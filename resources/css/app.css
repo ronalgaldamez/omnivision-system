@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0,1');
+
+/* SUSTITUYE LAS 3 LÍNEAS DE @tailwind POR ESTA: */
+@import "tailwindcss";
+
+@layer base {
+  body {
+    /* Ahora bg-gray-50 será reconocido correctamente */
+    @apply bg-gray-50 text-gray-800 font-sans text-sm;
+  }
+
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    @apply align-middle text-base;
+  }
+}

@@ -1,0 +1,50 @@
+# Dependencias
+/node_modules
+/vendor
+
+# Build de assets
+/public/build
+/public/hot
+/public/storage
+
+# Archivos de entorno
+.env
+.env.backup
+.env.production
+
+# Laravel storage
+/storage/*.key
+/storage/app/*
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/storage/logs/*
+/storage/debugbar
+/storage/pail
+!storage/app/.gitignore
+!storage/framework/.gitignore
+!storage/logs/.gitignore
+
+# Testing
+/.phpunit.cache
+/.phpunit.result.cache
+
+# Herramientas de desarrollo
+.phpactor.json
+/auth.json
+
+# Archivos de configuración local
+Homestead.json
+Homestead.yaml
+
+# Logs de NPM/Yarn
+npm-debug.log
+yarn-error.log
+
+# IDEs y editores
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
