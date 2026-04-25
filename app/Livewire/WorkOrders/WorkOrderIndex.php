@@ -15,9 +15,11 @@ class WorkOrderIndex extends Component
 
     public function render()
     {
-        $orders = WorkOrder::with('technician')
+        $orders = WorkOrder::with('technician', 'client')  // ← añade 'client'
             ->when($this->statusFilter, fn($q) => $q->where('status', $this->statusFilter))
-            ->when($this->search, fn($q) => $q->where('client_name', 'like', '%' . $this->search . '%')
+            ->when($this->search, fn($q) => $q->whereHas('client', function ($q2) {
+                $q2->where('name', 'like', '%' . $this->search . '%');
+            })
                 ->orWhereHas('technician', fn($q2) => $q2->where('name', 'like', '%' . $this->search . '%')))
             ->orderBy('created_at', 'desc')
             ->paginate(10);

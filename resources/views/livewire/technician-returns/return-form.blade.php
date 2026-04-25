@@ -10,6 +10,21 @@
             </select>
         </div>
 
+        <!-- Si el usuario es admin/warehouse, mostrar selector de técnico -->
+        @if(!auth()->user()->hasRole('technician'))
+            <div>
+                <label class="block text-sm font-medium">Técnico *</label>
+                <select wire:model.live="technician_id" class="mt-1 w-full rounded-md border-gray-300">
+                    <option value="">Seleccione técnico</option>
+                    @foreach($technicians as $tech)
+                        <option value="{{ $tech->id }}">{{ $tech->name }}</option>
+                    @endforeach
+                </select>
+                @error('technician_id') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+            </div>
+        @endif
+
+        <!-- Selección de OT -->
         <div>
             <label class="block text-sm font-medium">Orden de Trabajo *</label>
             <select wire:model.live="work_order_id" class="mt-1 w-full rounded-md border-gray-300">
@@ -22,6 +37,7 @@
             @error('work_order_id') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
         </div>
 
+        <!-- Productos disponibles para devolver (si hay OT seleccionada) -->
         @if($work_order_id && count($availableProducts) > 0)
             <div>
                 <label class="block text-sm font-medium">Producto *</label>
@@ -55,7 +71,7 @@
 
             <div>
                 <label class="block text-sm font-medium">Cantidad a devolver *</label>
-                <input type="number" wire:model="quantity" class="mt-1 w-full rounded-md border-gray-300" step="1">
+                <input type="number" wire:model="quantity" class="mt-1 w-full rounded-md border-gray-300" step="1" min="1">
                 @error('quantity') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
             </div>
         @elseif($work_order_id && count($availableProducts) == 0)
@@ -76,7 +92,7 @@
         </div>
     </form>
 
-    <!-- Modal de confirmación (igual que antes) -->
+    <!-- Modal de confirmación (Alpine.js) -->
     <div x-data="{ show: @entangle('showConfirmModal') }" x-show="show" x-cloak
         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
@@ -99,7 +115,7 @@
         </div>
     </div>
 
-    <!-- Toast (si no está en el layout) -->
+    <!-- Toast (notificaciones) -->
     <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
         x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 5000)"
         x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300">

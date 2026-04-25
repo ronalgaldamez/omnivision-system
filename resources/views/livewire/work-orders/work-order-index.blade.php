@@ -32,8 +32,8 @@
                 @forelse($orders as $order)
                     <tr class="border-b">
                         <td class="px-4 py-2">#{{ $order->id }}</td>
-                        <td class="px-4 py-2">{{ $order->client_name }}</td>
-                        <td class="px-4 py-2">{{ $order->technician->name }}</td>
+                        <td class="px-4 py-2">{{ $order->client->name ?? 'No especificado' }}</td>
+                        <td class="px-4 py-2">{{ $order->technician?->name ?? 'No asignado' }}</td>
                         <td class="px-4 py-2 text-center">
                             @if($order->status == 'pending') <span class="text-yellow-600">Pendiente</span>
                             @elseif($order->status == 'in_progress') <span class="text-blue-600">En progreso</span>

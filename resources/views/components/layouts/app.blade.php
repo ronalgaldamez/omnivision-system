@@ -35,6 +35,19 @@
         [x-cloak] {
             display: none !important;
         }
+
+        .nav-dropdown {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: all 0.2s ease;
+        }
+
+        .nav-group:hover .nav-dropdown {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
     </style>
     @livewireStyles
 </head>
@@ -42,166 +55,148 @@
 <body class="bg-gray-50 text-gray-800 text-sm">
     <livewire:global-notification />
     <div x-data="{ open: false }" class="min-h-screen">
-        <nav class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <!-- Barra de navegación mejorada -->
+        <nav class="bg-white border-b border-gray-200/80 shadow-sm sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-14">
-                    <div class="flex">
-                        <div class="flex items-center">
-                            <span class="material-symbols-outlined text-blue-600 mr-1">inventory</span>
-                            <span class="font-semibold text-gray-700">Kardex System</span>
-                        </div>
-                        <!-- Menú escritorio -->
-                        <div class="hidden md:flex md:items-center md:space-x-4 ml-6">
+                <div class="flex justify-between h-14 items-center">
+                    <!-- Logo (enlace al dashboard) -->
+                    <div class="flex items-center gap-x-6">
+                        <a href="{{ route('dashboard') }}" class="flex items-center gap-2 flex-shrink-0">
+                            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                                <span class="material-symbols-outlined text-white text-xl">inventory</span>
+                            </div>
+                            <span class="font-semibold text-gray-700 text-sm">Kardex System</span>
+                        </a>
+
+                        <!-- Menú escritorio (orden reorganizado) -->
+                        <div class="hidden md:flex md:items-center md:gap-x-1">
                             @auth
-                                @if(module_active('inventory'))
-                                    <div class="relative group">
-                                        <button
-                                            class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
-                                            <span class="material-symbols-outlined text-base">list_alt</span> Movimientos
-                                            <span class="material-symbols-outlined text-base">expand_more</span>
-                                        </button>
-                                        <div class="absolute left-0 top-full pt-1 hidden group-hover:block z-20">
-                                            <div class="bg-white border border-gray-200 rounded-md shadow-md min-w-[180px]">
-                                                @can('view movements')
-                                                    <a href="{{ route('movements.index') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">list_alt</span> Listado
-                                                    </a>
-                                                @endcan
-                                                @can('create movements')
-                                                    <a href="{{ route('movements.create') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">add_circle</span> Nuevo
-                                                        Movimiento
-                                                    </a>
-                                                @endcan
-                                                @can('view kardex')
-                                                    <a href="{{ route('kardex.index') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">receipt</span> Kardex
-                                                    </a>
-                                                @endcan
-                                            </div>
+                       
+                    <!-- 1. INVENTARIO (Movimientos, Productos, Kardex) -->
+                            @if(module_active('inventory'))
+                                @canany(['view movements', 'view products', 'create movements', 'view kardex'])
+                                <div class="nav-group relative">
+                                    <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
+                                        <span class="material-symbols-outlined text-base">inventory</span> Inventario
+                                        <span class="material-symbols-outlined text-base">expand_more</span>
+                                    </button>
+                                    <div class="nav-dropdown absolute left-0 top-full pt-1 z-20">
+                                        <div class="bg-white rounded-xl border border-gray-200/80 shadow-lg min-w-[200px] py-1.5">
+                                            @can('view movements')
+                                                <a href="{{ route('movements.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">list_alt</span> Movimientos
+                                                </a>
+                                            @endcan
+                                            @can('create movements')
+                                                <a href="{{ route('movements.create') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">add_circle</span> Nuevo Movimiento
+                                                </a>
+                                            @endcan
+                                            @can('view products')
+                                                <a href="{{ route('products.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">box</span> Productos
+                                                </a>
+                                            @endcan
+                                            @can('view kardex')
+                                                <a href="{{ route('kardex.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">receipt</span> Kardex
+                                                </a>
+                                            @endcan
                                         </div>
                                     </div>
+                                </div>
+                                @endcanany
+                            @endif
 
-                                    @can('view products')
-                                        <a href="{{ route('products.index') }}"
-                                            class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
-                                            <span class="material-symbols-outlined text-base">box</span> Productos
-                                        </a>
-                                    @endcan
-                                @endif
-
-                                @if(module_active('suppliers'))
-                                    <div class="relative group">
-                                        <button
-                                            class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
-                                            <span class="material-symbols-outlined text-base">shopping_cart</span> Compras
-                                            <span class="material-symbols-outlined text-base">expand_more</span>
-                                        </button>
-                                        <div class="absolute left-0 top-full pt-1 hidden group-hover:block z-20">
-                                            <div class="bg-white border border-gray-200 rounded-md shadow-md min-w-[180px]">
-                                                @can('view purchases')
-                                                    <a href="{{ route('purchases.index') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">history</span> Historial
-                                                    </a>
-                                                @endcan
-                                                @can('create purchases')
-                                                    <a href="{{ route('purchases.create') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">add_shopping_cart</span>
-                                                        Nueva Compra
-                                                    </a>
-                                                @endcan
-                                                @can('view suppliers')
-                                                    <a href="{{ route('suppliers.index') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">business</span>
-                                                        Proveedores
-                                                    </a>
-                                                @endcan
-                                                @can('create purchases')
-                                                    <a href="{{ route('returns.create') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">assignment_return</span>
-                                                        Devolución
-                                                    </a>
-                                                @endcan
-                                            </div>
+                                                        <!-- 2. COMPRAS (Proveedores, Compras, Devoluciones) -->
+                            @if(module_active('suppliers'))
+                                @canany(['view suppliers', 'view purchases', 'create purchases'])
+                                <div class="nav-group relative">
+                                    <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
+                                        <span class="material-symbols-outlined text-base">shopping_cart</span> Compras
+                                        <span class="material-symbols-outlined text-base">expand_more</span>
+                                    </button>
+                                    <div class="nav-dropdown absolute left-0 top-full pt-1 z-20">
+                                        <div class="bg-white rounded-xl border border-gray-200/80 shadow-lg min-w-[200px] py-1.5">
+                                            @can('view suppliers')
+                                                <a href="{{ route('suppliers.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">business</span> Proveedores
+                                                </a>
+                                            @endcan
+                                            @can('view purchases')
+                                                <a href="{{ route('purchases.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">history</span> Historial de Compras
+                                                </a>
+                                            @endcan
+                                            @can('create purchases')
+                                                <a href="{{ route('purchases.create') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">add_shopping_cart</span> Nueva Compra
+                                                </a>
+                                            @endcan
+                                            @can('create purchases')
+                                                <a href="{{ route('returns.create') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">assignment_return</span> Devolución
+                                                </a>
+                                            @endcan
                                         </div>
                                     </div>
-                                @endif
+                                </div>
+                                @endcanany
+                            @endif
 
+                                <!-- 3. TÉCNICOS (si aplica) -->
                                 @if(module_active('technicians'))
                                     @if(auth()->user()->hasRole('technician'))
                                         @can('create technician_requests')
-                                            <a href="{{ route('mobile.technician.requests') }}"
-                                                class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
+                                            <a href="{{ route('mobile.technician.requests') }}" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                                 <span class="material-symbols-outlined text-base">list_alt</span> Mis Solicitudes
                                             </a>
-                                            <a href="{{ route('mobile.technician.requests.create') }}"
-                                                class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
+                                            <a href="{{ route('mobile.technician.requests.create') }}" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                                 <span class="material-symbols-outlined text-base">add_task</span> Nueva Solicitud
                                             </a>
-                                            <a href="{{ route('mobile.work-orders.list') }}"
-                                                class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
+                                            <a href="{{ route('mobile.work-orders.list') }}" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                                 <span class="material-symbols-outlined text-base">work</span> Mis Órdenes
                                             </a>
-                                            <a href="{{ route('mobile.work-orders.map') }}"
-                                                class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
+                                            <a href="{{ route('mobile.work-orders.map') }}" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                                 <span class="material-symbols-outlined text-base">map</span> Mapa de Órdenes
                                             </a>
                                         @endcan
                                     @elseif(auth()->user()->hasRole('warehouse') || auth()->user()->hasRole('admin'))
-                                        <div class="relative group">
-                                            <button
-                                                class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
+                                        <div class="nav-group relative">
+                                            <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                                 <span class="material-symbols-outlined text-base">handyman</span> Técnicos
                                                 <span class="material-symbols-outlined text-base">expand_more</span>
                                             </button>
-                                            <div class="absolute left-0 top-full pt-1 hidden group-hover:block z-20">
-                                                <div class="bg-white border border-gray-200 rounded-md shadow-md min-w-[180px]">
+                                            <div class="nav-dropdown absolute left-0 top-full pt-1 z-20">
+                                                <div class="bg-white rounded-xl border border-gray-200/80 shadow-lg min-w-[200px] py-1.5">
                                                     @can('view technician_requests')
-                                                        <a href="{{ route('technician-requests.index') }}"
-                                                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                            <span class="material-symbols-outlined text-base">inbox</span> Gestionar
-                                                            Solicitudes
+                                                        <a href="{{ route('technician-requests.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                            <span class="material-symbols-outlined text-base">inbox</span> Gestionar Solicitudes
                                                         </a>
                                                     @endcan
                                                     @can('approve technician_requests')
-                                                        <a href="{{ route('code-delivery.index') }}"
-                                                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                            <span class="material-symbols-outlined text-base">qr_code_scanner</span>
-                                                            Escáner QR
+                                                        <a href="{{ route('code-delivery.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                            <span class="material-symbols-outlined text-base">qr_code_scanner</span> Escáner QR
                                                         </a>
                                                     @endcan
                                                     @if(module_active('technician_returns'))
                                                         @can('view technician_returns')
-                                                            <a href="{{ route('technician-returns.index') }}"
-                                                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                                <span class="material-symbols-outlined text-base">assignment_return</span>
-                                                                Devoluciones
+                                                            <a href="{{ route('technician-returns.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                                <span class="material-symbols-outlined text-base">assignment_return</span> Devoluciones
                                                             </a>
                                                         @endcan
                                                         @can('create technician_returns')
-                                                            <a href="{{ route('technician-returns.create') }}"
-                                                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                                <span class="material-symbols-outlined text-base">add_circle</span>
-                                                                Registrar Devolución
+                                                            <a href="{{ route('technician-returns.create') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                                <span class="material-symbols-outlined text-base">add_circle</span> Registrar Devolución
                                                             </a>
                                                         @endcan
                                                     @endif
                                                     @if(module_active('work_orders'))
                                                         @can('view work_orders')
-                                                            <a href="{{ route('work-orders.index') }}"
-                                                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                                <span class="material-symbols-outlined text-base">work</span> Órdenes de
-                                                                Trabajo
+                                                            <a href="{{ route('work-orders.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                                <span class="material-symbols-outlined text-base">work</span> Órdenes de Trabajo
                                                             </a>
-                                                            <a href="{{ route('work-orders.map') }}"
-                                                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                            <a href="{{ route('work-orders.map') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
                                                                 <span class="material-symbols-outlined text-base">map</span> Mapa de OT
                                                             </a>
                                                         @endcan
@@ -212,37 +207,24 @@
                                     @endif
                                 @endif
 
-                                @can('view dashboard')
-                                    <a href="{{ route('dashboard') }}"
-                                        class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-base">dashboard</span> Dashboard
-                                    </a>
-                                @endcan
-
+                                <!-- 4. REPORTES -->
                                 @if(module_active('reports'))
                                     @can('view reports')
-                                        <div class="relative group">
-                                            <button
-                                                class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
+                                        <div class="nav-group relative">
+                                            <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                                 <span class="material-symbols-outlined text-base">assessment</span> Reportes
                                                 <span class="material-symbols-outlined text-base">expand_more</span>
                                             </button>
-                                            <div class="absolute left-0 top-full pt-1 hidden group-hover:block z-20">
-                                                <div class="bg-white border border-gray-200 rounded-md shadow-md min-w-[160px]">
-                                                    <a href="{{ route('reports.stock') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">inventory</span> Stock
-                                                        bajo
+                                            <div class="nav-dropdown absolute left-0 top-full pt-1 z-20">
+                                                <div class="bg-white rounded-xl border border-gray-200/80 shadow-lg min-w-[200px] py-1.5">
+                                                    <a href="{{ route('reports.stock') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">inventory</span> Stock bajo
                                                     </a>
-                                                    <a href="{{ route('reports.movements') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">swap_vert</span>
-                                                        Movimientos
+                                                    <a href="{{ route('reports.movements') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">swap_vert</span> Movimientos
                                                     </a>
-                                                    <a href="{{ route('reports.technicians') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">handyman</span>
-                                                        Rendimiento técnicos
+                                                    <a href="{{ route('reports.technicians') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">handyman</span> Rendimiento técnicos
                                                     </a>
                                                 </div>
                                             </div>
@@ -250,7 +232,7 @@
                                     @endcan
                                 @endif
 
-                                <!-- ========== DROPDOWN: SOPORTE TÉCNICO (basado en permisos) ========== -->
+                                <!-- 5. SOPORTE TÉCNICO -->
                                 @php
                                     $showSupport = false;
                                     if (module_active('work_orders')) {
@@ -261,31 +243,24 @@
                                 @endphp
 
                                 @if($showSupport)
-                                    <div class="relative group">
-                                        <button
-                                            class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
+                                    <div class="nav-group relative">
+                                        <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                             <span class="material-symbols-outlined text-base">support_agent</span> Soporte
-                                            técnico
                                             <span class="material-symbols-outlined text-base">expand_more</span>
                                         </button>
-                                        <div class="absolute left-0 top-full pt-1 hidden group-hover:block z-20">
-                                            <div class="bg-white border border-gray-200 rounded-md shadow-md min-w-[200px]">
+                                        <div class="nav-dropdown absolute left-0 top-full pt-1 z-20">
+                                            <div class="bg-white rounded-xl border border-gray-200/80 shadow-lg min-w-[200px] py-1.5">
                                                 @can('create tickets')
-                                                    <a href="{{ route('tickets.create') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">add_comment</span> Nuevo
-                                                        Ticket
+                                                    <a href="{{ route('tickets.create') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">add_comment</span> Nuevo Ticket
                                                     </a>
-                                                    <a href="{{ route('tickets.index') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                    <a href="{{ route('tickets.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
                                                         <span class="material-symbols-outlined text-base">chat</span> Mis Tickets
                                                     </a>
                                                 @endcan
                                                 @can('edit tickets')
-                                                    <a href="{{ route('noc.panel') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">settings_overscan</span>
-                                                        Panel NOC
+                                                    <a href="{{ route('noc.panel') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">settings_overscan</span> Panel NOC
                                                     </a>
                                                 @endcan
                                             </div>
@@ -293,36 +268,29 @@
                                     </div>
                                 @endif
 
+                                <!-- 6. ADMIN (solo admin) -->
                                 @if(auth()->user()->hasRole('admin'))
-                                    <div class="relative group">
-                                        <button
-                                            class="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm flex items-center gap-1">
+                                    <div class="nav-group relative">
+                                        <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                             <span class="material-symbols-outlined text-base">admin_panel_settings</span> Admin
                                             <span class="material-symbols-outlined text-base">expand_more</span>
                                         </button>
-                                        <div class="absolute left-0 top-full pt-1 hidden group-hover:block z-20">
-                                            <div class="bg-white border border-gray-200 rounded-md shadow-md min-w-[180px]">
-                                                <a href="{{ route('admin.users.index') }}"
-                                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                        <div class="nav-dropdown absolute left-0 top-full pt-1 z-20">
+                                            <div class="bg-white rounded-xl border border-gray-200/80 shadow-lg min-w-[200px] py-1.5">
+                                                <a href="{{ route('admin.users.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
                                                     <span class="material-symbols-outlined text-base">people</span> Usuarios
                                                 </a>
-                                                <a href="{{ route('admin.roles.index') }}"
-                                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                    <span class="material-symbols-outlined text-base">security</span> Roles y
-                                                    Permisos
+                                                <a href="{{ route('admin.roles.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">security</span> Roles y Permisos
                                                 </a>
-                                                <hr class="my-1">
+                                                <hr class="my-1.5 border-gray-100">
                                                 @can('manage catalog')
-                                                    <a href="{{ route('admin.catalog') }}"
-                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <span class="material-symbols-outlined text-base">inventory_2</span>
-                                                        Catálogo
+                                                    <a href="{{ route('admin.catalog') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">inventory_2</span> Catálogo
                                                     </a>
                                                 @endcan
-                                                <a href="{{ route('admin.settings') }}"
-                                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                    <span class="material-symbols-outlined text-base">settings</span>
-                                                    Configuración
+                                                <a href="{{ route('admin.settings') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">settings</span> Configuración
                                                 </a>
                                             </div>
                                         </div>
@@ -332,14 +300,16 @@
                         </div>
                     </div>
 
+                    <!-- Perfil de usuario y logout -->
                     @auth
-                        <div class="hidden md:flex items-center space-x-3">
-                            <span class="material-symbols-outlined text-base text-gray-500">account_circle</span>
-                            <span class="text-xs text-gray-500">{{ auth()->user()->name }}</span>
+                        <div class="hidden md:flex items-center gap-3">
+                            <div class="flex items-center gap-2 text-xs text-gray-500 bg-gray-50/80 px-3 py-1.5 rounded-lg">
+                                <span class="material-symbols-outlined text-base">account_circle</span>
+                                <span>{{ auth()->user()->name }}</span>
+                            </div>
                             <form method="POST" action="{{ route('logout') }}" class="inline">
                                 @csrf
-                                <button type="submit"
-                                    class="text-gray-500 hover:text-gray-700 text-sm flex items-center gap-1">
+                                <button type="submit" class="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm font-medium transition">
                                     <span class="material-symbols-outlined text-base">logout</span> Salir
                                 </button>
                             </form>
@@ -348,140 +318,111 @@
 
                     <!-- Botón hamburguesa (móvil) -->
                     <div class="flex items-center md:hidden">
-                        <button @click="open = !open" class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <button @click="open = !open" class="text-gray-500 hover:text-gray-700 focus:outline-none p-1.5 rounded-lg hover:bg-gray-100 transition">
                             <span class="material-symbols-outlined">menu</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Menú móvil -->
-            <div x-show="open" @click.away="open = false" x-transition.duration.300ms
-                class="md:hidden bg-white border-t border-gray-200">
-                <div class="px-2 pt-2 pb-3 space-y-1">
+            <!-- Menú móvil mejorado (mismo orden) -->
+            <div x-show="open" @click.away="open = false" x-transition.duration.200ms
+                class="md:hidden bg-white border-t border-gray-200 shadow-lg">
+                <div class="px-4 pt-3 pb-4 space-y-2 max-h-[calc(100vh-3.5rem)] overflow-y-auto">
                     @auth
+                        <!-- Inventario -->
                         @if(module_active('inventory'))
                             <div class="space-y-1">
-                                <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Movimientos
-                                </div>
+                                <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Inventario</h3>
                                 @can('view movements')
-                                    <a href="{{ route('movements.index') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
-                                        <span class="material-symbols-outlined text-base">list_alt</span> Listado
+                                    <a href="{{ route('movements.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
+                                        <span class="material-symbols-outlined text-base">list_alt</span> Movimientos
                                     </a>
                                 @endcan
                                 @can('create movements')
-                                    <a href="{{ route('movements.create') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                    <a href="{{ route('movements.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                         <span class="material-symbols-outlined text-base">add_circle</span> Nuevo Movimiento
                                     </a>
                                 @endcan
+                                @can('view products')
+                                    <a href="{{ route('products.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
+                                        <span class="material-symbols-outlined text-base">box</span> Productos
+                                    </a>
+                                @endcan
                                 @can('view kardex')
-                                    <a href="{{ route('kardex.index') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                    <a href="{{ route('kardex.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                         <span class="material-symbols-outlined text-base">receipt</span> Kardex
                                     </a>
                                 @endcan
                             </div>
-
-                            @can('view products')
-                                <a href="{{ route('products.index') }}"
-                                    class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-base">box</span> Productos
-                                </a>
-                            @endcan
                         @endif
 
+                        <!-- Compras -->
                         @if(module_active('suppliers'))
                             <div class="space-y-1">
-                                <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Compras
-                                </div>
-                                @can('view purchases')
-                                    <a href="{{ route('purchases.index') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
-                                        <span class="material-symbols-outlined text-base">history</span> Historial
-                                    </a>
-                                @endcan
-                                @can('create purchases')
-                                    <a href="{{ route('purchases.create') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
-                                        <span class="material-symbols-outlined text-base">add_shopping_cart</span> Nueva Compra
-                                    </a>
-                                @endcan
+                                <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Compras</h3>
                                 @can('view suppliers')
-                                    <a href="{{ route('suppliers.index') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                    <a href="{{ route('suppliers.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                         <span class="material-symbols-outlined text-base">business</span> Proveedores
                                     </a>
                                 @endcan
+                                @can('view purchases')
+                                    <a href="{{ route('purchases.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
+                                        <span class="material-symbols-outlined text-base">history</span> Historial de Compras
+                                    </a>
+                                @endcan
                                 @can('create purchases')
-                                    <a href="{{ route('returns.create') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                    <a href="{{ route('purchases.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
+                                        <span class="material-symbols-outlined text-base">add_shopping_cart</span> Nueva Compra
+                                    </a>
+                                @endcan
+                                @can('create purchases')
+                                    <a href="{{ route('returns.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                         <span class="material-symbols-outlined text-base">assignment_return</span> Devolución
                                     </a>
                                 @endcan
                             </div>
                         @endif
 
+                        <!-- Técnicos -->
                         @if(module_active('technicians'))
                             @if(auth()->user()->hasRole('technician'))
                                 @can('create technician_requests')
-                                    <a href="{{ route('mobile.technician.requests') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                    <a href="{{ route('mobile.technician.requests') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition">
                                         <span class="material-symbols-outlined text-base">list_alt</span> Mis Solicitudes
                                     </a>
-                                    <a href="{{ route('mobile.technician.requests.create') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                    <a href="{{ route('mobile.technician.requests.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition">
                                         <span class="material-symbols-outlined text-base">add_task</span> Nueva Solicitud
                                     </a>
-                                    <a href="{{ route('mobile.work-orders.list') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                    <a href="{{ route('mobile.work-orders.list') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition">
                                         <span class="material-symbols-outlined text-base">work</span> Mis Órdenes
                                     </a>
-                                    <a href="{{ route('mobile.work-orders.map') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                    <a href="{{ route('mobile.work-orders.map') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition">
                                         <span class="material-symbols-outlined text-base">map</span> Mapa de Órdenes
                                     </a>
                                 @endcan
                             @elseif(auth()->user()->hasRole('warehouse') || auth()->user()->hasRole('admin'))
                                 <div class="space-y-1">
-                                    <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Técnicos
-                                    </div>
+                                    <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Técnicos</h3>
                                     @can('view technician_requests')
-                                        <a href="{{ route('technician-requests.index') }}"
-                                            class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                        <a href="{{ route('technician-requests.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                             <span class="material-symbols-outlined text-base">inbox</span> Gestionar Solicitudes
                                         </a>
                                     @endcan
                                     @can('approve technician_requests')
-                                        <a href="{{ route('code-delivery.index') }}"
-                                            class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                        <a href="{{ route('code-delivery.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                             <span class="material-symbols-outlined text-base">qr_code_scanner</span> Escáner QR
                                         </a>
                                     @endcan
                                     @if(module_active('technician_returns'))
                                         @can('view technician_returns')
-                                            <a href="{{ route('technician-returns.index') }}"
-                                                class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                            <a href="{{ route('technician-returns.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                                 <span class="material-symbols-outlined text-base">assignment_return</span> Devoluciones
                                             </a>
                                         @endcan
                                         @can('create technician_returns')
-                                            <a href="{{ route('technician-returns.create') }}"
-                                                class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                            <a href="{{ route('technician-returns.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                                 <span class="material-symbols-outlined text-base">add_circle</span> Registrar Devolución
-                                            </a>
-                                        @endcan
-                                    @endif
-                                    @if(module_active('work_orders'))
-                                        @can('view work_orders')
-                                            <a href="{{ route('work-orders.index') }}"
-                                                class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
-                                                <span class="material-symbols-outlined text-base">work</span> Órdenes de Trabajo
-                                            </a>
-                                            <a href="{{ route('work-orders.map') }}"
-                                                class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
-                                                <span class="material-symbols-outlined text-base">map</span> Mapa de OT
                                             </a>
                                         @endcan
                                     @endif
@@ -489,35 +430,25 @@
                             @endif
                         @endif
 
-                        @can('view dashboard')
-                            <a href="{{ route('dashboard') }}"
-                                class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-base">dashboard</span> Dashboard
-                            </a>
-                        @endcan
-
+                        <!-- Reportes -->
                         @if(module_active('reports'))
                             @can('view reports')
                                 <div class="space-y-1">
-                                    <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Reportes
-                                    </div>
-                                    <a href="{{ route('reports.stock') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                    <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Reportes</h3>
+                                    <a href="{{ route('reports.stock') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                         <span class="material-symbols-outlined text-base">inventory</span> Stock bajo
                                     </a>
-                                    <a href="{{ route('reports.movements') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                    <a href="{{ route('reports.movements') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                         <span class="material-symbols-outlined text-base">swap_vert</span> Movimientos
                                     </a>
-                                    <a href="{{ route('reports.technicians') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                    <a href="{{ route('reports.technicians') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                         <span class="material-symbols-outlined text-base">handyman</span> Rendimiento técnicos
                                     </a>
                                 </div>
                             @endcan
                         @endif
 
-                        <!-- ========== MENÚ MÓVIL: SOPORTE TÉCNICO (sección) ========== -->
+                        <!-- Soporte -->
                         @php
                             $showSupportMobile = false;
                             if (module_active('work_orders')) {
@@ -529,60 +460,52 @@
 
                         @if($showSupportMobile)
                             <div class="space-y-1">
-                                <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Soporte
-                                    técnico</div>
+                                <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Soporte</h3>
                                 @can('create tickets')
-                                    <a href="{{ route('tickets.create') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                    <a href="{{ route('tickets.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                         <span class="material-symbols-outlined text-base">add_comment</span> Nuevo Ticket
                                     </a>
-                                    <a href="{{ route('tickets.index') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                    <a href="{{ route('tickets.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                         <span class="material-symbols-outlined text-base">chat</span> Mis Tickets
                                     </a>
                                 @endcan
                                 @can('edit tickets')
-                                    <a href="{{ route('noc.panel') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                    <a href="{{ route('noc.panel') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                         <span class="material-symbols-outlined text-base">settings_overscan</span> Panel NOC
                                     </a>
                                 @endcan
                             </div>
                         @endif
 
+                        <!-- Admin -->
                         @if(auth()->user()->hasRole('admin'))
                             <div class="space-y-1">
-                                <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin</div>
-                                <a href="{{ route('admin.users.index') }}"
-                                    class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin</h3>
+                                <a href="{{ route('admin.users.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                     <span class="material-symbols-outlined text-base">people</span> Usuarios
                                 </a>
-                                <a href="{{ route('admin.roles.index') }}"
-                                    class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                <a href="{{ route('admin.roles.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                     <span class="material-symbols-outlined text-base">security</span> Roles y Permisos
                                 </a>
                                 @can('manage catalog')
-                                    <a href="{{ route('admin.catalog') }}"
-                                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                    <a href="{{ route('admin.catalog') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                         <span class="material-symbols-outlined text-base">inventory_2</span> Catálogo
                                     </a>
                                 @endcan
-                                <a href="{{ route('admin.settings') }}"
-                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 ml-2">
+                                <a href="{{ route('admin.settings') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80 transition ml-2">
                                     <span class="material-symbols-outlined text-base">settings</span> Configuración
                                 </a>
                             </div>
                         @endif
 
-                        <hr class="my-2">
+                        <hr class="my-2 border-gray-100">
                         <div class="flex items-center gap-2 px-3 py-2 text-sm text-gray-500">
                             <span class="material-symbols-outlined text-base">account_circle</span>
                             <span>{{ auth()->user()->name }}</span>
                         </div>
                         <form method="POST" action="{{ route('logout') }}" class="inline">
                             @csrf
-                            <button type="submit"
-                                class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                            <button type="submit" class="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition">
                                 <span class="material-symbols-outlined text-base">logout</span> Cerrar sesión
                             </button>
                         </form>
@@ -591,6 +514,7 @@
             </div>
         </nav>
 
+        <!-- Contenido principal -->
         <main class="py-6">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {{ $slot }}
@@ -598,14 +522,28 @@
         </main>
     </div>
 
-    <!-- Toast global -->
+    <!-- Toast global unificado -->
     <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
         x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 5000)"
-        x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300" style="display: none;">
+        x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"
+        x-transition:enter="transform ease-out duration-300" x-transition:enter-start="translate-y-2 opacity-0"
+        x-transition:enter-end="translate-y-0 opacity-100" x-transition:leave="transform ease-in duration-200"
+        x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-2 opacity-0"
+        style="display: none;">
+        <div x-show="toastType === 'success'"
+            class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+            <span class="material-symbols-outlined">check_circle</span>
+            <span x-text="toastMessage" class="text-sm font-medium"></span>
+        </div>
+        <div x-show="toastType === 'error'"
+            class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+            <span class="material-symbols-outlined">error</span>
+            <span x-text="toastMessage" class="text-sm font-medium"></span>
+        </div>
         <div x-show="toastType === 'info'"
-            class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+            class="bg-blue-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
             <span class="material-symbols-outlined">info</span>
-            <span x-text="toastMessage"></span>
+            <span x-text="toastMessage" class="text-sm font-medium"></span>
         </div>
     </div>
 

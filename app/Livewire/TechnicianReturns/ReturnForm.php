@@ -4,6 +4,7 @@ namespace App\Livewire\TechnicianReturns;
 
 use Livewire\Component;
 use App\Models\Product;
+use App\Models\User;
 use App\Models\WorkOrder;
 use App\Models\TechnicianRequest;
 use App\Models\TechnicianReturn;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 class ReturnForm extends Component
 {
     public $type = 'surplus';
+    public $technician_id = null;        // nuevo: para filtro por técnico (solo admin/warehouse)
     public $work_order_id;
     public $product_id;
     public $quantity;
@@ -21,14 +23,16 @@ class ReturnForm extends Component
     public $productSearch = '';
     public $selectedRequestId = null;
 
+    public $technicians = [];             // lista de técnicos (para admin/warehouse)
     public $workOrders = [];
-    public $availableProducts = []; // Productos disponibles para devolver (de la OT seleccionada)
+    public $availableProducts = [];
 
     public $showConfirmModal = false;
     public $confirmMessage = '';
 
     protected $rules = [
         'type' => 'required|in:surplus,damage',
+        'technician_id' => 'nullable|exists:users,id',
         'work_order_id' => 'required|exists:work_orders,id',
         'product_id' => 'required|exists:products,id',
         'quantity' => 'required|integer|min:1',
@@ -37,10 +41,37 @@ class ReturnForm extends Component
 
     public function mount()
     {
-        $this->workOrders = WorkOrder::where('technician_id', Auth::id())
-            ->where('status', '!=', 'cancelled')
-            ->orderBy('scheduled_date', 'desc')
-            ->get();
+        $user = Auth::user();
+        // Si es técnico, solo verá sus propias OT (sin selector de técnico)
+        if ($user->hasRole('technician')) {
+            $this->technician_id = $user->id;
+            $this->loadWorkOrders();
+        } else {
+            // Admin o warehouse: cargar lista de técnicos
+            $this->technicians = User::role('technician')->orderBy('name')->get();
+        }
+    }
+
+    public function updatedTechnicianId()
+    {
+        $this->work_order_id = null;
+        $this->product_id = null;
+        $this->availableProducts = [];
+        if ($this->technician_id) {
+            $this->loadWorkOrders();
+        }
+    }
+
+    public function loadWorkOrders()
+    {
+        if ($this->technician_id) {
+            $this->workOrders = WorkOrder::where('technician_id', $this->technician_id)
+                ->where('status', '!=', 'cancelled')
+                ->orderBy('scheduled_date', 'desc')
+                ->get();
+        } else {
+            $this->workOrders = [];
+        }
     }
 
     public function updatedWorkOrderId()
@@ -51,7 +82,6 @@ class ReturnForm extends Component
         $this->availableProducts = [];
 
         if ($this->work_order_id) {
-            // Obtener las solicitudes entregadas de esta OT
             $requests = TechnicianRequest::where('work_order_id', $this->work_order_id)
                 ->where('status', 'delivered')
                 ->with('products.product')
@@ -104,7 +134,7 @@ class ReturnForm extends Component
             return;
         }
 
-        // Obtener la solicitud asociada (para mantener trazabilidad)
+        // Obtener la solicitud asociada
         $technicianRequest = TechnicianRequest::where('work_order_id', $this->work_order_id)
             ->whereHas('products', function ($q) {
                 $q->where('product_id', $this->product_id);
@@ -141,7 +171,7 @@ class ReturnForm extends Component
         }
 
         $this->dispatch('showToast', ['type' => 'success', 'message' => 'Devolución registrada correctamente.']);
-        $this->reset(['work_order_id', 'product_id', 'quantity', 'notes', 'selectedRequestId']);
+        $this->reset(['technician_id', 'work_order_id', 'product_id', 'quantity', 'notes', 'selectedRequestId']);
         $this->availableProducts = [];
         $this->showConfirmModal = false;
         return redirect()->route('technician-returns.index');

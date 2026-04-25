@@ -8,11 +8,11 @@ use Illuminate\Support\Facades\Auth;
 
 class WorkOrderShow extends Component
 {
-    public $workOrder;
+    public $order;
 
     public function mount($id)
     {
-        $this->workOrder = WorkOrder::with('technician', 'products.product', 'client')->findOrFail($id);
+        $this->order = WorkOrder::with('technician', 'products.product', 'client')->findOrFail($id);
     }
 
     public function completeWorkOrder()
@@ -22,14 +22,14 @@ class WorkOrderShow extends Component
             return;
         }
 
-        if ($this->workOrder->status === 'completed') {
+        if ($this->order->status === 'completed') {
             $this->dispatch('showToast', ['type' => 'error', 'message' => 'Ya está completada.']);
             return;
         }
 
-        $this->workOrder->status = 'completed';
-        $this->workOrder->completed_date = now();
-        $this->workOrder->save();
+        $this->order->status = 'completed';
+        $this->order->completed_date = now();
+        $this->order->save();
 
         $this->dispatch('showToast', ['type' => 'success', 'message' => 'Orden completada.']);
         return redirect()->route('work-orders.index');
@@ -37,6 +37,6 @@ class WorkOrderShow extends Component
 
     public function render()
     {
-        return view('livewire.work-orders.work-order-show')->layout('components.layouts.app');
+        return view('livewire.work-orders.work-order-show', ['order' => $this->order])->layout('components.layouts.app');
     }
 }

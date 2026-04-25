@@ -153,7 +153,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $nocRole->givePermissionTo([
             'view tickets',
-            'edit tickets'
+            'edit tickets',
+            'create tickets',
         ]);
 
         $supervisorRole->givePermissionTo([
