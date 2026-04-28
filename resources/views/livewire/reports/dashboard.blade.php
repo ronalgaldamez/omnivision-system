@@ -10,6 +10,33 @@
             <p class="text-sm text-gray-500 mt-1">Resumen general de la actividad del sistema</p>
         </div>
 
+    <!-- Últimos movimientos -->
+    <div class="bg-white rounded-lg shadow p-4">
+        <h2 class="font-medium mb-2">Últimos movimientos</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-3 py-2 text-left">Fecha</th>
+                        <th class="px-3 py-2 text-left">Producto</th>
+                        <th class="px-3 py-2 text-center">Tipo</th>
+                        <th class="px-3 py-2 text-right">Cantidad</th>
+                        <th class="px-3 py-2 text-left">Usuario</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($recentMovements as $mov)
+                        <tr class="border-b">
+                            <td class="px-3 py-1">{{ $mov->created_at->format('d/m/Y H:i') }}</td>
+                            <td class="px-3 py-1">{{ $mov->product->name }}</td>
+                            <td class="px-3 py-1 text-center">{{ $mov->type }}</td>
+                            <td class="px-3 py-1 text-right">{{ $mov->quantity }}</td>
+                            <td class="px-3 py-1">{{ $mov->user->name }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+
         <!-- Contenido -->
         <div class="p-6 space-y-6">
             <!-- Tarjetas resumen -->
@@ -176,6 +203,7 @@
                     </table>
                 </div>
             </div>
+
         </div>
     </div>
 </div>

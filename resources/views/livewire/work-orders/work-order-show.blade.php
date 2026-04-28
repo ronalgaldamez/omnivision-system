@@ -160,15 +160,24 @@
                 </div>
             </div>
 
-            <!-- Acción de completar -->
-            @if(!in_array($order->status, ['completed', 'cancelled']) && auth()->user()->can('complete work_orders') && $order->technician_id)
-                <div class="flex justify-end pt-4 border-t border-gray-200">
-                    <button wire:click="completeWorkOrder"
-                        onclick="return confirm('¿Marcar esta orden como completada? Esta acción no se puede deshacer.')"
-                        class="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition">
-                        <span class="material-symbols-outlined text-base">check_circle</span>
-                        Completar trabajo
-                    </button>
+
+            <!-- Acción de completar y cancelar -->
+            @if(!in_array($order->status, ['completed', 'cancelled']))
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                    @if(auth()->user()->can('complete work_orders'))
+                        <button wire:click="completeWorkOrder" onclick="return confirm('¿Marcar esta orden como completada?')"
+                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
+                            <span class="material-symbols-outlined text-base">check_circle</span>
+                            Completar trabajo
+                        </button>
+                    @endif
+                    @if(auth()->user()->can('cancel work orders'))
+                        <button wire:click="cancelWorkOrder" onclick="return confirm('¿Cancelar esta orden?')"
+                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-red-700 transition">
+                            <span class="material-symbols-outlined text-base">cancel</span>
+                            Cancelar orden
+                        </button>
+                    @endif
                 </div>
             @endif
         </div>

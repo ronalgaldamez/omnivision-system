@@ -35,6 +35,25 @@ class WorkOrderShow extends Component
         return redirect()->route('work-orders.index');
     }
 
+    public function cancelWorkOrder()
+    {
+        if (!Auth::user()->can('cancel work orders')) {
+            $this->dispatch('showToast', ['type' => 'error', 'message' => 'No tienes permiso para cancelar.']);
+            return;
+        }
+
+        if (in_array($this->order->status, ['completed', 'cancelled'])) {
+            $this->dispatch('showToast', ['type' => 'error', 'message' => 'No se puede cancelar una orden ya completada o cancelada.']);
+            return;
+        }
+
+        $this->order->status = 'cancelled';
+        $this->order->save();
+
+        $this->dispatch('showToast', ['type' => 'success', 'message' => 'Orden cancelada.']);
+        return redirect()->route('work-orders.index');
+    }
+
     public function render()
     {
         return view('livewire.work-orders.work-order-show', ['order' => $this->order])->layout('components.layouts.app');

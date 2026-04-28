@@ -47,6 +47,13 @@ class WorkOrderForm extends Component
 
     public function mount($id = null)
     {
+        $user = Auth::user();
+
+        // Verificar permiso para asignar técnicos (al crear o editar)
+        if ($user->cannot('assign technicians')) {
+            abort(403, 'No tienes permiso para asignar técnicos a órdenes de trabajo.');
+        }
+
         if ($id) {
             $order = WorkOrder::with('products')->findOrFail($id);
             $this->orderId = $order->id;
