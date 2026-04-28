@@ -14,7 +14,7 @@ class TicketForm extends Component
     public $client_id;
     public $service_type;
     public $requires_noc = false;
-    public $status = 'pending';   // para edición
+    public $status = 'pending';
 
     // Búsqueda de clientes
     public $clientSearch = '';
@@ -31,20 +31,24 @@ class TicketForm extends Component
         'status' => 'in:pending,in_progress,resolved,closed',
     ];
 
+    // Escuchar eventos
+    protected function getListeners()
+    {
+        return [
+            'clientCreated' => 'handleClientCreated',
+        ];
+    }
+
     public function mount($id = null)
     {
         $user = Auth::user();
 
         if ($id) {
-            // Modo edición
             $this->ticketId = $id;
             $ticket = Ticket::findOrFail($id);
-
-            // Autorización para editar: necesita permiso 'update tickets' O ser el creador si tiene 'update own tickets'? Usamos 'update tickets' directamente.
             if ($user->cannot('update tickets')) {
                 abort(403, 'No tienes permiso para editar tickets.');
             }
-
             $this->client_id = $ticket->client_id;
             $this->description = $ticket->description;
             $this->service_type = $ticket->service_type;
@@ -52,7 +56,6 @@ class TicketForm extends Component
             $this->status = $ticket->status;
             $this->clientSearch = $ticket->client->name;
         } else {
-            // Modo creación
             if ($user->cannot('create tickets')) {
                 abort(403, 'No tienes permiso para crear tickets.');
             }
@@ -88,6 +91,12 @@ class TicketForm extends Component
         $this->showClientModal = false;
     }
 
+    public function handleClientCreated($clientId, $clientName)
+    {
+        $this->selectClient($clientId, $clientName);
+        $this->closeClientModal();
+    }
+
     public function save()
     {
         $this->validate();
@@ -100,22 +109,19 @@ class TicketForm extends Component
         ];
 
         if ($this->ticketId) {
-            // Actualizar
             $ticket = Ticket::findOrFail($this->ticketId);
             $data['status'] = $this->status;
             $ticket->update($data);
-            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Ticket actualizado.']);
+            session()->flash('message', 'Ticket actualizado correctamente.');
         } else {
-            // Crear
             $data['created_by'] = Auth::id();
             $data['status'] = 'pending';
             $ticket = Ticket::create($data);
 
-            // Si no requiere NOC, crear OT automáticamente
             if (!$this->requires_noc) {
                 $this->createWorkOrder($ticket);
             }
-            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Ticket creado correctamente.']);
+            session()->flash('message', 'Ticket creado correctamente.');
         }
 
         return redirect()->route('tickets.index');
