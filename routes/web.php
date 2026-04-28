@@ -94,29 +94,30 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/work-orders-map', \App\Livewire\Mobile\WorkOrderMap::class)->name('mobile.work-orders.map');
     });
 
-    // ========== WORK ORDERS ==========
+    // ========== WORK ORDERS (rutas ajustadas) ==========
     if (module_active('work_orders')) {
-        Route::prefix('work-orders')->middleware('can:view work_orders')->group(function () {
-            Route::get('/', \App\Livewire\WorkOrders\WorkOrderIndex::class)->name('work-orders.index');
-            Route::get('/{id}/show', \App\Livewire\WorkOrders\WorkOrderShow::class)->name('work-orders.show');
-            Route::get('/map', \App\Livewire\WorkOrders\WorkOrderMap::class)->name('work-orders.map');
+        // Index sin middleware (autorización interna)
+        Route::get('/work-orders', \App\Livewire\WorkOrders\WorkOrderIndex::class)->name('work-orders.index');
+        Route::get('/work-orders/{id}/show', \App\Livewire\WorkOrders\WorkOrderShow::class)->name('work-orders.show');
+        Route::get('/work-orders/map', \App\Livewire\WorkOrders\WorkOrderMap::class)->name('work-orders.map');
+
+        // Creación y edición requieren permisos específicos
+        Route::middleware('can:create work_orders')->group(function () {
+            Route::get('/work-orders/create', \App\Livewire\WorkOrders\WorkOrderForm::class)->name('work-orders.create');
         });
-        Route::prefix('work-orders')->middleware('can:create work_orders')->group(function () {
-            Route::get('/create', \App\Livewire\WorkOrders\WorkOrderForm::class)->name('work-orders.create');
-        });
-        Route::prefix('work-orders')->middleware('can:edit work_orders')->group(function () {
-            Route::get('/{id}/edit', \App\Livewire\WorkOrders\WorkOrderForm::class)->name('work-orders.edit');
+        Route::middleware('can:edit work_orders')->group(function () {
+            Route::get('/work-orders/{id}/edit', \App\Livewire\WorkOrders\WorkOrderForm::class)->name('work-orders.edit');
         });
 
         // ========== TICKETS ==========
-        Route::prefix('tickets')->middleware('can:view tickets')->group(function () {
+        Route::prefix('tickets')->group(function () {
             Route::get('/', \App\Livewire\Tickets\TicketIndex::class)->name('tickets.index');
             Route::get('/create', \App\Livewire\Tickets\TicketForm::class)->name('tickets.create');
         });
     }
 
     // ========== NOC ==========
-    Route::middleware(['auth', 'can:edit tickets'])->group(function () {
+    Route::middleware(['auth', 'can:access noc panel'])->group(function () {
         Route::get('/noc', \App\Livewire\Noc\NocPanel::class)->name('noc.panel');
     });
 

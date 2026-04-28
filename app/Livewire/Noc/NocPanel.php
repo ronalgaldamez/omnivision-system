@@ -10,20 +10,18 @@ use Illuminate\Support\Facades\Auth;
 class NocPanel extends Component
 {
     public $tickets;
-    public $selectedTicket = null;
     public $showDetailModal = false;
+    public $selectedTicket = null;
 
     public function mount()
     {
-        $this->loadTickets();
-    }
+        // Autorización con el nuevo permiso específico
+        if (Auth::user()->cannot('access noc panel')) {
+            abort(403, 'No tienes acceso al panel NOC.');
+        }
 
-    public function loadTickets()
-    {
-        $this->tickets = Ticket::with('client')
-            ->where('requires_noc', true)
+        $this->tickets = Ticket::where('requires_noc', true)
             ->where('status', 'pending')
-            ->orderBy('created_at', 'desc')
             ->get();
     }
 
@@ -42,29 +40,34 @@ class NocPanel extends Component
     public function resolveRemote($ticketId)
     {
         $ticket = Ticket::find($ticketId);
-        $ticket->status = 'resolved';
-        $ticket->resolved_by = Auth::id();
-        $ticket->resolved_at = now();
-        $ticket->save();
-        $this->loadTickets();
-        $this->dispatch('showToast', ['type' => 'success', 'message' => 'Ticket resuelto remotamente.']);
+        if ($ticket && $ticket->requires_noc) {
+            $ticket->status = 'resolved';
+            $ticket->resolved_by = Auth::id();
+            $ticket->resolved_at = now();
+            $ticket->save();
+            session()->flash('message', 'Ticket resuelto remotamente.');
+        }
+        $this->mount(); // refrescar la lista
+        $this->closeModal(); // cerrar modal si estaba abierto
     }
 
     public function createWorkOrder($ticketId)
     {
-        $ticket = Ticket::find($ticketId);
-        $workOrder = WorkOrder::create([
-            'ticket_id' => $ticket->id,
-            'client_id' => $ticket->client_id,
-            'description' => $ticket->description,
-            'service_type' => $ticket->service_type,
-            'status' => 'pending',
-            'notes' => $ticket->description,
-        ]);
-        $ticket->status = 'in_progress';
-        $ticket->save();
-        $this->loadTickets();
-        $this->dispatch('showToast', ['type' => 'success', 'message' => 'OT creada a partir del ticket.']);
+        $ticket = Ticket::with('client')->find($ticketId);
+        if ($ticket) {
+            $workOrder = WorkOrder::create([
+                'ticket_id' => $ticket->id,
+                'client_id' => $ticket->client_id,
+                'description' => $ticket->description,
+                'service_type' => $ticket->service_type,
+                'status' => 'pending',
+            ]);
+            $ticket->status = 'in_progress';
+            $ticket->save();
+            session()->flash('message', 'OT creada a partir del ticket.');
+        }
+        $this->mount(); // refrescar lista
+        $this->closeModal(); // cerrar modal
     }
 
     public function render()
