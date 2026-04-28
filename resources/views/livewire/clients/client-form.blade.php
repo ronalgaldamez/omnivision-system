@@ -61,7 +61,7 @@
 
     <!-- Botones de acción -->
     <div class="flex justify-end gap-3 pt-2">
-        <button type="button" @click="$dispatch('closeModal')"
+        <button type="button" wire:click="$parent.closeClientModal()"
             class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition shadow-sm">
             Cancelar
         </button>
