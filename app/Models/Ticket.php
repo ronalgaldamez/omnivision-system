@@ -11,7 +11,8 @@ class Ticket extends Model
 
     protected $fillable = [
         'client_id', 'description', 'service_type', 'requires_noc',
-        'status', 'created_by', 'resolved_by', 'resolved_at'
+        'status', 'created_by', 'resolved_by', 'resolved_at',
+        'ticket_code',  // ← añadido
     ];
 
     public function client()

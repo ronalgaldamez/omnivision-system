@@ -31,7 +31,6 @@ class TicketForm extends Component
         'status' => 'in:pending,in_progress,resolved,closed',
     ];
 
-    // Escuchar eventos
     protected function getListeners()
     {
         return [
@@ -97,6 +96,19 @@ class TicketForm extends Component
         $this->closeClientModal();
     }
 
+    private function generateTicketCode($ticketId)
+    {
+        $user = Auth::user();
+        if ($user->hasRole('secretary')) {
+            $prefix = 'TK-S-';
+        } elseif ($user->hasRole('noc')) {
+            $prefix = 'TK-N-';
+        } else {
+            $prefix = 'TK-A-';
+        }
+        return $prefix . $ticketId;
+    }
+
     public function save()
     {
         $this->validate();
@@ -118,10 +130,14 @@ class TicketForm extends Component
             $data['status'] = 'pending';
             $ticket = Ticket::create($data);
 
+            // Generar código de asistencia
+            $ticket->ticket_code = $this->generateTicketCode($ticket->id);
+            $ticket->save();
+
             if (!$this->requires_noc) {
                 $this->createWorkOrder($ticket);
             }
-            session()->flash('message', 'Ticket creado correctamente.');
+            session()->flash('message', 'Ticket creado correctamente. Código: ' . $ticket->ticket_code);
         }
 
         return redirect()->route('tickets.index');

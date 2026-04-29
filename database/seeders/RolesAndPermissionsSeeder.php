@@ -41,7 +41,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit work_orders',
             'delete work_orders',
             'complete work_orders',
-            // Nuevos
             'assign technicians',
             'cancel work orders',
             'view all work orders',
@@ -65,7 +64,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'create clients',
             'edit clients',
 
-            // Tickets (antiguos y nuevos)
+            // Tickets
             'view tickets',
             'create tickets',
             'edit tickets',
@@ -96,7 +95,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $nocRole = Role::firstOrCreate(['name' => 'noc']);
         $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
 
-        // Admin: todos los permisos
+        // Admin
         $adminRole->syncPermissions(Permission::all());
 
         // Warehouse
@@ -119,7 +118,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit work_orders',
             'delete work_orders',
             'complete work_orders',
-            'assign technicians',   // puede asignar técnicos
+            'assign technicians',
             'view technician_returns',
             'create technician_returns',
             'view catalog',
@@ -157,26 +156,26 @@ class RolesAndPermissionsSeeder extends Seeder
             'create purchases',
         ]);
 
-        // Secretary
+        // Secretary (sin view own work_orders)
         $secretaryRole->syncPermissions([
             'view clients',
             'create clients',
             'edit clients',
             'view own tickets',
             'create tickets',
-            'view own work_orders',   // ver órdenes relacionadas con sus tickets
+            // 'view own work_orders' // ← ELIMINADO
         ]);
 
         // NOC
         $nocRole->syncPermissions([
-            'view any tickets',       // puede ver todos los tickets (necesario para el panel)
+            'view any tickets',
             'view own tickets',
             'create tickets',
-            'update tickets',         // editar tickets
-            'access noc panel',       // panel NOC
+            'update tickets',
+            'access noc panel',
             'view pending noc tickets',
             'view resolutions',
-            'view own work_orders',   // ver órdenes relacionadas con tickets que él gestionó
+            'view own work_orders',
         ]);
 
         // Supervisor

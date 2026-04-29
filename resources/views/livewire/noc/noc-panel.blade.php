@@ -26,6 +26,13 @@
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200">
+                            <!-- Nueva columna: Código -->
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-gray-400 text-base">qr_code</span>
+                                    Código
+                                </div>
+                            </th>
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">
                                 <div class="flex items-center gap-1.5">
                                     <span class="material-symbols-outlined text-gray-400 text-base">tag</span> ID
@@ -60,6 +67,10 @@
                     <tbody class="divide-y divide-gray-100">
                         @forelse($tickets as $ticket)
                             <tr class="hover:bg-gray-50/80 transition">
+                                <!-- Mostrar código -->
+                                <td class="px-4 py-3 font-mono text-xs text-gray-700">
+                                    {{ $ticket->ticket_code ?? '—' }}
+                                </td>
                                 <td class="px-4 py-3 font-mono text-xs text-gray-700">#{{ $ticket->id }}</td>
                                 <td class="px-4 py-3 text-gray-800">{{ $ticket->client->name ?? 'N/A' }}</td>
                                 <td class="px-4 py-3">
@@ -96,7 +107,8 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-4 py-12 text-center bg-gray-50/50">
+                                <!-- colspan actualizado a 6 (por la nueva columna) -->
+                                <td colspan="6" class="px-4 py-12 text-center bg-gray-50/50">
                                     <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">checklist</span>
                                     <p class="text-gray-500">No hay tickets pendientes</p>
                                     <p class="text-sm text-gray-400 mt-1">Todos los tickets NOC han sido procesados</p>
@@ -120,6 +132,12 @@
                 </div>
 
                 <div class="space-y-3">
+                    <!-- Nuevo bloque: Código de asistencia -->
+                    <div class="bg-gray-50 p-3 rounded-lg">
+                        <p class="text-xs text-gray-500">Código de asistencia</p>
+                        <p class="font-mono text-sm font-bold">{{ $selectedTicket->ticket_code ?? 'N/A' }}</p>
+                    </div>
+
                     <!-- Cliente -->
                     <div class="bg-gray-50 p-3 rounded-lg">
                         <p class="text-xs text-gray-500">Cliente</p>
