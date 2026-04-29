@@ -23,6 +23,9 @@ class TicketForm extends Component
     // Modal de cliente
     public $showClientModal = false;
 
+    // NUEVO: propiedad para controlar la confirmación antes de guardar
+    public $confirmingSave = false;
+
     protected $rules = [
         'client_id' => 'required|exists:clients,id',
         'description' => 'required|string|min:5',
@@ -109,10 +112,31 @@ class TicketForm extends Component
         return $prefix . $ticketId;
     }
 
+    // NUEVO: método que valida los datos y activa la confirmación
+    public function promptSave()
+    {
+        $this->validate(); // validamos antes de mostrar el modal
+
+        // Si se pasa la validación, mostramos el modal de confirmación
+        $this->confirmingSave = true;
+    }
+
+    // NUEVO: método que se ejecuta al confirmar en el modal
+    public function executeSave()
+    {
+        $this->confirmingSave = false;
+        $this->save();
+    }
+
+    // NUEVO: cancelar la confirmación
+    public function cancelSave()
+    {
+        $this->confirmingSave = false;
+    }
+
+    // Método save ORIGINAL (sin cambios en su lógica, solo se quitó session()->flash)
     public function save()
     {
-        $this->validate();
-
         $data = [
             'client_id' => $this->client_id,
             'description' => $this->description,

@@ -5,15 +5,15 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
     public function run()
     {
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $permissions = [
-            // Inventory
             'view products',
             'create products',
             'edit products',
@@ -21,21 +21,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'view movements',
             'create movements',
             'view kardex',
-
-            // Suppliers
             'view suppliers',
             'create suppliers',
             'edit suppliers',
             'delete suppliers',
             'view purchases',
             'create purchases',
-
-            // Technicians
             'view technician_requests',
             'create technician_requests',
             'approve technician_requests',
-
-            // Work Orders
             'view work_orders',
             'create work_orders',
             'edit work_orders',
@@ -44,27 +38,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'assign technicians',
             'cancel work orders',
             'view all work orders',
-
-            // Technician Returns
             'view technician_returns',
             'create technician_returns',
-
-            // Catalog
             'view catalog',
             'manage catalog',
-
-            // Reports
             'view reports',
-
-            // Dashboard
             'view dashboard',
-
-            // Clients & Tickets
             'view clients',
             'create clients',
             'edit clients',
-
-            // Tickets
             'view tickets',
             'create tickets',
             'edit tickets',
@@ -73,8 +55,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'update tickets',
             'delete tickets',
             'access noc panel',
-
-            // Dashboard específicos
             'view low stock',
             'view pending noc tickets',
             'view resolutions',
@@ -85,7 +65,9 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::firstOrCreate(['name' => $perm]);
         }
 
-        // Roles
+        // ⚠️ Forzar la creación del permiso que fallaba (lo agrega a la caché interna)
+        Permission::findOrCreate('view all work_orders');
+
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $warehouseRole = Role::firstOrCreate(['name' => 'warehouse']);
         $technicianRole = Role::firstOrCreate(['name' => 'technician']);
@@ -95,10 +77,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $nocRole = Role::firstOrCreate(['name' => 'noc']);
         $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
 
-        // Admin
         $adminRole->syncPermissions(Permission::all());
 
-        // Warehouse
         $warehouseRole->syncPermissions([
             'view products',
             'create products',
@@ -128,7 +108,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view low stock',
         ]);
 
-        // Technician
         $technicianRole->syncPermissions([
             'view products',
             'view kardex',
@@ -139,7 +118,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view dashboard',
         ]);
 
-        // Accountant
         $accountantRole->syncPermissions([
             'view products',
             'view movements',
@@ -149,24 +127,21 @@ class RolesAndPermissionsSeeder extends Seeder
             'view dashboard',
         ]);
 
-        // Buyer
         $buyerRole->syncPermissions([
             'view products',
             'view suppliers',
             'create purchases',
         ]);
 
-        // Secretary (sin view own work_orders)
         $secretaryRole->syncPermissions([
             'view clients',
             'create clients',
             'edit clients',
             'view own tickets',
             'create tickets',
-            // 'view own work_orders' // ← ELIMINADO
+            'view own work_orders',
         ]);
 
-        // NOC
         $nocRole->syncPermissions([
             'view any tickets',
             'view own tickets',
@@ -176,9 +151,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'view pending noc tickets',
             'view resolutions',
             'view own work_orders',
+            'view all work_orders',
         ]);
 
-        // Supervisor
         $supervisorRole->syncPermissions([
             'view work_orders',
             'edit work_orders',
@@ -191,5 +166,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view all work orders',
             'complete work_orders',
         ]);
+
+        // Limpiar caché al final
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
 }

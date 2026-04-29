@@ -13,6 +13,10 @@ class NocPanel extends Component
     public $showDetailModal = false;
     public $selectedTicket = null;
 
+    // Nuevas propiedades para la confirmación
+    public $confirmingAction = null;   // 'resolve' o 'create_ot'
+    public $confirmingTicketId = null;
+
     public function mount()
     {
         // Autorización con el nuevo permiso específico
@@ -37,6 +41,41 @@ class NocPanel extends Component
         $this->selectedTicket = null;
     }
 
+    // Métodos que solo PREPARAN la acción (no la ejecutan aún)
+    public function promptResolveRemote($ticketId)
+    {
+        $this->confirmingAction = 'resolve';
+        $this->confirmingTicketId = $ticketId;
+    }
+
+    public function promptCreateWorkOrder($ticketId)
+    {
+        $this->confirmingAction = 'create_ot';
+        $this->confirmingTicketId = $ticketId;
+    }
+
+    // Método que ejecuta la acción confirmada
+    public function executeConfirmedAction()
+    {
+        if ($this->confirmingAction === 'resolve') {
+            $this->resolveRemote($this->confirmingTicketId);
+        } elseif ($this->confirmingAction === 'create_ot') {
+            $this->createWorkOrder($this->confirmingTicketId);
+        }
+
+        // Limpiar confirmación
+        $this->confirmingAction = null;
+        $this->confirmingTicketId = null;
+    }
+
+    // Cancelar la confirmación
+    public function cancelConfirmation()
+    {
+        $this->confirmingAction = null;
+        $this->confirmingTicketId = null;
+    }
+
+    // TUS MÉTODOS ORIGINALES (sin cambios en su lógica)
     public function resolveRemote($ticketId)
     {
         $ticket = Ticket::find($ticketId);

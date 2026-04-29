@@ -14,13 +14,7 @@
 
         <!-- Contenido -->
         <div class="p-6 space-y-5">
-            @if(session('message'))
-                <div
-                    class="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg border border-green-200">
-                    <span class="material-symbols-outlined text-green-600">check_circle</span>
-                    {{ session('message') }}
-                </div>
-            @endif
+            {{-- Se eliminó el banner de session('message') porque ahora usamos Toast --}}
 
             <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                 <table class="min-w-full text-sm">
@@ -90,14 +84,14 @@
                                             <span class="material-symbols-outlined text-base">visibility</span>
                                             Detalle
                                         </button>
-                                        <button wire:click="resolveRemote({{ $ticket->id }})"
-                                            onclick="return confirm('¿Confirmas resolución remota?')"
+                                        {{-- Cambiado: ahora llama a promptResolveRemote --}}
+                                        <button wire:click="promptResolveRemote({{ $ticket->id }})"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
                                             <span class="material-symbols-outlined text-base">check_circle</span>
                                             Resolver
                                         </button>
-                                        <button wire:click="createWorkOrder({{ $ticket->id }})"
-                                            onclick="return confirm('¿Crear orden de trabajo?')"
+                                        {{-- Cambiado: ahora llama a promptCreateWorkOrder --}}
+                                        <button wire:click="promptCreateWorkOrder({{ $ticket->id }})"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
                                             <span class="material-symbols-outlined text-base">engineering</span>
                                             Crear OT
@@ -121,7 +115,7 @@
         </div>
     </div>
 
-    <!-- Modal de detalle del ticket -->
+    <!-- Modal de detalle del ticket (SIN cambios, excepto los botones) -->
     @if($showDetailModal && $selectedTicket)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -166,15 +160,13 @@
                         </div>
                     @endif
 
-                    <!-- Acciones -->
+                    <!-- Acciones (MODIFICADOS) -->
                     <div class="flex justify-end gap-2 pt-3">
-                        <button wire:click="resolveRemote({{ $selectedTicket->id }})"
-                            onclick="return confirm('¿Confirmas resolución remota?')"
+                        <button wire:click="promptResolveRemote({{ $selectedTicket->id }})"
                             class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
                             Resolver remotamente
                         </button>
-                        <button wire:click="createWorkOrder({{ $selectedTicket->id }})"
-                            onclick="return confirm('¿Crear orden de trabajo?')"
+                        <button wire:click="promptCreateWorkOrder({{ $selectedTicket->id }})"
                             class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
                             Crear OT
                         </button>
@@ -187,4 +179,65 @@
             </div>
         </div>
     @endif
+
+    <!-- NUEVO: Diálogo de confirmación (mismo estilo que compras) -->
+    @if($confirmingAction)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="p-6 text-center">
+                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 mb-4">
+                            <span class="material-symbols-outlined text-blue-600 text-2xl">help</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Confirmar acción</h3>
+                        <p class="text-sm text-gray-600 mt-2">
+                            @if($confirmingAction === 'resolve')
+                                ¿Confirmas la resolución remota del ticket #{{ $confirmingTicketId }}?
+                            @else
+                                ¿Crear una orden de trabajo a partir del ticket #{{ $confirmingTicketId }}?
+                            @endif
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                        <button wire:click="executeConfirmedAction"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
+                            Sí, continuar
+                        </button>
+                        <button @click="open = false" wire:click="cancelConfirmation"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Toast (mismo sistema que en compras) -->
+    <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
+        x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 5000)"
+        x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"
+        x-transition:enter="transform ease-out duration-300" x-transition:enter-start="translate-y-2 opacity-0"
+        x-transition:enter-end="translate-y-0 opacity-100" x-transition:leave="transform ease-in duration-200"
+        x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-2 opacity-0"
+        style="display: none;">
+        <div x-show="toastType === 'success'"
+            class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+            <span class="material-symbols-outlined">check_circle</span>
+            <span x-text="toastMessage" class="text-sm font-medium"></span>
+        </div>
+        <div x-show="toastType === 'error'"
+            class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+            <span class="material-symbols-outlined">error</span>
+            <span x-text="toastMessage" class="text-sm font-medium"></span>
+        </div>
+    </div>
+
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
 </div>
