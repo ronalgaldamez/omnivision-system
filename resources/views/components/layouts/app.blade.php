@@ -309,6 +309,11 @@
                     <!-- Perfil y logout -->
                     @auth
                         <div class="hidden md:flex items-center gap-3">
+                            {{-- Notificaciones NOC (solo se ve si tiene acceso al panel NOC) --}}
+                            @if(Auth::user()->can('access noc panel'))
+                                <livewire:notifications-badge />
+                            @endif
+
                             <div class="flex items-center gap-2 text-xs text-gray-500 bg-gray-50/80 px-3 py-1.5 rounded-lg">
                                 <span class="material-symbols-outlined text-base">account_circle</span>
                                 <span>{{ auth()->user()->name }}</span>

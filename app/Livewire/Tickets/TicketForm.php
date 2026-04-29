@@ -112,29 +112,23 @@ class TicketForm extends Component
         return $prefix . $ticketId;
     }
 
-    // NUEVO: método que valida los datos y activa la confirmación
     public function promptSave()
     {
-        $this->validate(); // validamos antes de mostrar el modal
-
-        // Si se pasa la validación, mostramos el modal de confirmación
+        $this->validate();
         $this->confirmingSave = true;
     }
 
-    // NUEVO: método que se ejecuta al confirmar en el modal
     public function executeSave()
     {
         $this->confirmingSave = false;
         $this->save();
     }
 
-    // NUEVO: cancelar la confirmación
     public function cancelSave()
     {
         $this->confirmingSave = false;
     }
 
-    // Método save ORIGINAL (sin cambios en su lógica, solo se quitó session()->flash)
     public function save()
     {
         $data = [
@@ -154,13 +148,19 @@ class TicketForm extends Component
             $data['status'] = 'pending';
             $ticket = Ticket::create($data);
 
-            // Generar código de asistencia
             $ticket->ticket_code = $this->generateTicketCode($ticket->id);
             $ticket->save();
 
             if (!$this->requires_noc) {
                 $this->createWorkOrder($ticket);
             }
+
+            // 🔔 Notificar al NOC si el ticket requiere su intervención
+            if ($this->requires_noc) {
+                $this->dispatch('ticket-created-for-noc');  // actualiza el badge
+                $this->dispatch('show-toast', type: 'info', message: 'Nuevo ticket requiere atención del NOC.');
+            }
+
             session()->flash('message', 'Ticket creado correctamente. Código: ' . $ticket->ticket_code);
         }
 
