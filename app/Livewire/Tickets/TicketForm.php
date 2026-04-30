@@ -23,8 +23,11 @@ class TicketForm extends Component
     // Modal de cliente
     public $showClientModal = false;
 
-    // NUEVO: propiedad para controlar la confirmación antes de guardar
+    // Confirmación antes de guardar
     public $confirmingSave = false;
+
+    // Controla si se muestra el switch de NOC (oculto para el propio NOC)
+    public $canRequestNoc = true;
 
     protected $rules = [
         'client_id' => 'required|exists:clients,id',
@@ -61,6 +64,12 @@ class TicketForm extends Component
             if ($user->cannot('create tickets')) {
                 abort(403, 'No tienes permiso para crear tickets.');
             }
+        }
+
+        // Si el usuario es NOC, no puede solicitar intervención del NOC (él mismo)
+        if ($user->hasRole('noc')) {
+            $this->canRequestNoc = false;
+            $this->requires_noc = false;
         }
     }
 
@@ -112,29 +121,23 @@ class TicketForm extends Component
         return $prefix . $ticketId;
     }
 
-    // NUEVO: método que valida los datos y activa la confirmación
     public function promptSave()
     {
-        $this->validate(); // validamos antes de mostrar el modal
-
-        // Si se pasa la validación, mostramos el modal de confirmación
+        $this->validate();
         $this->confirmingSave = true;
     }
 
-    // NUEVO: método que se ejecuta al confirmar en el modal
     public function executeSave()
     {
         $this->confirmingSave = false;
         $this->save();
     }
 
-    // NUEVO: cancelar la confirmación
     public function cancelSave()
     {
         $this->confirmingSave = false;
     }
 
-    // Método save ORIGINAL (sin cambios en su lógica, solo se quitó session()->flash)
     public function save()
     {
         $data = [
@@ -154,13 +157,19 @@ class TicketForm extends Component
             $data['status'] = 'pending';
             $ticket = Ticket::create($data);
 
-            // Generar código de asistencia
             $ticket->ticket_code = $this->generateTicketCode($ticket->id);
             $ticket->save();
 
             if (!$this->requires_noc) {
                 $this->createWorkOrder($ticket);
             }
+
+            // 🔔 Notificar al NOC si el ticket requiere su intervención
+            if ($this->requires_noc) {
+                $this->dispatch('ticket-created-for-noc');
+                // $this->dispatch('show-toast', type: 'info', message: 'Nuevo ticket requiere atención del NOC.');
+            }
+
             session()->flash('message', 'Ticket creado correctamente. Código: ' . $ticket->ticket_code);
         }
 

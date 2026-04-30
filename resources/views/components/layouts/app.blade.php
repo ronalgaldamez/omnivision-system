@@ -306,9 +306,14 @@
                         </div>
                     </div>
 
-                    <!-- Perfil y logout -->
+                            <!-- Perfil y logout -->
                     @auth
                         <div class="hidden md:flex items-center gap-3">
+                            {{-- Notificaciones NOC (solo si tiene acceso al panel) --}}
+                            @if(Auth::user()->can('access noc panel'))
+                                <livewire:notifications-badge />
+                            @endif
+
                             <div class="flex items-center gap-2 text-xs text-gray-500 bg-gray-50/80 px-3 py-1.5 rounded-lg">
                                 <span class="material-symbols-outlined text-base">account_circle</span>
                                 <span>{{ auth()->user()->name }}</span>
@@ -472,6 +477,29 @@
     @livewireScripts
     @vite(['resources/js/app.js'])
     @stack('scripts')
+    <!-- Sonido para notificaciones del NOC (con desbloqueo automático) -->
+    <script>
+        document.addEventListener('livewire:initialized', () => {
+            const audio = new Audio('{{ asset('sounds/notification.mp3') }}');
+
+            function unlockAudio() {
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }).catch(() => {});
+                document.removeEventListener('click', unlockAudio);
+            }
+            document.addEventListener('click', unlockAudio, { once: true });
+
+            // Escucha el nuevo evento emitido por el badge cuando detecta tickets nuevos
+            Livewire.on('new-noc-ticket', () => {
+                audio.play().catch(err => {
+                    console.log('Audio bloqueado:', err);
+                });
+            });
+        });
+    </script>
+
 </body>
 
 </html>

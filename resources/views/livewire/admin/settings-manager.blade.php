@@ -1,7 +1,5 @@
 <div class="max-w-3xl mx-auto">
-    <!-- Tarjeta principal -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <!-- Encabezado con fondo sutil -->
         <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
             <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <span class="material-symbols-outlined text-gray-500">settings</span>
@@ -10,7 +8,6 @@
             <p class="text-sm text-gray-500 mt-1">Ajustes generales y control de módulos</p>
         </div>
 
-        <!-- Contenido -->
         <div class="p-6 space-y-6">
             <!-- Switch para OT obligatoria -->
             <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4">
@@ -22,6 +19,21 @@
                     <input type="checkbox" wire:model.live="otRequired" class="sr-only peer">
                     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
+            </div>
+
+            <!-- NUEVO: Intervalo de polling NOC -->
+            <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-gray-400 text-base">timer</span>
+                    Intervalo de polling NOC (segundos)
+                </label>
+                <p class="text-xs text-gray-500 mb-3">Cada cuántos segundos se actualiza el contador de notificaciones del panel NOC (mín. 5, máx. 300).</p>
+                <div class="relative w-32">
+                    <input type="number" wire:model.live="nocPollingInterval"
+                        class="w-full pl-3 pr-8 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                        min="5" max="300" step="5">
+                    <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-base">schedule</span>
+                </div>
             </div>
 
             <!-- Sección de módulos -->
@@ -63,7 +75,7 @@
         </div>
     </div>
 
-    <!-- Toast unificado con el diseño del sistema -->
+    <!-- Toast unificado -->
     <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
          x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 3500)"
          x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"

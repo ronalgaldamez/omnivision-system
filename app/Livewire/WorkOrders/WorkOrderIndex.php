@@ -20,7 +20,15 @@ class WorkOrderIndex extends Component
 
     public function render()
     {
+        // Recargar los permisos del usuario desde la base de datos para evitar la caché de sesión
         $user = Auth::user();
+        if ($user) {
+            // Forzamos la recarga de la relación roles y sus permisos
+            $user->load('roles.permissions');
+            // Actualizamos la instancia en el contenedor de autorización
+            Auth::setUser($user);
+        }
+
         $query = WorkOrder::with('technician', 'client', 'ticket');
 
         if ($user->can('view all work orders')) {

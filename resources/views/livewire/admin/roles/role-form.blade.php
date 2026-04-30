@@ -27,12 +27,13 @@
                         <input type="text" wire:model="name"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                             placeholder="Ej: administrador, técnico, reportes...">
-                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">edit_note</span>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">edit_note</span>
                     </div>
                     @error('name') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Permisos agrupados por categorías -->
+                <!-- Permisos agrupados por categorías (mapeo directo) -->
                 <div class="border-t border-gray-200 pt-6">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-4">
                         <span class="material-symbols-outlined text-gray-500">lock</span>
@@ -40,35 +41,107 @@
                     </h2>
 
                     @php
-                        // Agrupar permisos por categoría (mismas categorías del seeder)
+                        // Mapeo exacto de cada permiso a su categoría (basado en el seeder)
+                        $permissionCategoryMap = [
+                            // Productos
+                            'view products' => 'Productos',
+                            'create products' => 'Productos',
+                            'edit products' => 'Productos',
+                            'delete products' => 'Productos',
+                            // Movimientos
+                            'view movements' => 'Movimientos',
+                            'create movements' => 'Movimientos',
+                            // Kardex
+                            'view kardex' => 'Kardex',
+                            // Proveedores
+                            'view suppliers' => 'Proveedores',
+                            'create suppliers' => 'Proveedores',
+                            'edit suppliers' => 'Proveedores',
+                            'delete suppliers' => 'Proveedores',
+                            // Compras
+                            'view purchases' => 'Compras',
+                            'create purchases' => 'Compras',
+                            // Solicitudes
+                            'view technician_requests' => 'Solicitudes',
+                            'create technician_requests' => 'Solicitudes',
+                            'approve technician_requests' => 'Solicitudes',
+                            // Devoluciones
+                            'view technician_returns' => 'Devoluciones',
+                            'create technician_returns' => 'Devoluciones',
+                            // Órdenes de Trabajo
+                            'view work_orders' => 'Órdenes de Trabajo',
+                            'create work_orders' => 'Órdenes de Trabajo',
+                            'edit work_orders' => 'Órdenes de Trabajo',
+                            'delete work_orders' => 'Órdenes de Trabajo',
+                            'complete work_orders' => 'Órdenes de Trabajo',
+                            'assign technicians' => 'Órdenes de Trabajo',
+                            'cancel work orders' => 'Órdenes de Trabajo',
+                            'view all work orders' => 'Órdenes de Trabajo',
+                            'view own work_orders' => 'Órdenes de Trabajo',
+                            // Catálogo
+                            'view catalog' => 'Catálogo',
+                            'manage catalog' => 'Catálogo',
+                            // Reportes
+                            'view reports' => 'Reportes',
+                            // Dashboard
+                            'view dashboard' => 'Dashboard',
+                            // Clientes
+                            'view clients' => 'Clientes',
+                            'create clients' => 'Clientes',
+                            'edit clients' => 'Clientes',
+                            // Tickets
+                            'view tickets' => 'Tickets',
+                            'create tickets' => 'Tickets',
+                            'edit tickets' => 'Tickets',
+                            'view any tickets' => 'Tickets',
+                            'view own tickets' => 'Tickets',
+                            'update tickets' => 'Tickets',
+                            'delete tickets' => 'Tickets',
+                            'access noc panel' => 'Tickets',
+                            'view pending noc tickets' => 'Tickets',
+                            'view resolutions' => 'Tickets',
+                            // Otros (low stock, settings, etc.)
+                            'view low stock' => 'General',
+                        ];
+
                         $categorized = [];
                         foreach ($permissions as $perm) {
-                            $map = [
-                                'products' => 'Productos',
-                                'movements' => 'Movimientos',
-                                'kardex' => 'Kardex',
-                                'suppliers' => 'Proveedores',
-                                'purchases' => 'Compras',
-                                'technician_requests' => 'Solicitudes',
-                                'technician_returns' => 'Devoluciones',
-                                'work_orders' => 'Órdenes de Trabajo',
-                                'catalog' => 'Catálogo',
-                                'reports' => 'Reportes',
-                                'dashboard' => 'Dashboard',
-                                'clients' => 'Clientes',
-                                'tickets' => 'Tickets',
-                            ];
-                            $category = 'Otros';
-                            foreach ($map as $key => $label) {
-                                if (str_contains($perm->name, $key)) {
-                                    $category = $label;
-                                    break;
-                                }
-                            }
+                            $category = $permissionCategoryMap[$perm->name] ?? 'General';
                             $categorized[$category][] = $perm;
                         }
 
-                        // Iconos para cada categoría
+                        // Orden de categorías deseado (como el menú)
+                        $categoryOrder = [
+                            'Productos',
+                            'Movimientos',
+                            'Kardex',
+                            'Proveedores',
+                            'Compras',
+                            'Solicitudes',
+                            'Devoluciones',
+                            'Órdenes de Trabajo',
+                            'Catálogo',
+                            'Reportes',
+                            'Dashboard',
+                            'Clientes',
+                            'Tickets',
+                            'General',
+                        ];
+
+                        // Ordenar las categorías según el orden definido
+                        $orderedCategorized = [];
+                        foreach ($categoryOrder as $cat) {
+                            if (isset($categorized[$cat])) {
+                                $orderedCategorized[$cat] = $categorized[$cat];
+                            }
+                        }
+                        // Agregar cualquier categoría no listada al final
+                        foreach ($categorized as $cat => $perms) {
+                            if (!isset($orderedCategorized[$cat])) {
+                                $orderedCategorized[$cat] = $perms;
+                            }
+                        }
+
                         $categoryIcons = [
                             'Productos' => 'inventory_2',
                             'Movimientos' => 'swap_vert',
@@ -83,20 +156,23 @@
                             'Dashboard' => 'dashboard',
                             'Clientes' => 'person',
                             'Tickets' => 'confirmation_number',
-                            'Otros' => 'settings',
+                            'General' => 'settings',
                         ];
                     @endphp
 
                     <div class="space-y-5">
-                        @foreach($categorized as $category => $perms)
+                        @foreach($orderedCategorized as $category => $perms)
                             <div>
-                                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">{{ $categoryIcons[$category] ?? 'settings' }}</span>
+                                <h3
+                                    class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                    <span
+                                        class="material-symbols-outlined text-gray-400 text-base">{{ $categoryIcons[$category] ?? 'settings' }}</span>
                                     {{ $category }}
                                 </h3>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                     @foreach($perms as $perm)
-                                        <label class="flex items-center gap-2.5 p-2.5 bg-gray-50/80 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition">
+                                        <label
+                                            class="flex items-center gap-2.5 p-2.5 bg-gray-50/80 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition">
                                             <input type="checkbox" value="{{ $perm->name }}" wire:model="selectedPermissions"
                                                 class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-2 focus:ring-blue-500/20 w-4 h-4">
                                             <span class="text-sm text-gray-700">{{ $perm->name }}</span>
@@ -106,7 +182,8 @@
                             </div>
                         @endforeach
                     </div>
-                    @error('selectedPermissions') <span class="text-xs text-red-500 mt-2 block">{{ $message }}</span> @enderror
+                    @error('selectedPermissions') <span class="text-xs text-red-500 mt-2 block">{{ $message }}</span>
+                    @enderror
                 </div>
 
                 <!-- Botones de acción -->
@@ -125,7 +202,8 @@
 
             <!-- Mensajes de sesión -->
             @if(session('message'))
-                <div class="mt-4 flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg border border-green-200">
+                <div
+                    class="mt-4 flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg border border-green-200">
                     <span class="material-symbols-outlined text-green-600">check_circle</span>
                     {{ session('message') }}
                 </div>
