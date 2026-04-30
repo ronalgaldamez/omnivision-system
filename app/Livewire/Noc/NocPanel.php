@@ -19,7 +19,6 @@ class NocPanel extends Component
 
     public function mount()
     {
-        // Autorización con el nuevo permiso específico
         if (Auth::user()->cannot('access noc panel')) {
             abort(403, 'No tienes acceso al panel NOC.');
         }
@@ -27,6 +26,11 @@ class NocPanel extends Component
         $this->tickets = Ticket::where('requires_noc', true)
             ->where('status', 'pending')
             ->get();
+
+        // Si se recibe ?ticket_id=X en la URL, abrir ese ticket automáticamente
+        if ($ticketId = request()->get('ticket_id')) {
+            $this->viewDetail($ticketId);
+        }
     }
 
     public function viewDetail($ticketId)

@@ -21,7 +21,6 @@
 
         <!-- Contenido del formulario -->
         <div class="p-6">
-            {{-- Cambiado: wire:submit.prevent ahora llama a promptSave --}}
             <form wire:submit.prevent="promptSave" class="space-y-6">
                 <!-- Cliente (buscador + botón nuevo) -->
                 <div>
@@ -99,22 +98,24 @@
                     @error('service_type') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Requiere NOC (toggle estilizado) -->
-                <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
-                    <div class="flex items-center justify-between gap-4">
-                        <div>
-                            <label class="text-sm font-medium text-gray-700">¿Requiere intervención del NOC?</label>
-                            <p class="text-xs text-gray-500 mt-0.5">Si se activa, el ticket se enviará al panel NOC y no
-                                se creará OT automáticamente.</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                            <input type="checkbox" wire:model="requires_noc" class="sr-only peer">
-                            <div
-                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                <!-- Requiere NOC (toggle estilizado) - solo visible si no es el propio NOC -->
+                @if($canRequestNoc)
+                    <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">¿Requiere intervención del NOC?</label>
+                                <p class="text-xs text-gray-500 mt-0.5">Si se activa, el ticket se enviará al panel NOC y no
+                                    se creará OT automáticamente.</p>
                             </div>
-                        </label>
+                            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                <input type="checkbox" wire:model="requires_noc" class="sr-only peer">
+                                <div
+                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                                </div>
+                            </label>
+                        </div>
                     </div>
-                </div>
+                @endif
 
                 <!-- Botones de acción -->
                 <div class="flex justify-end gap-3 pt-2">
@@ -164,7 +165,7 @@
         </script>
     @endif
 
-    <!-- NUEVO: Modal de confirmación de guardado (mismo estilo que NOC y compras) -->
+    <!-- Modal de confirmación de guardado (mismo estilo que NOC y compras) -->
     @if($confirmingSave)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"

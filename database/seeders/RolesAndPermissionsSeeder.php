@@ -13,6 +13,7 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
+        // Lista oficial de permisos (únicos que deben existir)
         $permissions = [
             'view products',
             'create products',
@@ -37,7 +38,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'complete work_orders',
             'assign technicians',
             'cancel work orders',
-            'view all work orders',
+            'view all work orders',           // ← correcto (espacios)
             'view technician_returns',
             'create technician_returns',
             'view catalog',
@@ -58,16 +59,18 @@ class RolesAndPermissionsSeeder extends Seeder
             'view low stock',
             'view pending noc tickets',
             'view resolutions',
-            'view own work_orders',
+            'view own work_orders',           // ← correcto (guión bajo en 'work_orders')
         ];
 
+        // 🧹 Paso 1: Eliminar cualquier permiso que NO esté en la lista oficial
+        Permission::whereNotIn('name', $permissions)->delete();
+
+        // Paso 2: Crear los permisos oficiales (si no existen)
         foreach ($permissions as $perm) {
             Permission::firstOrCreate(['name' => $perm]);
         }
 
-        // ⚠️ Forzar la creación del permiso que fallaba (lo agrega a la caché interna)
-        Permission::findOrCreate('view all work_orders');
-
+        // Roles
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $warehouseRole = Role::firstOrCreate(['name' => 'warehouse']);
         $technicianRole = Role::firstOrCreate(['name' => 'technician']);
@@ -77,6 +80,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $nocRole = Role::firstOrCreate(['name' => 'noc']);
         $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
 
+        // Asignación de permisos (sin cambios en los nombres)
         $adminRole->syncPermissions(Permission::all());
 
         $warehouseRole->syncPermissions([
@@ -151,7 +155,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view pending noc tickets',
             'view resolutions',
             'view own work_orders',
-            'view all work_orders',
+            'view all work orders',  // ← correcto
         ]);
 
         $supervisorRole->syncPermissions([
