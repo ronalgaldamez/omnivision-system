@@ -20,4 +20,8 @@ class Client extends Model
     {
         return $this->hasManyThrough(WorkOrder::class, Ticket::class);
     }
+    public function phones()
+    {
+        return $this->hasMany(ClientPhone::class);
+    }
 }
