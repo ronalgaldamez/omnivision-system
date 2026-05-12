@@ -48,8 +48,8 @@ class WorkOrder extends Model
         return $this->hasMany(OrderProduct::class);
     }
 
-    public function technicianRequests()
+    public function requisitions()
     {
-        return $this->hasMany(TechnicianRequest::class);
+        return $this->belongsToMany(Requisition::class, 'requisition_work_order');
     }
 }

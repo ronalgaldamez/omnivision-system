@@ -36,10 +36,14 @@ class PurchaseForm extends Component
     public $productSearchResults = [];
     public $editingIndex = null;
 
+    // Modal de confirmación (editar/eliminar item)
     public $showConfirmModal = false;
     public $modalAction = null;
     public $modalItemIndex = null;
     public $modalMessage = '';
+
+    // Modal para crear producto rápidamente
+    public $showProductModal = false;
 
     protected $rules = [
         'supplier_id' => 'required|exists:suppliers,id',
@@ -52,6 +56,13 @@ class PurchaseForm extends Component
         'items.*.unit_cost' => 'required|numeric|min:0',
     ];
 
+    protected function getListeners()
+    {
+        return [
+            'productCreated' => 'handleProductCreated',
+        ];
+    }
+
     public function mount()
     {
         $this->purchase_date = date('Y-m-d');
@@ -59,24 +70,7 @@ class PurchaseForm extends Component
         $this->calculateTotals();
     }
 
-    public function updatedIncludeIva()
-    {
-        $this->calculateTotals();
-    }
-
-    public function calculateTotals()
-    {
-        $this->subtotal = array_sum(array_map(fn($i) => $i['quantity'] * $i['unit_cost'], $this->items));
-        if ($this->includeIva) {
-            $this->ivaAmount = round($this->subtotal * 0.13, 2);
-            $this->total = $this->subtotal + $this->ivaAmount;
-        } else {
-            $this->ivaAmount = 0;
-            $this->total = $this->subtotal;
-        }
-    }
-
-    // Búsqueda de proveedor
+    // ==================== Proveedor ====================
     public function updatedSupplierSearch()
     {
         if (strlen($this->supplierSearch) >= 2) {
@@ -100,7 +94,7 @@ class PurchaseForm extends Component
         }
     }
 
-    // Búsqueda de producto
+    // ==================== Producto ====================
     public function updatedCurrentProductSearch()
     {
         if (strlen($this->currentProductSearch) >= 2) {
@@ -173,7 +167,6 @@ class PurchaseForm extends Component
         $this->currentQuantity = $item['quantity'];
         $this->currentUnitCost = $item['unit_cost'];
         $this->editingIndex = $index;
-        // No eliminamos el item, se reemplazará al guardar
     }
 
     public function confirmAction($action, $index)
@@ -190,10 +183,10 @@ class PurchaseForm extends Component
     {
         if ($this->modalAction === 'delete') {
             $this->removeItem($this->modalItemIndex);
-            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Producto eliminado de la lista.']);
+            $this->dispatch('show-toast', type: 'success', message: 'Producto eliminado de la lista.');
         } elseif ($this->modalAction === 'edit') {
             $this->editItem($this->modalItemIndex);
-            $this->dispatch('showToast', ['type' => 'info', 'message' => 'Producto cargado para edición.']);
+            $this->dispatch('show-toast', type: 'info', message: 'Producto cargado para edición.');
         }
         $this->closeModal();
     }
@@ -213,6 +206,42 @@ class PurchaseForm extends Component
         $this->calculateTotals();
     }
 
+    // ==================== Modal de producto nuevo ====================
+    public function openProductModal()
+    {
+        $this->showProductModal = true;
+    }
+
+    public function closeProductModal()
+    {
+        $this->showProductModal = false;
+    }
+
+    public function handleProductCreated($productId, $productName)
+    {
+        $this->dispatch('show-toast', type: 'success', message: 'Producto creado exitosamente.');
+        $this->closeProductModal();
+    }
+
+    // ==================== Totales e IVA ====================
+    public function updatedIncludeIva()
+    {
+        $this->calculateTotals();
+    }
+
+    public function calculateTotals()
+    {
+        $this->subtotal = array_sum(array_map(fn($i) => $i['quantity'] * $i['unit_cost'], $this->items));
+        if ($this->includeIva) {
+            $this->ivaAmount = round($this->subtotal * 0.13, 2);
+            $this->total = $this->subtotal + $this->ivaAmount;
+        } else {
+            $this->ivaAmount = 0;
+            $this->total = $this->subtotal;
+        }
+    }
+
+    // ==================== Guardado ====================
     public function save()
     {
         $this->validate();
@@ -263,11 +292,11 @@ class PurchaseForm extends Component
             }
 
             DB::commit();
-            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Compra registrada exitosamente.']);
+            $this->dispatch('show-toast', type: 'success', message: 'Compra registrada exitosamente.');
             $this->redirectRoute('purchases.index');
         } catch (\Exception $e) {
             DB::rollBack();
-            $this->dispatch('showToast', ['type' => 'error', 'message' => 'Error: ' . $e->getMessage()]);
+            $this->dispatch('show-toast', type: 'error', message: 'Error: ' . $e->getMessage());
         }
     }
 

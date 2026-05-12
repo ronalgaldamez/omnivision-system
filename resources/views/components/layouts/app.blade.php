@@ -4,7 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>@yield('title', 'Sistema Kardex')</title>
+    <title>
+        @hasSection('title')
+            @yield('title')
+        @else
+            {{ page_title_from_route() }}
+        @endif
+    </title>
+
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('android-chrome-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('android-chrome-512x512.png') }}">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
+
     <!-- Tailwind CSS v3 CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts + Material Icons -->
@@ -42,7 +57,6 @@
 </head>
 
 <body class="bg-gray-50 text-gray-800 text-sm">
-    <livewire:global-notification />
     <div x-data="{ open: false }" class="min-h-screen">
         <nav class="bg-white border-b border-gray-200/80 shadow-sm sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -59,7 +73,7 @@
                         <div class="hidden md:flex md:items-center md:gap-x-1">
                             @auth
                                 {{-- INVENTARIO --}}
-                                @if(module_active('inventory') && auth()->user()->canAny(['view movements', 'view products', 'create movements', 'view kardex']))
+                                @if(module_active('inventory') && auth()->user()->can('access_inventory'))
                                 <div class="nav-group relative">
                                     <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                         <span class="material-symbols-outlined text-base">inventory</span> Inventario
@@ -93,7 +107,7 @@
                                 @endif
 
                                 {{-- COMPRAS --}}
-                                @if(module_active('suppliers') && auth()->user()->canAny(['view suppliers', 'view purchases', 'create purchases']))
+                                @if(module_active('suppliers') && auth()->user()->can('access_suppliers'))
                                 <div class="nav-group relative">
                                     <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                         <span class="material-symbols-outlined text-base">shopping_cart</span> Compras
@@ -115,8 +129,6 @@
                                                 <a href="{{ route('purchases.create') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
                                                     <span class="material-symbols-outlined text-base">add_shopping_cart</span> Nueva Compra
                                                 </a>
-                                            @endcan
-                                            @can('create purchases')
                                                 <a href="{{ route('returns.create') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
                                                     <span class="material-symbols-outlined text-base">assignment_return</span> Devolución
                                                 </a>
@@ -126,24 +138,14 @@
                                 </div>
                                 @endif
 
-                                {{-- TÉCNICOS (para técnico: enlaces directos; para warehouse/admin: dropdown) --}}
-                                @if(module_active('technicians'))
+                                {{-- TÉCNICOS --}}
+                                @if(module_active('technicians') && auth()->user()->can('access_technicians'))
                                     @if(auth()->user()->hasRole('technician'))
                                         @php
-                                            $hasTechAny = auth()->user()->canAny(['view technician_requests', 'create technician_requests', 'view work_orders']);
+                                            $hasTechAny = auth()->user()->canAny(['view work_orders', 'view requisitions']);
                                         @endphp
                                         @if($hasTechAny)
                                             <div class="flex items-center gap-1">
-                                                @can('view technician_requests')
-                                                    <a href="{{ route('mobile.technician.requests') }}" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
-                                                        <span class="material-symbols-outlined text-base">list_alt</span> Mis Solicitudes
-                                                    </a>
-                                                @endcan
-                                                @can('create technician_requests')
-                                                    <a href="{{ route('mobile.technician.requests.create') }}" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
-                                                        <span class="material-symbols-outlined text-base">add_task</span> Nueva Solicitud
-                                                    </a>
-                                                @endcan
                                                 @can('view work_orders')
                                                     <a href="{{ route('mobile.work-orders.list') }}" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                                         <span class="material-symbols-outlined text-base">work</span> Mis Órdenes
@@ -152,13 +154,18 @@
                                                         <span class="material-symbols-outlined text-base">map</span> Mapa de Órdenes
                                                     </a>
                                                 @endcan
+                                                @can('view requisitions')
+                                                    <a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
+                                                        <span class="material-symbols-outlined text-base">inventory_2</span> Mis Requisiciones
+                                                    </a>
+                                                @endcan
                                             </div>
                                         @endif
-                                    @elseif(auth()->user()->hasAnyRole(['warehouse', 'admin']))
+                                    @else
                                         @php
-                                            $hasTechWarehouseAny = auth()->user()->canAny(['view technician_requests', 'approve technician_requests', 'view technician_returns', 'create technician_returns', 'view work_orders']);
+                                            $hasTechAny = auth()->user()->canAny(['view work_orders', 'view technician_returns', 'create technician_returns', 'view requisitions']);
                                         @endphp
-                                        @if($hasTechWarehouseAny)
+                                        @if($hasTechAny)
                                         <div class="nav-group relative">
                                             <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                                 <span class="material-symbols-outlined text-base">handyman</span> Técnicos
@@ -166,16 +173,6 @@
                                             </button>
                                             <div class="nav-dropdown absolute left-0 top-full pt-1 z-20">
                                                 <div class="bg-white rounded-xl border border-gray-200/80 shadow-lg min-w-[200px] py-1.5">
-                                                    @can('view technician_requests')
-                                                        <a href="{{ route('technician-requests.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
-                                                            <span class="material-symbols-outlined text-base">inbox</span> Gestionar Solicitudes
-                                                        </a>
-                                                    @endcan
-                                                    @can('approve technician_requests')
-                                                        <a href="{{ route('code-delivery.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
-                                                            <span class="material-symbols-outlined text-base">qr_code_scanner</span> Escáner QR
-                                                        </a>
-                                                    @endcan
                                                     @if(module_active('technician_returns'))
                                                         @can('view technician_returns')
                                                             <a href="{{ route('technician-returns.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
@@ -198,6 +195,11 @@
                                                             </a>
                                                         @endcan
                                                     @endif
+                                                    @can('view requisitions')
+                                                        <a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                            <span class="material-symbols-outlined text-base">inventory_2</span> Requisiciones
+                                                        </a>
+                                                    @endcan
                                                 </div>
                                             </div>
                                         </div>
@@ -206,7 +208,7 @@
                                 @endif
 
                                 {{-- REPORTES --}}
-                                @if(module_active('reports') && auth()->user()->can('view reports'))
+                                @if(module_active('reports') && auth()->user()->can('access_reports'))
                                 <div class="nav-group relative">
                                     <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                         <span class="material-symbols-outlined text-base">assessment</span> Reportes
@@ -228,14 +230,8 @@
                                 </div>
                                 @endif
 
-                                {{-- SOPORTE (escritorio) --}}
-                                @php
-                                    $hasSupportAccess = auth()->user()->can('create tickets') ||
-                                                        auth()->user()->can('view any tickets') ||
-                                                        auth()->user()->can('view own tickets') ||
-                                                        auth()->user()->can('access noc panel');
-                                @endphp
-                                @if($hasSupportAccess)
+                                {{-- SOPORTE --}}
+                                @if(auth()->user()->can('access_support'))
                                 <div class="nav-group relative">
                                     <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                         <span class="material-symbols-outlined text-base">support_agent</span> Soporte
@@ -275,7 +271,7 @@
                                 @endif
 
                                 {{-- ADMIN --}}
-                                @if(auth()->user()->hasRole('admin'))
+                                @if(auth()->user()->can('access_admin'))
                                 <div class="nav-group relative">
                                     <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
                                         <span class="material-symbols-outlined text-base">admin_panel_settings</span> Admin
@@ -306,10 +302,9 @@
                         </div>
                     </div>
 
-                            <!-- Perfil y logout -->
+                    <!-- Perfil y logout -->
                     @auth
                         <div class="hidden md:flex items-center gap-3">
-                            {{-- Notificaciones NOC (solo si tiene acceso al panel) --}}
                             @if(Auth::user()->can('access noc panel'))
                                 <livewire:notifications-badge />
                             @endif
@@ -341,7 +336,7 @@
                 class="md:hidden bg-white border-t border-gray-200 shadow-lg">
                 <div class="px-4 pt-3 pb-4 space-y-2 max-h-[calc(100vh-3.5rem)] overflow-y-auto">
                     @auth
-                        @if(module_active('inventory') && auth()->user()->canAny(['view movements', 'view products', 'create movements', 'view kardex']))
+                        @if(module_active('inventory') && auth()->user()->can('access_inventory'))
                             <div class="space-y-1">
                                 <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Inventario</h3>
                                 @can('view movements')<a href="{{ route('movements.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Movimientos</a>@endcan
@@ -351,7 +346,7 @@
                             </div>
                         @endif
 
-                        @if(module_active('suppliers') && auth()->user()->canAny(['view suppliers', 'view purchases', 'create purchases']))
+                        @if(module_active('suppliers') && auth()->user()->can('access_suppliers'))
                             <div class="space-y-1">
                                 <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Compras</h3>
                                 @can('view suppliers')<a href="{{ route('suppliers.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Proveedores</a>@endcan
@@ -361,32 +356,30 @@
                             </div>
                         @endif
 
-                        @if(module_active('technicians'))
+                        @if(module_active('technicians') && auth()->user()->can('access_technicians'))
                             @if(auth()->user()->hasRole('technician'))
-                                @php $hasTechAnyMobile = auth()->user()->canAny(['view technician_requests', 'create technician_requests', 'view work_orders']); @endphp
+                                @php $hasTechAnyMobile = auth()->user()->canAny(['view work_orders', 'view requisitions']); @endphp
                                 @if($hasTechAnyMobile)
-                                    @can('view technician_requests')<a href="{{ route('mobile.technician.requests') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80">Mis Solicitudes</a>@endcan
-                                    @can('create technician_requests')<a href="{{ route('mobile.technician.requests.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80">Nueva Solicitud</a>@endcan
                                     @can('view work_orders')<a href="{{ route('mobile.work-orders.list') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80">Mis Órdenes</a>@endcan
                                     @can('view work_orders')<a href="{{ route('mobile.work-orders.map') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80">Mapa de Órdenes</a>@endcan
+                                    @can('view requisitions')<a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80">Mis Requisiciones</a>@endcan
                                 @endif
-                            @elseif(auth()->user()->hasAnyRole(['warehouse', 'admin']))
-                                @php $hasTechWarehouseAnyMobile = auth()->user()->canAny(['view technician_requests', 'approve technician_requests', 'view technician_returns', 'create technician_returns', 'view work_orders']); @endphp
-                                @if($hasTechWarehouseAnyMobile)
+                            @else
+                                @php $hasTechAnyMobile = auth()->user()->canAny(['view work_orders', 'view technician_returns', 'create technician_returns', 'view requisitions']); @endphp
+                                @if($hasTechAnyMobile)
                                     <div class="space-y-1">
                                         <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Técnicos</h3>
-                                        @can('view technician_requests')<a href="{{ route('technician-requests.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Gestionar Solicitudes</a>@endcan
-                                        @can('approve technician_requests')<a href="{{ route('code-delivery.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Escáner QR</a>@endcan
                                         @if(module_active('technician_returns'))
                                             @can('view technician_returns')<a href="{{ route('technician-returns.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Devoluciones</a>@endcan
                                             @can('create technician_returns')<a href="{{ route('technician-returns.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Registrar Devolución</a>@endcan
                                         @endif
+                                        @can('view requisitions')<a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Requisiciones</a>@endcan
                                     </div>
                                 @endif
                             @endif
                         @endif
 
-                        @if(module_active('reports') && auth()->user()->can('view reports'))
+                        @if(module_active('reports') && auth()->user()->can('access_reports'))
                             <div class="space-y-1">
                                 <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Reportes</h3>
                                 <a href="{{ route('reports.stock') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Stock bajo</a>
@@ -395,9 +388,7 @@
                             </div>
                         @endif
 
-                        {{-- SOPORTE MÓVIL --}}
-                        @php $showSupportMobile = module_active('work_orders') && (auth()->user()->can('create tickets') || auth()->user()->can('view any tickets') || auth()->user()->can('view own tickets') || auth()->user()->can('access noc panel')); @endphp
-                        @if($showSupportMobile)
+                        @if(auth()->user()->can('access_support'))
                             <div class="space-y-1">
                                 <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Soporte</h3>
                                 @can('create tickets')
@@ -419,7 +410,7 @@
                             </div>
                         @endif
 
-                        @if(auth()->user()->hasRole('admin'))
+                        @if(auth()->user()->can('access_admin'))
                             <div class="space-y-1">
                                 <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin</h3>
                                 <a href="{{ route('admin.users.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Usuarios</a>
@@ -477,7 +468,6 @@
     @livewireScripts
     @vite(['resources/js/app.js'])
     @stack('scripts')
-    <!-- Sonido para notificaciones del NOC (con desbloqueo automático) -->
     <script>
         document.addEventListener('livewire:initialized', () => {
             const audio = new Audio('{{ asset('sounds/notification.mp3') }}');
@@ -491,7 +481,6 @@
             }
             document.addEventListener('click', unlockAudio, { once: true });
 
-            // Escucha el nuevo evento emitido por el badge cuando detecta tickets nuevos
             Livewire.on('new-noc-ticket', () => {
                 audio.play().catch(err => {
                     console.log('Audio bloqueado:', err);
@@ -499,7 +488,5 @@
             });
         });
     </script>
-
 </body>
-
 </html>

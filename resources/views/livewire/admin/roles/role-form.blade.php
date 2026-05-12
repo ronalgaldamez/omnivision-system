@@ -61,10 +61,6 @@
                             // Compras
                             'view purchases' => 'Compras',
                             'create purchases' => 'Compras',
-                            // Solicitudes
-                            'view technician_requests' => 'Solicitudes',
-                            'create technician_requests' => 'Solicitudes',
-                            'approve technician_requests' => 'Solicitudes',
                             // Devoluciones
                             'view technician_returns' => 'Devoluciones',
                             'create technician_returns' => 'Devoluciones',

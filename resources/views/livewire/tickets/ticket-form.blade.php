@@ -1,7 +1,5 @@
 <div class="max-w-3xl mx-auto">
-    <!-- Tarjeta principal -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <!-- Encabezado con fondo sutil -->
         <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -19,10 +17,9 @@
             </div>
         </div>
 
-        <!-- Contenido del formulario -->
         <div class="p-6">
             <form wire:submit.prevent="promptSave" class="space-y-6">
-                <!-- Cliente (buscador + botón nuevo) -->
+                <!-- Cliente -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-gray-400 text-base">person</span>
@@ -98,7 +95,55 @@
                     @error('service_type') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Requiere NOC (toggle estilizado) - solo visible si no es el propio NOC -->
+                <!-- Prioridad -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-gray-400 text-base">flag</span>
+                        Prioridad *
+                    </label>
+                    <div class="relative">
+                        <select wire:model="priority"
+                            class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
+                            <option value="">Seleccione</option>
+                            <option value="P1">P1 - Crítico</option>
+                            <option value="P2">P2 - Alta</option>
+                            <option value="P3">P3 - Media</option>
+                            <option value="P4">P4 - Baja</option>
+                        </select>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">flag</span>
+                        <span
+                            class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                    </div>
+                    @error('priority') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Origen -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-gray-400 text-base">source</span>
+                        Origen del ticket
+                    </label>
+                    <div class="relative">
+                        <select wire:model="origin"
+                            class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
+                            <option value="">Seleccione</option>
+                            <option value="Facebook Messenger">Facebook Messenger</option>
+                            <option value="SMS WhatsApp">SMS WhatsApp</option>
+                            <option value="Llamada de WhatsApp">Llamada de WhatsApp</option>
+                            <option value="Llamada Telefónica">Llamada Telefónica</option>
+                            <option value="SMS">SMS</option>
+                            <option value="Presencial">Presencial</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">source</span>
+                        <span
+                            class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                    </div>
+                </div>
+
+                <!-- Requiere NOC (solo visible si no es NOC) -->
                 @if($canRequestNoc)
                     <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
                         <div class="flex items-center justify-between gap-4">
@@ -117,7 +162,7 @@
                     </div>
                 @endif
 
-                <!-- Botones de acción -->
+                <!-- Botones -->
                 <div class="flex justify-end gap-3 pt-2">
                     <a href="{{ route('tickets.index') }}"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition shadow-sm">
@@ -133,7 +178,7 @@
         </div>
     </div>
 
-    <!-- Modal para crear cliente (SIN cambios) -->
+    <!-- Modal para crear cliente -->
     @if($showClientModal)
         <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
             x-data="{ open: true }" x-show="open" x-cloak>
@@ -165,7 +210,7 @@
         </script>
     @endif
 
-    <!-- Modal de confirmación de guardado (mismo estilo que NOC y compras) -->
+    <!-- Modal de confirmación de guardado -->
     @if($confirmingSave)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
@@ -200,7 +245,7 @@
         </div>
     @endif
 
-    <!-- Toast (SIN cambios) -->
+    <!-- Toast -->
     <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
         x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 5000)"
         x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"

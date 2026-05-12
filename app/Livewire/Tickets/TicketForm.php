@@ -13,36 +13,30 @@ class TicketForm extends Component
     public $description;
     public $client_id;
     public $service_type;
+    public $priority = '';
+    public $origin = '';
     public $requires_noc = false;
     public $status = 'pending';
 
-    // Búsqueda de clientes
     public $clientSearch = '';
     public $clientSearchResults = [];
-
-    // Modal de cliente
     public $showClientModal = false;
-
-    // Confirmación antes de guardar
     public $confirmingSave = false;
-
-    // Controla si se muestra el switch de NOC (oculto para el propio NOC)
     public $canRequestNoc = true;
 
     protected $rules = [
         'client_id' => 'required|exists:clients,id',
         'description' => 'required|string|min:5',
         'service_type' => 'required|string|in:instalacion,traslado,revision,cobro_pendiente,reconexion,desconexion',
+        'priority' => 'required|in:P1,P2,P3,P4',
+        'origin' => 'nullable|string|max:100',
         'requires_noc' => 'boolean',
         'status' => 'in:pending,in_progress,resolved,closed',
     ];
 
-    protected function getListeners()
-    {
-        return [
-            'clientCreated' => 'handleClientCreated',
-        ];
-    }
+    protected $listeners = [
+        'clientCreated' => 'handleClientCreated',
+    ];
 
     public function mount($id = null)
     {
@@ -57,6 +51,8 @@ class TicketForm extends Component
             $this->client_id = $ticket->client_id;
             $this->description = $ticket->description;
             $this->service_type = $ticket->service_type;
+            $this->priority = $ticket->priority ?? '';
+            $this->origin = $ticket->origin ?? '';
             $this->requires_noc = $ticket->requires_noc;
             $this->status = $ticket->status;
             $this->clientSearch = $ticket->client->name;
@@ -66,10 +62,24 @@ class TicketForm extends Component
             }
         }
 
-        // Si el usuario es NOC, no puede solicitar intervención del NOC (él mismo)
         if ($user->hasRole('noc')) {
             $this->canRequestNoc = false;
             $this->requires_noc = false;
+        }
+    }
+
+    public function updatedServiceType($value)
+    {
+        $priorityMap = [
+            'instalacion' => 'P2',
+            'traslado' => 'P3',
+            'revision' => 'P3',
+            'cobro_pendiente' => 'P3',
+            'reconexion' => 'P1',
+            'desconexion' => 'P2',
+        ];
+        if (array_key_exists($value, $priorityMap)) {
+            $this->priority = $priorityMap[$value];
         }
     }
 
@@ -144,6 +154,8 @@ class TicketForm extends Component
             'client_id' => $this->client_id,
             'description' => $this->description,
             'service_type' => $this->service_type,
+            'priority' => $this->priority,
+            'origin' => $this->origin,
             'requires_noc' => $this->requires_noc,
         ];
 
@@ -164,10 +176,9 @@ class TicketForm extends Component
                 $this->createWorkOrder($ticket);
             }
 
-            // 🔔 Notificar al NOC si el ticket requiere su intervención
             if ($this->requires_noc) {
                 $this->dispatch('ticket-created-for-noc');
-                // $this->dispatch('show-toast', type: 'info', message: 'Nuevo ticket requiere atención del NOC.');
+                $this->dispatch('show-toast', type: 'info', message: 'Nuevo ticket requiere atención del NOC.');
             }
 
             session()->flash('message', 'Ticket creado correctamente. Código: ' . $ticket->ticket_code);

@@ -1,0 +1,35 @@
+services:
+  app:
+    build: .
+    container_name: omnivision_dev_app
+    volumes:
+      - .:/var/www/html
+    working_dir: /var/www/html
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:10.6
+    container_name: omnivision_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: omnivision_db
+      MYSQL_USER: omnivision_dev
+      MYSQL_PASSWORD: WtBpfIYGf
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  adminer:
+    image: adminer
+    container_name: laravel_adminer
+    ports:
+      - "8082:8080"
+    depends_on:
+      - db
+
+volumes:
+  db_data:

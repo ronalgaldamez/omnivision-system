@@ -4,7 +4,7 @@ namespace App\Livewire\Reports;
 
 use Livewire\Component;
 use App\Models\Product;
-use App\Models\TechnicianRequest;
+use App\Models\Requisition;
 use App\Models\WorkOrder;
 use App\Models\Movement;
 use App\Models\Ticket;
@@ -17,49 +17,46 @@ class Dashboard extends Component
     {
         $user = Auth::user();
 
-        // ========== TÉCNICO (mantenemos su vista separada) ==========
+        // ========== TÉCNICO (vista separada) ==========
         if ($user->hasRole('technician')) {
-            $pendingRequestsCount = TechnicianRequest::where('technician_id', $user->id)
-                ->where('status', 'pending')
+            $pendingRequisitionsCount = Requisition::where('technician_id', $user->id)
+                ->where('status', 'open')
                 ->count();
             $activeWorkOrdersCount = WorkOrder::where('technician_id', $user->id)
                 ->whereIn('status', ['pending', 'in_progress'])
                 ->count();
-            $recentRequests = TechnicianRequest::with('products.product')
+            $recentRequisitions = Requisition::with('items.product')
                 ->where('technician_id', $user->id)
                 ->latest()
                 ->limit(5)
                 ->get();
 
             return view('livewire.reports.dashboard-technician', compact(
-                'pendingRequestsCount',
+                'pendingRequisitionsCount',
                 'activeWorkOrdersCount',
-                'recentRequests'
+                'recentRequisitions'
             ))->layout('components.layouts.app');
         }
 
-        // ========== DATOS GLOBALES (para admin, warehouse, supervisor, y otros) ==========
-        // Solo se cargan si el usuario tiene el permiso correspondiente
-
-        // Stock bajo (permiso 'view low stock')
+        // ========== DATOS GLOBALES ==========
         $lowStockCount = null;
         if ($user->can('view low stock')) {
             $lowStockCount = Product::whereColumn('current_stock', '<=', 'stock_min')->count();
         }
 
-        // Solicitudes pendientes (permiso 'view technician_requests')
-        $pendingRequestsCount = null;
-        if ($user->can('view technician_requests')) {
-            $pendingRequestsCount = TechnicianRequest::where('status', 'pending')->count();
+        // Requisiciones pendientes (visible para quien tenga view requisitions)
+        $pendingRequisitionsCount = null;
+        if ($user->can('view requisitions')) {
+            $pendingRequisitionsCount = Requisition::where('status', 'open')->count();
         }
 
-        // Órdenes activas (permiso 'view work_orders')
+        // Órdenes activas
         $activeWorkOrdersCount = null;
         if ($user->can('view work_orders')) {
             $activeWorkOrdersCount = WorkOrder::whereIn('status', ['pending', 'in_progress'])->count();
         }
 
-        // Movimientos hoy y últimos movimientos (permiso 'view movements')
+        // Movimientos
         $todayMovementsCount = null;
         $recentMovements = null;
         if ($user->can('view movements')) {
@@ -67,7 +64,7 @@ class Dashboard extends Component
             $recentMovements = Movement::with('product', 'user')->latest()->limit(5)->get();
         }
 
-        // Tickets del usuario (secretaria o NOC): permiso 'view own tickets' + roles específicos
+        // Tickets del usuario (secretaria/NOC)
         $myTickets = null;
         $totalMyTickets = null;
         $pendingMyTickets = null;
@@ -79,7 +76,7 @@ class Dashboard extends Component
             $resolvedMyTickets = Ticket::where('created_by', $user->id)->where('status', 'resolved')->count();
         }
 
-        // Tickets pendientes NOC (permiso 'view pending noc tickets')
+        // Tickets pendientes NOC
         $pendingNocTickets = null;
         $pendingNocCount = null;
         if ($user->can('view pending noc tickets')) {
@@ -90,13 +87,13 @@ class Dashboard extends Component
             $pendingNocCount = $pendingNocTickets->count();
         }
 
-        // Clientes recientes (permiso 'view clients')
+        // Clientes recientes
         $recentClients = null;
         if ($user->can('view clients')) {
             $recentClients = Client::latest()->limit(5)->get();
         }
 
-        // Resueltos por NOC hoy (permiso 'view resolutions')
+        // Resueltos por NOC hoy
         $resolvedToday = null;
         if ($user->can('view resolutions')) {
             $resolvedToday = Ticket::where('resolved_by', $user->id)
@@ -104,7 +101,7 @@ class Dashboard extends Component
                 ->count();
         }
 
-        // Órdenes de trabajo relacionadas con tickets del usuario (solo si aplica)
+        // Órdenes relacionadas con tickets del usuario
         $relatedWorkOrders = null;
         if ($user->can('view own work_orders') && ($user->hasRole('secretary') || $user->hasRole('noc'))) {
             $relatedWorkOrders = WorkOrder::whereHas('ticket', function ($q) use ($user) {
@@ -114,7 +111,7 @@ class Dashboard extends Component
 
         return view('livewire.reports.dashboard', compact(
             'lowStockCount',
-            'pendingRequestsCount',
+            'pendingRequisitionsCount',
             'activeWorkOrdersCount',
             'todayMovementsCount',
             'recentMovements',
@@ -130,7 +127,7 @@ class Dashboard extends Component
         ))->layout('components.layouts.app');
     }
 
-    // Métodos auxiliares para acciones desde el dashboard (resolver remotamente, crear OT)
+    // Métodos auxiliares que se mantienen
     public function resolveRemote($ticketId)
     {
         $ticket = Ticket::find($ticketId);
@@ -138,7 +135,6 @@ class Dashboard extends Component
             $ticket->status = 'resolved';
             $ticket->resolved_by = auth()->id();
             $ticket->resolved_at = now();
-            $ticket->save();
             session()->flash('message', 'Ticket resuelto remotamente.');
         }
         return redirect()->route('noc.panel');
