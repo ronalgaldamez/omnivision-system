@@ -10,9 +10,17 @@ class Ticket extends Model
     use HasFactory;
 
     protected $fillable = [
-        'client_id', 'description', 'service_type', 'requires_noc',
-        'status', 'created_by', 'resolved_by', 'resolved_at',
-        'ticket_code',  // ← añadido
+        'client_id',
+        'description',
+        'service_type',
+        'priority',
+        'origin',
+        'requires_noc',
+        'status',
+        'created_by',
+        'resolved_by',
+        'resolved_at',
+        'ticket_code',
     ];
 
     public function client()

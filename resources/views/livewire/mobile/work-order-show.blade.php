@@ -32,7 +32,15 @@
                     <span class="material-symbols-outlined text-gray-400">call</span>
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Teléfono</p>
-                        <p class="text-gray-700">{{ $workOrder->client->phone ?? '—' }}</p>
+                        <p class="text-gray-700">
+                            @if($workOrder->client && $workOrder->client->phones->isNotEmpty())
+                                @foreach($workOrder->client->phones as $phone)
+                                    {{ $phone->number }}{{ !$loop->last ? ', ' : '' }}
+                                @endforeach
+                            @else
+                                {{ $workOrder->client->phone ?? '—' }}
+                            @endif
+                        </p>
                     </div>
                 </div>
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 sm:col-span-2">
@@ -138,9 +146,9 @@
             <!-- Botones de acción -->
             @if(!in_array($workOrder->status, ['completed', 'cancelled']))
                 <div class="border-t border-gray-200 pt-5 space-y-3">
-                    <a href="{{ route('mobile.technician.requests.create', ['work_order_id' => $workOrder->id]) }}"
+                    <a href="{{ route('technician.requisitions.create') }}"
                         class="block w-full text-center px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                        Solicitar materiales para esta OT
+                        Crear requisición de material
                     </a>
                     @if(auth()->user()->can('complete work_orders'))
                         <button wire:click="completeWorkOrder"

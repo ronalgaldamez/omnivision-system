@@ -24,11 +24,6 @@ class TechnicianReturn extends Model
         return $this->belongsTo(WorkOrder::class);
     }
 
-    public function request()
-    {
-        return $this->belongsTo(TechnicianRequest::class, 'technician_request_id');
-    }
-
     public function product()
     {
         return $this->belongsTo(Product::class);

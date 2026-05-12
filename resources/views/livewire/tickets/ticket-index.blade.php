@@ -51,61 +51,17 @@
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200">
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">qr_code</span>
-                                    Código
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">tag</span>
-                                    ID
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">person</span>
-                                    Cliente
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">handyman</span>
-                                    Tipo
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">description</span>
-                                    Descripción
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                <div class="flex items-center justify-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">dns</span>
-                                    NOC
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">flag</span>
-                                    Estado
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span
-                                        class="material-symbols-outlined text-gray-400 text-base">calendar_month</span>
-                                    Creado
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                <div class="flex items-center justify-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">engineering</span>
-                                    OT
-                                </div>
-                            </th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Código</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">ID</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Cliente</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Tipo</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Prioridad</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Origen</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Descripción</th>
+                            <th class="px-4 py-3 text-center text-gray-600 font-medium">NOC</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Estado</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Creado</th>
+                            <th class="px-4 py-3 text-center text-gray-600 font-medium">OT</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -125,6 +81,19 @@
                                         class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
                                         {{ $ticket->service_type }}
                                     </span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if($ticket->priority)
+                                        <span
+                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                                            {{ $ticket->priority }}
+                                        </span>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-gray-700">
+                                    {{ $ticket->origin ?? '—' }}
                                 </td>
                                 <td class="px-4 py-3 text-gray-600 max-w-[200px] truncate"
                                     title="{{ $ticket->description }}">
@@ -178,7 +147,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="px-4 py-12 text-center bg-gray-50/50">
+                                <td colspan="11" class="px-4 py-12 text-center bg-gray-50/50">
                                     <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">inbox</span>
                                     <p class="text-gray-500">No hay tickets registrados</p>
                                     <p class="text-sm text-gray-400 mt-1">Haz clic en "Nuevo Ticket" para crear uno</p>
@@ -194,7 +163,7 @@
                 <div class="mt-5">{{ $tickets->links() }}</div>
             @endif
 
-            <!-- Mensajes de sesión (se mantienen como fallback) -->
+            <!-- Mensajes de sesión -->
             @if(session('message'))
                 <div
                     class="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg border border-green-200">
@@ -237,6 +206,14 @@
                         <p class="font-medium">{{ ucfirst($selectedTicket->service_type) }}</p>
                     </div>
                     <div class="bg-gray-50 p-3 rounded-lg">
+                        <p class="text-xs text-gray-500">Prioridad</p>
+                        <p class="font-medium">{{ $selectedTicket->priority ?? 'N/A' }}</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded-lg">
+                        <p class="text-xs text-gray-500">Origen</p>
+                        <p class="font-medium">{{ $selectedTicket->origin ?? 'N/A' }}</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded-lg">
                         <p class="text-xs text-gray-500">Descripción del problema</p>
                         <p class="text-sm whitespace-pre-wrap">{{ $selectedTicket->description }}</p>
                     </div>
@@ -247,14 +224,12 @@
                         </div>
                     @endif
                     <div class="flex justify-end gap-2 pt-3">
-                        {{-- Botón "Ir al panel del NOC" --}}
                         @if(auth()->user()->can('access noc panel'))
                             <button wire:click="goToNocPanel"
                                 class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
                                 Ir al panel del NOC
                             </button>
                         @endif
-                        {{-- Botón "Crear OT" con confirmación --}}
                         @if(auth()->user()->can('create work_orders'))
                             <button wire:click="promptCreateWorkOrder({{ $selectedTicket->id }})"
                                 class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
@@ -269,7 +244,7 @@
         </div>
     @endif
 
-    <!-- Modal de confirmación (mismo estilo) -->
+    <!-- Modal de confirmación -->
     @if($confirmingAction)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"

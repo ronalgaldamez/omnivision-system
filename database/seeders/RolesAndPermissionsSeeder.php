@@ -15,6 +15,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Lista oficial de permisos (únicos que deben existir)
         $permissions = [
+            // Inventario
             'view products',
             'create products',
             'edit products',
@@ -22,15 +23,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'view movements',
             'create movements',
             'view kardex',
+            // Proveedores y Compras
             'view suppliers',
             'create suppliers',
             'edit suppliers',
             'delete suppliers',
             'view purchases',
             'create purchases',
-            'view technician_requests',
-            'create technician_requests',
-            'approve technician_requests',
+            // Técnicos (sin solicitudes)
             'view work_orders',
             'create work_orders',
             'edit work_orders',
@@ -38,16 +38,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'complete work_orders',
             'assign technicians',
             'cancel work orders',
-            'view all work orders',           // ← correcto (espacios)
+            'view all work orders',
             'view technician_returns',
             'create technician_returns',
+            // Catálogo
             'view catalog',
             'manage catalog',
+            // Reportes
             'view reports',
             'view dashboard',
+            // Clientes
             'view clients',
             'create clients',
             'edit clients',
+            // Tickets
             'view tickets',
             'create tickets',
             'edit tickets',
@@ -59,13 +63,23 @@ class RolesAndPermissionsSeeder extends Seeder
             'view low stock',
             'view pending noc tickets',
             'view resolutions',
-            'view own work_orders',           // ← correcto (guión bajo en 'work_orders')
+            'view own work_orders',
+            // Requisiciones
+            'view requisitions',
+            'create requisitions',
+            // ACCESO A MÓDULOS
+            'access_inventory',
+            'access_suppliers',
+            'access_technicians',
+            'access_reports',
+            'access_support',
+            'access_admin',
         ];
 
-        // 🧹 Paso 1: Eliminar cualquier permiso que NO esté en la lista oficial
+        // 🧹 Eliminar cualquier permiso que NO esté en la lista oficial
         Permission::whereNotIn('name', $permissions)->delete();
 
-        // Paso 2: Crear los permisos oficiales (si no existen)
+        // Crear los permisos oficiales (si no existen)
         foreach ($permissions as $perm) {
             Permission::firstOrCreate(['name' => $perm]);
         }
@@ -80,9 +94,10 @@ class RolesAndPermissionsSeeder extends Seeder
         $nocRole = Role::firstOrCreate(['name' => 'noc']);
         $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
 
-        // Asignación de permisos (sin cambios en los nombres)
+        // Admin recibe TODOS los permisos
         $adminRole->syncPermissions(Permission::all());
 
+        // Warehouse
         $warehouseRole->syncPermissions([
             'view products',
             'create products',
@@ -95,8 +110,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit suppliers',
             'view purchases',
             'create purchases',
-            'view technician_requests',
-            'approve technician_requests',
             'view work_orders',
             'create work_orders',
             'edit work_orders',
@@ -110,18 +123,26 @@ class RolesAndPermissionsSeeder extends Seeder
             'view reports',
             'view dashboard',
             'view low stock',
+            'access_inventory',
+            'access_suppliers',
+            'access_technicians',
+            'access_reports',
+            'access_support',
         ]);
 
+        // Technician
         $technicianRole->syncPermissions([
             'view products',
             'view kardex',
-            'view technician_requests',
-            'create technician_requests',
             'view work_orders',
             'complete work_orders',
             'view dashboard',
+            'view requisitions',
+            'create requisitions',
+            'access_technicians',
         ]);
 
+        // Accountant
         $accountantRole->syncPermissions([
             'view products',
             'view movements',
@@ -129,14 +150,18 @@ class RolesAndPermissionsSeeder extends Seeder
             'view purchases',
             'view reports',
             'view dashboard',
+            'access_reports',
         ]);
 
+        // Buyer
         $buyerRole->syncPermissions([
             'view products',
             'view suppliers',
             'create purchases',
+            'access_suppliers',
         ]);
 
+        // Secretary
         $secretaryRole->syncPermissions([
             'view clients',
             'create clients',
@@ -144,8 +169,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view own tickets',
             'create tickets',
             'view own work_orders',
+            'access_support',
         ]);
 
+        // NOC
         $nocRole->syncPermissions([
             'view any tickets',
             'view own tickets',
@@ -155,13 +182,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'view pending noc tickets',
             'view resolutions',
             'view own work_orders',
-            'view all work orders',  // ← correcto
+            'view all work orders',
+            'access_support',
+            'access_technicians',
         ]);
 
+        // Supervisor
         $supervisorRole->syncPermissions([
             'view work_orders',
             'edit work_orders',
-            'view technician_requests',
             'view low stock',
             'view reports',
             'view dashboard',
@@ -169,6 +198,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'cancel work orders',
             'view all work orders',
             'complete work_orders',
+            'view requisitions',   // puede ver pero no crear
+            'access_technicians',
+            'access_reports',
+            'access_support',
         ]);
 
         // Limpiar caché al final

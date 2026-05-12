@@ -15,18 +15,45 @@ class ReturnToSupplierForm extends Component
 {
     public $supplier_id = '';
     public $purchase_id = '';
-    public $returnMode = 'full'; // 'full', 'individual', 'partial'
+    public $returnMode = 'full';
     public $items = [];
     public $selectedItems = [];
     public $partialQuantities = [];
 
     public $showConfirmModal = false;
 
+    // Propiedades para el buscador de proveedores
+    public $supplierSearch = '';
+    public $supplierResults = [];
+
     protected $rules = [
         'supplier_id' => 'required|exists:suppliers,id',
         'purchase_id' => 'required|exists:purchases,id',
         'returnMode' => 'required|in:full,individual,partial',
     ];
+
+    public function updatedSupplierSearch()
+    {
+        if (strlen($this->supplierSearch) >= 2) {
+            $this->supplierResults = Supplier::where('name', 'like', '%' . $this->supplierSearch . '%')
+                ->orWhere('nit', 'like', '%' . $this->supplierSearch . '%')
+                ->orWhere('nrc', 'like', '%' . $this->supplierSearch . '%')
+                ->limit(10)
+                ->get();
+        } else {
+            $this->supplierResults = [];
+        }
+    }
+
+    public function selectSupplier($id)
+    {
+        $supplier = Supplier::find($id);
+        if ($supplier) {
+            $this->supplier_id = $supplier->id;
+            $this->supplierSearch = $supplier->name . ' (NIT: ' . ($supplier->nit ?? 'N/A') . ')';
+            $this->supplierResults = [];
+        }
+    }
 
     public function updatedSupplierId()
     {
@@ -86,8 +113,7 @@ class ReturnToSupplierForm extends Component
                     $hasError = true;
                 }
             }
-            if ($hasError)
-                return;
+            if ($hasError) return;
         }
 
         $this->showConfirmModal = true;
@@ -113,8 +139,7 @@ class ReturnToSupplierForm extends Component
                     $quantityToReturn = (int) ($this->partialQuantities[$item['id']] ?? 0);
                 }
 
-                if ($quantityToReturn <= 0)
-                    continue;
+                if ($quantityToReturn <= 0) continue;
 
                 $product = Product::find($item['product_id']);
                 if ($product->current_stock < $quantityToReturn) {
@@ -140,23 +165,22 @@ class ReturnToSupplierForm extends Component
             }
 
             DB::commit();
-            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Devolución registrada exitosamente.']);
+            $this->dispatch('show-toast', type: 'success', message: 'Devolución registrada exitosamente.');
             $this->redirectRoute('returns.index');
         } catch (\Exception $e) {
             DB::rollBack();
-            $this->dispatch('showToast', ['type' => 'error', 'message' => $e->getMessage()]);
+            $this->dispatch('show-toast', type: 'error', message: $e->getMessage());
         }
     }
 
     public function render()
     {
-        $suppliers = Supplier::orderBy('name')->get();
         $purchases = [];
         if ($this->supplier_id) {
             $purchases = Purchase::where('supplier_id', $this->supplier_id)
                 ->orderBy('purchase_date', 'desc')
                 ->get();
         }
-        return view('livewire.suppliers.return-form', compact('suppliers', 'purchases'))->layout('components.layouts.app');
+        return view('livewire.suppliers.return-form', compact('purchases'))->layout('components.layouts.app');
     }
 }

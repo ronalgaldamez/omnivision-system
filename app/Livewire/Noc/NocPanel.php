@@ -25,6 +25,13 @@ class NocPanel extends Component
 
         $this->tickets = Ticket::where('requires_noc', true)
             ->where('status', 'pending')
+            ->orderByRaw("CASE priority 
+                    WHEN 'P1' THEN 1 
+                    WHEN 'P2' THEN 2 
+                    WHEN 'P3' THEN 3 
+                    WHEN 'P4' THEN 4 
+                    ELSE 5 
+                  END ASC")
             ->get();
 
         // Si se recibe ?ticket_id=X en la URL, abrir ese ticket automáticamente
@@ -35,7 +42,7 @@ class NocPanel extends Component
 
     public function viewDetail($ticketId)
     {
-        $this->selectedTicket = Ticket::with('client')->find($ticketId);
+        $this->selectedTicket = Ticket::with('client', 'createdBy')->find($ticketId);
         $this->showDetailModal = true;
     }
 

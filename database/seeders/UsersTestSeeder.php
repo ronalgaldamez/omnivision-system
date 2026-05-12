@@ -36,9 +36,42 @@ class UsersTestSeeder extends Seeder
         );
         $noc->assignRole('noc');
 
+        // Técnico 1
+        $tecnico1 = User::firstOrCreate(
+            ['email' => 'tecnico1@omnivision.com'],
+            [
+                'name'              => 'Técnico Uno',
+                'password'          => Hash::make('123456789'),
+                'email_verified_at' => now(),
+            ]
+        );
+        $tecnico1->assignRole('technician');
+
+        // Técnico 2
+        $tecnico2 = User::firstOrCreate(
+            ['email' => 'tecnico2@omnivision.com'],
+            [
+                'name'              => 'Técnico Dos',
+                'password'          => Hash::make('123456789'),
+                'email_verified_at' => now(),
+            ]
+        );
+        $tecnico2->assignRole('technician');
+
+        // Supervisor
+        $supervisor = User::firstOrCreate(
+            ['email' => 'supervisor@omnivision.com'],
+            [
+                'name'              => 'Supervisor Uno',
+                'password'          => Hash::make('123456789'),
+                'email_verified_at' => now(),
+            ]
+        );
+        $supervisor->assignRole('supervisor');
+
         // Limpiar caché de permisos para que los roles se apliquen de inmediato
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $this->command->info('Usuarios de prueba creados: secretaria y NOC.');
+        $this->command->info('Usuarios de prueba creados: secretaria, NOC, 2 técnicos y supervisor.');
     }
 }

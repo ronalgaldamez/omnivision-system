@@ -49,7 +49,7 @@
                                         <span class="text-xs text-gray-500">NIT: {{ $supplier->nit ?? 'N/A' }} | NRC:
                                             {{ $supplier->nrc ?? 'N/A' }}</span>
                                     </li>
-                                @endforeach
+                                @endforeach>
                             </ul>
                         @endif
                         @error('supplier_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
@@ -109,10 +109,17 @@
 
                 <!-- Agregar productos -->
                 <div class="border-t border-gray-200 pt-6">
-                    <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-4">
-                        <span class="material-symbols-outlined text-gray-500">inventory_2</span>
-                        Productos de la compra
-                    </h2>
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-gray-500">inventory_2</span>
+                            Productos de la compra
+                        </h2>
+                        <button type="button" wire:click="openProductModal"
+                            class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
+                            <span class="material-symbols-outlined text-base">add_box</span>
+                            Nuevo Producto
+                        </button>
+                    </div>
 
                     <!-- Campos para agregar un producto -->
                     <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
@@ -200,41 +207,11 @@
                                 <table class="min-w-full text-sm">
                                     <thead>
                                         <tr class="bg-gray-50 border-b border-gray-200">
-                                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                                <div class="flex items-center gap-1.5">
-                                                    <span
-                                                        class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>
-                                                    Producto
-                                                </div>
-                                            </th>
-                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                                <div class="flex items-center justify-center gap-1.5">
-                                                    <span
-                                                        class="material-symbols-outlined text-gray-400 text-base">numbers</span>
-                                                    Cantidad
-                                                </div>
-                                            </th>
-                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                                <div class="flex items-center justify-center gap-1.5">
-                                                    <span
-                                                        class="material-symbols-outlined text-gray-400 text-base">attach_money</span>
-                                                    Costo unitario
-                                                </div>
-                                            </th>
-                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                                <div class="flex items-center justify-center gap-1.5">
-                                                    <span
-                                                        class="material-symbols-outlined text-gray-400 text-base">payments</span>
-                                                    Total
-                                                </div>
-                                            </th>
-                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                                <div class="flex items-center justify-center gap-1.5">
-                                                    <span
-                                                        class="material-symbols-outlined text-gray-400 text-base">settings</span>
-                                                    Acciones
-                                                </div>
-                                            </th>
+                                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Producto</th>
+                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Cantidad</th>
+                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Costo unitario</th>
+                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Total</th>
+                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-100">
@@ -387,6 +364,29 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal para crear producto -->
+    @if($showProductModal)
+        <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            x-data="{ open: true }" x-show="open" x-cloak>
+            <div class="relative mx-auto p-5 w-full max-w-lg">
+                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                        <h3 class="text-lg font-semibold flex items-center gap-2">
+                            <span class="material-symbols-outlined text-gray-500">add_box</span>
+                            Nuevo Producto
+                        </h3>
+                        <button @click="$wire.closeProductModal()" class="text-gray-400 hover:text-gray-600 transition">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <div class="p-5">
+                        <livewire:suppliers.quick-product-form />
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <!-- Toast -->
     <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
