@@ -41,4 +41,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Requisition::class, 'technician_id');
     }
+   
+    public function getRolePrefixAttribute(): string
+    {
+        return $this->roles()->first()?->prefix ?? 'OT';
+    }
 }

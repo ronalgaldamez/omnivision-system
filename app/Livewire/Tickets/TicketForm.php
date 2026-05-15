@@ -5,6 +5,7 @@ namespace App\Livewire\Tickets;
 use Livewire\Component;
 use App\Models\Client;
 use App\Models\Ticket;
+use App\Models\ServiceType;
 use Illuminate\Support\Facades\Auth;
 
 class TicketForm extends Component
@@ -12,23 +13,23 @@ class TicketForm extends Component
     public $ticketId;
     public $description;
     public $client_id;
-    public $service_type;
+    public $service_type_id = '';
     public $priority = '';
     public $origin = '';
-    public $requires_noc = false;
+    public $requires_noc = false;   // Switch manual (se inicializa según tipo de servicio)
     public $status = 'pending';
 
     public $clientSearch = '';
     public $clientSearchResults = [];
     public $showClientModal = false;
     public $confirmingSave = false;
-    public $canRequestNoc = true;
+
+    public $knowledgeArticles = [];
 
     protected $rules = [
         'client_id' => 'required|exists:clients,id',
         'description' => 'required|string|min:5',
-        'service_type' => 'required|string|in:instalacion,traslado,revision,cobro_pendiente,reconexion,desconexion',
-        'priority' => 'required|in:P1,P2,P3,P4',
+        'service_type_id' => 'required|exists:service_types,id',
         'origin' => 'nullable|string|max:100',
         'requires_noc' => 'boolean',
         'status' => 'in:pending,in_progress,resolved,closed',
@@ -50,37 +51,64 @@ class TicketForm extends Component
             }
             $this->client_id = $ticket->client_id;
             $this->description = $ticket->description;
-            $this->service_type = $ticket->service_type;
             $this->priority = $ticket->priority ?? '';
             $this->origin = $ticket->origin ?? '';
             $this->requires_noc = $ticket->requires_noc;
             $this->status = $ticket->status;
             $this->clientSearch = $ticket->client->name;
+
+            $serviceType = ServiceType::where('name', $ticket->service_type)->first();
+            $this->service_type_id = $serviceType ? $serviceType->id : '';
+
+            if ($this->service_type_id) {
+                $this->loadKnowledgeArticles($this->service_type_id);
+                $this->calculatePriorityFromArticles();
+            }
         } else {
             if ($user->cannot('create tickets')) {
                 abort(403, 'No tienes permiso para crear tickets.');
             }
-        }
-
-        if ($user->hasRole('noc')) {
-            $this->canRequestNoc = false;
-            $this->requires_noc = false;
+            // Al crear, si hay un tipo de servicio seleccionado por defecto (no hay), requires_noc se mantiene false.
+            // Se actualizará al elegir tipo de servicio.
         }
     }
 
-    public function updatedServiceType($value)
+    public function selectServiceType($value)
     {
-        $priorityMap = [
-            'instalacion' => 'P2',
-            'traslado' => 'P3',
-            'revision' => 'P3',
-            'cobro_pendiente' => 'P3',
-            'reconexion' => 'P1',
-            'desconexion' => 'P2',
-        ];
-        if (array_key_exists($value, $priorityMap)) {
-            $this->priority = $priorityMap[$value];
+        $this->service_type_id = $value;
+
+        $serviceType = ServiceType::find($value);
+        if ($serviceType) {
+            // Establecer automáticamente según configuración del tipo de servicio
+            $this->requires_noc = $serviceType->requires_noc;
+        } else {
+            $this->requires_noc = false;
         }
+
+        $this->loadKnowledgeArticles($value);
+        $this->calculatePriorityFromArticles();
+    }
+
+    private function loadKnowledgeArticles($serviceTypeId = null)
+    {
+        if (!$serviceTypeId) {
+            $this->knowledgeArticles = collect();
+            return;
+        }
+        $serviceType = ServiceType::with('articles')->find($serviceTypeId);
+        $this->knowledgeArticles = $serviceType ? $serviceType->articles()->orderBy('title')->get() : collect();
+    }
+
+    private function calculatePriorityFromArticles()
+    {
+        $priorityOrder = ['P1' => 1, 'P2' => 2, 'P3' => 3, 'P4' => 4];
+
+        $highestArticle = $this->knowledgeArticles
+            ->filter(fn($a) => !empty($a->priority))
+            ->sortBy(fn($a) => $priorityOrder[$a->priority] ?? 999)
+            ->first();
+
+        $this->priority = $highestArticle ? $highestArticle->priority : 'P3';
     }
 
     public function updatedClientSearch()
@@ -118,17 +146,46 @@ class TicketForm extends Component
         $this->closeClientModal();
     }
 
+    // Reemplaza el método existente
     private function generateTicketCode($ticketId)
     {
         $user = Auth::user();
-        if ($user->hasRole('secretary')) {
-            $prefix = 'TK-S-';
-        } elseif ($user->hasRole('noc')) {
-            $prefix = 'TK-N-';
-        } else {
-            $prefix = 'TK-A-';
+        $role = $user->roles()->first();
+        $prefix = $role->prefix ?? 'TK';   // Prefijo del rol, o 'TK' por defecto
+
+        // Mapear origen del ticket a código corto
+        $originMap = [
+            'Facebook Messenger' => 'FB',
+            'SMS WhatsApp' => 'WH',
+            'Llamada de WhatsApp' => 'WHL',
+            'Llamada Telefónica' => 'LL',
+            'SMS' => 'SMS',
+            'Presencial' => 'PR',
+            'Otros' => 'OT',
+        ];
+        $originCode = $originMap[$this->origin] ?? 'GEN';
+
+        // Calcular el número consecutivo considerando el formato TK-{PREFIX}-{ORIGIN}-{SEQ}
+        $nextNumber = $this->getNextTicketSequence($prefix, $originCode);
+
+        // Formato final: TK-SEC-LL-0001
+        return sprintf('TK-%s-%s-%04d', $prefix, $originCode, $nextNumber);
+    }
+
+    private function getNextTicketSequence(string $prefix, string $originCode): int
+    {
+        $likePattern = "TK-{$prefix}-{$originCode}-%";
+        $lastTicket = Ticket::where('ticket_code', 'like', $likePattern)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if (!$lastTicket) {
+            return 1;
         }
-        return $prefix . $ticketId;
+
+        $parts = explode('-', $lastTicket->ticket_code);
+        $lastNumber = (int) end($parts);
+        return $lastNumber + 1;
     }
 
     public function promptSave()
@@ -150,13 +207,16 @@ class TicketForm extends Component
 
     public function save()
     {
+        $serviceType = ServiceType::find($this->service_type_id);
+        $serviceName = $serviceType ? $serviceType->name : '';
+
         $data = [
             'client_id' => $this->client_id,
             'description' => $this->description,
-            'service_type' => $this->service_type,
+            'service_type' => $serviceName,
             'priority' => $this->priority,
             'origin' => $this->origin,
-            'requires_noc' => $this->requires_noc,
+            'requires_noc' => $this->requires_noc,   // Se guarda el valor del switch
         ];
 
         if ($this->ticketId) {
@@ -200,6 +260,7 @@ class TicketForm extends Component
 
     public function render()
     {
-        return view('livewire.tickets.ticket-form')->layout('components.layouts.app');
+        $serviceTypes = ServiceType::orderBy('name')->get();
+        return view('livewire.tickets.ticket-form', compact('serviceTypes'))->layout('components.layouts.app');
     }
 }

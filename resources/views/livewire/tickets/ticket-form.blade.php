@@ -77,45 +77,111 @@
                         Tipo de servicio *
                     </label>
                     <div class="relative">
-                        <select wire:model="service_type"
+                        <select wire:change="selectServiceType($event.target.value)"
                             class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
                             <option value="">Seleccione</option>
-                            <option value="instalacion">Instalación</option>
-                            <option value="traslado">Traslado</option>
-                            <option value="revision">Revisión</option>
-                            <option value="cobro_pendiente">Cobro pendiente</option>
-                            <option value="reconexion">Reconexión</option>
-                            <option value="desconexion">Desconexión</option>
+                            @foreach($serviceTypes as $type)
+                                <option value="{{ $type->id }}">{{ str_replace('_', ' ', $type->name) }}</option>
+                            @endforeach
                         </select>
                         <span
                             class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">build</span>
                         <span
                             class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                     </div>
-                    @error('service_type') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                    @error('service_type_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Prioridad -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-gray-400 text-base">flag</span>
-                        Prioridad *
-                    </label>
-                    <div class="relative">
-                        <select wire:model="priority"
-                            class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
-                            <option value="">Seleccione</option>
-                            <option value="P1">P1 - Crítico</option>
-                            <option value="P2">P2 - Alta</option>
-                            <option value="P3">P3 - Media</option>
-                            <option value="P4">P4 - Baja</option>
-                        </select>
-                        <span
-                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">flag</span>
-                        <span
-                            class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                <!-- Sección de Base de Conocimiento -->
+                @if(count($knowledgeArticles) > 0)
+                    <div x-data="{ openArticle: null, filter: 'all' }" wire:key="kb-{{ $service_type_id }}" class="bg-blue-50/50 rounded-xl border border-blue-200 p-4 space-y-3">
+                        <h3 class="text-sm font-semibold text-blue-800 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-blue-600 text-base">menu_book</span>
+                            Información Técnica
+                        </h3>
+                        
+                        @php
+                            $categories = $knowledgeArticles->pluck('category')->filter()->unique();
+                        @endphp
+                        @if($categories->count() > 1)
+                            <div class="flex flex-wrap gap-1">
+                                <button type="button" @click="filter = 'all'"
+                                    :class="filter === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-300'"
+                                    class="px-2 py-0.5 rounded-full text-xs font-medium transition">
+                                    Todas
+                                </button>
+                                @foreach($categories as $cat)
+                                    <button type="button" @click="filter = '{{ $cat }}'"
+                                        :class="filter === '{{ $cat }}' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-300'"
+                                        class="px-2 py-0.5 rounded-full text-xs font-medium transition">
+                                        {{ $cat }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <div class="space-y-2 max-h-60 overflow-y-auto">
+                            @foreach($knowledgeArticles as $article)
+                                <div x-show="filter === 'all' || filter === '{{ $article->category }}'"
+                                     class="bg-white rounded-lg border border-gray-200">
+                                    <button type="button" @click="openArticle = (openArticle === {{ $article->id }} ? null : {{ $article->id }})"
+                                        class="w-full flex items-center justify-between px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+                                        <div class="flex items-center gap-2">
+                                            <span>{{ $article->title }}</span>
+                                            @if($article->priority)
+                                                <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                                                    @switch($article->priority)
+                                                        @case('P1') bg-red-100 text-red-700 @break
+                                                        @case('P2') bg-orange-100 text-orange-700 @break
+                                                        @case('P3') bg-blue-100 text-blue-700 @break
+                                                        @case('P4') bg-gray-100 text-gray-600 @break
+                                                    @endswitch">
+                                                    {{ $article->priority }} - 
+                                                    @php
+                                                        $priorityLabels = ['P1' => 'Crítico', 'P2' => 'Alta', 'P3' => 'Media', 'P4' => 'Baja'];
+                                                    @endphp
+                                                    {{ $priorityLabels[$article->priority] ?? $article->priority }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <span class="material-symbols-outlined text-base transition-transform"
+                                            :class="openArticle === {{ $article->id }} ? 'rotate-180' : ''">
+                                            expand_more
+                                        </span>
+                                    </button>
+                                    <div x-show="openArticle === {{ $article->id }}" x-collapse
+                                        class="px-3 pb-3 text-xs text-gray-600 whitespace-pre-line">
+                                        {{ $article->content }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
-                    @error('priority') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                @endif
+
+                <!-- Switch Requiere NOC (manual, con badge) -->
+                <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">¿Requiere intervención del NOC?</label>
+                            <p class="text-xs text-gray-500 mt-0.5">Si se activa, el ticket se enviará al panel NOC y no se creará OT automáticamente.</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            @if($requires_noc)
+                                <span class="px-2.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                    NOC: Sí
+                                </span>
+                            @else
+                                <span class="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                                    NOC: No
+                                </span>
+                            @endif
+                            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                <input type="checkbox" wire:model="requires_noc" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Origen -->
@@ -142,25 +208,6 @@
                             class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                     </div>
                 </div>
-
-                <!-- Requiere NOC (solo visible si no es NOC) -->
-                @if($canRequestNoc)
-                    <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
-                        <div class="flex items-center justify-between gap-4">
-                            <div>
-                                <label class="text-sm font-medium text-gray-700">¿Requiere intervención del NOC?</label>
-                                <p class="text-xs text-gray-500 mt-0.5">Si se activa, el ticket se enviará al panel NOC y no
-                                    se creará OT automáticamente.</p>
-                            </div>
-                            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                                <input type="checkbox" wire:model="requires_noc" class="sr-only peer">
-                                <div
-                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                @endif
 
                 <!-- Botones -->
                 <div class="flex justify-end gap-3 pt-2">
@@ -189,7 +236,7 @@
                             <span class="material-symbols-outlined text-gray-500">person_add</span>
                             Nuevo Cliente
                         </h3>
-                        <button @click="$wire.closeClientModal()" class="text-gray-400 hover:text-gray-600 transition">
+                        <button type="button" @click="$wire.closeClientModal()" class="text-gray-400 hover:text-gray-600 transition">
                             <span class="material-symbols-outlined">close</span>
                         </button>
                     </div>
@@ -225,17 +272,16 @@
                         <p class="text-sm text-gray-600 mt-2">
                             ¿Estás seguro de guardar este ticket?
                             @if(!$ticketId && !$requires_noc)
-                                <span class="block text-xs text-gray-500 mt-1">Se creará automáticamente la orden de trabajo
-                                    correspondiente.</span>
+                                <span class="block text-xs text-gray-500 mt-1">Se creará automáticamente la orden de trabajo correspondiente.</span>
                             @endif
                         </p>
                     </div>
                     <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                        <button wire:click="executeSave"
+                        <button type="button" wire:click="executeSave"
                             class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
                             Sí, continuar
                         </button>
-                        <button @click="open = false" wire:click="cancelSave"
+                        <button type="button" @click="open = false" wire:click="cancelSave"
                             class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
                             Cancelar
                         </button>

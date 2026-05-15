@@ -33,7 +33,23 @@
                     @error('name') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Permisos agrupados por categorías (mapeo directo) -->
+                <!-- Prefijo del Rol -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-gray-400 text-base">tag</span>
+                        Prefijo (Abreviatura)
+                    </label>
+                    <div class="relative">
+                        <input type="text" wire:model="prefix"
+                            class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                            placeholder="Ej: SEC, NOC, ADM, SUP...">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">edit_note</span>
+                    </div>
+                    @error('prefix') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Permisos agrupados por categorías -->
                 <div class="border-t border-gray-200 pt-6">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-4">
                         <span class="material-symbols-outlined text-gray-500">lock</span>
@@ -41,7 +57,6 @@
                     </h2>
 
                     @php
-                        // Mapeo exacto de cada permiso a su categoría (basado en el seeder)
                         $permissionCategoryMap = [
                             // Productos
                             'view products' => 'Productos',
@@ -96,8 +111,46 @@
                             'access noc panel' => 'Tickets',
                             'view pending noc tickets' => 'Tickets',
                             'view resolutions' => 'Tickets',
-                            // Otros (low stock, settings, etc.)
+                            // Acceso a Módulos
+                            'access_inventory' => 'Acceso a Módulos',
+                            'access_suppliers' => 'Acceso a Módulos',
+                            'access_technicians' => 'Acceso a Módulos',
+                            'access_reports' => 'Acceso a Módulos',
+                            'access_support' => 'Acceso a Módulos',
+                            'access_admin' => 'Acceso a Módulos',
+                            // Submenús Inventario
+                            'view_movements_menu' => 'Submenús Inventario',
+                            'view_new_movement_menu' => 'Submenús Inventario',
+                            'view_products_menu' => 'Submenús Inventario',
+                            'view_kardex_menu' => 'Submenús Inventario',
+                            // Submenús Compras
+                            'view_suppliers_menu' => 'Submenús Compras',
+                            'view_purchase_history_menu' => 'Submenús Compras',
+                            'view_new_purchase_menu' => 'Submenús Compras',
+                            'view_returns_menu' => 'Submenús Compras',
+                            // Submenús Técnicos
+                            'view_returns_menu' => 'Submenús Técnicos',
+                            'view_register_return_menu' => 'Submenús Técnicos',
+                            'view_work_orders_menu' => 'Submenús Técnicos',
+                            'view_map_ot_menu' => 'Submenús Técnicos',
+                            'view_requisitions_menu' => 'Submenús Técnicos',
+                            // Submenús Reportes
+                            'view_low_stock_menu' => 'Submenús Reportes',
+                            'view_movements_report_menu' => 'Submenús Reportes',
+                            'view_technician_performance_menu' => 'Submenús Reportes',
+                            // Submenús Soporte
+                            'view_new_ticket_menu' => 'Submenús Soporte',
+                            'view_all_tickets_menu' => 'Submenús Soporte',
+                            'view_noc_panel_menu' => 'Submenús Soporte',
+                            // Submenús Admin
+                            'view_users_menu' => 'Submenús Admin',
+                            'view_roles_menu' => 'Submenús Admin',
+                            'view_catalog_menu' => 'Submenús Admin',
+                            'view_settings_menu' => 'Submenús Admin',
+                            // Otros
                             'view low stock' => 'General',
+                            'view requisitions' => 'General',
+                            'create requisitions' => 'General',
                         ];
 
                         $categorized = [];
@@ -106,7 +159,6 @@
                             $categorized[$category][] = $perm;
                         }
 
-                        // Orden de categorías deseado (como el menú)
                         $categoryOrder = [
                             'Productos',
                             'Movimientos',
@@ -121,17 +173,22 @@
                             'Dashboard',
                             'Clientes',
                             'Tickets',
+                            'Acceso a Módulos',
+                            'Submenús Inventario',
+                            'Submenús Compras',
+                            'Submenús Técnicos',
+                            'Submenús Reportes',
+                            'Submenús Soporte',
+                            'Submenús Admin',
                             'General',
                         ];
 
-                        // Ordenar las categorías según el orden definido
                         $orderedCategorized = [];
                         foreach ($categoryOrder as $cat) {
                             if (isset($categorized[$cat])) {
                                 $orderedCategorized[$cat] = $categorized[$cat];
                             }
                         }
-                        // Agregar cualquier categoría no listada al final
                         foreach ($categorized as $cat => $perms) {
                             if (!isset($orderedCategorized[$cat])) {
                                 $orderedCategorized[$cat] = $perms;
@@ -152,6 +209,13 @@
                             'Dashboard' => 'dashboard',
                             'Clientes' => 'person',
                             'Tickets' => 'confirmation_number',
+                            'Acceso a Módulos' => 'extension',
+                            'Submenús Inventario' => 'inventory_2',
+                            'Submenús Compras' => 'shopping_cart',
+                            'Submenús Técnicos' => 'handyman',
+                            'Submenús Reportes' => 'assessment',
+                            'Submenús Soporte' => 'support_agent',
+                            'Submenús Admin' => 'admin_panel_settings',
                             'General' => 'settings',
                         ];
                     @endphp

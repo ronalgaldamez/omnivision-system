@@ -181,67 +181,13 @@
         </div>
     </div>
 
-    <!-- Modal de detalle (modificado) -->
+    <!-- Modal de detalle (unificado) -->
     @if($showDetailModal && $selectedTicket)
-        <div x-data="{ open: true }" x-show="open" x-cloak
-            class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-xl bg-white">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold">Detalle del Ticket #{{ $selectedTicket->id }}</h3>
-                    <button wire:click="closeModal" class="text-gray-500 hover:text-gray-700">&times;</button>
-                </div>
-                <div class="space-y-3">
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500">Código de asistencia</p>
-                        <p class="font-mono text-sm font-bold">{{ $selectedTicket->ticket_code ?? 'N/A' }}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500">Cliente</p>
-                        <p class="font-medium">{{ $selectedTicket->client->name ?? 'N/A' }}</p>
-                        <p class="text-sm">{{ $selectedTicket->client->phone ?? 'Sin teléfono' }}</p>
-                        <p class="text-sm">{{ $selectedTicket->client->address ?? 'Sin dirección' }}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500">Tipo de servicio</p>
-                        <p class="font-medium">{{ ucfirst($selectedTicket->service_type) }}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500">Prioridad</p>
-                        <p class="font-medium">{{ $selectedTicket->priority ?? 'N/A' }}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500">Origen</p>
-                        <p class="font-medium">{{ $selectedTicket->origin ?? 'N/A' }}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500">Descripción del problema</p>
-                        <p class="text-sm whitespace-pre-wrap">{{ $selectedTicket->description }}</p>
-                    </div>
-                    @if($selectedTicket->notes)
-                        <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-xs text-gray-500">Notas adicionales</p>
-                            <p class="text-sm">{{ $selectedTicket->notes }}</p>
-                        </div>
-                    @endif
-                    <div class="flex justify-end gap-2 pt-3">
-                        @if(auth()->user()->can('access noc panel'))
-                            <button wire:click="goToNocPanel"
-                                class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
-                                Ir al panel del NOC
-                            </button>
-                        @endif
-                        @if(auth()->user()->can('create work_orders'))
-                            <button wire:click="promptCreateWorkOrder({{ $selectedTicket->id }})"
-                                class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                                Crear OT
-                            </button>
-                        @endif
-                        <button wire:click="closeModal"
-                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300">Cerrar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        @include('components.ticket-detail-modal', [
+            'ticket' => $selectedTicket,
+            'showNocButton' => auth()->user()->can('access noc panel'),
+            'showCreateOtButton' => auth()->user()->can('create work_orders'),
+        ])
     @endif
 
     <!-- Modal de confirmación -->

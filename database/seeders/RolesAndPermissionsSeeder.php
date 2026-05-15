@@ -74,12 +74,40 @@ class RolesAndPermissionsSeeder extends Seeder
             'access_reports',
             'access_support',
             'access_admin',
+            // Submenús Inventario
+            'view_movements_menu',
+            'view_new_movement_menu',
+            'view_products_menu',
+            'view_kardex_menu',
+            // Submenús Compras
+            'view_suppliers_menu',
+            'view_purchase_history_menu',
+            'view_new_purchase_menu',
+            // Submenús Técnicos
+            'view_returns_menu',                // Devoluciones (menú Técnicos)
+            'view_register_return_menu',        // Registrar devolución
+            'view_work_orders_menu',            // Órdenes de trabajo
+            'view_map_ot_menu',                 // Mapa OT
+            'view_requisitions_menu',           // Requisiciones
+            // Submenús Reportes
+            'view_low_stock_menu',              // Stock bajo
+            'view_movements_report_menu',       // Movimientos (reportes)
+            'view_technician_performance_menu', // Rendimiento de técnicos
+            // Submenús Soporte
+            'view_new_ticket_menu',             // Nuevo ticket
+            'view_all_tickets_menu',            // Todos los tickets
+            'view_noc_panel_menu',              // Panel NOC
+            // Submenús Admin
+            'view_users_menu',                  // Usuarios
+            'view_roles_menu',                  // Roles y permisos
+            'view_catalog_menu',                // Catálogo
+            'view_settings_menu',               // Configuración
         ];
 
-        // 🧹 Eliminar cualquier permiso que NO esté en la lista oficial
+        // 🧹 Paso 1: Eliminar cualquier permiso que NO esté en la lista oficial
         Permission::whereNotIn('name', $permissions)->delete();
 
-        // Crear los permisos oficiales (si no existen)
+        // Paso 2: Crear los permisos oficiales (si no existen)
         foreach ($permissions as $perm) {
             Permission::firstOrCreate(['name' => $perm]);
         }
@@ -94,7 +122,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $nocRole = Role::firstOrCreate(['name' => 'noc']);
         $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
 
-        // Admin recibe TODOS los permisos
+        // Admin recibe TODOS los permisos (siempre, sin importar cuántos nuevos agregues)
         $adminRole->syncPermissions(Permission::all());
 
         // Warehouse
@@ -124,10 +152,28 @@ class RolesAndPermissionsSeeder extends Seeder
             'view dashboard',
             'view low stock',
             'access_inventory',
+            'view_movements_menu',
+            'view_new_movement_menu',
+            'view_products_menu',
+            'view_kardex_menu',
             'access_suppliers',
+            'view_suppliers_menu',
+            'view_purchase_history_menu',
+            'view_new_purchase_menu',
             'access_technicians',
+            'view_returns_menu',
+            'view_register_return_menu',
+            'view_work_orders_menu',
+            'view_map_ot_menu',
+            'view_requisitions_menu',
             'access_reports',
+            'view_low_stock_menu',
+            'view_movements_report_menu',
+            'view_technician_performance_menu',
             'access_support',
+            'view_new_ticket_menu',
+            'view_all_tickets_menu',
+            'view_noc_panel_menu',
         ]);
 
         // Technician
@@ -140,6 +186,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'view requisitions',
             'create requisitions',
             'access_technicians',
+            'access_inventory',
+            'view_products_menu',
+            'view_kardex_menu',
+            'view_work_orders_menu',
+            'view_map_ot_menu',
+            'view_requisitions_menu',
         ]);
 
         // Accountant
@@ -151,6 +203,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'view reports',
             'view dashboard',
             'access_reports',
+            'view_low_stock_menu',
+            'view_movements_report_menu',
+            'view_technician_performance_menu',
         ]);
 
         // Buyer
@@ -159,6 +214,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view suppliers',
             'create purchases',
             'access_suppliers',
+            'view_suppliers_menu',
+            'view_new_purchase_menu',
         ]);
 
         // Secretary
@@ -170,6 +227,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'create tickets',
             'view own work_orders',
             'access_support',
+            'view_new_ticket_menu',
+            'view_all_tickets_menu',
         ]);
 
         // NOC
@@ -184,7 +243,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'view own work_orders',
             'view all work orders',
             'access_support',
+            'view_new_ticket_menu',
+            'view_all_tickets_menu',
+            'view_noc_panel_menu',
             'access_technicians',
+            'view_work_orders_menu',
         ]);
 
         // Supervisor
@@ -198,10 +261,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'cancel work orders',
             'view all work orders',
             'complete work_orders',
-            'view requisitions',   // puede ver pero no crear
+            'view requisitions',
             'access_technicians',
+            'view_work_orders_menu',
+            'view_map_ot_menu',
+            'view_requisitions_menu',
             'access_reports',
+            'view_low_stock_menu',
+            'view_movements_report_menu',
+            'view_technician_performance_menu',
             'access_support',
+            'view_all_tickets_menu',
         ]);
 
         // Limpiar caché al final
