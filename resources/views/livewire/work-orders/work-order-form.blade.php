@@ -27,25 +27,36 @@
         <div class="p-6">
             <form wire:submit.prevent="save" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <!-- Técnico -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                            <span class="material-symbols-outlined text-gray-400 text-base">engineering</span>
-                            Técnico *
-                        </label>
-                        <div class="relative">
-                            <select wire:model="technician_id"
-                                class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
-                                <option value="">Seleccione</option>
-                                @foreach($technicians as $tech)
-                                    <option value="{{ $tech->id }}">{{ $tech->name }}</option>
-                                @endforeach
-                            </select>
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">person</span>
-                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                    {{-- Técnico (solo visible si el usuario tiene permiso de asignar) --}}
+                    @if($canAssign)
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-base">engineering</span>
+                                Técnico *
+                            </label>
+                            <div class="relative">
+                                <input type="text" wire:model.live.debounce.300ms="technicianSearch"
+                                    placeholder="Buscar técnico por nombre..."
+                                    class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                <span
+                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                @if(count($technicianResults) > 0 && !$technician_id)
+                                    <ul
+                                        class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                        @foreach($technicianResults as $tech)
+                                            <li wire:click="selectTechnician({{ $tech->id }})"
+                                                class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between">
+                                                <span class="font-medium text-gray-800">{{ $tech->name }}</span>
+                                                <span class="text-xs text-gray-500">(ID: {{ $tech->id }})</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </div>
+                            @error('technician_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
+                            @enderror
                         </div>
-                        @error('technician_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
-                    </div>
+                    @endif
 
                     <!-- Cliente (buscador + botón nuevo) -->
                     <div>
@@ -58,14 +69,17 @@
                                 <input type="text" wire:model.live.debounce.300ms="clientSearch"
                                     placeholder="Buscar por nombre o teléfono..."
                                     class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                <span
+                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                                 @if(count($clientSearchResults) > 0)
-                                    <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                    <ul
+                                        class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
                                         @foreach($clientSearchResults as $client)
                                             <li wire:click="selectClient({{ $client->id }}, '{{ $client->name }}', '{{ $client->phone }}')"
                                                 class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between">
                                                 <span class="font-medium text-gray-800">{{ $client->name }}</span>
-                                                <span class="text-xs text-gray-500">{{ $client->phone ?? 'Sin teléfono' }}</span>
+                                                <span
+                                                    class="text-xs text-gray-500">{{ $client->phone ?? 'Sin teléfono' }}</span>
                                             </li>
                                         @endforeach
                                     </ul>
@@ -77,7 +91,8 @@
                                 Nuevo
                             </button>
                         </div>
-                        @error('client_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        @error('client_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
+                        @enderror
                     </div>
 
                     <!-- Fecha programada -->
@@ -89,7 +104,8 @@
                         <div class="relative">
                             <input type="date" wire:model="scheduled_date"
                                 class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">event</span>
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">event</span>
                         </div>
                     </div>
 
@@ -107,8 +123,10 @@
                                 <option value="completed">Completada</option>
                                 <option value="cancelled">Cancelada</option>
                             </select>
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">info</span>
-                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">info</span>
+                            <span
+                                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                         </div>
                         @error('status') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                     </div>
@@ -122,7 +140,8 @@
                         <div class="relative">
                             <input type="text" wire:model="latitude" readonly
                                 class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-700 shadow-sm text-sm">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">location_on</span>
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">location_on</span>
                         </div>
                         @error('latitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                     </div>
@@ -136,9 +155,11 @@
                         <div class="relative">
                             <input type="text" wire:model="longitude" readonly
                                 class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-700 shadow-sm text-sm">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">location_on</span>
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">location_on</span>
                         </div>
-                        @error('longitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        @error('longitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
+                        @enderror
                     </div>
 
                     <!-- Mapa -->
@@ -147,7 +168,8 @@
                             <span class="material-symbols-outlined text-gray-400 text-base">map</span>
                             Ubicación en el mapa
                         </label>
-                        <div id="map" style="height: 300px; width: 100%;" class="rounded-lg border border-gray-300 shadow-sm"></div>
+                        <div id="map" style="height: 300px; width: 100%;"
+                            class="rounded-lg border border-gray-300 shadow-sm"></div>
                         <div class="flex gap-2 mt-3">
                             <button type="button" id="getLocationBtn"
                                 class="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
@@ -172,7 +194,8 @@
                             <textarea wire:model="notes" rows="3"
                                 class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"
                                 placeholder="Notas o indicaciones adicionales"></textarea>
-                            <span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
                         </div>
                     </div>
                 </div>
@@ -194,10 +217,12 @@
                                     <input type="text" wire:model.live.debounce.300ms="currentProductSearch"
                                         placeholder="Buscar por nombre o SKU..."
                                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                    <span
+                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                                 </div>
                                 @if(count($searchResults) > 0)
-                                    <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                    <ul
+                                        class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
                                         @foreach($searchResults as $res)
                                             <li wire:click="selectProduct({{ $res->id }})"
                                                 class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between">
@@ -216,7 +241,8 @@
                                 <div class="relative">
                                     <input type="number" step="any" wire:model="currentQuantity"
                                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">tag</span>
+                                    <span
+                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">tag</span>
                                 </div>
                             </div>
                             <div class="flex items-end">
@@ -241,25 +267,29 @@
                                         <tr class="bg-gray-50 border-b border-gray-200">
                                             <th class="px-4 py-3 text-left text-gray-600 font-medium">
                                                 <div class="flex items-center gap-1.5">
-                                                    <span class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>
+                                                    <span
+                                                        class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>
                                                     Producto
                                                 </div>
                                             </th>
                                             <th class="px-4 py-3 text-center text-gray-600 font-medium">
                                                 <div class="flex items-center justify-center gap-1.5">
-                                                    <span class="material-symbols-outlined text-gray-400 text-base">numbers</span>
+                                                    <span
+                                                        class="material-symbols-outlined text-gray-400 text-base">numbers</span>
                                                     Cantidad
                                                 </div>
                                             </th>
                                             <th class="px-4 py-3 text-center text-gray-600 font-medium">
                                                 <div class="flex items-center justify-center gap-1.5">
-                                                    <span class="material-symbols-outlined text-gray-400 text-base">attach_money</span>
+                                                    <span
+                                                        class="material-symbols-outlined text-gray-400 text-base">attach_money</span>
                                                     Costo unitario
                                                 </div>
                                             </th>
                                             <th class="px-4 py-3 text-center text-gray-600 font-medium">
                                                 <div class="flex items-center justify-center gap-1.5">
-                                                    <span class="material-symbols-outlined text-gray-400 text-base">settings</span>
+                                                    <span
+                                                        class="material-symbols-outlined text-gray-400 text-base">settings</span>
                                                     Acciones
                                                 </div>
                                             </th>
@@ -278,7 +308,8 @@
                                                 </td>
                                                 <td class="px-4 py-3 text-center">
                                                     <button type="button" wire:click="removeProduct({{ $index }})"
-                                                        class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
+                                                        class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
+                                                        title="Eliminar">
                                                         <span class="material-symbols-outlined text-lg">delete</span>
                                                     </button>
                                                 </td>
@@ -324,7 +355,8 @@
                             <span class="material-symbols-outlined text-gray-500">person_add</span>
                             Nuevo Cliente
                         </h3>
-                        <button type="button" wire:click="closeClientModal" class="text-gray-400 hover:text-gray-600 transition">
+                        <button type="button" wire:click="closeClientModal"
+                            class="text-gray-400 hover:text-gray-600 transition">
                             <span class="material-symbols-outlined">close</span>
                         </button>
                     </div>
