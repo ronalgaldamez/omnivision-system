@@ -136,7 +136,8 @@
                                             @elseif($returnMode == 'partial')
                                                 <td class="px-4 py-3 text-center">
                                                     <input type="number" min="0" max="{{ $item['available_quantity'] }}" step="1"
-                                                        wire:model="partialQuantities.{{ $item['id'] }}"
+                                                        wire:model.lazy="partialQuantities.{{ $item['id'] }}"
+                                                        wire:key="partial-qty-{{ $item['id'] }}"
                                                         class="w-20 text-center rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm py-1.5">
                                                     @error("partialQuantities.{$item['id']}")
                                                         <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>

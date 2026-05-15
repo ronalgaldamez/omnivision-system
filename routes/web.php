@@ -20,6 +20,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', \App\Livewire\Reports\Dashboard::class)->name('dashboard');
     Route::post('/logout', LogoutController::class)->name('logout');
+    Route::get('/profile', \App\Livewire\Profile::class)->name('profile');
 
     // ========== INVENTORY ==========
     if (module_active('inventory')) {

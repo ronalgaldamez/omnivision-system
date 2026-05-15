@@ -113,7 +113,8 @@ class ReturnToSupplierForm extends Component
                     $hasError = true;
                 }
             }
-            if ($hasError) return;
+            if ($hasError)
+                return;
         }
 
         $this->showConfirmModal = true;
@@ -139,7 +140,8 @@ class ReturnToSupplierForm extends Component
                     $quantityToReturn = (int) ($this->partialQuantities[$item['id']] ?? 0);
                 }
 
-                if ($quantityToReturn <= 0) continue;
+                if ($quantityToReturn <= 0)
+                    continue;
 
                 $product = Product::find($item['product_id']);
                 if ($product->current_stock < $quantityToReturn) {

@@ -21,6 +21,7 @@ class WorkOrder extends Model
         'notes',
         'service_type',
         'description',
+        'code',
     ];
 
     protected $casts = [

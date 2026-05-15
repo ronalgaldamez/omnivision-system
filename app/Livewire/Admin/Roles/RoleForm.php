@@ -10,6 +10,7 @@ class RoleForm extends Component
 {
     public $roleId;
     public $name;
+    public $prefix = '';            // ← nuevo campo
     public $selectedPermissions = [];
 
     public function mount($id = null)
@@ -18,6 +19,7 @@ class RoleForm extends Component
             $role = Role::findOrFail($id);
             $this->roleId = $role->id;
             $this->name = $role->name;
+            $this->prefix = $role->prefix ?? '';
             $this->selectedPermissions = $role->permissions->pluck('name')->toArray();
         }
     }
@@ -26,17 +28,21 @@ class RoleForm extends Component
     {
         $this->validate([
             'name' => 'required|string|max:255|unique:roles,name,' . $this->roleId,
+            'prefix' => 'nullable|string|max:10',
         ]);
 
         if ($this->roleId) {
             $role = Role::findOrFail($this->roleId);
             $role->name = $this->name;
+            $role->prefix = $this->prefix;
             $role->save();
         } else {
-            $role = Role::create(['name' => $this->name]);
+            $role = Role::create([
+                'name' => $this->name,
+                'prefix' => $this->prefix,
+            ]);
         }
 
-        // Sincronizar permisos
         $role->syncPermissions($this->selectedPermissions);
 
         session()->flash('message', 'Rol guardado correctamente.');

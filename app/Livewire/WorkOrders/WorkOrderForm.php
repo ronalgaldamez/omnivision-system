@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\WorkOrder;
 use App\Models\OrderProduct;
 use App\Models\Client;
+use App\Models\Ticket;
 use Illuminate\Support\Facades\Auth;
 
 class WorkOrderForm extends Component
@@ -49,7 +50,6 @@ class WorkOrderForm extends Component
     {
         $user = Auth::user();
 
-        // Verificar permiso para asignar técnicos (al crear o editar)
         if ($user->cannot('assign technicians')) {
             abort(403, 'No tienes permiso para asignar técnicos a órdenes de trabajo.');
         }
@@ -165,6 +165,47 @@ class WorkOrderForm extends Component
         $this->products = array_values($this->products);
     }
 
+    /**
+     * Genera el código de la OT en formato OT-[PREFIJO]-[ORIGEN]-[SECUENCIA].
+     * - Prefijo: se obtiene del rol del usuario autenticado (campo `prefix` en la tabla roles).
+     * - Origen: se mapea desde el campo `origin` del ticket asociado (o se usa 'GEN' si no hay ticket).
+     * - Secuencia: número consecutivo para ese prefijo+origen.
+     */
+    private function generateWorkOrderCode(): string
+    {
+        $user = Auth::user();
+        $role = $user->roles()->first();
+        $prefix = $role->prefix ?? 'OT'; // Si el rol no tiene prefijo, usar 'OT' genérico
+
+        // Mapear origen del ticket a código corto
+        $originMap = [
+            'Facebook Messenger' => 'FB',
+            'SMS WhatsApp' => 'WH',
+            'Llamada de WhatsApp' => 'WHL',
+            'Llamada Telefónica' => 'LL',
+            'SMS' => 'SMS',
+            'Presencial' => 'PR',
+            'Otros' => 'OT',
+        ];
+
+        $ticket = Ticket::find($this->orderId ? WorkOrder::find($this->orderId)->ticket_id : null);
+        $origin = $ticket ? $originMap[$ticket->origin] ?? 'GEN' : 'GEN';
+
+        // Calcular secuencia
+        $lastCode = WorkOrder::where('code', 'like', "OT-{$prefix}-{$origin}-%")
+            ->orderBy('id', 'desc')
+            ->value('code');
+
+        $nextNumber = 1;
+        if ($lastCode) {
+            $parts = explode('-', $lastCode);
+            $lastNumber = (int) end($parts);
+            $nextNumber = $lastNumber + 1;
+        }
+
+        return sprintf('OT-%s-%s-%04d', $prefix, $origin, $nextNumber);
+    }
+
     public function save()
     {
         $this->validate();
@@ -198,6 +239,9 @@ class WorkOrderForm extends Component
             }
             session()->flash('message', 'Orden actualizada correctamente.');
         } else {
+            // Generar código automático
+            $orderData['code'] = $this->generateWorkOrderCode();
+
             $order = WorkOrder::create($orderData);
             foreach ($this->products as $prod) {
                 OrderProduct::create([
