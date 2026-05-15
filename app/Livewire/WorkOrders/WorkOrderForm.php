@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Auth;
 class WorkOrderForm extends Component
 {
     public $orderId;
-    public $technician_id;
+    public $technician_id = null;
     public $client_id;
     public $latitude;
     public $longitude;
@@ -36,23 +36,38 @@ class WorkOrderForm extends Component
     // Modal para crear cliente
     public $showClientModal = false;
 
-    protected $rules = [
-        'technician_id' => 'required|exists:users,id',
-        'client_id' => 'required|exists:clients,id',
-        'latitude' => 'nullable|numeric|between:-90,90',
-        'longitude' => 'nullable|numeric|between:-180,180',
-        'status' => 'required|in:pending,in_progress,completed,cancelled',
-        'scheduled_date' => 'nullable|date',
-        'notes' => 'nullable|string',
-    ];
+    // Permiso granular
+    public $canAssign = false;
+
+    // Buscador de técnicos
+    public $technicianSearch = '';
+    public $technicianResults = [];
+
+    protected function rules()
+    {
+        $rules = [
+            'client_id' => 'required|exists:clients,id',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'status' => 'required|in:pending,in_progress,completed,cancelled',
+            'scheduled_date' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ];
+
+        if ($this->canAssign) {
+            $rules['technician_id'] = 'required|exists:users,id';
+        } else {
+            $rules['technician_id'] = 'nullable|exists:users,id';
+        }
+
+        return $rules;
+    }
 
     public function mount($id = null)
     {
         $user = Auth::user();
 
-        if ($user->cannot('assign technicians')) {
-            abort(403, 'No tienes permiso para asignar técnicos a órdenes de trabajo.');
-        }
+        $this->canAssign = $user->can('assign technicians');
 
         if ($id) {
             $order = WorkOrder::with('products')->findOrFail($id);
@@ -68,6 +83,11 @@ class WorkOrderForm extends Component
             $this->scheduled_date = $order->scheduled_date?->format('Y-m-d');
             $this->notes = $order->notes;
 
+            // Si la OT tiene un técnico asignado, mostrarlo en el buscador
+            if ($order->technician) {
+                $this->technicianSearch = $order->technician->name;
+            }
+
             foreach ($order->products as $item) {
                 $this->products[] = [
                     'product_id' => $item->product_id,
@@ -78,8 +98,35 @@ class WorkOrderForm extends Component
                 ];
             }
         } else {
+            if ($user->cannot('create work_orders')) {
+                abort(403, 'No tienes permiso para crear órdenes de trabajo.');
+            }
             $this->products = [];
             $this->client_id = null;
+        }
+    }
+
+    // Buscador de técnicos
+    public function updatedTechnicianSearch()
+    {
+        if (strlen($this->technicianSearch) >= 2) {
+            $this->technicianResults = User::role('technician')
+                ->where('name', 'like', '%' . $this->technicianSearch . '%')
+                ->orderBy('name')
+                ->limit(10)
+                ->get();
+        } else {
+            $this->technicianResults = [];
+        }
+    }
+
+    public function selectTechnician($id)
+    {
+        $technician = User::find($id);
+        if ($technician) {
+            $this->technician_id = $technician->id;
+            $this->technicianSearch = $technician->name;
+            $this->technicianResults = [];
         }
     }
 
@@ -165,19 +212,12 @@ class WorkOrderForm extends Component
         $this->products = array_values($this->products);
     }
 
-    /**
-     * Genera el código de la OT en formato OT-[PREFIJO]-[ORIGEN]-[SECUENCIA].
-     * - Prefijo: se obtiene del rol del usuario autenticado (campo `prefix` en la tabla roles).
-     * - Origen: se mapea desde el campo `origin` del ticket asociado (o se usa 'GEN' si no hay ticket).
-     * - Secuencia: número consecutivo para ese prefijo+origen.
-     */
     private function generateWorkOrderCode(): string
     {
         $user = Auth::user();
         $role = $user->roles()->first();
-        $prefix = $role->prefix ?? 'OT'; // Si el rol no tiene prefijo, usar 'OT' genérico
+        $prefix = $role->prefix ?? 'OT';
 
-        // Mapear origen del ticket a código corto
         $originMap = [
             'Facebook Messenger' => 'FB',
             'SMS WhatsApp' => 'WH',
@@ -191,7 +231,6 @@ class WorkOrderForm extends Component
         $ticket = Ticket::find($this->orderId ? WorkOrder::find($this->orderId)->ticket_id : null);
         $origin = $ticket ? $originMap[$ticket->origin] ?? 'GEN' : 'GEN';
 
-        // Calcular secuencia
         $lastCode = WorkOrder::where('code', 'like', "OT-{$prefix}-{$origin}-%")
             ->orderBy('id', 'desc')
             ->value('code');
@@ -239,7 +278,6 @@ class WorkOrderForm extends Component
             }
             session()->flash('message', 'Orden actualizada correctamente.');
         } else {
-            // Generar código automático
             $orderData['code'] = $this->generateWorkOrderCode();
 
             $order = WorkOrder::create($orderData);
@@ -287,7 +325,6 @@ class WorkOrderForm extends Component
 
     public function render()
     {
-        $technicians = User::role('technician')->orderBy('name')->get();
-        return view('livewire.work-orders.work-order-form', compact('technicians'))->layout('components.layouts.app');
+        return view('livewire.work-orders.work-order-form')->layout('components.layouts.app');
     }
 }
