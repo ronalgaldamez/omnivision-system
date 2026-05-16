@@ -51,11 +51,16 @@ class RequisitionForm extends Component
         return $rules;
     }
 
-    public function mount()
+    public function mount($work_order_id = null)
     {
         $this->loadTechnicianStock();
         $this->otRequired = Setting::get('ot_required', 'false') === 'true';
         $this->loadWorkOrders();
+
+        // Preseleccionar la OT si viene de la URL
+        if ($work_order_id) {
+            $this->selectedWorkOrders = [(int) $work_order_id];
+        }
     }
 
     public function loadTechnicianStock()
@@ -65,10 +70,12 @@ class RequisitionForm extends Component
             ->get();
 
         $this->technicianStock = $inventory->mapWithKeys(function ($item) {
-            return [$item->product_id => [
-                'name' => $item->product->name,
-                'quantity' => $item->quantity_in_hand,
-            ]];
+            return [
+                $item->product_id => [
+                    'name' => $item->product->name,
+                    'quantity' => $item->quantity_in_hand,
+                ]
+            ];
         })->toArray();
     }
 
@@ -202,7 +209,8 @@ class RequisitionForm extends Component
 
     public function save()
     {
-        if ($this->isSaving) return;
+        if ($this->isSaving)
+            return;
         $this->isSaving = true;
 
         $requisition = Requisition::create([
