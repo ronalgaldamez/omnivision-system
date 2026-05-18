@@ -88,25 +88,29 @@
                 </div>
             </div>
 
-            {{-- Control de tiempos --}}
-            @if($workOrder->started_at)
+            {{-- Control de tiempos (mejorado) --}}
+            @if($workOrder->started_at || $workOrder->accumulated_seconds > 0)
                 <div class="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
                     <span class="material-symbols-outlined text-blue-500">schedule</span>
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Tiempo trabajado</p>
-                        <p class="text-sm text-gray-800 font-medium">
-                            Inició: {{ $workOrder->started_at->format('d/m/Y H:i') }}
-                        </p>
-                        @if($workOrder->completed_date)
+                        @if($workOrder->started_at)
                             <p class="text-sm text-gray-800 font-medium">
-                                Finalizó: {{ $workOrder->completed_date->format('d/m/Y H:i') }}
+                                Inició: {{ $workOrder->started_at->format('d/m/Y H:i') }}
                             </p>
-                            <p class="text-xs text-green-600 font-medium mt-1">
-                                Duración:
-                                {{ $workOrder->started_at->diffForHumans($workOrder->completed_date, ['parts' => 2]) }}
+                        @endif
+                        @if($workOrder->accumulated_seconds > 0)
+                            @php
+                                $hours = floor($workOrder->accumulated_seconds / 3600);
+                                $minutes = floor(($workOrder->accumulated_seconds % 3600) / 60);
+                            @endphp
+                            <p class="text-xs text-gray-600">
+                                @if($workOrder->status === 'paused')
+                                    Tiempo acumulado: {{ $hours }}h {{ $minutes }}m (pausada)
+                                @else
+                                    Tiempo total anterior: {{ $hours }}h {{ $minutes }}m
+                                @endif
                             </p>
-                        @else
-                            <p class="text-xs text-blue-600 font-medium mt-1">En progreso...</p>
                         @endif
                     </div>
                 </div>
@@ -160,10 +164,17 @@
             @endif
 
             <!-- Botones de acción -->
+            <!-- Botones de acción -->
             @if(!in_array($workOrder->status, ['completed', 'cancelled']))
                 <div class="border-t border-gray-200 pt-5 space-y-3">
-                    {{-- Si NO tiene requisición abierta --}}
-                    @if(!$hasOpenRequisition)
+                    {{-- Pendiente: mostrar iniciar (si tiene requisición y no hay otra en progreso) --}}
+                    @if($workOrder->status === 'pending' && $hasOpenRequisition && !$hasAnotherInProgress)
+                        <button wire:click="promptStartWorkOrder"
+                            class="block w-full text-center px-5 py-2.5 bg-yellow-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-yellow-600 transition">
+                            Iniciar OT
+                        </button>
+                    @elseif($workOrder->status === 'pending' && !$hasOpenRequisition)
+                        {{-- Mostrar opciones para vincular o crear requisición (mismo código anterior) --}}
                         @php
                             $openRequisition = App\Models\Requisition::where('technician_id', auth()->id())->where('status', 'open')->first();
                         @endphp
@@ -192,22 +203,42 @@
                                 Crear requisición de material
                             </a>
                         @endif
-                    @else
-                        {{-- Iniciar OT (solo si YA tiene requisición vinculada y está pendiente) --}}
-                        @if($workOrder->status === 'pending')
-                            <button wire:click="promptStartWorkOrder"
-                                class="block w-full text-center px-5 py-2.5 bg-yellow-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-yellow-600 transition">
-                                Iniciar OT
+                    @elseif($workOrder->status === 'pending' && $hasAnotherInProgress)
+                        <div class="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <span class="material-symbols-outlined text-yellow-600">warning</span>
+                            <div>
+                                <p class="text-sm font-medium text-yellow-800">Ya tienes otra OT en progreso</p>
+                                <p class="text-xs text-yellow-700">Finaliza o pausa esa OT antes de iniciar esta.</p>
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- En progreso: mostrar Pausar y Completar --}}
+                    @if($workOrder->status === 'in_progress')
+                        <button wire:click="promptPauseWorkOrder"
+                            class="block w-full text-center px-5 py-2.5 bg-gray-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-gray-600 transition">
+                            Pausar OT
+                        </button>
+                        @if(auth()->user()->can('complete work_orders'))
+                            <button wire:click="promptCompleteWorkOrder"
+                                class="block w-full text-center px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
+                                Completar trabajo
                             </button>
                         @endif
                     @endif
 
-                    {{-- Completar trabajo --}}
-                    @if(auth()->user()->can('complete work_orders'))
-                        <button wire:click="promptCompleteWorkOrder"
-                            class="block w-full text-center px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
-                            Completar trabajo
+                    {{-- Pausada: mostrar Reanudar y Completar --}}
+                    @if($workOrder->status === 'paused')
+                        <button wire:click="promptResumeWorkOrder"
+                            class="block w-full text-center px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-600 transition">
+                            Reanudar OT
                         </button>
+                        @if(auth()->user()->can('complete work_orders'))
+                            <button wire:click="promptCompleteWorkOrder"
+                                class="block w-full text-center px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
+                                Completar trabajo
+                            </button>
+                        @endif
                     @endif
                 </div>
             @endif
