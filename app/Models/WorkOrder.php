@@ -22,13 +22,15 @@ class WorkOrder extends Model
         'service_type',
         'description',
         'code',
-        'started_at',       // ← añadido
+        'started_at',   
+        'accumulated_seconds',
     ];
 
     protected $casts = [
         'scheduled_date' => 'date',
         'completed_date' => 'datetime',
-        'started_at' => 'datetime',   // ← añadido
+        'started_at' => 'datetime',
+        'accumulated_seconds' => 'integer',
     ];
 
     public function technician()

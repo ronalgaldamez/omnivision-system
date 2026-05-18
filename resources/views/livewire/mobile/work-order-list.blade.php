@@ -33,9 +33,10 @@
                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">filter_alt</span>
                     <select wire:model.live="statusFilter"
                         class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
-                        <option value="pending,in_progress">Pendientes / En progreso</option>
+                        <option value="pending,in_progress,paused">Pendientes / En progreso / Pausadas</option>
                         <option value="pending">Solo pendientes</option>
                         <option value="in_progress">Solo en progreso</option>
+                        <option value="paused">Solo pausadas</option>
                         <option value="completed">Completadas</option>
                         <option value="cancelled">Canceladas</option>
                     </select>
@@ -73,6 +74,12 @@
                                             class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
                                             <span class="material-symbols-outlined text-sm">autorenew</span>
                                             En progreso
+                                        </span>
+                                    @elseif($order->status == 'paused')
+                                        <span
+                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                                            <span class="material-symbols-outlined text-sm">pause_circle</span>
+                                            Pausada
                                         </span>
                                     @elseif($order->status == 'completed')
                                         <span
