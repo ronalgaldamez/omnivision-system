@@ -118,12 +118,14 @@ class RolesAndPermissionsSeeder extends Seeder
         $technicianRole = Role::firstOrCreate(['name' => 'technician']);
         $accountantRole = Role::firstOrCreate(['name' => 'accountant']);
         $buyerRole = Role::firstOrCreate(['name' => 'buyer']);
-        // Renombrado a Atención al Cliente
-        $atencionClienteRole = Role::firstOrCreate(['name' => 'atencion_al_cliente']);
+
+        $atencionClienteRole = Role::firstOrCreate(
+            ['name' => 'atencion_al_cliente'],
+            ['prefix' => 'SAC']
+        );
         $nocRole = Role::firstOrCreate(['name' => 'noc']);
         $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
 
-        // Admin recibe TODOS los permisos
         $adminRole->syncPermissions(Permission::all());
 
         // Warehouse
@@ -217,7 +219,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_new_purchase_menu',
         ]);
 
-        // Atención al Cliente (antes Secretaria)
+
         $atencionClienteRole->syncPermissions([
             'view dashboard',
             'view clients',
