@@ -69,7 +69,7 @@ class Dashboard extends Component
         $totalMyTickets = null;
         $pendingMyTickets = null;
         $resolvedMyTickets = null;
-        if ($user->can('view own tickets') && ($user->hasRole('secretary') || $user->hasRole('noc'))) {
+        if ($user->can('view own tickets') && ($user->hasRole('atencion_al_cliente') || $user->hasRole('noc'))) {
             $myTickets = Ticket::where('created_by', $user->id)->latest()->limit(5)->get();
             $totalMyTickets = Ticket::where('created_by', $user->id)->count();
             $pendingMyTickets = Ticket::where('created_by', $user->id)->where('status', 'pending')->count();
@@ -103,7 +103,7 @@ class Dashboard extends Component
 
         // Órdenes relacionadas con tickets del usuario
         $relatedWorkOrders = null;
-        if ($user->can('view own work_orders') && ($user->hasRole('secretary') || $user->hasRole('noc'))) {
+        if ($user->can('view own work_orders') && ($user->hasRole('atencion_al_cliente') || $user->hasRole('noc'))) {
             $relatedWorkOrders = WorkOrder::whereHas('ticket', function ($q) use ($user) {
                 $q->where('created_by', $user->id);
             })->latest()->limit(5)->get();

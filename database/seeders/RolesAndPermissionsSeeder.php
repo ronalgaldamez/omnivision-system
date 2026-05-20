@@ -13,7 +13,7 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Lista oficial de permisos (únicos que deben existir)
+        // Lista oficial de permisos
         $permissions = [
             // Inventario
             'view products',
@@ -30,7 +30,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete suppliers',
             'view purchases',
             'create purchases',
-            // Técnicos (sin solicitudes)
+            // Técnicos
             'view work_orders',
             'create work_orders',
             'edit work_orders',
@@ -84,30 +84,30 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_purchase_history_menu',
             'view_new_purchase_menu',
             // Submenús Técnicos
-            'view_returns_menu',                // Devoluciones (menú Técnicos)
-            'view_register_return_menu',        // Registrar devolución
-            'view_work_orders_menu',            // Órdenes de trabajo
-            'view_map_ot_menu',                 // Mapa OT
-            'view_requisitions_menu',           // Requisiciones
+            'view_returns_menu',
+            'view_register_return_menu',
+            'view_work_orders_menu',
+            'view_map_ot_menu',
+            'view_requisitions_menu',
             // Submenús Reportes
-            'view_low_stock_menu',              // Stock bajo
-            'view_movements_report_menu',       // Movimientos (reportes)
-            'view_technician_performance_menu', // Rendimiento de técnicos
+            'view_low_stock_menu',
+            'view_movements_report_menu',
+            'view_technician_performance_menu',
             // Submenús Soporte
-            'view_new_ticket_menu',             // Nuevo ticket
-            'view_all_tickets_menu',            // Todos los tickets
-            'view_noc_panel_menu',              // Panel NOC
+            'view_new_ticket_menu',
+            'view_all_tickets_menu',
+            'view_noc_panel_menu',
             // Submenús Admin
-            'view_users_menu',                  // Usuarios
-            'view_roles_menu',                  // Roles y permisos
-            'view_catalog_menu',                // Catálogo
-            'view_settings_menu',               // Configuración
+            'view_users_menu',
+            'view_roles_menu',
+            'view_catalog_menu',
+            'view_settings_menu',
         ];
 
         // 🧹 Paso 1: Eliminar cualquier permiso que NO esté en la lista oficial
         Permission::whereNotIn('name', $permissions)->delete();
 
-        // Paso 2: Crear los permisos oficiales (si no existen)
+        // Paso 2: Crear los permisos oficiales
         foreach ($permissions as $perm) {
             Permission::firstOrCreate(['name' => $perm]);
         }
@@ -118,11 +118,12 @@ class RolesAndPermissionsSeeder extends Seeder
         $technicianRole = Role::firstOrCreate(['name' => 'technician']);
         $accountantRole = Role::firstOrCreate(['name' => 'accountant']);
         $buyerRole = Role::firstOrCreate(['name' => 'buyer']);
-        $secretaryRole = Role::firstOrCreate(['name' => 'secretary']);
+        // Renombrado a Atención al Cliente
+        $atencionClienteRole = Role::firstOrCreate(['name' => 'atencion_al_cliente']);
         $nocRole = Role::firstOrCreate(['name' => 'noc']);
         $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
 
-        // Admin recibe TODOS los permisos (siempre, sin importar cuántos nuevos agregues)
+        // Admin recibe TODOS los permisos
         $adminRole->syncPermissions(Permission::all());
 
         // Warehouse
@@ -216,8 +217,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_new_purchase_menu',
         ]);
 
-        // Secretary
-        $secretaryRole->syncPermissions([
+        // Atención al Cliente (antes Secretaria)
+        $atencionClienteRole->syncPermissions([
             'view dashboard',
             'view clients',
             'create clients',
