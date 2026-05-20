@@ -28,21 +28,15 @@ class RequisitionIndex extends Component
             return;
         }
 
-        // Crear una devolución de técnico (technician_return)
-        $return = \App\Models\TechnicianReturn::create([
-            'technician_id' => $user->id,
-            'return_date' => now(),
-            'status' => 'completed',
-            'notes' => 'Cierre semanal automático - Material sobrante de requisiciones',
-        ]);
-
         foreach ($inventoryItems as $inv) {
             if ($inv->quantity_in_hand > 0) {
-                \App\Models\ReturnProduct::create([
-                    'technician_return_id' => $return->id,
+                // Crear devolución por producto
+                $return = \App\Models\TechnicianReturn::create([
+                    'user_id' => $user->id,
                     'product_id' => $inv->product_id,
                     'quantity' => $inv->quantity_in_hand,
-                    'condition' => 'good', // asumimos bueno, ajustable luego
+                    'type' => 'surplus',
+                    'notes' => 'Cierre semanal automático',
                 ]);
 
                 // Devolver stock a bodega
@@ -54,7 +48,7 @@ class RequisitionIndex extends Component
                     'product_id' => $inv->product_id,
                     'type' => 'technician_return',
                     'quantity' => $inv->quantity_in_hand,
-                    'description' => 'Devolución cierre semanal (Req. agrupadas)',
+                    'description' => 'Devolución cierre semanal',
                     'user_id' => $user->id,
                     'reference_type' => 'technician_return',
                     'reference_id' => $return->id,

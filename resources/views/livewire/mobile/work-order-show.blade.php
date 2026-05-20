@@ -71,6 +71,12 @@
                                 <span class="material-symbols-outlined text-sm">autorenew</span>
                                 En progreso
                             </span>
+                        @elseif($workOrder->status == 'paused')
+                            <span
+                                class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                                <span class="material-symbols-outlined text-sm">pause_circle</span>
+                                Pausada
+                            </span>
                         @elseif($workOrder->status == 'completed')
                             <span
                                 class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium">
@@ -88,7 +94,7 @@
                 </div>
             </div>
 
-            {{-- Control de tiempos (mejorado) --}}
+            {{-- Control de tiempos --}}
             @if($workOrder->started_at || $workOrder->accumulated_seconds > 0)
                 <div class="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
                     <span class="material-symbols-outlined text-blue-500">schedule</span>
@@ -164,7 +170,6 @@
             @endif
 
             <!-- Botones de acción -->
-            <!-- Botones de acción -->
             @if(!in_array($workOrder->status, ['completed', 'cancelled']))
                 <div class="border-t border-gray-200 pt-5 space-y-3">
                     {{-- Pendiente: mostrar iniciar (si tiene requisición y no hay otra en progreso) --}}
@@ -174,22 +179,18 @@
                             Iniciar OT
                         </button>
                     @elseif($workOrder->status === 'pending' && !$hasOpenRequisition)
-                        {{-- Mostrar opciones para vincular o crear requisición (mismo código anterior) --}}
-                        @php
-                            $openRequisition = App\Models\Requisition::where('technician_id', auth()->id())->where('status', 'open')->first();
-                        @endphp
-                        @if($openRequisition)
+                        @if($technicianHasOpenRequisition)
                             <div class="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                                 <span class="material-symbols-outlined text-yellow-600">warning</span>
                                 <div>
                                     <p class="text-sm font-medium text-yellow-800">OT no vinculada</p>
-                                    <p class="text-xs text-yellow-700">Abre el formulario para seleccionar esta y otras OTs.</p>
+                                    <p class="text-xs text-yellow-700">Selecciona OTs para vincular a tu requisición activa.</p>
                                 </div>
                             </div>
-                            <a href="{{ route('technician.requisitions.create', ['work_order_id' => $workOrder->id]) }}"
+                            <button wire:click="openWorkOrderSelectionModal"
                                 class="block w-full text-center px-5 py-2.5 bg-purple-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-purple-700 transition">
-                                Ir al formulario de requisición
-                            </a>
+                                Vincular OTs a requisición activa
+                            </button>
                         @else
                             <div class="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                                 <span class="material-symbols-outlined text-yellow-600">warning</span>
@@ -226,19 +227,12 @@
                             </button>
                         @endif
                     @endif
-
-                    {{-- Pausada: mostrar Reanudar y Completar --}}
+                    {{-- Pausada: solo mostrar Reanudar (por seguridad) --}}
                     @if($workOrder->status === 'paused')
                         <button wire:click="promptResumeWorkOrder"
                             class="block w-full text-center px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-600 transition">
                             Reanudar OT
                         </button>
-                        @if(auth()->user()->can('complete work_orders'))
-                            <button wire:click="promptCompleteWorkOrder"
-                                class="block w-full text-center px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
-                                Completar trabajo
-                            </button>
-                        @endif
                     @endif
                 </div>
             @endif
@@ -265,6 +259,105 @@
                             Sí, continuar
                         </button>
                         <button @click="open = false" wire:click="cancelConfirmation"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal de consumo de material (aparece al completar) --}}
+    @if($showConsumptionModal)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-lg">
+                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                        <h3 class="text-lg font-semibold flex items-center gap-2">
+                            <span class="material-symbols-outlined text-gray-500">inventory_2</span>
+                            Material Utilizado en OT #{{ $workOrder->id }}
+                        </h3>
+                        <button wire:click="closeConsumptionModal" class="text-gray-400 hover:text-gray-600 transition">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        @if(count($availableProducts) > 0)
+                            <p class="text-sm text-gray-600">Indica cuánto material usaste de tu requisición para esta OT.</p>
+                            <div class="space-y-3">
+                                @foreach($availableProducts as $index => $product)
+                                    <div class="flex items-center justify-between gap-4 p-3 bg-gray-50 rounded-lg">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-gray-800">{{ $product['product_name'] }}</p>
+                                            <p class="text-xs text-gray-500">Disponible: {{ $product['available'] }}</p>
+                                        </div>
+                                        <input type="number" min="0" max="{{ $product['available'] }}" step="any"
+                                            wire:model.defer="consumptionQuantities.{{ $index }}"
+                                            class="w-20 text-center rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm py-1.5">
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-sm text-gray-500">No tienes productos disponibles en tu requisición activa.</p>
+                        @endif
+                    </div>
+                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                        <button wire:click="saveConsumption"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
+                            Guardar consumo
+                        </button>
+                        <button wire:click="closeConsumptionModal"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                            Omitir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal de selección de OTs para vincular --}}
+    @if($showWorkOrderSelectionModal)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-lg">
+                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                        <h3 class="text-lg font-semibold flex items-center gap-2">
+                            <span class="material-symbols-outlined text-gray-500">playlist_add_check</span>
+                            Selecciona OTs para Vincular
+                        </h3>
+                        <button wire:click="closeWorkOrderSelectionModal"
+                            class="text-gray-400 hover:text-gray-600 transition">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        <p class="text-sm text-gray-600">Marca las Órdenes de Trabajo que deseas agregar a tu requisición
+                            activa.</p>
+                        <div class="space-y-2 max-h-60 overflow-y-auto">
+                            @forelse($eligibleWorkOrders as $wo)
+                                <label
+                                    class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition">
+                                    <input type="checkbox" value="{{ $wo['id'] }}" wire:model="selectedWorkOrdersForLink"
+                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-2 focus:ring-blue-500/20">
+                                    <span class="text-sm text-gray-700">{{ $wo['name'] }}</span>
+                                </label>
+                            @empty
+                                <p class="text-sm text-gray-500">No hay OTs pendientes sin vincular.</p>
+                            @endforelse
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                        <button wire:click="linkSelectedWorkOrders"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
+                            Vincular seleccionadas
+                        </button>
+                        <button wire:click="closeWorkOrderSelectionModal"
                             class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
                             Cancelar
                         </button>
