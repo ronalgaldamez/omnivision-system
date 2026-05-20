@@ -247,10 +247,19 @@ class RequisitionForm extends Component
                 $product->decrement('current_stock', $item['quantity']);
             }
 
-            TechnicianInventory::updateOrCreate(
-                ['technician_id' => Auth::id(), 'product_id' => $product->id],
-                ['quantity_in_hand' => \DB::raw('quantity_in_hand + ' . $item['quantity'])]
-            );
+            $existingInventory = TechnicianInventory::where('technician_id', Auth::id())
+                ->where('product_id', $product->id)
+                ->first();
+
+            if ($existingInventory) {
+                $existingInventory->increment('quantity_in_hand', $item['quantity']);
+            } else {
+                TechnicianInventory::create([
+                    'technician_id' => Auth::id(),
+                    'product_id' => $product->id,
+                    'quantity_in_hand' => $item['quantity'],
+                ]);
+            }
         }
 
         $this->dispatch('show-toast', type: 'success', message: 'Requisición creada correctamente.');

@@ -178,8 +178,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Technician
         $technicianRole->syncPermissions([
-            'view products',
-            'view kardex',
             'view work_orders',
             'complete work_orders',
             'view dashboard',
@@ -220,6 +218,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Secretary
         $secretaryRole->syncPermissions([
+            'view dashboard',
             'view clients',
             'create clients',
             'edit clients',
@@ -233,6 +232,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // NOC
         $nocRole->syncPermissions([
+            'view dashboard',
             'view any tickets',
             'view own tickets',
             'create tickets',

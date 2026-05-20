@@ -11,7 +11,7 @@ class WorkOrderList extends Component
 {
     use WithPagination;
 
-    public $statusFilter = 'pending,in_progress'; // por defecto ver pendientes y en progreso
+    public $statusFilter = 'pending,in_progress,paused'; // por defecto ver pendientes y en progreso
     public $search = '';
 
     public function render()
