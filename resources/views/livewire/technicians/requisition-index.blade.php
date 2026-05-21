@@ -50,7 +50,7 @@
                             @if($req->workOrders->isNotEmpty())
                                 <p class="text-xs text-gray-500 mb-2">Órdenes: 
                                     @foreach($req->workOrders as $wo)
-                                        #{{ $wo->id }}@if(!$loop->last), @endif
+                                        {{ $wo->code ?? 'OT-'.$wo->id }} - {{ $wo->client->name ?? 'N/A' }}@if(!$loop->last), @endif
                                     @endforeach
                                 </p>
                             @endif

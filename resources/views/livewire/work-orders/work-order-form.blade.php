@@ -188,7 +188,7 @@
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                             <span class="material-symbols-outlined text-gray-400 text-base">sticky_note_2</span>
-                            Notas
+                            Notas *
                         </label>
                         <div class="relative">
                             <textarea wire:model="notes" rows="3"

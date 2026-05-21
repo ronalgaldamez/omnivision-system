@@ -12,7 +12,7 @@ class WorkOrderShow extends Component
 
     public function mount($id)
     {
-        $this->order = WorkOrder::with('technician', 'products.product', 'client')->findOrFail($id);
+        $this->order = WorkOrder::with('technician', 'products.product', 'client', 'ticket', 'createdBy')->findOrFail($id);
     }
 
     public function completeWorkOrder()
@@ -52,6 +52,23 @@ class WorkOrderShow extends Component
 
         $this->dispatch('showToast', ['type' => 'success', 'message' => 'Orden cancelada.']);
         return redirect()->route('work-orders.index');
+    }
+
+    public function getTicketOriginLabel()
+    {
+        $ticket = $this->order->ticket;
+        if (!$ticket)
+            return null;
+        $map = [
+            'Facebook Messenger' => 'Facebook Messenger',
+            'SMS WhatsApp' => 'SMS WhatsApp',
+            'Llamada de WhatsApp' => 'Llamada de WhatsApp',
+            'Llamada Telefónica' => 'Llamada Telefónica',
+            'SMS' => 'SMS',
+            'Presencial' => 'Presencial',
+            'Otros' => 'Otros',
+        ];
+        return $map[$ticket->origin] ?? $ticket->origin ?? 'Desconocido';
     }
 
     public function render()

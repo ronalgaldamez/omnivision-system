@@ -6,7 +6,7 @@
             <div>
                 <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
                     <span class="material-symbols-outlined text-gray-500">work</span>
-                    Orden #{{ $order->id }}
+                    Orden de Trabajo {{ $order->code ?? 'OT-'.$order->id }}
                 </h1>
                 <p class="text-sm text-gray-500 mt-1">Detalle de la orden de trabajo</p>
             </div>
@@ -42,6 +42,14 @@
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Técnico</p>
                         <p class="text-gray-800">{{ $order->technician->name ?? 'N/A' }}</p>
+                    </div>
+                </div>
+                <!-- Creada por -->
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">person_add</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Creada por</p>
+                        <p class="text-gray-800">{{ $order->createdBy->name ?? 'N/A' }}</p>
                     </div>
                 </div>
                 <!-- Teléfono -->
@@ -105,6 +113,58 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Información del Ticket Asociado --}}
+            @if($order->ticket)
+                <div class="border-t border-gray-200 pt-5 space-y-3">
+                    <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-gray-500">confirmation_number</span>
+                        Información del Ticket
+                    </h2>
+                    {{-- Origen del Ticket --}}
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">source</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Origen del Ticket</p>
+                            <p class="text-gray-700">{{ $this->getTicketOriginLabel() ?? '—' }}</p>
+                        </div>
+                    </div>
+                    {{-- Prioridad del Ticket --}}
+                    @if($order->ticket->priority)
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">flag</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Prioridad del Ticket</p>
+                            <p class="text-gray-700">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    @switch($order->ticket->priority)
+                                        @case('P1') bg-red-100 text-red-700 @break
+                                        @case('P2') bg-orange-100 text-orange-700 @break
+                                        @case('P3') bg-blue-100 text-blue-700 @break
+                                        @case('P4') bg-gray-100 text-gray-600 @break
+                                    @endswitch">
+                                    {{ $order->ticket->priority }} -
+                                    @php
+                                        $priorityLabels = ['P1' => 'Crítico', 'P2' => 'Alta', 'P3' => 'Media', 'P4' => 'Baja'];
+                                    @endphp
+                                    {{ $priorityLabels[$order->ticket->priority] ?? $order->ticket->priority }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    @endif
+                    {{-- Problema Reportado --}}
+                    @if($order->ticket->description)
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">description</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Problema Reportado</p>
+                            <p class="text-gray-700 whitespace-pre-wrap">{{ $order->ticket->description }}</p>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            @endif
 
             <!-- Productos -->
             <div class="border-t border-gray-200 pt-5">
