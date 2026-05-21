@@ -51,7 +51,7 @@ class WorkOrderForm extends Component
             'longitude' => 'nullable|numeric|between:-180,180',
             'status' => 'required|in:pending,in_progress,completed,cancelled',
             'scheduled_date' => 'nullable|date',
-            'notes' => 'nullable|string',
+            'notes' => 'required|string|min:5',
         ];
 
         if ($this->canAssign) {

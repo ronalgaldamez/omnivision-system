@@ -4,7 +4,7 @@
             <div>
                 <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
                     <span class="material-symbols-outlined text-gray-500">work</span>
-                    Orden de Trabajo #{{ $workOrder->id }}
+                    {{ $workOrder->code ?? 'OT-'.$workOrder->id }}
                 </h1>
                 <p class="text-sm text-gray-500 mt-1">Detalle de la orden asignada</p>
             </div>
@@ -16,14 +16,17 @@
         </div>
 
         <div class="p-6 space-y-5">
-            <!-- Datos del cliente -->
+            {{-- ========== DATOS DEL CLIENTE ========== --}}
+            <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
+                <span class="material-symbols-outlined text-gray-500">person</span>
+                Datos del Cliente
+            </h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">person</span>
                     <div>
-                        <p class="text-xs text-gray-500 uppercase tracking-wide">Cliente</p>
-                        <p class="text-gray-800 font-medium">{{ $workOrder->client->name ?? 'Cliente no especificado' }}
-                        </p>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Nombre</p>
+                        <p class="text-gray-800 font-medium">{{ $workOrder->client->name ?? 'No especificado' }}</p>
                     </div>
                 </div>
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
@@ -48,95 +51,156 @@
                         <p class="text-gray-700">{{ $workOrder->client->address ?? '—' }}</p>
                     </div>
                 </div>
-                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
-                    <span class="material-symbols-outlined text-gray-400">calendar_month</span>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase tracking-wide">Fecha programada</p>
-                        <p class="text-gray-700">{{ $workOrder->scheduled_date?->format('d/m/Y') ?? '—' }}</p>
-                    </div>
-                </div>
-                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
-                    <span class="material-symbols-outlined text-gray-400">flag</span>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase tracking-wide">Estado</p>
-                        @if($workOrder->status == 'pending')
-                            <span
-                                class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-yellow-50 text-yellow-700 rounded-full text-xs font-medium">
-                                <span class="material-symbols-outlined text-sm">schedule</span>
-                                Pendiente
-                            </span>
-                        @elseif($workOrder->status == 'in_progress')
-                            <span
-                                class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
-                                <span class="material-symbols-outlined text-sm">autorenew</span>
-                                En progreso
-                            </span>
-                        @elseif($workOrder->status == 'paused')
-                            <span
-                                class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                                <span class="material-symbols-outlined text-sm">pause_circle</span>
-                                Pausada
-                            </span>
-                        @elseif($workOrder->status == 'completed')
-                            <span
-                                class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium">
-                                <span class="material-symbols-outlined text-sm">check_circle</span>
-                                Completada
-                            </span>
-                        @else
-                            <span
-                                class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-red-50 text-red-700 rounded-full text-xs font-medium">
-                                <span class="material-symbols-outlined text-sm">cancel</span>
-                                Cancelada
-                            </span>
-                        @endif
-                    </div>
-                </div>
             </div>
 
-            {{-- Control de tiempos --}}
-            @if($workOrder->started_at || $workOrder->accumulated_seconds > 0)
-                <div class="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-                    <span class="material-symbols-outlined text-blue-500">schedule</span>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase tracking-wide">Tiempo trabajado</p>
-                        @if($workOrder->started_at)
-                            <p class="text-sm text-gray-800 font-medium">
-                                Inició: {{ $workOrder->started_at->format('d/m/Y H:i') }}
-                            </p>
+            {{-- ========== INFORMACIÓN DEL TICKET ========== --}}
+            @if($workOrder->ticket)
+                <div class="border-t border-gray-200 pt-5 space-y-3">
+                    <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-gray-500">confirmation_number</span>
+                        Ticket #{{ $workOrder->ticket->id }}
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                            <span class="material-symbols-outlined text-gray-400">person</span>
+                            <div>
+                                <p class="text-xs text-gray-500 uppercase tracking-wide">Creado por</p>
+                                <p class="text-gray-700">{{ $workOrder->ticket->createdBy->name ?? 'N/A' }}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                            <span class="material-symbols-outlined text-gray-400">source</span>
+                            <div>
+                                <p class="text-xs text-gray-500 uppercase tracking-wide">Origen</p>
+                                <p class="text-gray-700">{{ $this->getTicketOriginLabel() ?? '—' }}</p>
+                            </div>
+                        </div>
+                        @if($workOrder->ticket->priority)
+                        <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                            <span class="material-symbols-outlined text-gray-400">flag</span>
+                            <div>
+                                <p class="text-xs text-gray-500 uppercase tracking-wide">Prioridad</p>
+                                <p class="text-gray-700">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        @switch($workOrder->ticket->priority)
+                                            @case('P1') bg-red-100 text-red-700 @break
+                                            @case('P2') bg-orange-100 text-orange-700 @break
+                                            @case('P3') bg-blue-100 text-blue-700 @break
+                                            @case('P4') bg-gray-100 text-gray-600 @break
+                                        @endswitch">
+                                        {{ $workOrder->ticket->priority }} -
+                                        @php
+                                            $priorityLabels = ['P1' => 'Crítico', 'P2' => 'Alta', 'P3' => 'Media', 'P4' => 'Baja'];
+                                        @endphp
+                                        {{ $priorityLabels[$workOrder->ticket->priority] ?? $workOrder->ticket->priority }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
                         @endif
-                        @if($workOrder->accumulated_seconds > 0)
-                            @php
-                                $hours = floor($workOrder->accumulated_seconds / 3600);
-                                $minutes = floor(($workOrder->accumulated_seconds % 3600) / 60);
-                            @endphp
-                            <p class="text-xs text-gray-600">
-                                @if($workOrder->status === 'paused')
-                                    Tiempo acumulado: {{ $hours }}h {{ $minutes }}m (pausada)
-                                @else
-                                    Tiempo total anterior: {{ $hours }}h {{ $minutes }}m
-                                @endif
-                            </p>
+                        @if($workOrder->ticket->description)
+                        <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 sm:col-span-2">
+                            <span class="material-symbols-outlined text-gray-400">description</span>
+                            <div>
+                                <p class="text-xs text-gray-500 uppercase tracking-wide">Problema Reportado</p>
+                                <p class="text-gray-700 whitespace-pre-wrap">{{ $workOrder->ticket->description }}</p>
+                            </div>
+                        </div>
                         @endif
                     </div>
                 </div>
             @endif
 
-            <!-- Notas -->
-            <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
-                <span class="material-symbols-outlined text-gray-400">sticky_note_2</span>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase tracking-wide">Notas</p>
-                    <p class="text-gray-700">{{ $workOrder->notes ?? '—' }}</p>
+            {{-- ========== INFORMACIÓN DE LA OT ========== --}}
+            <div class="border-t border-gray-200 pt-5 space-y-3">
+                <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-gray-500">engineering</span>
+                    Información de la OT
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">person</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Creada por</p>
+                            <p class="text-gray-700">{{ $workOrder->createdBy->name ?? 'N/A' }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">calendar_month</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Fecha programada</p>
+                            <p class="text-gray-700">{{ $workOrder->scheduled_date?->format('d/m/Y') ?? '—' }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">flag</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Estado</p>
+                            @if($workOrder->status == 'pending')
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-yellow-50 text-yellow-700 rounded-full text-xs font-medium">
+                                    <span class="material-symbols-outlined text-sm">schedule</span> Pendiente
+                                </span>
+                            @elseif($workOrder->status == 'in_progress')
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                                    <span class="material-symbols-outlined text-sm">autorenew</span> En progreso
+                                </span>
+                            @elseif($workOrder->status == 'paused')
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                                    <span class="material-symbols-outlined text-sm">pause_circle</span> Pausada
+                                </span>
+                            @elseif($workOrder->status == 'completed')
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                                    <span class="material-symbols-outlined text-sm">check_circle</span> Completada
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-red-50 text-red-700 rounded-full text-xs font-medium">
+                                    <span class="material-symbols-outlined text-sm">cancel</span> Cancelada
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                    {{-- Tiempo trabajado --}}
+                    @if($workOrder->started_at || $workOrder->accumulated_seconds > 0)
+                    <div class="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100 sm:col-span-2">
+                        <span class="material-symbols-outlined text-blue-500">schedule</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Tiempo trabajado</p>
+                            @if($workOrder->started_at)
+                                <p class="text-sm text-gray-800 font-medium">Inició: {{ $workOrder->started_at->format('d/m/Y H:i') }}</p>
+                            @endif
+                            @if($workOrder->accumulated_seconds > 0)
+                                @php
+                                    $hours = floor($workOrder->accumulated_seconds / 3600);
+                                    $minutes = floor(($workOrder->accumulated_seconds % 3600) / 60);
+                                @endphp
+                                <p class="text-xs text-gray-600">
+                                    @if($workOrder->status === 'paused')
+                                        Tiempo acumulado: {{ $hours }}h {{ $minutes }}m (pausada)
+                                    @else
+                                        Tiempo total anterior: {{ $hours }}h {{ $minutes }}m
+                                    @endif
+                                </p>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
+                    {{-- Notas --}}
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 sm:col-span-2">
+                        <span class="material-symbols-outlined text-gray-400">sticky_note_2</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Notas</p>
+                            <p class="text-gray-700">{{ $workOrder->notes ?? '—' }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Productos sugeridos -->
+            {{-- Productos sugeridos --}}
             @if($workOrder->products->count())
                 <div class="border-t border-gray-200 pt-5">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-3">
                         <span class="material-symbols-outlined text-gray-500">inventory_2</span>
-                        Productos sugeridos / asignados
+                        Productos sugeridos
                     </h2>
                     <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                         <table class="min-w-full text-sm">
@@ -227,7 +291,7 @@
                             </button>
                         @endif
                     @endif
-                    {{-- Pausada: solo mostrar Reanudar (por seguridad) --}}
+                    {{-- Pausada: solo Reanudar --}}
                     @if($workOrder->status === 'paused')
                         <button wire:click="promptResumeWorkOrder"
                             class="block w-full text-center px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-600 transition">
@@ -268,7 +332,7 @@
         </div>
     @endif
 
-    {{-- Modal de consumo de material (aparece al completar) --}}
+    {{-- Modal de consumo de material --}}
     @if($showConsumptionModal)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
@@ -278,7 +342,7 @@
                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
                         <h3 class="text-lg font-semibold flex items-center gap-2">
                             <span class="material-symbols-outlined text-gray-500">inventory_2</span>
-                            Material Utilizado en OT #{{ $workOrder->id }}
+                            Material Utilizado en {{ $workOrder->code ?? 'OT-'.$workOrder->id }}
                         </h3>
                         <button wire:click="closeConsumptionModal" class="text-gray-400 hover:text-gray-600 transition">
                             <span class="material-symbols-outlined">close</span>
@@ -331,18 +395,15 @@
                             <span class="material-symbols-outlined text-gray-500">playlist_add_check</span>
                             Selecciona OTs para Vincular
                         </h3>
-                        <button wire:click="closeWorkOrderSelectionModal"
-                            class="text-gray-400 hover:text-gray-600 transition">
+                        <button wire:click="closeWorkOrderSelectionModal" class="text-gray-400 hover:text-gray-600 transition">
                             <span class="material-symbols-outlined">close</span>
                         </button>
                     </div>
                     <div class="p-5 space-y-4">
-                        <p class="text-sm text-gray-600">Marca las Órdenes de Trabajo que deseas agregar a tu requisición
-                            activa.</p>
+                        <p class="text-sm text-gray-600">Marca las Órdenes de Trabajo que deseas agregar a tu requisición activa.</p>
                         <div class="space-y-2 max-h-60 overflow-y-auto">
                             @forelse($eligibleWorkOrders as $wo)
-                                <label
-                                    class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition">
+                                <label class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition">
                                     <input type="checkbox" value="{{ $wo['id'] }}" wire:model="selectedWorkOrdersForLink"
                                         class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-2 focus:ring-blue-500/20">
                                     <span class="text-sm text-gray-700">{{ $wo['name'] }}</span>
@@ -370,7 +431,8 @@
     {{-- Toast --}}
     <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
         x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 3500)"
-        x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300" style="display: none;">
+        x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"
+        style="display: none;">
         <div x-show="toastType === 'success'"
             class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
             <span class="material-symbols-outlined">check_circle</span>
@@ -384,8 +446,6 @@
     </div>
 
     <style>
-        [x-cloak] {
-            display: none !important;
-        }
+        [x-cloak] { display: none !important; }
     </style>
 </div>

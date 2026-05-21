@@ -107,7 +107,9 @@ class RequisitionDetail extends Component
             $hasConsumption = WorkOrderMaterial::where('work_order_id', $wo->id)->exists();
             return [
                 'id' => $wo->id,
-                'name' => 'OT #' . $wo->id,
+                'code' => $wo->code ?? 'OT-' . $wo->id,
+                'client_name' => $wo->client->name ?? 'N/A',
+                'name' => ($wo->code ?? 'OT-' . $wo->id) . ' - ' . ($wo->client->name ?? 'N/A'),
                 'hasConsumption' => $hasConsumption,
             ];
         })->toArray();

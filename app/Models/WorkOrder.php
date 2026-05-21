@@ -22,7 +22,7 @@ class WorkOrder extends Model
         'service_type',
         'description',
         'code',
-        'started_at',   
+        'started_at',
         'accumulated_seconds',
     ];
 
@@ -56,5 +56,10 @@ class WorkOrder extends Model
     public function requisitions()
     {
         return $this->belongsToMany(Requisition::class, 'requisition_work_order');
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }
