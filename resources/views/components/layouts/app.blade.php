@@ -141,62 +141,43 @@
                                 @endif
 
                                 {{-- TÉCNICOS --}}
+                                                   {{-- TÉCNICOS --}}
                                 @if(module_active('technicians') && auth()->user()->can('access_technicians'))
-                                    @if(auth()->user()->hasRole('technician'))
-                                        <div class="flex items-center gap-1">
-                                            @can('view_work_orders_menu')
-                                                <a href="{{ route('mobile.work-orders.list') }}" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
-                                                    <span class="material-symbols-outlined text-base">work</span> Mis Órdenes
-                                                </a>
-                                            @endcan
-                                            @can('view_map_ot_menu')
-                                                <a href="{{ route('mobile.work-orders.map') }}" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
-                                                    <span class="material-symbols-outlined text-base">map</span> Mapa de Órdenes
-                                                </a>
-                                            @endcan
-                                            @can('view_requisitions_menu')
-                                                <a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
-                                                    <span class="material-symbols-outlined text-base">inventory_2</span> Mis Requisiciones
-                                                </a>
-                                            @endcan
-                                        </div>
-                                    @else
-                                        <div class="nav-group relative">
-                                            <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
-                                                <span class="material-symbols-outlined text-base">handyman</span> Técnicos
-                                                <span class="material-symbols-outlined text-base">expand_more</span>
-                                            </button>
-                                            <div class="nav-dropdown absolute left-0 top-full pt-1 z-20">
-                                                <div class="bg-white rounded-xl border border-gray-200/80 shadow-lg min-w-[200px] py-1.5">
-                                                    @can('view_returns_menu')
-                                                        <a href="{{ route('technician-returns.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
-                                                            <span class="material-symbols-outlined text-base">assignment_return</span> Devoluciones
-                                                        </a>
-                                                    @endcan
-                                                    @can('view_register_return_menu')
-                                                        <a href="{{ route('technician-returns.create') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
-                                                            <span class="material-symbols-outlined text-base">add_circle</span> Registrar Devolución
-                                                        </a>
-                                                    @endcan
-                                                    @can('view_work_orders_menu')
-                                                        <a href="{{ route('work-orders.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
-                                                            <span class="material-symbols-outlined text-base">work</span> Órdenes de Trabajo
-                                                        </a>
-                                                    @endcan
-                                                    @can('view_map_ot_menu')
-                                                        <a href="{{ route('work-orders.map') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
-                                                            <span class="material-symbols-outlined text-base">map</span> Mapa de OT
-                                                        </a>
-                                                    @endcan
-                                                    @can('view_requisitions_menu')
-                                                        <a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
-                                                            <span class="material-symbols-outlined text-base">inventory_2</span> Requisiciones
-                                                        </a>
-                                                    @endcan
-                                                </div>
+                                    <div class="nav-group relative">
+                                        <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
+                                            <span class="material-symbols-outlined text-base">handyman</span> Técnicos
+                                            <span class="material-symbols-outlined text-base">expand_more</span>
+                                        </button>
+                                        <div class="nav-dropdown absolute left-0 top-full pt-1 z-20">
+                                            <div class="bg-white rounded-xl border border-gray-200/80 shadow-lg min-w-[200px] py-1.5">
+                                                @can('view_returns_menu')
+                                                    <a href="{{ route('technician-returns.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">assignment_return</span> Devoluciones
+                                                    </a>
+                                                @endcan
+                                                @can('view_register_return_menu')
+                                                    <a href="{{ route('technician-returns.create') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">add_circle</span> Registrar Devolución
+                                                    </a>
+                                                @endcan
+                                                @can('view_work_orders_menu')
+                                                    <a href="{{ route('work-orders.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">work</span> Órdenes de Trabajo
+                                                    </a>
+                                                @endcan
+                                                @can('view_map_ot_menu')
+                                                    <a href="{{ route('work-orders.map') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">map</span> Mapa de OT
+                                                    </a>
+                                                @endcan
+                                                @can('view_requisitions_menu')
+                                                    <a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">inventory_2</span> Requisiciones
+                                                    </a>
+                                                @endcan
                                             </div>
                                         </div>
-                                    @endif
+                                    </div>
                                 @endif
 
                                 {{-- REPORTES --}}
@@ -371,20 +352,14 @@
 
                         {{-- TÉCNICOS MÓVIL --}}
                         @if(module_active('technicians') && auth()->user()->can('access_technicians'))
-                            @if(auth()->user()->hasRole('technician'))
-                                @can('view_work_orders_menu')<a href="{{ route('mobile.work-orders.list') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80">Mis Órdenes</a>@endcan
-                                @can('view_map_ot_menu')<a href="{{ route('mobile.work-orders.map') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80">Mapa de Órdenes</a>@endcan
-                                @can('view_requisitions_menu')<a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50/80">Mis Requisiciones</a>@endcan
-                            @else
-                                <div class="space-y-1">
-                                    <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Técnicos</h3>
-                                    @can('view_returns_menu')<a href="{{ route('technician-returns.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Devoluciones</a>@endcan
-                                    @can('view_register_return_menu')<a href="{{ route('technician-returns.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Registrar Devolución</a>@endcan
-                                    @can('view_work_orders_menu')<a href="{{ route('work-orders.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Órdenes de Trabajo</a>@endcan
-                                    @can('view_map_ot_menu')<a href="{{ route('work-orders.map') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Mapa de OT</a>@endcan
-                                    @can('view_requisitions_menu')<a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Requisiciones</a>@endcan
-                                </div>
-                            @endif
+                            <div class="space-y-1">
+                                <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Técnicos</h3>
+                                @can('view_returns_menu')<a href="{{ route('technician-returns.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Devoluciones</a>@endcan
+                                @can('view_register_return_menu')<a href="{{ route('technician-returns.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Registrar Devolución</a>@endcan
+                                @can('view_work_orders_menu')<a href="{{ route('work-orders.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Órdenes de Trabajo</a>@endcan
+                                @can('view_map_ot_menu')<a href="{{ route('work-orders.map') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Mapa de OT</a>@endcan
+                                @can('view_requisitions_menu')<a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Requisiciones</a>@endcan
+                            </div>
                         @endif
 
                         {{-- REPORTES MÓVIL --}}

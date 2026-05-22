@@ -182,6 +182,8 @@ class RolesAndPermissionsSeeder extends Seeder
         // Technician
         $technicianRole->syncPermissions([
             'view work_orders',
+            'create work_orders',
+            'edit work_orders',
             'complete work_orders',
             'view dashboard',
             'view requisitions',
@@ -228,6 +230,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'view own tickets',
             'create tickets',
             'view own work_orders',
+            'view work_orders',
+            'create work_orders',
+            'edit work_orders',
             'access_support',
             'view_new_ticket_menu',
             'view_all_tickets_menu',
@@ -245,6 +250,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view resolutions',
             'view own work_orders',
             'view all work orders',
+            'view work_orders',
+            'create work_orders',       
+            'edit work_orders',         
+            'assign technicians',       
             'access_support',
             'view_new_ticket_menu',
             'view_all_tickets_menu',
@@ -276,8 +285,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'access_support',
             'view_all_tickets_menu',
         ]);
-
-        // Limpiar caché al final
+        
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
 }
