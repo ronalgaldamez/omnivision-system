@@ -5,22 +5,19 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User; // Importante añadir esto
 
-class CheckRole
+class CheckPermission
 {
-    public function handle(Request $request, Closure $next, ...$roles)
+    public function handle(Request $request, Closure $next, ...$permissions)
     {
         if (!Auth::check()) {
             return redirect('login');
         }
 
-        /** @var User $user */
         $user = Auth::user();
 
-        foreach ($roles as $role) {
-            // Ahora el sistema reconocerá hasRole() sin advertencias
-            if ($user->hasRole($role)) {
+        foreach ($permissions as $permission) {
+            if ($user->can($permission)) {
                 return $next($request);
             }
         }
