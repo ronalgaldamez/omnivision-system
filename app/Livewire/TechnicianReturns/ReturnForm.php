@@ -40,11 +40,12 @@ class ReturnForm extends Component
     public function mount()
     {
         $user = Auth::user();
-        if ($user->hasRole('technician')) {
+        if ($user->can('assign any technician in returns')) {
+            $this->technicians = User::role('technician')->orderBy('name')->get();
+        } else {
+            // Se autoasigna el técnico actual
             $this->technician_id = $user->id;
             $this->loadWorkOrders();
-        } else {
-            $this->technicians = User::role('technician')->orderBy('name')->get();
         }
     }
 

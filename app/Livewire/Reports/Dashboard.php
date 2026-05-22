@@ -17,8 +17,8 @@ class Dashboard extends Component
     {
         $user = Auth::user();
 
-        // ========== TÉCNICO (vista separada) ==========
-        if ($user->hasRole('technician')) {
+        // ========== VISTA ESPECIAL PARA TÉCNICO (ahora controlada por permiso) ==========
+        if ($user->can('view technician dashboard')) {
             $pendingRequisitionsCount = Requisition::where('technician_id', $user->id)
                 ->where('status', 'open')
                 ->count();
@@ -64,12 +64,12 @@ class Dashboard extends Component
             $recentMovements = Movement::with('product', 'user')->latest()->limit(5)->get();
         }
 
-        // Tickets del usuario (secretaria/NOC)
+        // Tickets del usuario (secretaria/NOC) – ahora sin restricción de rol
         $myTickets = null;
         $totalMyTickets = null;
         $pendingMyTickets = null;
         $resolvedMyTickets = null;
-        if ($user->can('view own tickets') && ($user->hasRole('atencion_al_cliente') || $user->hasRole('noc'))) {
+        if ($user->can('view own tickets')) {
             $myTickets = Ticket::where('created_by', $user->id)->latest()->limit(5)->get();
             $totalMyTickets = Ticket::where('created_by', $user->id)->count();
             $pendingMyTickets = Ticket::where('created_by', $user->id)->where('status', 'pending')->count();
@@ -101,9 +101,9 @@ class Dashboard extends Component
                 ->count();
         }
 
-        // Órdenes relacionadas con tickets del usuario
+        // Órdenes relacionadas con tickets del usuario – ahora sin restricción de rol
         $relatedWorkOrders = null;
-        if ($user->can('view own work_orders') && ($user->hasRole('atencion_al_cliente') || $user->hasRole('noc'))) {
+        if ($user->can('view own work_orders')) {
             $relatedWorkOrders = WorkOrder::whereHas('ticket', function ($q) use ($user) {
                 $q->where('created_by', $user->id);
             })->latest()->limit(5)->get();

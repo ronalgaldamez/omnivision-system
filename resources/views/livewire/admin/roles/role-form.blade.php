@@ -89,6 +89,7 @@
                             'cancel work orders' => 'Órdenes de Trabajo',
                             'view all work orders' => 'Órdenes de Trabajo',
                             'view own work_orders' => 'Órdenes de Trabajo',
+                            'access my daily jobs' => 'Órdenes de Trabajo',
                             // Catálogo
                             'view catalog' => 'Catálogo',
                             'manage catalog' => 'Catálogo',

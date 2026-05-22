@@ -83,11 +83,21 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
-    // ========== TECHNICIANS MOBILE ==========
-    Route::prefix('mobile/technician')->middleware(['auth', 'role:technician'])->group(function () {
-        Route::get('/work-orders/{id}', \App\Livewire\Mobile\WorkOrderShow::class)->name('mobile.work-orders.show');
-        Route::get('/work-orders', \App\Livewire\Mobile\WorkOrderList::class)->name('mobile.work-orders.list');
-        Route::get('/work-orders-map', \App\Livewire\Mobile\WorkOrderMap::class)->name('mobile.work-orders.map');
+    Route::prefix('mobile/technician')->middleware(['auth'])->group(function () {
+        // Mis Trabajos (OT del día) – requiere permiso específico
+        Route::get('/work-orders', \App\Livewire\Mobile\WorkOrderList::class)
+            ->middleware('can:access my daily jobs')
+            ->name('mobile.work-orders.list');
+
+        // Detalle de OT (accesible desde Mis Trabajos o desde cualquier lado si tiene el permiso)
+        Route::get('/work-orders/{id}', \App\Livewire\Mobile\WorkOrderShow::class)
+            ->middleware('can:access my daily jobs')
+            ->name('mobile.work-orders.show');
+
+        // Mapa de OT (se mantiene con el permiso que ya existía o puedes cambiarlo)
+        Route::get('/work-orders-map', \App\Livewire\Mobile\WorkOrderMap::class)
+            ->middleware('can:view_map_ot_menu')
+            ->name('mobile.work-orders.map');
     });
 
     // ========== WORK ORDERS ==========

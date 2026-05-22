@@ -102,6 +102,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_roles_menu',
             'view_catalog_menu',
             'view_settings_menu',
+
+            'view technician dashboard',
+            'assign any technician in returns',
+
+            'access my daily jobs',
         ];
 
         // 🧹 Paso 1: Eliminar cualquier permiso que NO esté en la lista oficial
@@ -179,22 +184,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_noc_panel_menu',
         ]);
 
-        // Technician
         $technicianRole->syncPermissions([
             'view work_orders',
             'create work_orders',
             'edit work_orders',
             'complete work_orders',
+            'view own work_orders',
             'view dashboard',
             'view requisitions',
             'create requisitions',
             'access_technicians',
-            'access_inventory',
-            'view_products_menu',
-            'view_kardex_menu',
             'view_work_orders_menu',
             'view_map_ot_menu',
             'view_requisitions_menu',
+            'access my daily jobs',
         ]);
 
         // Accountant
@@ -251,9 +254,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'view own work_orders',
             'view all work orders',
             'view work_orders',
-            'create work_orders',       
-            'edit work_orders',         
-            'assign technicians',       
+            'create work_orders',
+            'edit work_orders',
+            'assign technicians',
             'access_support',
             'view_new_ticket_menu',
             'view_all_tickets_menu',
@@ -285,7 +288,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'access_support',
             'view_all_tickets_menu',
         ]);
-        
+
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
 }

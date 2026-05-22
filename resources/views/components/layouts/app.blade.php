@@ -141,7 +141,6 @@
                                 @endif
 
                                 {{-- TÉCNICOS --}}
-                                                   {{-- TÉCNICOS --}}
                                 @if(module_active('technicians') && auth()->user()->can('access_technicians'))
                                     <div class="nav-group relative">
                                         <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
@@ -163,6 +162,12 @@
                                                 @can('view_work_orders_menu')
                                                     <a href="{{ route('work-orders.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
                                                         <span class="material-symbols-outlined text-base">work</span> Órdenes de Trabajo
+                                                    </a>
+                                                @endcan
+                                                {{-- NUEVO: Mis Trabajos --}}
+                                                @can('access my daily jobs')
+                                                    <a href="{{ route('mobile.work-orders.list') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                        <span class="material-symbols-outlined text-base">work</span> Mis Trabajos
                                                     </a>
                                                 @endcan
                                                 @can('view_map_ot_menu')
@@ -357,6 +362,8 @@
                                 @can('view_returns_menu')<a href="{{ route('technician-returns.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Devoluciones</a>@endcan
                                 @can('view_register_return_menu')<a href="{{ route('technician-returns.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Registrar Devolución</a>@endcan
                                 @can('view_work_orders_menu')<a href="{{ route('work-orders.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Órdenes de Trabajo</a>@endcan
+                                {{-- NUEVO: Mis Trabajos móvil --}}
+                                @can('access my daily jobs')<a href="{{ route('mobile.work-orders.list') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Mis Trabajos</a>@endcan
                                 @can('view_map_ot_menu')<a href="{{ route('work-orders.map') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Mapa de OT</a>@endcan
                                 @can('view_requisitions_menu')<a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Requisiciones</a>@endcan
                             </div>
