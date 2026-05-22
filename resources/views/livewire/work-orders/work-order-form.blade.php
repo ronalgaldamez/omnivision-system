@@ -348,7 +348,7 @@
     @if($showClientModal)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-            <div class="relative mx-auto p-5 w-full max-w-md">
+            <div class="relative mx-auto p-5 w-full max-w-3xl max-h-[85vh] overflow-y-auto">
                 <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
                         <h3 class="text-lg font-semibold flex items-center gap-2">

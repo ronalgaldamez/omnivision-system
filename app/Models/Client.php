@@ -9,7 +9,25 @@ class Client extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'phone', 'address', 'service'];
+    protected $fillable = [
+        'name',
+        'phone',
+        'address',
+        'service',
+        'document_type',
+        'document_number',
+        'email',
+        'latitude',
+        'longitude',
+        'nro_luz',
+        'installation_address',
+        'notes',
+    ];
+
+    protected $casts = [
+        'latitude' => 'float',
+        'longitude' => 'float',
+    ];
 
     public function tickets()
     {
@@ -20,6 +38,7 @@ class Client extends Model
     {
         return $this->hasManyThrough(WorkOrder::class, Ticket::class);
     }
+
     public function phones()
     {
         return $this->hasMany(ClientPhone::class);

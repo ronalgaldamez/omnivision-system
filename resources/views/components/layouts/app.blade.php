@@ -164,7 +164,6 @@
                                                         <span class="material-symbols-outlined text-base">work</span> Órdenes de Trabajo
                                                     </a>
                                                 @endcan
-                                                {{-- NUEVO: Mis Trabajos --}}
                                                 @can('access my daily jobs')
                                                     <a href="{{ route('mobile.work-orders.list') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
                                                         <span class="material-symbols-outlined text-base">work</span> Mis Trabajos
@@ -236,6 +235,30 @@
                                             @can('view_noc_panel_menu')
                                                 <a href="{{ route('noc.panel') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
                                                     <span class="material-symbols-outlined text-base">settings_overscan</span> Panel NOC
+                                                </a>
+                                            @endcan
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
+
+                                {{-- CLIENTES --}}
+                                @if(auth()->user()->can('view clients'))
+                                <div class="nav-group relative">
+                                    <button class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 transition text-sm font-medium">
+                                        <span class="material-symbols-outlined text-base">people</span> Clientes
+                                        <span class="material-symbols-outlined text-base">expand_more</span>
+                                    </button>
+                                    <div class="nav-dropdown absolute left-0 top-full pt-1 z-20">
+                                        <div class="bg-white rounded-xl border border-gray-200/80 shadow-lg min-w-[200px] py-1.5">
+                                            @can('view clients')
+                                                <a href="{{ route('admin.clients.index') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">list_alt</span> Ver Clientes
+                                                </a>
+                                            @endcan
+                                            @can('create clients')
+                                                <a href="{{ route('admin.clients.create') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50/80 transition">
+                                                    <span class="material-symbols-outlined text-base">add_circle</span> Nuevo Cliente
                                                 </a>
                                             @endcan
                                         </div>
@@ -362,7 +385,6 @@
                                 @can('view_returns_menu')<a href="{{ route('technician-returns.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Devoluciones</a>@endcan
                                 @can('view_register_return_menu')<a href="{{ route('technician-returns.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Registrar Devolución</a>@endcan
                                 @can('view_work_orders_menu')<a href="{{ route('work-orders.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Órdenes de Trabajo</a>@endcan
-                                {{-- NUEVO: Mis Trabajos móvil --}}
                                 @can('access my daily jobs')<a href="{{ route('mobile.work-orders.list') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Mis Trabajos</a>@endcan
                                 @can('view_map_ot_menu')<a href="{{ route('work-orders.map') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Mapa de OT</a>@endcan
                                 @can('view_requisitions_menu')<a href="{{ route('technician.requisitions.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Requisiciones</a>@endcan
@@ -386,6 +408,15 @@
                                 @can('view_new_ticket_menu')<a href="{{ route('tickets.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Nuevo Ticket</a>@endcan
                                 @can('view_all_tickets_menu')<a href="{{ route('tickets.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Todos los Tickets</a>@endcan
                                 @can('view_noc_panel_menu')<a href="{{ route('noc.panel') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Panel NOC</a>@endcan
+                            </div>
+                        @endif
+
+                        {{-- CLIENTES MÓVIL --}}
+                        @if(auth()->user()->can('view clients'))
+                            <div class="space-y-1">
+                                <h3 class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Clientes</h3>
+                                @can('view clients')<a href="{{ route('admin.clients.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Ver Clientes</a>@endcan
+                                @can('create clients')<a href="{{ route('admin.clients.create') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80 ml-2">Nuevo Cliente</a>@endcan
                             </div>
                         @endif
 
