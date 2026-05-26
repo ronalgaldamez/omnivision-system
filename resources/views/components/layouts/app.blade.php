@@ -20,7 +20,6 @@
     <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('android-chrome-512x512.png') }}">
     <link rel="manifest" href="{{ asset('site.webmanifest') }}">
 
-    {{-- Tailwind + Fuentes + Leaflet --}}
     <script src="https://cdn.tailwindcss.com"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=JetBrains+Mono:wght@400;500&display=swap"
@@ -67,31 +66,28 @@
     @livewireStyles
 </head>
 
-<body class="bg-gray-50 text-gray-800 text-sm" x-data="{ sidebarOpen: window.innerWidth >= 768 }"
-    @resize.window="sidebarOpen = window.innerWidth >= 768">
+<body class="bg-gray-50 text-gray-800 text-sm">
 
-    {{-- Contenedor principal --}}
-    <div class="flex h-screen overflow-hidden">
+    @auth
+        {{-- ========== LAYOUT CON SIDEBAR PARA USUARIOS AUTENTICADOS ========== --}}
+        <div x-data="{ sidebarOpen: window.innerWidth >= 768 }" class="flex h-screen overflow-hidden">
 
-        {{-- ============ SIDEBAR LATERAL ============ --}}
-        <aside :class="sidebarOpen ? 'w-64' : 'w-0'"
-            class="bg-white border-r border-gray-200/80 flex flex-col transition-all duration-300 overflow-hidden z-40 h-full sticky top-0">
+            {{-- Sidebar --}}
+            <aside :class="sidebarOpen ? 'w-64' : 'w-0'"
+                class="bg-white border-r border-gray-200/80 flex flex-col transition-all duration-300 overflow-hidden z-40 h-full sticky top-0">
 
-            {{-- Logo --}}
-            <div class="h-14 flex items-center gap-2 px-4 border-b border-gray-100 flex-shrink-0">
-                <a href="{{ route('dashboard') }}" class="flex items-center gap-2">
-                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-                        <span class="material-symbols-outlined text-white text-xl">inventory</span>
-                    </div>
-                    <span x-show="sidebarOpen" class="font-semibold text-gray-700 text-sm whitespace-nowrap">Kardex
-                        System</span>
-                </a>
-            </div>
+                <div class="h-14 flex items-center gap-2 px-4 border-b border-gray-100 flex-shrink-0">
+                    <a href="{{ route('dashboard') }}" class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                            <span class="material-symbols-outlined text-white text-xl">inventory</span>
+                        </div>
+                        <span x-show="sidebarOpen" class="font-semibold text-gray-700 text-sm whitespace-nowrap">Kardex
+                            System</span>
+                    </a>
+                </div>
 
-            {{-- Navegación con scroll --}}
-            <nav class="flex-1 overflow-y-auto sidebar-scroll px-3 py-4 space-y-1" x-data="{ activeGroup: null }">
-                @auth
-                    {{-- ============== INVENTARIO ============== --}}
+                <nav class="flex-1 overflow-y-auto sidebar-scroll px-3 py-4 space-y-1">
+                    {{-- INVENTARIO --}}
                     @if(module_active('inventory') && auth()->user()->can('access_inventory'))
                         <div x-data="{ open: false }">
                             <button @click="open = !open"
@@ -121,7 +117,7 @@
                         </div>
                     @endif
 
-                    {{-- ============== COMPRAS ============== --}}
+                    {{-- COMPRAS --}}
                     @if(module_active('suppliers') && auth()->user()->can('access_suppliers'))
                         <div x-data="{ open: false }">
                             <button @click="open = !open"
@@ -153,7 +149,7 @@
                         </div>
                     @endif
 
-                    {{-- ============== TÉCNICOS ============== --}}
+                    {{-- TÉCNICOS --}}
                     @if(module_active('technicians') && auth()->user()->can('access_technicians'))
                         <div x-data="{ open: false }">
                             <button @click="open = !open"
@@ -190,7 +186,7 @@
                         </div>
                     @endif
 
-                    {{-- ============== REPORTES ============== --}}
+                    {{-- REPORTES --}}
                     @if(module_active('reports') && auth()->user()->can('access_reports'))
                         <div x-data="{ open: false }">
                             <button @click="open = !open"
@@ -217,7 +213,7 @@
                         </div>
                     @endif
 
-                    {{-- ============== SOPORTE ============== --}}
+                    {{-- SOPORTE --}}
                     @if(auth()->user()->can('access_support'))
                         <div x-data="{ open: false }">
                             <button @click="open = !open"
@@ -244,7 +240,7 @@
                         </div>
                     @endif
 
-                    {{-- ============== CLIENTES ============== --}}
+                    {{-- CLIENTES --}}
                     @if(auth()->user()->can('view clients'))
                         <div x-data="{ open: false }">
                             <button @click="open = !open"
@@ -267,7 +263,7 @@
                         </div>
                     @endif
 
-                    {{-- ============== ADMIN ============== --}}
+                    {{-- ADMIN --}}
                     @if(auth()->user()->can('access_admin'))
                         <div x-data="{ open: false }">
                             <button @click="open = !open"
@@ -295,35 +291,29 @@
                             </div>
                         </div>
                     @endif
-                @endauth
-            </nav>
+                </nav>
 
-            {{-- Footer del sidebar --}}
-            <div class="border-t border-gray-100 p-3 flex-shrink-0" x-show="sidebarOpen">
-                @auth
+                <div class="border-t border-gray-100 p-3 flex-shrink-0" x-show="sidebarOpen">
                     <div class="flex items-center gap-2 text-xs text-gray-500">
                         <span class="material-symbols-outlined text-sm">circle</span>
                         <span>{{ auth()->user()->name }}</span>
                     </div>
-                @endauth
-            </div>
-        </aside>
-
-        {{-- ============ CONTENIDO PRINCIPAL ============ --}}
-        <div class="flex-1 flex flex-col overflow-hidden">
-            {{-- Navbar superior compacta --}}
-            <nav
-                class="bg-white border-b border-gray-200/80 h-14 flex items-center justify-between px-4 z-30 flex-shrink-0">
-                <div class="flex items-center gap-3">
-                    <button @click="sidebarOpen = !sidebarOpen"
-                        class="text-gray-500 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition">
-                        <span class="material-symbols-outlined">menu</span>
-                    </button>
-                    <span class="font-semibold text-gray-700 text-sm hidden sm:block">Kardex System</span>
                 </div>
+            </aside>
 
-                <div class="flex items-center gap-3">
-                    @auth
+            {{-- Contenido principal --}}
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <nav
+                    class="bg-white border-b border-gray-200/80 h-14 flex items-center justify-between px-4 z-30 flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <button @click="sidebarOpen = !sidebarOpen"
+                            class="text-gray-500 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition">
+                            <span class="material-symbols-outlined">menu</span>
+                        </button>
+                        <span class="font-semibold text-gray-700 text-sm hidden sm:block">Kardex System</span>
+                    </div>
+
+                    <div class="flex items-center gap-3">
                         @if(Auth::user()->can('access noc panel'))
                             <livewire:notifications-badge />
                         @endif
@@ -359,18 +349,22 @@
                                 </form>
                             </div>
                         </div>
-                    @endauth
-                </div>
-            </nav>
+                    </div>
+                </nav>
 
-            {{-- Contenido dinámico --}}
-            <main class="flex-1 overflow-y-auto p-6">
-                {{ $slot }}
-            </main>
+                <main class="flex-1 overflow-y-auto p-6">
+                    {{ $slot }}
+                </main>
+            </div>
         </div>
-    </div>
+    @else
+        {{-- ========== LAYOUT MÍNIMO PARA INVITADOS (login, register) ========== --}}
+        <main class="min-h-screen flex items-center justify-center p-4">
+            {{ $slot }}
+        </main>
+    @endauth
 
-    {{-- Toast (se mantiene igual) --}}
+    {{-- Toast (siempre presente por si acaso) --}}
     <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
         x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 5000)"
         x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"
@@ -401,14 +395,9 @@
     <script>
         document.addEventListener('livewire:initialized', () => {
             const audio = new Audio('{{ asset('sounds/notification.mp3') }}');
-            function unlockAudio() {
-                audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => { });
-                document.removeEventListener('click', unlockAudio);
-            }
+            function unlockAudio() { audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => { }); document.removeEventListener('click', unlockAudio); }
             document.addEventListener('click', unlockAudio, { once: true });
-            Livewire.on('new-noc-ticket', () => {
-                audio.play().catch(err => console.log('Audio bloqueado:', err));
-            });
+            Livewire.on('new-noc-ticket', () => { audio.play().catch(err => console.log('Audio bloqueado:', err)); });
         });
     </script>
 </body>
