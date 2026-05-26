@@ -9,18 +9,44 @@ use App\Models\ClientPhone;
 class ClientForm extends Component
 {
     public $name = '';
+    public $document_type = null;
+    public $document_number = '';
+    public $email = '';
+    public $phone = '';
     public $address = '';
-    public $service_contracted = '';
+    public $latitude = null;
+    public $longitude = null;
+    public $nro_luz = '';
+    public $installation_address = '';
+    public $service = '';
+    public $notes = '';
 
-    // Array dinámico de teléfonos
     public $phones = [];
+
+    protected function rules()
+    {
+        return [
+            'name' => 'required|string|max:255',
+            'document_type' => 'nullable|in:dui,cedula,ruc,pasaporte',
+            'document_number' => 'nullable|string|max:50',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'nro_luz' => 'nullable|string|max:50',
+            'installation_address' => 'nullable|string',
+            'service' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+            'phones' => 'nullable|array',
+            'phones.*.number' => 'required_with:phones|string|max:20',
+            'phones.*.type' => 'nullable|in:personal,casa,referencia,trabajo,otro',
+        ];
+    }
 
     public function mount()
     {
-        // Inicializar con un campo de teléfono personal
-        $this->phones = [
-            ['number' => '', 'type' => 'personal']
-        ];
+        $this->phones = [['number' => '', 'type' => 'personal']];
     }
 
     public function addPhone()
@@ -36,41 +62,34 @@ class ClientForm extends Component
 
     public function save()
     {
-        $this->validate([
-            'name' => 'required|string|max:255',
-            'address' => 'nullable|string',
-            'service_contracted' => 'nullable|string',
-            'phones' => 'array|min:1',
-            'phones.*.number' => 'required|string|max:20',
-            'phones.*.type' => 'nullable|string|max:20',
-        ], [
-            'phones.*.number.required' => 'El número de teléfono es obligatorio.',
-        ]);
+        $this->validate();
 
         $client = Client::create([
             'name' => $this->name,
+            'document_type' => $this->document_type,
+            'document_number' => $this->document_number,
+            'email' => $this->email,
+            'phone' => $this->phone,
             'address' => $this->address,
-            'service_contracted' => $this->service_contracted,
-            // guardamos el primer teléfono en el campo legacy 'phone' por compatibilidad
-            'phone' => $this->phones[0]['number'],
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
+            'nro_luz' => $this->nro_luz,
+            'installation_address' => $this->installation_address,
+            'service' => $this->service,
+            'notes' => $this->notes,
         ]);
 
         foreach ($this->phones as $phone) {
-            ClientPhone::create([
-                'client_id' => $client->id,
-                'number' => $phone['number'],
-                'type' => $phone['type'] ?? 'personal',
-            ]);
+            if (!empty($phone['number'])) {
+                $client->phones()->create([
+                    'number' => $phone['number'],
+                    'type' => $phone['type'] ?? 'personal',
+                ]);
+            }
         }
 
-        $this->dispatch('clientCreated', $client->id, $client->name);
-        $this->dispatch('showToast', ['type' => 'success', 'message' => 'Cliente creado correctamente.']);
-
-        // Resetear el formulario
-        $this->reset(['name', 'address', 'service_contracted']);
-        $this->phones = [
-            ['number' => '', 'type' => 'personal']
-        ];
+        // Emitir evento para que el componente padre (TicketForm / WorkOrderForm) pueda seleccionar el cliente
+        $this->dispatch('clientCreated', $client->id, $client->name, $client->phone);
     }
 
     public function render()
