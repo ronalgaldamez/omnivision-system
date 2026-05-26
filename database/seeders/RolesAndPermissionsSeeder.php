@@ -51,6 +51,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view clients',
             'create clients',
             'edit clients',
+            'delete clients',
             // Tickets
             'view tickets',
             'create tickets',
@@ -107,6 +108,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'assign any technician in returns',
 
             'access my daily jobs',
+            // Cliente
+
         ];
 
         // 🧹 Paso 1: Eliminar cualquier permiso que NO esté en la lista oficial
@@ -226,10 +229,10 @@ class RolesAndPermissionsSeeder extends Seeder
 
 
         $atencionClienteRole->syncPermissions([
-            'view dashboard',
             'view clients',
             'create clients',
             'edit clients',
+            'delete clients',
             'view own tickets',
             'create tickets',
             'view own work_orders',

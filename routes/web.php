@@ -83,18 +83,14 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
+    // ========== TECHNICIANS MOBILE ==========
     Route::prefix('mobile/technician')->middleware(['auth'])->group(function () {
-        // Mis Trabajos (OT del día) – requiere permiso específico
         Route::get('/work-orders', \App\Livewire\Mobile\WorkOrderList::class)
             ->middleware('can:access my daily jobs')
             ->name('mobile.work-orders.list');
-
-        // Detalle de OT (accesible desde Mis Trabajos o desde cualquier lado si tiene el permiso)
         Route::get('/work-orders/{id}', \App\Livewire\Mobile\WorkOrderShow::class)
             ->middleware('can:access my daily jobs')
             ->name('mobile.work-orders.show');
-
-        // Mapa de OT (se mantiene con el permiso que ya existía o puedes cambiarlo)
         Route::get('/work-orders-map', \App\Livewire\Mobile\WorkOrderMap::class)
             ->middleware('can:view_map_ot_menu')
             ->name('mobile.work-orders.map');
@@ -146,6 +142,19 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/reports/technicians', \App\Livewire\Reports\TechnicianPerformance::class)->name('reports.technicians');
         });
     }
+
+    // ========== CLIENTS ==========
+    Route::prefix('admin/clients')->middleware(['auth'])->group(function () {
+        Route::middleware('can:view clients')->group(function () {
+            Route::get('/', \App\Livewire\Admin\Clients\ClientIndex::class)->name('admin.clients.index');
+        });
+        Route::middleware('can:create clients')->group(function () {
+            Route::get('/create', \App\Livewire\Admin\Clients\ClientForm::class)->name('admin.clients.create');
+        });
+        Route::middleware('can:edit clients')->group(function () {
+            Route::get('/{id}/edit', \App\Livewire\Admin\Clients\ClientForm::class)->name('admin.clients.edit');
+        });
+    });
 
     // ========== ADMIN ==========
     Route::prefix('admin/users')->middleware(['auth', 'can:access_admin'])->group(function () {
