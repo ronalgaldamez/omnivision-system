@@ -27,7 +27,8 @@
                         <input type="text" wire:model="name"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                             placeholder="Nombre completo del cliente">
-                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">edit_note</span>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">edit_note</span>
                     </div>
                     @error('name') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
@@ -48,8 +49,10 @@
                                 <option value="ruc">RUC</option>
                                 <option value="pasaporte">Pasaporte</option>
                             </select>
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">description</span>
-                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">description</span>
+                            <span
+                                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                         </div>
                     </div>
                     <div>
@@ -61,59 +64,75 @@
                             <input type="text" wire:model="document_number"
                                 class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                                 placeholder="Número de identificación">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">tag</span>
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">tag</span>
                         </div>
-                        @error('document_number') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        @error('document_number') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
+                        @enderror
                     </div>
                 </div>
 
-                <!-- Teléfonos (principal y adicionales) -->
+                <!-- Teléfono principal -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-gray-400 text-base">call</span>
-                        Teléfonos
+                        Teléfono principal
                     </label>
-                    <div class="space-y-2">
-                        <div class="flex items-start gap-2">
-                            <div class="flex-1 relative">
-                                <input type="text" wire:model="phone"
-                                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                    placeholder="Teléfono principal">
-                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">phone</span>
-                            </div>
-                        </div>
-                        @foreach($phones as $index => $phone)
-                            <div class="flex items-start gap-2">
-                                <div class="flex-1 relative">
-                                    <input type="text" wire:model="phones.{{ $index }}.number"
-                                        class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                        placeholder="Número adicional">
-                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">phone</span>
-                                </div>
-                                <div class="w-32">
-                                    <select wire:model="phones.{{ $index }}.type"
-                                        class="w-full py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                        <option value="personal">Personal</option>
-                                        <option value="casa">Casa</option>
-                                        <option value="referencia">Referencia</option>
-                                        <option value="trabajo">Trabajo</option>
-                                        <option value="otro">Otro</option>
-                                    </select>
-                                </div>
-                                <button type="button" wire:click="removePhone({{ $index }})"
-                                    class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition flex-shrink-0"
-                                    title="Eliminar teléfono">
-                                    <span class="material-symbols-outlined text-lg">delete</span>
-                                </button>
-                            </div>
-                        @endforeach
+                    <div class="relative">
+                        <input type="text" wire:model="phone"
+                            class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                            placeholder="Número de teléfono">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">phone</span>
                     </div>
-                    <button type="button" wire:click="addPhone"
-                        class="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition">
-                        <span class="material-symbols-outlined text-base">add_circle</span>
-                        Agregar otro teléfono
-                    </button>
+                    @error('phone') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
+
+                <!-- Teléfonos adicionales (dinámicos) -->
+                @if(count($phones) > 0)
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-gray-400 text-base">phonelink</span>
+                            Teléfonos adicionales
+                        </label>
+                        <div class="space-y-2">
+                            @foreach($phones as $index => $phone)
+                                <div class="flex items-start gap-2">
+                                    <div class="flex-1 relative">
+                                        <input type="text" wire:model="phones.{{ $index }}.number"
+                                            class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                                            placeholder="Número adicional">
+                                        <span
+                                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">phone</span>
+                                        @error('phones.' . $index . '.number') <span
+                                        class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div class="w-32">
+                                        <select wire:model="phones.{{ $index }}.type"
+                                            class="w-full py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                            <option value="personal">Personal</option>
+                                            <option value="casa">Casa</option>
+                                            <option value="referencia">Referencia</option>
+                                            <option value="trabajo">Trabajo</option>
+                                            <option value="otro">Otro</option>
+                                        </select>
+                                    </div>
+                                    <button type="button" wire:click="removePhone({{ $index }})"
+                                        class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition flex-shrink-0"
+                                        title="Eliminar teléfono">
+                                        <span class="material-symbols-outlined text-lg">delete</span>
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                <button type="button" wire:click="addPhone"
+                    class="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition">
+                    <span class="material-symbols-outlined text-base">add_circle</span>
+                    Agregar otro teléfono
+                </button>
 
                 <!-- Correo electrónico -->
                 <div>
@@ -125,7 +144,8 @@
                         <input type="email" wire:model="email"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                             placeholder="correo@ejemplo.com">
-                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">alternate_email</span>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">alternate_email</span>
                     </div>
                     @error('email') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
@@ -140,7 +160,8 @@
                         <textarea wire:model="address" rows="2"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"
                             placeholder="Dirección del cliente"></textarea>
-                        <span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
                     </div>
                 </div>
 
@@ -154,7 +175,8 @@
                         <textarea wire:model="installation_address" rows="2"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"
                             placeholder="Dirección donde se instalará el servicio"></textarea>
-                        <span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
                     </div>
                 </div>
 
@@ -169,7 +191,8 @@
                             <input type="number" step="any" wire:model="latitude"
                                 class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                                 placeholder="Ej: 13.6929">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">pin_drop</span>
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">pin_drop</span>
                         </div>
                         @error('latitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                     </div>
@@ -182,9 +205,11 @@
                             <input type="number" step="any" wire:model="longitude"
                                 class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                                 placeholder="Ej: -89.1825">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">pin_drop</span>
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">pin_drop</span>
                         </div>
-                        @error('longitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        @error('longitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
+                        @enderror
                     </div>
                 </div>
 
@@ -198,7 +223,8 @@
                         <input type="text" wire:model="nro_luz"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                             placeholder="Número de medidor">
-                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">electric_meter</span>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">electric_meter</span>
                     </div>
                 </div>
 
@@ -212,7 +238,8 @@
                         <input type="text" wire:model="service"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                             placeholder="Ej: Internet, Cable, IPTV, etc.">
-                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">devices</span>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">devices</span>
                     </div>
                 </div>
 
@@ -226,7 +253,8 @@
                         <textarea wire:model="notes" rows="2"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"
                             placeholder="Observaciones internas..."></textarea>
-                        <span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
                     </div>
                 </div>
 
