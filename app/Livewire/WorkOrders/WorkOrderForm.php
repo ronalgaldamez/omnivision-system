@@ -4,12 +4,11 @@ namespace App\Livewire\WorkOrders;
 
 use Livewire\Component;
 use App\Models\User;
-use App\Models\Product;
 use App\Models\WorkOrder;
-use App\Models\OrderProduct;
 use App\Models\Client;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class WorkOrderForm extends Component
 {
@@ -22,19 +21,27 @@ class WorkOrderForm extends Component
     public $scheduled_date;
     public $notes;
 
+    // Datos técnicos
+    public $wifi_name;
+    public $wifi_password;
+    public $profile_name;
+    public $profile_password;
+    public $mac;
+    public $pon;
+    public $mufa;
+    public $installation_date;
+    public $canEditTech = false;
+
+    // Cliente seleccionado (para mostrar info en solo lectura)
+    public $selectedClient = null;
+
     // Búsqueda de clientes
     public $clientSearch = '';
     public $clientSearchResults = [];
 
-    // Productos de la orden
-    public $products = [];
-    public $currentProductSearch = '';
-    public $currentProductId = '';
-    public $currentQuantity = 1;
-    public $searchResults = [];
-
     // Modal para crear cliente
     public $showClientModal = false;
+    public $modalKey = ''; // Clave única para forzar nueva instancia
 
     // Permiso granular
     public $canAssign = false;
@@ -46,27 +53,34 @@ class WorkOrderForm extends Component
     protected function rules()
     {
         $rules = [
-            'client_id' => 'required|exists:clients,id',
+            'client_id' => 'required|integer|exists:clients,id',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
             'status' => 'required|in:pending,in_progress,completed,cancelled',
-            'scheduled_date' => 'nullable|date',
+            'scheduled_date' => 'required|date',
             'notes' => 'required|string|min:5',
+            'wifi_name' => 'nullable|string|max:255',
+            'wifi_password' => 'nullable|string|max:255',
+            'profile_name' => 'nullable|string|max:255',
+            'profile_password' => 'nullable|string|max:255',
+            'mac' => 'nullable|string|max:255',
+            'pon' => 'nullable|string|max:255',
+            'mufa' => 'nullable|string|max:255',
+            'installation_date' => 'nullable|date',
         ];
 
         if ($this->canAssign) {
-            $rules['technician_id'] = 'required|exists:users,id';
+            $rules['technician_id'] = 'required|integer|exists:users,id';
         } else {
-            $rules['technician_id'] = 'nullable|exists:users,id';
+            $rules['technician_id'] = 'nullable|integer|exists:users,id';
         }
 
         return $rules;
     }
 
-    public function mount($id = null)
+    public function mount($id = null, ?int $ticket_id = null)
     {
         $user = Auth::user();
-
         $this->canAssign = $user->can('assign technicians');
 
         if ($id) {
@@ -75,6 +89,7 @@ class WorkOrderForm extends Component
             $this->technician_id = $order->technician_id;
             $this->client_id = $order->client_id;
             if ($order->client) {
+                $this->selectedClient = $order->client;
                 $this->clientSearch = $order->client->name . ' (' . ($order->client->phone ?? 'Sin teléfono') . ')';
             }
             $this->latitude = $order->latitude;
@@ -83,30 +98,48 @@ class WorkOrderForm extends Component
             $this->scheduled_date = $order->scheduled_date?->format('Y-m-d');
             $this->notes = $order->notes;
 
-            // Si la OT tiene un técnico asignado, mostrarlo en el buscador
             if ($order->technician) {
                 $this->technicianSearch = $order->technician->name;
             }
 
-            foreach ($order->products as $item) {
-                $this->products[] = [
-                    'product_id' => $item->product_id,
-                    'product_name' => $item->product->name,
-                    'product_sku' => $item->product->sku,
-                    'quantity' => $item->quantity,
-                    'unit_cost_at_time' => $item->unit_cost_at_time,
-                ];
-            }
+            $this->wifi_name = $order->wifi_name;
+            $this->wifi_password = $order->wifi_password;
+            $this->profile_name = $order->profile_name;
+            $this->profile_password = $order->profile_password;
+            $this->mac = $order->mac;
+            $this->pon = $order->pon;
+            $this->mufa = $order->mufa;
+            $this->installation_date = $order->installation_date?->format('Y-m-d');
+
+            $this->canEditTech = $user->id === $order->technician_id
+                && in_array($order->status, ['pending', 'in_progress']);
         } else {
             if ($user->cannot('create work_orders')) {
                 abort(403, 'No tienes permiso para crear órdenes de trabajo.');
             }
-            $this->products = [];
             $this->client_id = null;
+            $this->canEditTech = false;
+
+            // Si viene de un ticket, cargar cliente automáticamente
+            if ($ticket_id) {
+                $ticket = Ticket::with('client')->find($ticket_id);
+                if ($ticket) {
+                    $client = $ticket->client;
+                    if ($client instanceof \Illuminate\Database\Eloquent\Collection) {
+                        $client = $client->first();
+                    }
+                    if ($client) {
+                        $this->client_id = (int) $client->id;
+                        $this->selectedClient = $client;
+                        $this->clientSearch = $client->name . ' (' . ($client->phone ?? 'Sin teléfono') . ')';
+                        $this->latitude = $client->latitude;
+                        $this->longitude = $client->longitude;
+                    }
+                }
+            }
         }
     }
 
-    // Buscador de técnicos
     public function updatedTechnicianSearch()
     {
         if (strlen($this->technicianSearch) >= 2) {
@@ -124,13 +157,12 @@ class WorkOrderForm extends Component
     {
         $technician = User::find($id);
         if ($technician) {
-            $this->technician_id = $technician->id;
+            $this->technician_id = (int) $technician->id;
             $this->technicianSearch = $technician->name;
             $this->technicianResults = [];
         }
     }
 
-    // Búsqueda de clientes
     public function updatedClientSearch()
     {
         if (strlen($this->clientSearch) >= 2) {
@@ -145,71 +177,33 @@ class WorkOrderForm extends Component
 
     public function selectClient($id, $name, $phone = null)
     {
+        $id = (int) $id;
+        $client = Client::find($id);
+
+        if (!$client) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente seleccionado ya no existe.');
+            return;
+        }
+
         $this->client_id = $id;
+        $this->selectedClient = $client;
         $this->clientSearch = $name . ($phone ? ' (' . $phone . ')' : '');
         $this->clientSearchResults = [];
+
+        // Cargar coordenadas del cliente
+        $this->latitude = $client->latitude;
+        $this->longitude = $client->longitude;
     }
 
-    // Modal de cliente
     public function openClientModal()
     {
+        $this->modalKey = 'client-modal-' . uniqid(); // Nueva clave única
         $this->showClientModal = true;
     }
 
     public function closeClientModal()
     {
         $this->showClientModal = false;
-    }
-
-    // Productos
-    public function updatedCurrentProductSearch()
-    {
-        if (strlen($this->currentProductSearch) >= 2) {
-            $this->searchResults = Product::where('name', 'like', '%' . $this->currentProductSearch . '%')
-                ->orWhere('sku', 'like', '%' . $this->currentProductSearch . '%')
-                ->limit(10)
-                ->get();
-        } else {
-            $this->searchResults = [];
-        }
-    }
-
-    public function selectProduct($id)
-    {
-        $product = Product::find($id);
-        if ($product) {
-            $this->currentProductId = $product->id;
-            $this->currentProductSearch = $product->name . ' (' . $product->sku . ')';
-            $this->searchResults = [];
-        }
-    }
-
-    public function addProduct()
-    {
-        $this->validate([
-            'currentProductId' => 'required|exists:products,id',
-            'currentQuantity' => 'required|numeric|min:0.01',
-        ]);
-
-        $product = Product::find($this->currentProductId);
-
-        $this->products[] = [
-            'product_id' => $this->currentProductId,
-            'product_name' => $product->name,
-            'product_sku' => $product->sku,
-            'quantity' => $this->currentQuantity,
-            'unit_cost_at_time' => $product->current_stock > 0 ? $product->movements()->latest()->value('unit_cost') : null,
-        ];
-
-        $this->currentProductSearch = '';
-        $this->currentProductId = '';
-        $this->currentQuantity = 1;
-    }
-
-    public function removeProduct($index)
-    {
-        unset($this->products[$index]);
-        $this->products = array_values($this->products);
     }
 
     private function generateWorkOrderCode(): string
@@ -247,7 +241,16 @@ class WorkOrderForm extends Component
 
     public function save()
     {
-        $this->validate();
+        try {
+            $this->validate();
+        } catch (ValidationException $e) {
+            foreach ($e->errors() as $field => $messages) {
+                foreach ($messages as $message) {
+                    $this->dispatch('show-toast', type: 'error', message: $message);
+                }
+            }
+            throw $e;
+        }
 
         $orderData = [
             'technician_id' => $this->technician_id,
@@ -257,70 +260,28 @@ class WorkOrderForm extends Component
             'status' => $this->status,
             'scheduled_date' => $this->scheduled_date,
             'notes' => $this->notes,
+            'wifi_name' => $this->wifi_name,
+            'wifi_password' => $this->wifi_password,
+            'profile_name' => $this->profile_name,
+            'profile_password' => $this->profile_password,
+            'mac' => $this->mac,
+            'pon' => $this->pon,
+            'mufa' => $this->mufa,
+            'installation_date' => $this->installation_date,
         ];
 
         if ($this->orderId) {
             $order = WorkOrder::findOrFail($this->orderId);
-            $oldStatus = $order->status;
             $order->update($orderData);
-
-            if ($oldStatus !== 'completed' && $this->status === 'completed') {
-                $this->completeOrder($order);
-            }
-            $order->products()->delete();
-            foreach ($this->products as $prod) {
-                OrderProduct::create([
-                    'work_order_id' => $order->id,
-                    'product_id' => $prod['product_id'],
-                    'quantity' => $prod['quantity'],
-                    'unit_cost_at_time' => $prod['unit_cost_at_time'],
-                ]);
-            }
             session()->flash('message', 'Orden actualizada correctamente.');
         } else {
             $orderData['code'] = $this->generateWorkOrderCode();
-
+            $orderData['created_by'] = Auth::id();
             $order = WorkOrder::create($orderData);
-            foreach ($this->products as $prod) {
-                OrderProduct::create([
-                    'work_order_id' => $order->id,
-                    'product_id' => $prod['product_id'],
-                    'quantity' => $prod['quantity'],
-                    'unit_cost_at_time' => $prod['unit_cost_at_time'],
-                ]);
-            }
             session()->flash('message', 'Orden creada correctamente.');
         }
 
         return redirect()->route('work-orders.index');
-    }
-
-    protected function completeOrder(WorkOrder $order)
-    {
-        foreach ($order->products as $item) {
-            $product = $item->product;
-            if ($product->current_stock < $item->quantity) {
-                session()->flash('error', "Stock insuficiente para {$product->name}. Stock actual: {$product->current_stock}");
-                return;
-            }
-        }
-
-        foreach ($order->products as $item) {
-            $product = $item->product;
-            \App\Models\Movement::create([
-                'product_id' => $product->id,
-                'type' => 'technician_out',
-                'quantity' => $item->quantity,
-                'description' => 'Orden de trabajo #' . $order->id,
-                'user_id' => Auth::id(),
-                'reference_type' => 'work_order',
-                'reference_id' => $order->id,
-            ]);
-            $product->updateStock($item->quantity, 'technician_out');
-            $product->save();
-        }
-        $order->completed_date = now();
-        $order->save();
     }
 
     public function render()

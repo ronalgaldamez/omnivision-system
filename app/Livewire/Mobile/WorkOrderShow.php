@@ -30,6 +30,17 @@ class WorkOrderShow extends Component
 
     public $technicianHasOpenRequisition = false;
 
+    // ========== NUEVAS PROPIEDADES TÉCNICAS ==========
+    public $wifi_name;
+    public $wifi_password;
+    public $profile_name;
+    public $profile_password;
+    public $mac;
+    public $pon;
+    public $mufa;
+    public $installation_date;
+    public $canEditTech = false;
+
     public function mount($id)
     {
         $this->workOrder = WorkOrder::with('technician', 'products.product', 'client', 'ticket.createdBy', 'createdBy')
@@ -43,8 +54,56 @@ class WorkOrderShow extends Component
         $this->technicianHasOpenRequisition = Requisition::where('technician_id', Auth::id())
             ->where('status', 'open')
             ->exists();
+
+        // ========== INICIALIZAR CAMPOS TÉCNICOS ==========
+        $this->wifi_name = $this->workOrder->wifi_name;
+        $this->wifi_password = $this->workOrder->wifi_password;
+        $this->profile_name = $this->workOrder->profile_name;
+        $this->profile_password = $this->workOrder->profile_password;
+        $this->mac = $this->workOrder->mac;
+        $this->pon = $this->workOrder->pon;
+        $this->mufa = $this->workOrder->mufa;
+        $this->installation_date = $this->workOrder->installation_date?->format('Y-m-d');
+
+        // Solo el técnico asignado puede editar si la OT está activa
+        $user = Auth::user();
+        $this->canEditTech = $user->id === $this->workOrder->technician_id
+            && in_array($this->workOrder->status, ['pending', 'in_progress']);
     }
 
+    // ========== MÉTODO PARA GUARDAR DATOS TÉCNICOS ==========
+    public function saveTechnicalData()
+    {
+        if (!$this->canEditTech) {
+            abort(403);
+        }
+
+        $this->validate([
+            'wifi_name' => 'nullable|string|max:255',
+            'wifi_password' => 'nullable|string|max:255',
+            'profile_name' => 'nullable|string|max:255',
+            'profile_password' => 'nullable|string|max:255',
+            'mac' => 'nullable|string|max:255',
+            'pon' => 'nullable|string|max:255',
+            'mufa' => 'nullable|string|max:255',
+            'installation_date' => 'nullable|date',
+        ]);
+
+        $this->workOrder->update([
+            'wifi_name' => $this->wifi_name,
+            'wifi_password' => $this->wifi_password,
+            'profile_name' => $this->profile_name,
+            'profile_password' => $this->profile_password,
+            'mac' => $this->mac,
+            'pon' => $this->pon,
+            'mufa' => $this->mufa,
+            'installation_date' => $this->installation_date,
+        ]);
+
+        $this->dispatch('show-toast', type: 'success', message: 'Datos técnicos actualizados.');
+    }
+
+    // ========== MÉTODOS EXISTENTES (NO SE TOCAN) ==========
     protected function checkOpenRequisition()
     {
         $this->hasOpenRequisition = $this->workOrder->requisitions()
@@ -109,9 +168,7 @@ class WorkOrderShow extends Component
             })
             ->toArray();
 
-        // Iniciar con la OT actual seleccionada por defecto
         $this->selectedWorkOrdersForLink = [$this->workOrder->id];
-
         $this->showWorkOrderSelectionModal = true;
     }
 
@@ -235,6 +292,7 @@ class WorkOrderShow extends Component
         $this->workOrder->save();
 
         $this->checkAnotherInProgress();
+        $this->canEditTech = true; // ahora puede editar datos técnicos
         $this->dispatch('show-toast', type: 'success', message: 'Orden iniciada correctamente.');
     }
 
@@ -250,6 +308,7 @@ class WorkOrderShow extends Component
         $this->workOrder->started_at = null;
         $this->workOrder->save();
 
+        $this->canEditTech = false;
         $this->checkAnotherInProgress();
         $this->dispatch('show-toast', type: 'success', message: 'Orden pausada. Tiempo guardado.');
     }
@@ -263,6 +322,7 @@ class WorkOrderShow extends Component
         $this->workOrder->started_at = now();
         $this->workOrder->save();
 
+        $this->canEditTech = true;
         $this->checkAnotherInProgress();
         $this->dispatch('show-toast', type: 'success', message: 'Orden reanudada.');
     }
@@ -285,6 +345,8 @@ class WorkOrderShow extends Component
         $this->workOrder->completed_date = now();
         $this->workOrder->accumulated_seconds = $totalSeconds;
         $this->workOrder->save();
+
+        $this->canEditTech = false;
 
         if ($this->hasOpenRequisition) {
             $this->loadAvailableProducts();
