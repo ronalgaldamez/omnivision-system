@@ -108,8 +108,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'assign any technician in returns',
 
             'access my daily jobs',
-            // Cliente
-
         ];
 
         // 🧹 Paso 1: Eliminar cualquier permiso que NO esté en la lista oficial
@@ -201,6 +199,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_map_ot_menu',
             'view_requisitions_menu',
             'access my daily jobs',
+            'view technician dashboard',
         ]);
 
         // Accountant
@@ -227,7 +226,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_new_purchase_menu',
         ]);
 
-
         $atencionClienteRole->syncPermissions([
             'view clients',
             'create clients',
@@ -244,7 +242,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_all_tickets_menu',
         ]);
 
-        // NOC
+        // NOC: ahora con los mismos permisos de dashboard que Admin
         $nocRole->syncPermissions([
             'view dashboard',
             'view any tickets',
@@ -266,6 +264,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_noc_panel_menu',
             'access_technicians',
             'view_work_orders_menu',
+            'view technician dashboard',    // Mi Panel de Control
+            'view movements',               // Últimos movimientos
+            'view low stock',               // Stock bajo
+            'view requisitions',            // Requisiciones pendientes
         ]);
 
         // Supervisor

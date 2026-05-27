@@ -17,46 +17,22 @@ class Dashboard extends Component
     {
         $user = Auth::user();
 
-        // ========== VISTA ESPECIAL PARA TÉCNICO (ahora controlada por permiso) ==========
-        if ($user->can('view technician dashboard')) {
-            $pendingRequisitionsCount = Requisition::where('technician_id', $user->id)
-                ->where('status', 'open')
-                ->count();
-            $activeWorkOrdersCount = WorkOrder::where('technician_id', $user->id)
-                ->whereIn('status', ['pending', 'in_progress'])
-                ->count();
-            $recentRequisitions = Requisition::with('items.product')
-                ->where('technician_id', $user->id)
-                ->latest()
-                ->limit(5)
-                ->get();
-
-            return view('livewire.reports.dashboard-technician', compact(
-                'pendingRequisitionsCount',
-                'activeWorkOrdersCount',
-                'recentRequisitions'
-            ))->layout('components.layouts.app');
-        }
-
-        // ========== DATOS GLOBALES ==========
+        // ========== DATOS COMUNES PARA TODOS LOS ROLES ==========
         $lowStockCount = null;
         if ($user->can('view low stock')) {
             $lowStockCount = Product::whereColumn('current_stock', '<=', 'stock_min')->count();
         }
 
-        // Requisiciones pendientes (visible para quien tenga view requisitions)
         $pendingRequisitionsCount = null;
         if ($user->can('view requisitions')) {
             $pendingRequisitionsCount = Requisition::where('status', 'open')->count();
         }
 
-        // Órdenes activas
         $activeWorkOrdersCount = null;
         if ($user->can('view work_orders')) {
             $activeWorkOrdersCount = WorkOrder::whereIn('status', ['pending', 'in_progress'])->count();
         }
 
-        // Movimientos
         $todayMovementsCount = null;
         $recentMovements = null;
         if ($user->can('view movements')) {
@@ -64,7 +40,6 @@ class Dashboard extends Component
             $recentMovements = Movement::with('product', 'user')->latest()->limit(5)->get();
         }
 
-        // Tickets del usuario (secretaria/NOC) – ahora sin restricción de rol
         $myTickets = null;
         $totalMyTickets = null;
         $pendingMyTickets = null;
@@ -76,7 +51,6 @@ class Dashboard extends Component
             $resolvedMyTickets = Ticket::where('created_by', $user->id)->where('status', 'resolved')->count();
         }
 
-        // Tickets pendientes NOC
         $pendingNocTickets = null;
         $pendingNocCount = null;
         if ($user->can('view pending noc tickets')) {
@@ -87,13 +61,11 @@ class Dashboard extends Component
             $pendingNocCount = $pendingNocTickets->count();
         }
 
-        // Clientes recientes
         $recentClients = null;
         if ($user->can('view clients')) {
             $recentClients = Client::latest()->limit(5)->get();
         }
 
-        // Resueltos por NOC hoy
         $resolvedToday = null;
         if ($user->can('view resolutions')) {
             $resolvedToday = Ticket::where('resolved_by', $user->id)
@@ -101,12 +73,29 @@ class Dashboard extends Component
                 ->count();
         }
 
-        // Órdenes relacionadas con tickets del usuario – ahora sin restricción de rol
         $relatedWorkOrders = null;
         if ($user->can('view own work_orders')) {
             $relatedWorkOrders = WorkOrder::whereHas('ticket', function ($q) use ($user) {
                 $q->where('created_by', $user->id);
             })->latest()->limit(5)->get();
+        }
+
+        // ========== DATOS ESPECÍFICOS PARA TÉCNICO ==========
+        $techPendingRequisitionsCount = null;
+        $techActiveWorkOrdersCount = null;
+        $techRecentRequisitions = null;
+        if ($user->can('view technician dashboard')) {
+            $techPendingRequisitionsCount = Requisition::where('technician_id', $user->id)
+                ->where('status', 'open')
+                ->count();
+            $techActiveWorkOrdersCount = WorkOrder::where('technician_id', $user->id)
+                ->whereIn('status', ['pending', 'in_progress'])
+                ->count();
+            $techRecentRequisitions = Requisition::with('items.product')
+                ->where('technician_id', $user->id)
+                ->latest()
+                ->limit(5)
+                ->get();
         }
 
         return view('livewire.reports.dashboard', compact(
@@ -123,11 +112,14 @@ class Dashboard extends Component
             'pendingNocCount',
             'recentClients',
             'resolvedToday',
-            'relatedWorkOrders'
+            'relatedWorkOrders',
+            'techPendingRequisitionsCount',
+            'techActiveWorkOrdersCount',
+            'techRecentRequisitions'
         ))->layout('components.layouts.app');
     }
 
-    // Métodos auxiliares que se mantienen
+    // Métodos auxiliares (sin cambios)
     public function resolveRemote($ticketId)
     {
         $ticket = Ticket::find($ticketId);
