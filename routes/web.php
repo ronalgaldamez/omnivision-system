@@ -18,7 +18,9 @@ Route::middleware('guest')->group(function () {
 
 // Protected routes
 Route::middleware(['auth'])->group(function () {
+    // Dashboard (acceso para todos los autenticados, sin permiso específico)
     Route::get('/dashboard', \App\Livewire\Reports\Dashboard::class)->name('dashboard');
+
     Route::post('/logout', LogoutController::class)->name('logout');
     Route::get('/profile', \App\Livewire\Profile::class)->name('profile');
 
@@ -133,9 +135,6 @@ Route::middleware(['auth'])->group(function () {
 
     // ========== REPORTS ==========
     if (module_active('reports')) {
-        Route::middleware('can:view dashboard')->group(function () {
-            Route::get('/dashboard', \App\Livewire\Reports\Dashboard::class)->name('dashboard');
-        });
         Route::middleware('can:view reports')->group(function () {
             Route::get('/reports/stock', \App\Livewire\Reports\StockReport::class)->name('reports.stock');
             Route::get('/reports/movements', \App\Livewire\Reports\MovementsReport::class)->name('reports.movements');
