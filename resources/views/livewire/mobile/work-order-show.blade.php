@@ -22,6 +22,7 @@
                 Datos del Cliente
             </h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {{-- Nombre --}}
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">person</span>
                     <div>
@@ -29,6 +30,21 @@
                         <p class="text-gray-800 font-medium">{{ $workOrder->client->name ?? 'No especificado' }}</p>
                     </div>
                 </div>
+                {{-- Documento (tipo + número) --}}
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">fingerprint</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Documento</p>
+                        <p class="text-gray-800 font-medium">
+                            @if($workOrder->client->document_type && $workOrder->client->document_number)
+                                {{ strtoupper($workOrder->client->document_type) }}: {{ $workOrder->client->document_number }}
+                            @else
+                                No especificado
+                            @endif
+                        </p>
+                    </div>
+                </div>
+                {{-- Teléfono --}}
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">call</span>
                     <div>
@@ -44,6 +60,15 @@
                         </p>
                     </div>
                 </div>
+                {{-- Correo electrónico --}}
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">mail</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Correo electrónico</p>
+                        <p class="text-gray-700">{{ $workOrder->client->email ?? '—' }}</p>
+                    </div>
+                </div>
+                {{-- Dirección --}}
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 sm:col-span-2">
                     <span class="material-symbols-outlined text-gray-400">location_on</span>
                     <div>
@@ -51,6 +76,137 @@
                         <p class="text-gray-700">{{ $workOrder->client->address ?? '—' }}</p>
                     </div>
                 </div>
+
+                {{-- Nuevos campos del cliente (instalación, servicio, etc.) --}}
+                @if($workOrder->client->installation_address)
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 sm:col-span-2">
+                    <span class="material-symbols-outlined text-gray-400">home_pin</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Dirección de instalación</p>
+                        <p class="text-gray-700">{{ $workOrder->client->installation_address }}</p>
+                    </div>
+                </div>
+                @endif
+                @if($workOrder->client->service)
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">tv</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Servicio</p>
+                        <p class="text-gray-700">{{ $workOrder->client->service }}</p>
+                    </div>
+                </div>
+                @endif
+                @if($workOrder->client->nro_luz)
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">bolt</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">N.° de luz</p>
+                        <p class="text-gray-700">{{ $workOrder->client->nro_luz }}</p>
+                    </div>
+                </div>
+                @endif
+                @if($workOrder->latitude && $workOrder->longitude)
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 sm:col-span-2">
+                    <span class="material-symbols-outlined text-gray-400">explore</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Coordenadas</p>
+                        <p class="text-gray-700">{{ $workOrder->latitude }}, {{ $workOrder->longitude }}</p>
+                    </div>
+                </div>
+                @endif
+            </div>
+
+            {{-- ========== DATOS TÉCNICOS (con iconos) ========== --}}
+            <div class="border-t border-gray-200 pt-5 space-y-3">
+                <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-gray-500">settings</span>
+                    Datos Técnicos
+                </h2>
+                <form wire:submit.prevent="saveTechnicalData" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {{-- Nombre de perfil --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-sm">person</span>
+                                Nombre de perfil
+                            </label>
+                            <input type="text" wire:model="profile_name" {{ !$canEditTech ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                        </div>
+                        {{-- Contraseña de perfil --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-sm">key</span>
+                                Contraseña de perfil
+                            </label>
+                            <input type="text" wire:model="profile_password" {{ !$canEditTech ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                        </div>
+                        {{-- Nombre wifi --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-sm">wifi</span>
+                                Nombre wifi
+                            </label>
+                            <input type="text" wire:model="wifi_name" {{ !$canEditTech ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                        </div>
+                        {{-- Contraseña wifi --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-sm">key</span>
+                                Contraseña wifi
+                            </label>
+                            <input type="text" wire:model="wifi_password" {{ !$canEditTech ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                        </div>
+                        {{-- MAC --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-sm">lan</span>
+                                MAC
+                            </label>
+                            <input type="text" wire:model="mac" {{ !$canEditTech ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                        </div>
+                        {{-- PON --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-sm">settings_input_antenna</span>
+                                PON
+                            </label>
+                            <input type="text" wire:model="pon" {{ !$canEditTech ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                        </div>
+                        {{-- Mufa --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-sm">cable</span>
+                                Mufa
+                            </label>
+                            <input type="text" wire:model="mufa" {{ !$canEditTech ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                        </div>
+                        {{-- Fecha de instalación --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-sm">calendar_today</span>
+                                Fecha de instalación
+                            </label>
+                            <input type="date" wire:model="installation_date" {{ !$canEditTech ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                        </div>
+                    </div>
+                    @if($canEditTech)
+                    <div class="flex justify-end">
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition inline-flex items-center gap-2">
+                            <span class="material-symbols-outlined text-base">save</span>
+                            Guardar datos técnicos
+                        </button>
+                    </div>
+                    @endif
+                </form>
             </div>
 
             {{-- ========== INFORMACIÓN DEL TICKET ========== --}}
@@ -122,7 +278,11 @@
                         <span class="material-symbols-outlined text-gray-400">person</span>
                         <div>
                             <p class="text-xs text-gray-500 uppercase tracking-wide">Creada por</p>
-                            <p class="text-gray-700">{{ $workOrder->createdBy->name ?? 'N/A' }}</p>
+                            @php
+                                $creator = $workOrder->createdBy;
+                                $rol = $creator?->getRoleNames()?->first();
+                            @endphp
+                            <p class="text-gray-700">{{ $creator?->name ?? 'N/A' }}{{ $rol ? ' ('.strtoupper(str_replace('_', ' ', $rol)).')' : '' }}</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
@@ -196,7 +356,7 @@
             </div>
 
             {{-- Productos sugeridos --}}
-            @if($workOrder->products->count())
+            @if($workOrder->products?->count())
                 <div class="border-t border-gray-200 pt-5">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-3">
                         <span class="material-symbols-outlined text-gray-500">inventory_2</span>

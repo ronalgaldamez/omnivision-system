@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin\Clients;
+namespace App\Livewire\Clients;
 
 use Livewire\Component;
 use App\Models\Client;
@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\DB;
 
 class ClientForm extends Component
 {
-    public $clientId = null;
     public $name = '';
     public $document_type = null;
     public $document_number = '';
@@ -45,27 +44,9 @@ class ClientForm extends Component
         ];
     }
 
-    public function mount($id = null)
+    public function mount()
     {
-        if ($id) {
-            $this->clientId = $id;
-            $client = Client::with('phones')->findOrFail($id);
-            $this->name = $client->name;
-            $this->document_type = $client->document_type;
-            $this->document_number = $client->document_number;
-            $this->email = $client->email;
-            $this->phone = $client->phone;
-            $this->address = $client->address;
-            $this->latitude = $client->latitude;
-            $this->longitude = $client->longitude;
-            $this->nro_luz = $client->nro_luz;
-            $this->installation_address = $client->installation_address;
-            $this->service = $client->service;
-            $this->notes = $client->notes;
-            $this->phones = $client->phones->toArray();
-        } else {
-            $this->phones = [];
-        }
+        $this->phones = [];
     }
 
     public function addPhone()
@@ -81,13 +62,10 @@ class ClientForm extends Component
 
     public function save()
     {
-        // 1. Limpiar coordenadas
         $this->latitude = is_numeric($this->latitude) ? (float) $this->latitude : null;
         $this->longitude = is_numeric($this->longitude) ? (float) $this->longitude : null;
 
-        // 2. Validación manual de coordenadas (antes de tocar la base de datos)
         $errors = [];
-
         if ($this->latitude !== null) {
             $latStr = (string) $this->latitude;
             if (!preg_match('/^-?\d{1,2}\.\d+$/', $latStr)) {
@@ -96,7 +74,6 @@ class ClientForm extends Component
                 $errors[] = 'Latitud: valor fuera de rango (-90 a 90).';
             }
         }
-
         if ($this->longitude !== null) {
             $lonStr = (string) $this->longitude;
             if (!preg_match('/^-?\d{1,3}\.\d+$/', $lonStr)) {
@@ -105,41 +82,29 @@ class ClientForm extends Component
                 $errors[] = 'Longitud: valor fuera de rango (-180 a 180).';
             }
         }
-
         if (!empty($errors)) {
             $this->dispatch('show-toast', type: 'error', message: implode(' ', $errors));
-            return; // DETIENE EL GUARDADO
+            return;
         }
 
-        // 3. Validación normal del resto de campos
         $this->validate();
 
-        // 4. Guardar en base de datos
-        DB::transaction(function () {
-            $data = [
-                'name' => $this->name,
-                'document_type' => $this->document_type,
-                'document_number' => $this->document_number,
-                'email' => $this->email,
-                'phone' => $this->phone,
-                'address' => $this->address,
-                'latitude' => $this->latitude,
-                'longitude' => $this->longitude,
-                'nro_luz' => $this->nro_luz,
-                'installation_address' => $this->installation_address,
-                'service' => $this->service,
-                'notes' => $this->notes,
-            ];
+        $client = Client::create([
+            'name' => $this->name,
+            'document_type' => $this->document_type,
+            'document_number' => $this->document_number,
+            'email' => $this->email,
+            'phone' => $this->phone,
+            'address' => $this->address,
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
+            'nro_luz' => $this->nro_luz,
+            'installation_address' => $this->installation_address,
+            'service' => $this->service,
+            'notes' => $this->notes,
+        ]);
 
-            if ($this->clientId) {
-                $client = Client::findOrFail($this->clientId);
-                $client->update($data);
-            } else {
-                $client = Client::create($data);
-            }
-
-            // Teléfonos adicionales
-            $client->phones()->delete();
+        DB::transaction(function () use ($client) {
             foreach ($this->phones as $phone) {
                 if (!empty($phone['number'])) {
                     $client->phones()->create([
@@ -150,12 +115,12 @@ class ClientForm extends Component
             }
         });
 
-        session()->flash('message', $this->clientId ? 'Cliente actualizado.' : 'Cliente creado.');
-        return redirect()->route('admin.clients.index');
+        // Emitir evento con los datos del nuevo cliente
+        $this->dispatch('clientCreated', id: $client->id, name: $client->name, phone: $client->phone ?? '');
     }
 
     public function render()
     {
-        return view('livewire.admin.clients.client-form')->layout('components.layouts.app');
+        return view('livewire.clients.client-form');
     }
 }

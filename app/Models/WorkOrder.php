@@ -24,6 +24,16 @@ class WorkOrder extends Model
         'code',
         'started_at',
         'accumulated_seconds',
+        'created_by',
+        // Nuevos campos técnicos
+        'wifi_name',
+        'wifi_password',
+        'profile_name',
+        'profile_password',
+        'mac',
+        'pon',
+        'mufa',
+        'installation_date',
     ];
 
     protected $casts = [
@@ -31,6 +41,7 @@ class WorkOrder extends Model
         'completed_date' => 'datetime',
         'started_at' => 'datetime',
         'accumulated_seconds' => 'integer',
+        'installation_date' => 'date',
     ];
 
     public function technician()
