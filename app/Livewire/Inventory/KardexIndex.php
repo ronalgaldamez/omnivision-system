@@ -13,12 +13,40 @@ class KardexIndex extends Component
     public $date_from = '';
     public $date_to = '';
 
+    // Propiedades para el buscador de productos
+    public $productSearch = '';
+    public $productResults = [];
+
     protected $queryString = ['product_id', 'type', 'date_from', 'date_to'];
+
+    public function updatedProductSearch()
+    {
+        if (strlen($this->productSearch) >= 2) {
+            $this->productResults = Product::where('name', 'like', '%' . $this->productSearch . '%')
+                ->orWhere('sku', 'like', '%' . $this->productSearch . '%')
+                ->limit(10)
+                ->get();
+        } else {
+            $this->productResults = [];
+        }
+    }
+
+    public function selectProduct($id, $name)
+    {
+        $this->product_id = $id;
+        $this->productSearch = $name;
+        $this->productResults = [];
+    }
+
+    public function clearProduct()
+    {
+        $this->product_id = '';
+        $this->productSearch = '';
+        $this->productResults = [];
+    }
 
     public function render()
     {
-        $products = Product::orderBy('name')->get();
-
         $movements = Movement::with('product', 'user')
             ->when($this->product_id, fn($q) => $q->where('product_id', $this->product_id))
             ->when($this->type, fn($q) => $q->where('type', $this->type))
@@ -33,7 +61,7 @@ class KardexIndex extends Component
         $items = [];
 
         foreach ($movements as $index => $mov) {
-            $item = clone $mov;  // clonamos para no modificar el original
+            $item = clone $mov;
             $item->line_number = $index + 1;
 
             $isEntry = in_array($mov->type, ['entry', 'technician_return']);
@@ -84,7 +112,7 @@ class KardexIndex extends Component
             $items[] = $item;
         }
 
-        return view('livewire.inventory.kardex.index', compact('products', 'items'))
+        return view('livewire.inventory.kardex.index', compact('items'))
             ->layout('components.layouts.app');
     }
 }

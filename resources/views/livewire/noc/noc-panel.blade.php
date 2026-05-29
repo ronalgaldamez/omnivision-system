@@ -1,7 +1,5 @@
 <div class="max-w-7xl mx-auto">
-    <!-- Tarjeta principal -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <!-- Encabezado con fondo sutil -->
         <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
             <div>
                 <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -12,67 +10,42 @@
             </div>
         </div>
 
-        <!-- Contenido -->
         <div class="p-6 space-y-5">
-            {{-- Se eliminó el banner de session('message') porque ahora usamos Toast --}}
-
             <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200">
-                            <!-- Nueva columna: Código -->
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">qr_code</span>
-                                    Código
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">tag</span> ID
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">person</span>
-                                    Cliente
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">handyman</span>
-                                    Servicio
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">description</span>
-                                    Descripción
-                                </div>
-                            </th>
-                            <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                <div class="flex items-center justify-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-400 text-base">settings</span>
-                                    Acciones
-                                </div>
-                            </th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Código</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">ID</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Cliente</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Servicio</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Prioridad</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Origen</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Descripción</th>
+                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Acciones</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @forelse($tickets as $ticket)
                             <tr class="hover:bg-gray-50/80 transition">
-                                <!-- Mostrar código -->
-                                <td class="px-4 py-3 font-mono text-xs text-gray-700">
-                                    {{ $ticket->ticket_code ?? '—' }}
-                                </td>
+                                <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $ticket->ticket_code ?? '—' }}</td>
                                 <td class="px-4 py-3 font-mono text-xs text-gray-700">#{{ $ticket->id }}</td>
                                 <td class="px-4 py-3 text-gray-800">{{ $ticket->client->name ?? 'N/A' }}</td>
                                 <td class="px-4 py-3">
-                                    <span
-                                        class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
                                         {{ $ticket->service_type }}
                                     </span>
                                 </td>
+                                <td class="px-4 py-3">
+                                    @if($ticket->priority)
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                                            {{ $ticket->priority }}
+                                        </span>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-gray-700">{{ $ticket->origin ?? '—' }}</td>
                                 <td class="px-4 py-3 text-gray-600 max-w-xs truncate" title="{{ $ticket->description }}">
                                     {{ Str::limit($ticket->description, 100) }}
                                 </td>
@@ -84,13 +57,11 @@
                                             <span class="material-symbols-outlined text-base">visibility</span>
                                             Detalle
                                         </button>
-                                        {{-- Cambiado: ahora llama a promptResolveRemote --}}
                                         <button wire:click="promptResolveRemote({{ $ticket->id }})"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
                                             <span class="material-symbols-outlined text-base">check_circle</span>
                                             Resolver
                                         </button>
-                                        {{-- Cambiado: ahora llama a promptCreateWorkOrder --}}
                                         <button wire:click="promptCreateWorkOrder({{ $ticket->id }})"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
                                             <span class="material-symbols-outlined text-base">engineering</span>
@@ -101,11 +72,9 @@
                             </tr>
                         @empty
                             <tr>
-                                <!-- colspan actualizado a 6 (por la nueva columna) -->
-                                <td colspan="6" class="px-4 py-12 text-center bg-gray-50/50">
+                                <td colspan="8" class="px-4 py-12 text-center bg-gray-50/50">
                                     <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">checklist</span>
                                     <p class="text-gray-500">No hay tickets pendientes</p>
-                                    <p class="text-sm text-gray-400 mt-1">Todos los tickets NOC han sido procesados</p>
                                 </td>
                             </tr>
                         @endforelse
@@ -115,72 +84,16 @@
         </div>
     </div>
 
-    <!-- Modal de detalle del ticket (SIN cambios, excepto los botones) -->
+    <!-- Modal de detalle del ticket (unificado) -->
     @if($showDetailModal && $selectedTicket)
-        <div x-data="{ open: true }" x-show="open" x-cloak
-            class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-xl bg-white">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold">Detalle del Ticket #{{ $selectedTicket->id }}</h3>
-                    <button wire:click="closeModal" class="text-gray-500 hover:text-gray-700">&times;</button>
-                </div>
-
-                <div class="space-y-3">
-                    <!-- Nuevo bloque: Código de asistencia -->
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500">Código de asistencia</p>
-                        <p class="font-mono text-sm font-bold">{{ $selectedTicket->ticket_code ?? 'N/A' }}</p>
-                    </div>
-
-                    <!-- Cliente -->
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500">Cliente</p>
-                        <p class="font-medium">{{ $selectedTicket->client->name ?? 'N/A' }}</p>
-                        <p class="text-sm">{{ $selectedTicket->client->phone ?? 'Sin teléfono' }}</p>
-                        <p class="text-sm">{{ $selectedTicket->client->address ?? 'Sin dirección' }}</p>
-                    </div>
-
-                    <!-- Tipo de servicio -->
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500">Tipo de servicio</p>
-                        <p class="font-medium">{{ ucfirst($selectedTicket->service_type) }}</p>
-                    </div>
-
-                    <!-- Descripción completa -->
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500">Descripción del problema</p>
-                        <p class="text-sm whitespace-pre-wrap">{{ $selectedTicket->description }}</p>
-                    </div>
-
-                    <!-- Notas adicionales (si existen) -->
-                    @if($selectedTicket->notes)
-                        <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-xs text-gray-500">Notas adicionales</p>
-                            <p class="text-sm">{{ $selectedTicket->notes }}</p>
-                        </div>
-                    @endif
-
-                    <!-- Acciones (MODIFICADOS) -->
-                    <div class="flex justify-end gap-2 pt-3">
-                        <button wire:click="promptResolveRemote({{ $selectedTicket->id }})"
-                            class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
-                            Resolver remotamente
-                        </button>
-                        <button wire:click="promptCreateWorkOrder({{ $selectedTicket->id }})"
-                            class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                            Crear OT
-                        </button>
-                        <button wire:click="closeModal"
-                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300">
-                            Cerrar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        @include('components.ticket-detail-modal', [
+            'ticket' => $selectedTicket,
+            'showNocButton' => false,  // Ya estamos en NOC, no mostramos "Ir al panel NOC"
+            'showCreateOtButton' => auth()->user()->can('create work_orders'),
+        ])
     @endif
 
-    <!-- NUEVO: Diálogo de confirmación (mismo estilo que compras) -->
+    <!-- Modal de confirmación -->
     @if($confirmingAction)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
@@ -215,7 +128,7 @@
         </div>
     @endif
 
-    <!-- Toast (mismo sistema que en compras) -->
+    <!-- Toast -->
     <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
         x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 5000)"
         x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"
@@ -236,8 +149,6 @@
     </div>
 
     <style>
-        [x-cloak] {
-            display: none !important;
-        }
+        [x-cloak] { display: none !important; }
     </style>
 </div>

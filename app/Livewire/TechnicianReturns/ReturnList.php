@@ -15,7 +15,7 @@ class ReturnList extends Component
 
     public function render()
     {
-        $returns = TechnicianReturn::with('product', 'user', 'request')
+        $returns = TechnicianReturn::with('product', 'user')   // <-- quitamos 'request'
             ->when($this->typeFilter, fn($q) => $q->where('type', $this->typeFilter))
             ->when($this->search, fn($q) => $q->where('notes', 'like', '%' . $this->search . '%')
                 ->orWhereHas('product', fn($q2) => $q2->where('name', 'like', '%' . $this->search . '%')))

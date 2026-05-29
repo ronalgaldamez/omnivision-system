@@ -31,16 +31,19 @@
                     <div class="relative">
                         <select wire:model="type"
                             class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
-                            <option value="surplus">Sobrante (devuelve al inventario - recalcula costo promedio)</option>
+                            <option value="surplus">Sobrante (devuelve al inventario - recalcula costo promedio)
+                            </option>
                             <option value="damage">Dañado (se descarta del inventario - resta stock)</option>
                         </select>
-                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">alt_route</span>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">alt_route</span>
+                        <span
+                            class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                     </div>
                 </div>
 
-                <!-- Técnico (solo admin/warehouse) -->
-                @if(!auth()->user()->hasRole('technician'))
+                <!-- Técnico (solo usuarios con permiso assign any technician in returns) -->
+                @can('assign any technician in returns')
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                             <span class="material-symbols-outlined text-gray-400 text-base">engineering</span>
@@ -54,12 +57,15 @@
                                     <option value="{{ $tech->id }}">{{ $tech->name }}</option>
                                 @endforeach
                             </select>
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">person</span>
-                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">person</span>
+                            <span
+                                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                         </div>
-                        @error('technician_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        @error('technician_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
+                        @enderror
                     </div>
-                @endif
+                @endcan
 
                 <!-- Orden de Trabajo -->
                 <div>
@@ -76,10 +82,13 @@
                                     ({{ $wo->scheduled_date?->format('d/m/Y') }})</option>
                             @endforeach
                         </select>
-                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">receipt</span>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">receipt</span>
+                        <span
+                            class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                     </div>
-                    @error('work_order_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                    @error('work_order_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
                 </div>
 
                 <!-- Productos disponibles (si hay OT y productos) -->
@@ -99,9 +108,11 @@
                                 <input type="text" wire:model.live="productSearch"
                                     placeholder="Buscar producto disponible para devolver..."
                                     class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                <span
+                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                                 @if($productSearch && count($availableProducts) > 0)
-                                    <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                    <ul
+                                        class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
                                         @foreach($availableProducts as $prod)
                                             @if(stripos($prod['product_name'], $productSearch) !== false || stripos($prod['product_sku'], $productSearch) !== false)
                                                 <li wire:click="selectProduct({{ $prod['product_id'] }}, {{ $prod['request_id'] }}, {{ $prod['available'] }})"
@@ -114,13 +125,16 @@
                                     </ul>
                                 @endif
                             </div>
-                            <select wire:model="product_id" class="mt-2 w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
+                            <select wire:model="product_id"
+                                class="mt-2 w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
                                 <option value="">Seleccione producto a devolver</option>
                                 @foreach($availableProducts as $prod)
-                                    <option value="{{ $prod['product_id'] }}">{{ $prod['product_name'] }} (Disponible: {{ $prod['available'] }})</option>
+                                    <option value="{{ $prod['product_id'] }}">{{ $prod['product_name'] }} (Disponible:
+                                        {{ $prod['available'] }})</option>
                                 @endforeach
                             </select>
-                            @error('product_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                            @error('product_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <div>
@@ -131,13 +145,15 @@
                             <div class="relative">
                                 <input type="number" wire:model="quantity" step="1" min="1"
                                     class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">tag</span>
+                                <span
+                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">tag</span>
                             </div>
                             @error('quantity') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                         </div>
                     </div>
                 @elseif($work_order_id && count($availableProducts) == 0)
-                    <div class="flex items-center gap-2 text-sm text-yellow-700 bg-yellow-50 px-4 py-3 rounded-lg border border-yellow-200">
+                    <div
+                        class="flex items-center gap-2 text-sm text-yellow-700 bg-yellow-50 px-4 py-3 rounded-lg border border-yellow-200">
                         <span class="material-symbols-outlined text-yellow-600">warning</span>
                         No hay productos disponibles para devolver de esta OT.
                     </div>
@@ -153,7 +169,8 @@
                         <textarea wire:model="notes" rows="2"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"
                             placeholder="Describe el motivo de la devolución..."></textarea>
-                        <span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
                     </div>
                 </div>
 
@@ -210,15 +227,19 @@
         style="display: none;">
         <div x-show="toastType === 'success'"
             class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span class="material-symbols-outlined">check_circle</span> <span x-text="toastMessage" class="text-sm font-medium"></span>
+            <span class="material-symbols-outlined">check_circle</span> <span x-text="toastMessage"
+                class="text-sm font-medium"></span>
         </div>
         <div x-show="toastType === 'error'"
             class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span class="material-symbols-outlined">error</span> <span x-text="toastMessage" class="text-sm font-medium"></span>
+            <span class="material-symbols-outlined">error</span> <span x-text="toastMessage"
+                class="text-sm font-medium"></span>
         </div>
     </div>
 
     <style>
-        [x-cloak] { display: none !important; }
+        [x-cloak] {
+            display: none !important;
+        }
     </style>
 </div>

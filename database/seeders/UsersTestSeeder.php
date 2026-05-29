@@ -11,34 +11,50 @@ class UsersTestSeeder extends Seeder
 {
     public function run()
     {
-        // Nos aseguramos de que los roles existan primero
+        // Asegurar roles
         $this->call(RolesAndPermissionsSeeder::class);
 
-        // Secretaria
-        $secretaria = User::firstOrCreate(
+        // Atención al cliente (Kenia)
+        $atencion = User::firstOrCreate(
             ['email' => 'kenia.guille@omnivision.com'],
             [
-                'name'              => 'Kenia Guille',
-                'password'          => Hash::make('123456789'),
+                'name' => 'Kenia Guille',
+                'password' => Hash::make('123456789'),
                 'email_verified_at' => now(),
             ]
         );
-        $secretaria->assignRole('secretary');
+        $atencion->assignRole('atencion_al_cliente');
 
         // NOC
         $noc = User::firstOrCreate(
             ['email' => 'deivy.alas@omnivision.com'],
             [
-                'name'              => 'Deivy Alas',
-                'password'          => Hash::make('123456789'),
+                'name' => 'Deivy Alas',
+                'password' => Hash::make('123456789'),
                 'email_verified_at' => now(),
             ]
         );
         $noc->assignRole('noc');
 
-        // Limpiar caché de permisos para que los roles se apliquen de inmediato
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        // Técnico 1
+        User::firstOrCreate(
+            ['email' => 'tecnico1@omnivision.com'],
+            ['name' => 'Técnico Uno', 'password' => Hash::make('123456789'), 'email_verified_at' => now()]
+        )->assignRole('technician');
 
-        $this->command->info('Usuarios de prueba creados: secretaria y NOC.');
+        // Técnico 2
+        User::firstOrCreate(
+            ['email' => 'tecnico2@omnivision.com'],
+            ['name' => 'Técnico Dos', 'password' => Hash::make('123456789'), 'email_verified_at' => now()]
+        )->assignRole('technician');
+
+        // Supervisor
+        User::firstOrCreate(
+            ['email' => 'supervisor@omnivision.com'],
+            ['name' => 'Supervisor Uno', 'password' => Hash::make('123456789'), 'email_verified_at' => now()]
+        )->assignRole('supervisor');
+
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        $this->command->info('Usuarios de prueba creados: Atención al cliente, NOC, 2 técnicos y supervisor.');
     }
 }

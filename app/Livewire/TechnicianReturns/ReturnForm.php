@@ -6,7 +6,6 @@ use Livewire\Component;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\WorkOrder;
-use App\Models\TechnicianRequest;
 use App\Models\TechnicianReturn;
 use App\Models\Movement;
 use App\Services\InventoryService;
@@ -15,18 +14,17 @@ use Illuminate\Support\Facades\Auth;
 class ReturnForm extends Component
 {
     public $type = 'surplus';
-    public $technician_id = null;        // nuevo: para filtro por técnico (solo admin/warehouse)
+    public $technician_id = null;
     public $work_order_id;
     public $product_id;
     public $quantity;
     public $notes;
     public $productSearch = '';
-    public $selectedRequestId = null;
+    public $selectedRequestId = null; // ya no se usa, pero lo conservamos por si acaso
 
-    public $technicians = [];             // lista de técnicos (para admin/warehouse)
+    public $technicians = [];
     public $workOrders = [];
-    public $availableProducts = [];
-
+    public $searchResults = [];       // para el buscador de productos
     public $showConfirmModal = false;
     public $confirmMessage = '';
 
@@ -42,13 +40,12 @@ class ReturnForm extends Component
     public function mount()
     {
         $user = Auth::user();
-        // Si es técnico, solo verá sus propias OT (sin selector de técnico)
-        if ($user->hasRole('technician')) {
+        if ($user->can('assign any technician in returns')) {
+            $this->technicians = User::role('technician')->orderBy('name')->get();
+        } else {
+            // Se autoasigna el técnico actual
             $this->technician_id = $user->id;
             $this->loadWorkOrders();
-        } else {
-            // Admin o warehouse: cargar lista de técnicos
-            $this->technicians = User::role('technician')->orderBy('name')->get();
         }
     }
 
@@ -56,7 +53,7 @@ class ReturnForm extends Component
     {
         $this->work_order_id = null;
         $this->product_id = null;
-        $this->availableProducts = [];
+        $this->searchResults = [];
         if ($this->technician_id) {
             $this->loadWorkOrders();
         }
@@ -78,42 +75,27 @@ class ReturnForm extends Component
     {
         $this->product_id = null;
         $this->quantity = null;
-        $this->selectedRequestId = null;
-        $this->availableProducts = [];
+        $this->searchResults = [];
+    }
 
-        if ($this->work_order_id) {
-            $requests = TechnicianRequest::where('work_order_id', $this->work_order_id)
-                ->where('status', 'delivered')
-                ->with('products.product')
+    // Buscador de productos (nuevo)
+    public function updatedProductSearch()
+    {
+        if (strlen($this->productSearch) >= 2) {
+            $this->searchResults = Product::where('name', 'like', '%' . $this->productSearch . '%')
+                ->orWhere('sku', 'like', '%' . $this->productSearch . '%')
+                ->limit(10)
                 ->get();
-
-            $products = [];
-            foreach ($requests as $req) {
-                foreach ($req->products as $rp) {
-                    $alreadyReturned = TechnicianReturn::where('technician_request_id', $req->id)
-                        ->where('product_id', $rp->product_id)
-                        ->sum('quantity');
-                    $available = $rp->quantity_delivered - $alreadyReturned;
-                    if ($available > 0) {
-                        $products[] = [
-                            'product_id' => $rp->product_id,
-                            'product_name' => $rp->product->name,
-                            'product_sku' => $rp->product->sku,
-                            'available' => $available,
-                            'request_id' => $req->id,
-                        ];
-                    }
-                }
-            }
-            $this->availableProducts = $products;
+        } else {
+            $this->searchResults = [];
         }
     }
 
-    public function selectProduct($productId, $requestId, $available)
+    public function selectProduct($id, $name)
     {
-        $this->product_id = $productId;
-        $this->selectedRequestId = $requestId;
-        $this->dispatch('showToast', ['type' => 'info', 'message' => "Producto seleccionado. Cantidad máxima a devolver: $available"]);
+        $this->product_id = $id;
+        $this->productSearch = $name;
+        $this->searchResults = [];
     }
 
     public function confirmSave()
@@ -129,19 +111,13 @@ class ReturnForm extends Component
         $inventoryService = new InventoryService();
 
         if ($this->type === 'damage' && $product->current_stock < $this->quantity) {
-            $this->dispatch('showToast', ['type' => 'error', 'message' => 'Stock insuficiente para registrar dañado. Stock actual: ' . $product->current_stock]);
+            $this->dispatch('show-toast', type: 'error', message: 'Stock insuficiente para registrar dañado. Stock actual: ' . $product->current_stock);
             $this->showConfirmModal = false;
             return;
         }
 
-        // Obtener la solicitud asociada
-        $technicianRequest = TechnicianRequest::where('work_order_id', $this->work_order_id)
-            ->whereHas('products', function ($q) {
-                $q->where('product_id', $this->product_id);
-            })->first();
-
         $return = TechnicianReturn::create([
-            'technician_request_id' => $technicianRequest ? $technicianRequest->id : null,
+            'technician_request_id' => null,           // ya no depende de una solicitud
             'work_order_id' => $this->work_order_id,
             'type' => $this->type,
             'product_id' => $this->product_id,
@@ -170,9 +146,9 @@ class ReturnForm extends Component
             $inventoryService->processExit($product, $this->quantity, $movement);
         }
 
-        $this->dispatch('showToast', ['type' => 'success', 'message' => 'Devolución registrada correctamente.']);
-        $this->reset(['technician_id', 'work_order_id', 'product_id', 'quantity', 'notes', 'selectedRequestId']);
-        $this->availableProducts = [];
+        $this->dispatch('show-toast', type: 'success', message: 'Devolución registrada correctamente.');
+        $this->reset(['technician_id', 'work_order_id', 'product_id', 'quantity', 'notes', 'productSearch']);
+        $this->searchResults = [];
         $this->showConfirmModal = false;
         return redirect()->route('technician-returns.index');
     }

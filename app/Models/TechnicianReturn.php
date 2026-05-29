@@ -2,40 +2,25 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class TechnicianReturn extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'technician_request_id',
-        'work_order_id',
-        'type',
+        'user_id',
         'product_id',
         'quantity',
+        'type',
         'notes',
-        'user_id'
     ];
 
-    public function workOrder()
+    public function user()
     {
-        return $this->belongsTo(WorkOrder::class);
-    }
-
-    public function request()
-    {
-        return $this->belongsTo(TechnicianRequest::class, 'technician_request_id');
+        return $this->belongsTo(User::class);
     }
 
     public function product()
     {
         return $this->belongsTo(Product::class);
-    }
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
     }
 }

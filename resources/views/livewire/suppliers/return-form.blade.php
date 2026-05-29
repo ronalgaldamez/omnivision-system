@@ -1,7 +1,5 @@
 <div class="max-w-6xl mx-auto">
-    <!-- Tarjeta principal -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <!-- Encabezado con fondo sutil -->
         <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -19,26 +17,33 @@
             </div>
         </div>
 
-        <!-- Contenido -->
         <div class="p-6">
             <form wire:submit.prevent="confirmReturn" class="space-y-6">
-                <!-- Selección de proveedor -->
-                <div>
+                <!-- Buscador de proveedor -->
+                <div class="relative">
                     <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-gray-400 text-base">warehouse</span>
                         Proveedor *
                     </label>
                     <div class="relative">
-                        <select wire:model.live="supplier_id"
-                            class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
-                            <option value="">Seleccione proveedor</option>
-                            @foreach($suppliers as $supplier)
-                                <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
-                            @endforeach
-                        </select>
-                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">business</span>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                        <input type="text" wire:model.live.debounce.300ms="supplierSearch"
+                            placeholder="Buscar por nombre, NIT o NRC..."
+                            class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                     </div>
+                    @if(count($supplierResults) > 0 && !$supplier_id)
+                        <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                            @foreach($supplierResults as $supplier)
+                                <li wire:click="selectSupplier({{ $supplier->id }})"
+                                    class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between">
+                                    <div>
+                                        <span class="font-medium text-gray-800">{{ $supplier->name }}</span>
+                                    </div>
+                                    <span class="text-xs text-gray-500">NIT: {{ $supplier->nit ?? 'N/A' }} | NRC: {{ $supplier->nrc ?? 'N/A' }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
                     @error('supplier_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
@@ -66,7 +71,7 @@
                     </div>
                 @endif
 
-                <!-- Modo de devolución (solo si hay items) -->
+                <!-- Modo de devolución -->
                 @if($purchase_id && count($items) > 0)
                     <div class="border-t border-gray-200 pt-6">
                         <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-4">
@@ -90,7 +95,6 @@
                                 <span class="text-sm text-gray-700">Devolución parcial</span>
                             </label>
                         </div>
-                        @error('returnMode') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                     </div>
 
                     <!-- Tabla de productos -->
@@ -103,44 +107,14 @@
                             <table class="min-w-full text-sm">
                                 <thead>
                                     <tr class="bg-gray-50 border-b border-gray-200">
-                                        <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                            <div class="flex items-center gap-1.5">
-                                                <span class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>
-                                                Producto (SKU)
-                                            </div>
-                                        </th>
-                                        <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                            <div class="flex items-center justify-center gap-1.5">
-                                                <span class="material-symbols-outlined text-gray-400 text-base">shopping_cart</span>
-                                                Comprado
-                                            </div>
-                                        </th>
-                                        <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                            <div class="flex items-center justify-center gap-1.5">
-                                                <span class="material-symbols-outlined text-gray-400 text-base">assignment_return</span>
-                                                Ya devuelto
-                                            </div>
-                                        </th>
-                                        <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                            <div class="flex items-center justify-center gap-1.5">
-                                                <span class="material-symbols-outlined text-gray-400 text-base">inventory</span>
-                                                Disponible
-                                            </div>
-                                        </th>
+                                        <th class="px-4 py-3 text-left text-gray-600 font-medium">Producto (SKU)</th>
+                                        <th class="px-4 py-3 text-center text-gray-600 font-medium">Comprado</th>
+                                        <th class="px-4 py-3 text-center text-gray-600 font-medium">Devuelto</th>
+                                        <th class="px-4 py-3 text-center text-gray-600 font-medium">Disponible</th>
                                         @if($returnMode == 'individual')
-                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                                <div class="flex items-center justify-center gap-1.5">
-                                                    <span class="material-symbols-outlined text-gray-400 text-base">select_check_box</span>
-                                                    Devolver
-                                                </div>
-                                            </th>
+                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Devolver</th>
                                         @elseif($returnMode == 'partial')
-                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                                <div class="flex items-center justify-center gap-1.5">
-                                                    <span class="material-symbols-outlined text-gray-400 text-base">numbers</span>
-                                                    Cantidad a devolver
-                                                </div>
-                                            </th>
+                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Cantidad</th>
                                         @endif
                                     </tr>
                                 </thead>
@@ -153,9 +127,7 @@
                                             </td>
                                             <td class="px-4 py-3 text-center text-gray-700">{{ $item['purchased_quantity'] }}</td>
                                             <td class="px-4 py-3 text-center text-gray-700">{{ $item['returned_quantity'] }}</td>
-                                            <td class="px-4 py-3 text-center font-medium text-gray-800">
-                                                {{ $item['available_quantity'] }}
-                                            </td>
+                                            <td class="px-4 py-3 text-center font-medium text-gray-800">{{ $item['available_quantity'] }}</td>
                                             @if($returnMode == 'individual')
                                                 <td class="px-4 py-3 text-center">
                                                     <input type="checkbox" value="{{ $item['id'] }}" wire:model="selectedItems"
@@ -164,7 +136,8 @@
                                             @elseif($returnMode == 'partial')
                                                 <td class="px-4 py-3 text-center">
                                                     <input type="number" min="0" max="{{ $item['available_quantity'] }}" step="1"
-                                                        wire:model="partialQuantities.{{ $item['id'] }}"
+                                                        wire:model.lazy="partialQuantities.{{ $item['id'] }}"
+                                                        wire:key="partial-qty-{{ $item['id'] }}"
                                                         class="w-20 text-center rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm py-1.5">
                                                     @error("partialQuantities.{$item['id']}")
                                                         <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>

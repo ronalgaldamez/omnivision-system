@@ -26,28 +26,49 @@
         <!-- Contenido -->
         <div class="p-6 space-y-5">
             <!-- Filtros -->
+            <!-- Filtros -->
             <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
-                <div class="flex flex-wrap gap-4 items-end">
-                    <div class="w-52">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Producto -->
+                    <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
                             <span class="material-symbols-outlined text-gray-400 text-sm">inventory_2</span>
                             Producto
                         </label>
-                        <div class="relative">
-                            <select wire:model.live="product_id"
-                                class="w-full pl-8 pr-8 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
-                                <option value="">Todos</option>
-                                @foreach($products as $product)
-                                    <option value="{{ $product->id }}">{{ $product->name }}</option>
-                                @endforeach
-                            </select>
-                            <span
-                                class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">unfold_more</span>
-                            <span
-                                class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-base">expand_more</span>
+                        <div class="flex items-center">
+                            <div class="relative flex-1">
+                                <input type="text" wire:model.live.debounce.300ms="productSearch"
+                                    placeholder="Buscar por nombre o SKU..."
+                                    class="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                <span
+                                    class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
+                            </div>
+                            @if($product_id)
+                                <button type="button" wire:click="clearProduct"
+                                    class="ml-1 p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition">
+                                    <span class="material-symbols-outlined text-base">close</span>
+                                </button>
+                            @endif
                         </div>
+                        {{-- Dropdown de resultados --}}
+                        @if(count($productResults) > 0 && !$product_id)
+                            <div class="relative">
+                                <ul
+                                    class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                    @foreach($productResults as $product)
+                                        <li wire:click="selectProduct('{{ $product->id }}', '{{ $product->name }} ({{ $product->sku }})')"
+                                            class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between">
+                                            <span class="font-medium text-gray-800">{{ $product->name }}</span>
+                                            <span class="text-xs text-gray-500">({{ $product->sku }})</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                     </div>
-                    <div class="w-40">
+
+                    <!-- Tipo -->
+                    <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
                             <span class="material-symbols-outlined text-gray-400 text-sm">filter_alt</span>
                             Tipo
@@ -69,7 +90,9 @@
                                 class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-base">expand_more</span>
                         </div>
                     </div>
-                    <div class="w-36">
+
+                    <!-- Desde -->
+                    <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
                             <span class="material-symbols-outlined text-gray-400 text-sm">calendar_today</span>
                             Desde
@@ -81,7 +104,9 @@
                                 class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">event</span>
                         </div>
                     </div>
-                    <div class="w-36">
+
+                    <!-- Hasta -->
+                    <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
                             <span class="material-symbols-outlined text-gray-400 text-sm">event_available</span>
                             Hasta
@@ -147,7 +172,6 @@
                             </th>
                         </tr>
                         <tr class="bg-gray-50">
-                            <!-- Subencabezados ENTRADAS -->
                             <th
                                 class="px-2 py-2 text-center text-gray-500 text-xs font-medium border-r border-gray-200">
                                 UNIDADES</th>
@@ -157,7 +181,6 @@
                             <th
                                 class="px-2 py-2 text-center text-gray-500 text-xs font-medium border-r border-gray-200">
                                 C.T.</th>
-                            <!-- Subencabezados SALIDAS -->
                             <th
                                 class="px-2 py-2 text-center text-gray-500 text-xs font-medium border-r border-gray-200">
                                 UNIDADES</th>
@@ -167,7 +190,6 @@
                             <th
                                 class="px-2 py-2 text-center text-gray-500 text-xs font-medium border-r border-gray-200">
                                 C.T.</th>
-                            <!-- Subencabezados EXISTENCIAS -->
                             <th
                                 class="px-2 py-2 text-center text-gray-500 text-xs font-medium border-r border-gray-200">
                                 UNIDADES</th>
@@ -181,7 +203,8 @@
                         @forelse($items as $item)
                             <tr class="hover:bg-gray-50/80 transition">
                                 <td class="px-3 py-2 border-r border-gray-100 text-center text-gray-700">
-                                    {{ $item->line_number }}</td>
+                                    {{ $item->line_number }}
+                                </td>
                                 <td class="px-3 py-2 border-r border-gray-100 text-center text-gray-700 font-mono text-xs">
                                     {{ \Carbon\Carbon::parse($item->created_at)->format('d/m/Y') }}
                                 </td>
@@ -222,7 +245,8 @@
                                 </td>
                                 <!-- ENTRADAS -->
                                 <td class="px-2 py-2 border-r border-gray-100 text-right text-gray-700">
-                                    {{ $item->entry_qty ?? '' }}</td>
+                                    {{ $item->entry_qty ?? '' }}
+                                </td>
                                 <td class="px-2 py-2 border-r border-gray-100 text-right text-gray-700 font-mono">
                                     {{ $item->entry_cost !== null ? number_format($item->entry_cost, 4) : '' }}
                                 </td>
@@ -231,7 +255,8 @@
                                 </td>
                                 <!-- SALIDAS -->
                                 <td class="px-2 py-2 border-r border-gray-100 text-right text-gray-700">
-                                    {{ $item->exit_qty ?? '' }}</td>
+                                    {{ $item->exit_qty ?? '' }}
+                                </td>
                                 <td class="px-2 py-2 border-r border-gray-100 text-right text-gray-700 font-mono">
                                     {{ $item->exit_cost !== null ? number_format($item->exit_cost, 4) : '' }}
                                 </td>
@@ -240,7 +265,8 @@
                                 </td>
                                 <!-- EXISTENCIAS -->
                                 <td class="px-2 py-2 border-r border-gray-100 text-right font-medium text-gray-800">
-                                    {{ $item->balance_qty }}</td>
+                                    {{ $item->balance_qty }}
+                                </td>
                                 <td
                                     class="px-2 py-2 border-r border-gray-100 text-right font-medium text-gray-800 font-mono">
                                     {{ number_format($item->balance_cost, 4) }}
@@ -262,7 +288,6 @@
                 </table>
             </div>
 
-            <!-- Opcional: Resumen o totales -->
             @if(count($items) > 0)
                 <div class="text-right text-xs text-gray-500 flex items-center justify-end gap-2">
                     <span class="material-symbols-outlined text-gray-400 text-sm">info</span>
