@@ -20,8 +20,7 @@ class DatabaseSeeder extends Seeder
         // Datos de demostración (marcas, modelos, categorías, productos)
         $this->call(DemoDataSeeder::class);
         $this->call(SuppliersSeeder::class);
-
-        $this->call(ClientsSeeder::class);
-
+        
+        $this->call(ClientSeeder::class);
     }
 }
