@@ -84,6 +84,18 @@ Route::middleware(['auth'])->group(function () {
         });
     }
 
+    // ========== REQUISITIONS (nuevo módulo) ==========
+    Route::prefix('requisitions')->middleware(['auth', 'can:create requisitions'])->group(function () {
+        // Listado de requisiciones del técnico autenticado
+        Route::get('/', \App\Livewire\Technicians\RequisitionIndex::class)->name('technician.requisitions.index');
+        // Crear nueva requisición
+        Route::get('/create', \App\Livewire\Technicians\RequisitionForm::class)->name('technician.requisitions.create');
+        // Ver detalle y ajustar consumo (botones + y -)
+        Route::get('/{id}/show', \App\Livewire\Technicians\RequisitionDetail::class)->name('technician.requisitions.show');
+        // Cierre semanal (método en el mismo componente de detalle o uno dedicado)
+        Route::post('/{id}/close', \App\Livewire\Technicians\RequisitionDetail::class)->name('technician.requisitions.close');
+    });
+
     // ========== TECHNICIANS MOBILE ==========
     Route::prefix('mobile/technician')->middleware(['auth', 'role:technician', 'can:create technician_requests'])->group(function () {
         Route::get('/requests', \App\Livewire\Mobile\Technician\RequestList::class)->name('mobile.technician.requests');

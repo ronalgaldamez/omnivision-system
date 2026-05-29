@@ -38,7 +38,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'complete work_orders',
             'assign technicians',
             'cancel work orders',
-            'view all work orders',           // ← correcto (espacios)
+            'view all work orders',           
             'view technician_returns',
             'create technician_returns',
             'view catalog',
@@ -59,7 +59,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view low stock',
             'view pending noc tickets',
             'view resolutions',
-            'view own work_orders',           // ← correcto (guión bajo en 'work_orders')
+            'view own work_orders',    
+            'create requisitions',       
         ];
 
         // 🧹 Paso 1: Eliminar cualquier permiso que NO esté en la lista oficial
@@ -120,6 +121,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view work_orders',
             'complete work_orders',
             'view dashboard',
+            'create requisitions',
         ]);
 
         $accountantRole->syncPermissions([

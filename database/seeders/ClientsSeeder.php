@@ -1,0 +1,123 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Client;
+
+class ClientsSeeder extends Seeder
+{
+    public function run()
+    {
+        $clients = [
+            ['name' => 'ZEINA ISABEL MARTÍNEZ DE VALLE'],
+            ['name' => 'MARCELA YANETH QUINTANILLA PINEDA'],
+            ['name' => 'LITZI YANUCELI RAMOS ZAVALA'],
+            ['name' => 'SAUL ROBERTO NÚÑEZ MORALES'],
+            ['name' => 'RICARDO ESTEBAN MARTÍNEZ RIVAS'],
+            ['name' => 'KEYLYN YAJAIRA RIVAS LÓPEZ'],
+            ['name' => 'PEDRO ALEXANDER VALLE'],
+            ['name' => 'MARTIR ANTONIO SORTO'],
+            ['name' => 'NOE ALEJANDRO ÁNGEL ALVARENGA'],
+            ['name' => 'OSCAR ALEXANDER ORTIZ CAÑAS'],
+            ['name' => 'FRANCISCO MÉNDEZ ACOSTA'],
+            ['name' => 'MARÍA LUZ RIVERA'],
+            ['name' => 'YANETH MARLENE ALVEÑO DE VARELA'],
+            ['name' => 'ARMIDIO FLORES AVILES'],
+            ['name' => 'TORIBIO ORELLANA'],
+            ['name' => 'MARÍA MAGDALENA RODRÍGUEZ DE RODRÍGUEZ'],
+            ['name' => 'ERNESTINA HERNÁNDEZ'],
+            ['name' => 'JOSÉ FÉLIX MEDINA CRUZ'],
+            ['name' => 'JOSÉ JAIME MORAN ESCOBAR'],
+            ['name' => 'JOSÉ RAMON TRIGUEROS FLORES'],
+            ['name' => 'YAMILETH DE LOS ÁNGELES MORAN ESCOBAR'],
+            ['name' => 'MARÍA EDUVIGES RODAS VELÁSQUEZ'],
+            ['name' => 'MARTA ALICIA RAMÍREZ DE PEÑA'],
+            ['name' => 'ESTEFANY MICHELL SIBRIAN ESPINOZA'],
+            ['name' => 'REINA DEL CARMEN CRUZ RIVAS'],
+            ['name' => 'LESLY ALEJANDRA PÉREZ MEMBREÑO'],
+            ['name' => 'SAUL ERNESTO ROSALES LÓPEZ'],
+            ['name' => 'MARIO ERNESTO AYALA LÓPEZ'],
+            ['name' => 'ALVARO REYNALDO RIVERA AVELAR'],
+            ['name' => 'DORALICIA BRIZUELA DE OCHOA'],
+            ['name' => 'WANDY ESTERLI CRUZ VARELA'],
+            ['name' => 'ISABEL MORENO DE MEJIA'],
+            ['name' => 'EVELYN MARISOL REYES RODRÍGUEZ'],
+            ['name' => 'MANUEL DE JESÚS VALDIZÓN BARILLAS'],
+            ['name' => 'NESTOR ERICK PORTILLO SALAZAR'],
+            ['name' => 'MIRNA YAMILETH BATREZ PÉREZ'],
+            ['name' => 'LUIS ALFREDO GUILLEN PORTILLO'],
+            ['name' => 'MARTIN ASCENCIO'],
+            ['name' => 'DORA MARINA ROGEL RIVAS'],
+            ['name' => 'GUILLERMO EDGARDO PEÑA AVELAR (2)'],
+            ['name' => 'KENIA BEATRIZ MEJÍA AVELAR (2)'],
+            ['name' => 'MARÍA MARGOTH TRUJILLO'],
+            ['name' => 'INÉS YESENIA HERNÁNDEZ DE RODRÍGUEZ'],
+            ['name' => 'LOYDA ELIZABETH CHICAS BARILLAS'],
+            ['name' => 'INGRY YAMILETH LUNA CALDERÓN'],
+            ['name' => 'MARÍA ISABEL GÁMEZ POLANCO'],
+            ['name' => 'JOSUÉ FERNANDO RAMÍREZ SARAVIA'],
+            ['name' => 'REY ALEJANDRO GONZALES CARTAGENA'],
+            ['name' => 'HÉCTOR ANTONIO MARTÍNEZ UMAÑAA'],
+            ['name' => 'SANDY XIOMARA GUTIÉRREZ ALFARO'],
+            ['name' => 'LEONEL EBERARDO ORTIZ HERNÁNDEZ'],
+            ['name' => 'YOALMO DANIEL HERNÁNDEZ'],
+            ['name' => 'LUIS ALFREDO GUILLEN PORTILLO (2)'],
+            ['name' => 'SALVADOR VALLE TORRES'],
+            ['name' => 'MOISES ALEXANDER AGUILAR MARTÍNEZ'],
+            ['name' => 'JOSÉ EMILIO ARDÓN GARCÍA'],
+            ['name' => 'MARGARITA DEL CARMEN CORTEZ AYALA'],
+            ['name' => 'YANETH MARLENE ALVEÑO DE VARELA (2)'],
+            ['name' => 'ORCI VLADIMIR REYES ORELLANA'],
+            ['name' => 'CARLOS CACERES AGUILAR'],
+            ['name' => 'NUBIA ELIZABETH HERNÁNDEZ DE BARILLAS'],
+            ['name' => 'BERTA ALICIA AGUILAR DE ESPINOZA'],
+            ['name' => 'GEOVANY ÁLVAREZ'],
+            ['name' => 'EDUARDO GONZÁLEZ HUEZO'],
+            ['name' => 'ROSALINA SANTAMARÍA'],
+            ['name' => 'KENIA BEATRIZ MEJÍA AVELAR'],
+            ['name' => 'ÁNGEL ANTONIO MONTALVO LÓPEZ CISNEROS'],
+            ['name' => 'YESENIA REYES'],
+            ['name' => 'JOSÉ FRANCISCO ORELLANA'],
+            ['name' => 'JOSÉ SANTIAGO HERNÁNDEZ VALLE'],
+            ['name' => 'GUILLERMO EDGARDO PEÑA AVELAR'],
+            ['name' => 'MARINA ESTER RODRÍGUEZ DE OSEJO'],
+            ['name' => 'LUCILA CISNEROS DE HERNÁNDEZ'],
+            ['name' => 'GLADIS DE JESÚS MEJÍA'],
+            ['name' => 'CAROLINA DEL CARMEN GALDÁMEZ DURAN'],
+            ['name' => 'JUAN JOSÉ CASTILLO RAMÍREZ'],
+            ['name' => 'GONZALO ARNULFO RAMÍREZ'],
+            ['name' => 'NIDIA ARGENTINA CHILIN BARILLAS'],
+            ['name' => 'ELVA MARGARITA MIRANDA MORALES'],
+            ['name' => 'HÉCTOR ABILIO MENDOZA'],
+            ['name' => 'MARÍA ELENA HERNÁNDEZ VDA DE CANTARERO'],
+            ['name' => 'CARLOS ANTONIO MORAN AGUILAR'],
+            ['name' => 'DAVID ALFREDO ORELLANA CALDERÓN'],
+            ['name' => 'SANTOS AMERICO HERNÁNDEZ FLORES'],
+            ['name' => 'ELVIRA DEL CARMEN GÁMEZ'],
+            ['name' => 'BLANCA ESTELA ARDÓN MANCÍA'],
+            ['name' => 'MIRNA GRICELDA RODRÍGUEZ CHILIN'],
+            ['name' => 'FELIPE MEJÍA ORELLANA'],
+            ['name' => 'JOSÉ LUIS SOSA CASTILLO'],
+        ];
+
+        $counter = 1;
+        foreach ($clients as $data) {
+            Client::create([
+                'name'                 => $data['name'],
+                'phone'                => '2222-' . str_pad($counter, 4, '0', STR_PAD_LEFT),   // Teléfono ficticio: 2222-0001, 2222-0002...
+                'address'             => 'San Pablo Tacachico',
+                'service'             => 'No especificado',
+                'document_type'       => 'dui',
+                'document_number'     => '00000000-' . ($counter % 10),
+                'email'               => strtolower(str_replace(' ', '', $data['name'])) . '@ejemplo.com',
+                'latitude'            => null,
+                'longitude'           => null,
+                'nro_luz'             => (string)(10000 + $counter),
+                'installation_address'=> 'San Pablo Tacachico',
+                'notes'               => 'Cliente migrado – verificar datos reales',
+            ]);
+            $counter++;
+        }
+    }
+}
