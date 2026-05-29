@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Auth\Login;
 use App\Livewire\Auth\Register;
+use App\Livewire\Dashboard;
 use App\Http\Controllers\Auth\LogoutController;
 
 // Ruta raíz redirige a login
@@ -18,11 +19,8 @@ Route::middleware('guest')->group(function () {
 
 // Protected routes
 Route::middleware(['auth'])->group(function () {
-    // Dashboard (acceso para todos los autenticados, sin permiso específico)
     Route::get('/dashboard', \App\Livewire\Reports\Dashboard::class)->name('dashboard');
-
     Route::post('/logout', LogoutController::class)->name('logout');
-    Route::get('/profile', \App\Livewire\Profile::class)->name('profile');
 
     // ========== INVENTORY ==========
     if (module_active('inventory')) {
@@ -73,37 +71,49 @@ Route::middleware(['auth'])->group(function () {
         })->name('returns.index');
     }
 
-    // ========== REQUISITIONS ==========
-    Route::prefix('requisitions')->middleware(['auth'])->group(function () {
-        Route::middleware('can:view requisitions')->group(function () {
-            Route::get('/', \App\Livewire\Technicians\RequisitionIndex::class)->name('technician.requisitions.index');
-            Route::get('/{id}/show', \App\Livewire\Technicians\RequisitionDetail::class)->name('technician.requisitions.show');
+    // ========== TECHNICIANS (escritorio) ==========
+    if (module_active('technicians')) {
+        Route::prefix('technician-requests')->middleware('can:view technician_requests')->group(function () {
+            Route::get('/', \App\Livewire\Technicians\RequestList::class)->name('technician-requests.index');
         });
-        Route::middleware('can:create requisitions')->group(function () {
-            Route::get('/create', \App\Livewire\Technicians\RequisitionForm::class)->name('technician.requisitions.create');
-            Route::post('/{id}/close', \App\Livewire\Technicians\RequisitionDetail::class)->name('technician.requisitions.close');
+        Route::prefix('technician-requests')->middleware('can:approve technician_requests')->group(function () {
+            Route::get('/{id}/approve', \App\Livewire\Technicians\RequestApprovalForm::class)->name('technician-requests.approve');
         });
+        Route::middleware('can:approve technician_requests')->group(function () {
+            Route::get('/code-delivery', \App\Livewire\Technicians\CodeDeliveryForm::class)->name('code-delivery.index');
+        });
+    }
+
+    // ========== REQUISITIONS (nuevo módulo) ==========
+    Route::prefix('requisitions')->middleware(['auth', 'can:create requisitions'])->group(function () {
+        // Listado de requisiciones del técnico autenticado
+        Route::get('/', \App\Livewire\Technicians\RequisitionIndex::class)->name('technician.requisitions.index');
+        // Crear nueva requisición
+        Route::get('/create', \App\Livewire\Technicians\RequisitionForm::class)->name('technician.requisitions.create');
+        // Ver detalle y ajustar consumo (botones + y -)
+        Route::get('/{id}/show', \App\Livewire\Technicians\RequisitionDetail::class)->name('technician.requisitions.show');
+        // Cierre semanal (método en el mismo componente de detalle o uno dedicado)
+        Route::post('/{id}/close', \App\Livewire\Technicians\RequisitionDetail::class)->name('technician.requisitions.close');
     });
 
     // ========== TECHNICIANS MOBILE ==========
-    Route::prefix('mobile/technician')->middleware(['auth'])->group(function () {
-        Route::get('/work-orders', \App\Livewire\Mobile\WorkOrderList::class)
-            ->middleware('can:access my daily jobs')
-            ->name('mobile.work-orders.list');
-        Route::get('/work-orders/{id}', \App\Livewire\Mobile\WorkOrderShow::class)
-            ->middleware('can:access my daily jobs')
-            ->name('mobile.work-orders.show');
-        Route::get('/work-orders-map', \App\Livewire\Mobile\WorkOrderMap::class)
-            ->middleware('can:view_map_ot_menu')
-            ->name('mobile.work-orders.map');
+    Route::prefix('mobile/technician')->middleware(['auth', 'role:technician', 'can:create technician_requests'])->group(function () {
+        Route::get('/requests', \App\Livewire\Mobile\Technician\RequestList::class)->name('mobile.technician.requests');
+        Route::get('/requests/create/{work_order_id?}', \App\Livewire\Mobile\Technician\RequestForm::class)->name('mobile.technician.requests.create');
+        Route::get('/requests/{id}/edit', \App\Livewire\Mobile\Technician\RequestForm::class)->name('mobile.technician.requests.edit');
+        Route::get('/work-orders/{id}', \App\Livewire\Mobile\WorkOrderShow::class)->name('mobile.work-orders.show');
+        Route::get('/work-orders', \App\Livewire\Mobile\WorkOrderList::class)->name('mobile.work-orders.list');
+        Route::get('/work-orders-map', \App\Livewire\Mobile\WorkOrderMap::class)->name('mobile.work-orders.map');
     });
 
-    // ========== WORK ORDERS ==========
+    // ========== WORK ORDERS (rutas ajustadas) ==========
     if (module_active('work_orders')) {
+        // Index sin middleware (autorización interna)
         Route::get('/work-orders', \App\Livewire\WorkOrders\WorkOrderIndex::class)->name('work-orders.index');
         Route::get('/work-orders/{id}/show', \App\Livewire\WorkOrders\WorkOrderShow::class)->name('work-orders.show');
         Route::get('/work-orders/map', \App\Livewire\WorkOrders\WorkOrderMap::class)->name('work-orders.map');
 
+        // Creación y edición requieren permisos específicos
         Route::middleware('can:create work_orders')->group(function () {
             Route::get('/work-orders/create', \App\Livewire\WorkOrders\WorkOrderForm::class)->name('work-orders.create');
         });
@@ -111,7 +121,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/work-orders/{id}/edit', \App\Livewire\WorkOrders\WorkOrderForm::class)->name('work-orders.edit');
         });
 
-        // TICKETS
+        // ========== TICKETS ==========
         Route::prefix('tickets')->group(function () {
             Route::get('/', \App\Livewire\Tickets\TicketIndex::class)->name('tickets.index');
             Route::get('/create', \App\Livewire\Tickets\TicketForm::class)->name('tickets.create');
@@ -135,6 +145,9 @@ Route::middleware(['auth'])->group(function () {
 
     // ========== REPORTS ==========
     if (module_active('reports')) {
+        Route::middleware('can:view dashboard')->group(function () {
+            Route::get('/dashboard', \App\Livewire\Reports\Dashboard::class)->name('dashboard');
+        });
         Route::middleware('can:view reports')->group(function () {
             Route::get('/reports/stock', \App\Livewire\Reports\StockReport::class)->name('reports.stock');
             Route::get('/reports/movements', \App\Livewire\Reports\MovementsReport::class)->name('reports.movements');
@@ -142,26 +155,13 @@ Route::middleware(['auth'])->group(function () {
         });
     }
 
-    // ========== CLIENTS ==========
-    Route::prefix('admin/clients')->middleware(['auth'])->group(function () {
-        Route::middleware('can:view clients')->group(function () {
-            Route::get('/', \App\Livewire\Admin\Clients\ClientIndex::class)->name('admin.clients.index');
-        });
-        Route::middleware('can:create clients')->group(function () {
-            Route::get('/create', \App\Livewire\Admin\Clients\ClientForm::class)->name('admin.clients.create');
-        });
-        Route::middleware('can:edit clients')->group(function () {
-            Route::get('/{id}/edit', \App\Livewire\Admin\Clients\ClientForm::class)->name('admin.clients.edit');
-        });
-    });
-
     // ========== ADMIN ==========
-    Route::prefix('admin/users')->middleware(['auth', 'can:access_admin'])->group(function () {
+    Route::prefix('admin/users')->middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/', \App\Livewire\Admin\Users\UserIndex::class)->name('admin.users.index');
         Route::get('/create', \App\Livewire\Admin\Users\UserCreate::class)->name('admin.users.create');
         Route::get('/{id}/edit', \App\Livewire\Admin\Users\UserForm::class)->name('admin.users.edit');
     });
-    Route::prefix('admin/roles')->middleware(['auth', 'can:access_admin'])->group(function () {
+    Route::prefix('admin/roles')->middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/', \App\Livewire\Admin\Roles\RoleIndex::class)->name('admin.roles.index');
         Route::get('/create', \App\Livewire\Admin\Roles\RoleForm::class)->name('admin.roles.create');
         Route::get('/{id}/edit', \App\Livewire\Admin\Roles\RoleForm::class)->name('admin.roles.edit');
