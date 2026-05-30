@@ -53,7 +53,6 @@
                 Teléfonos
             </label>
             <div class="space-y-2">
-                {{-- Teléfono principal --}}
                 <div class="flex items-start gap-2">
                     <div class="flex-1 relative">
                         <input type="text" wire:model="phone"
@@ -62,7 +61,6 @@
                         <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">phone</span>
                     </div>
                 </div>
-                {{-- Teléfonos adicionales --}}
                 @foreach($phones as $index => $phone)
                     <div class="flex items-start gap-2">
                         <div class="flex-1 relative">
@@ -142,7 +140,8 @@
             </div>
         </div>
 
-        {{-- Coordenadas --}}
+        {{-- Coordenadas (solo visibles si el usuario tiene el permiso) --}}
+        @can('capture coordinates')
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
@@ -171,6 +170,7 @@
                 @error('longitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
             </div>
         </div>
+        @endcan
 
         {{-- Número de luz --}}
         <div>

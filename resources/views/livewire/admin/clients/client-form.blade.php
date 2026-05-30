@@ -180,7 +180,8 @@
                     </div>
                 </div>
 
-                <!-- Coordenadas -->
+                <!-- Coordenadas (solo visibles si el usuario tiene el permiso) -->
+                @can('capture coordinates')
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
@@ -212,6 +213,7 @@
                         @enderror
                     </div>
                 </div>
+                @endcan
 
                 <!-- Número de luz -->
                 <div>

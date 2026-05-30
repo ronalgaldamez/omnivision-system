@@ -108,6 +108,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'assign any technician in returns',
 
             'access my daily jobs',
+
+            // Captura de coordenadas (solo personal de campo/ventas)
+            'capture coordinates',
         ];
 
         // 🧹 Paso 1: Eliminar cualquier permiso que NO esté en la lista oficial
@@ -183,6 +186,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_new_ticket_menu',
             'view_all_tickets_menu',
             'view_noc_panel_menu',
+            'capture coordinates',
         ]);
 
         $technicianRole->syncPermissions([
@@ -200,6 +204,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_requisitions_menu',
             'access my daily jobs',
             'view technician dashboard',
+            'capture coordinates',   // El técnico en campo puede tomar coordenadas
         ]);
 
         // Accountant
@@ -226,6 +231,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_new_purchase_menu',
         ]);
 
+        // Atención al Cliente: NO tiene 'capture coordinates'
         $atencionClienteRole->syncPermissions([
             'view clients',
             'create clients',
@@ -242,7 +248,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_all_tickets_menu',
         ]);
 
-        // NOC: ahora con los mismos permisos de dashboard que Admin
+        // NOC
         $nocRole->syncPermissions([
             'view dashboard',
             'view any tickets',
@@ -264,10 +270,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_noc_panel_menu',
             'access_technicians',
             'view_work_orders_menu',
-            'view technician dashboard',    // Mi Panel de Control
-            'view movements',               // Últimos movimientos
-            'view low stock',               // Stock bajo
-            'view requisitions',            // Requisiciones pendientes
+            'view technician dashboard',
+            'view movements',
+            'view low stock',
+            'view requisitions',
         ]);
 
         // Supervisor
