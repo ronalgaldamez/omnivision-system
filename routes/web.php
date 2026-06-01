@@ -18,9 +18,8 @@ Route::middleware('guest')->group(function () {
 
 // Protected routes
 Route::middleware(['auth'])->group(function () {
-    // Dashboard (acceso para todos los autenticados, sin permiso específico)
+    // Dashboard (acceso para todos los autenticados, sin middleware adicional)
     Route::get('/dashboard', \App\Livewire\Reports\Dashboard::class)->name('dashboard');
-
     Route::post('/logout', LogoutController::class)->name('logout');
     Route::get('/profile', \App\Livewire\Profile::class)->name('profile');
 

@@ -14,39 +14,17 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-gray-400 text-base">engineering</span>
-                        Órdenes de Trabajo {{ $otRequired ? ' *' : '' }}
+                        Órdenes de Trabajo *
                     </label>
-                    @foreach($groupedWorkOrders as $day => $orders)
-                        <div class="mb-4">
-                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                                OT día {{ $day }}
-                            </h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                @foreach($orders as $wo)
-                                    @php
-                                        // Buscar el índice real en el arreglo plano para el slider
-                                        $realIndex = collect($allWorkOrdersFlat)->search(fn($item) => $item->id == $wo['id']);
-                                    @endphp
-                                    <div class="flex items-center gap-2 p-2 rounded-lg border transition
-                                        {{ $wo['blocked'] ? 'bg-gray-100 border-gray-200 opacity-50' : 'bg-gray-50/80 border-gray-200 hover:bg-gray-100' }}">
-                                        <input type="checkbox" value="{{ $wo['id'] }}" wire:model="selectedWorkOrders"
-                                            class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-2 focus:ring-blue-500/20"
-                                            {{ $wo['blocked'] ? 'disabled' : '' }}>
-                                        <span class="text-sm text-gray-700 flex-1">#{{ $wo['id'] }} - {{ $wo['name'] }}</span>
-                                        @if($wo['blocked'])
-                                            <span class="text-xs text-gray-400 mr-2">(ya asignada)</span>
-                                        @endif
-                                        <button type="button"
-                                                wire:click="viewWorkOrderDetail({{ $realIndex }})"
-                                                class="p-1 text-blue-600 hover:bg-blue-50 rounded transition"
-                                                title="Ver detalle">
-                                            <span class="material-symbols-outlined text-base">visibility</span>
-                                        </button>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endforeach
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        @foreach($workOrders as $wo)
+                            <label class="flex items-center gap-2 p-2 bg-gray-50/80 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition">
+                                <input type="checkbox" value="{{ $wo->id }}" wire:model="selectedWorkOrders"
+                                    class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-2 focus:ring-blue-500/20">
+                                <span class="text-sm text-gray-700">#{{ $wo->id }} - {{ $wo->client->name ?? 'N/A' }}</span>
+                            </label>
+                        @endforeach
+                    </div>
                     @error('selectedWorkOrders') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
@@ -109,6 +87,7 @@
                         </div>
                     </div>
 
+                    <!-- Tabla de productos agregados -->
                     @if(count($items))
                     <div class="mt-5 overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                         <table class="min-w-full text-sm">
@@ -165,67 +144,7 @@
         </div>
     </div>
 
-    <!-- Modal Slider de Detalle de OT -->
-    @if($showWorkOrderModal && $selectedWorkOrder)
-        <div x-data="{}" x-show="true" x-cloak
-            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
-            style="display: none;">
-            <div class="relative mx-auto p-5 w-full max-w-lg">
-                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                        <h3 class="text-lg font-semibold flex items-center gap-2">
-                            <span class="material-symbols-outlined text-gray-500">description</span>
-                            Detalle OT #{{ $selectedWorkOrder->id }}
-                        </h3>
-                        <button wire:click="closeWorkOrderModal" class="text-gray-400 hover:text-gray-600 transition">
-                            <span class="material-symbols-outlined">close</span>
-                        </button>
-                    </div>
-                    <div class="p-5 space-y-4">
-                        <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-xs text-gray-500">Cliente</p>
-                            <p class="font-medium">{{ $selectedWorkOrder->client->name ?? 'N/A' }}</p>
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-xs text-gray-500">Tipo de servicio</p>
-                            <p class="font-medium">{{ ucfirst($selectedWorkOrder->service_type ?? 'N/A') }}</p>
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-xs text-gray-500">Descripción</p>
-                            <p class="text-sm whitespace-pre-wrap">{{ $selectedWorkOrder->description ?? 'Sin descripción' }}</p>
-                        </div>
-                        @if($selectedWorkOrder->client?->phones?->isNotEmpty())
-                            <div class="bg-gray-50 p-3 rounded-lg">
-                                <p class="text-xs text-gray-500">Teléfonos</p>
-                                @foreach($selectedWorkOrder->client->phones as $phone)
-                                    <p class="text-sm">{{ $phone->number }} <span class="text-xs text-gray-400">({{ $phone->type }})</span></p>
-                                @endforeach
-                            </div>
-                        @endif
-                        @if($selectedWorkOrder->client?->address)
-                            <div class="bg-gray-50 p-3 rounded-lg">
-                                <p class="text-xs text-gray-500">Dirección</p>
-                                <p class="text-sm">{{ $selectedWorkOrder->client->address }}</p>
-                            </div>
-                        @endif
-                    </div>
-                    <div class="bg-gray-50 px-6 py-4 flex items-center justify-between">
-                        <button wire:click="previousWorkOrder"
-                            class="p-2 rounded-full bg-white border border-gray-300 shadow-sm hover:bg-gray-100 transition">
-                            <span class="material-symbols-outlined">arrow_back</span>
-                        </button>
-                        <span class="text-xs text-gray-500">Usa las flechas para navegar</span>
-                        <button wire:click="nextWorkOrder"
-                            class="p-2 rounded-full bg-white border border-gray-300 shadow-sm hover:bg-gray-100 transition">
-                            <span class="material-symbols-outlined">arrow_forward</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    <!-- Modal de confirmación de guardado -->
+    <!-- Modal de confirmación -->
     @if($confirmingSave)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
