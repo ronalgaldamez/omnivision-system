@@ -5,9 +5,16 @@
                 <div>
                     <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
                         <span class="material-symbols-outlined text-gray-500">confirmation_number</span>
-                        Nuevo Ticket
+                        {{ $ticketId ? 'Editar Ticket' : 'Nuevo Ticket' }}
+                        @if($isDraft)
+                            <span class="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+                                Borrador
+                            </span>
+                        @endif
                     </h1>
-                    <p class="text-sm text-gray-500 mt-1">Generar una nueva solicitud de servicio</p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        {{ $ticketId ? 'Modificar solicitud de servicio' : 'Generar una nueva solicitud de servicio' }}
+                    </p>
                 </div>
                 <a href="{{ route('tickets.index') }}"
                     class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition">
@@ -36,7 +43,7 @@
                                 <ul
                                     class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
                                     @foreach($clientSearchResults as $client)
-                                        <li wire:click="selectClient({{ $client->id }}, '{{ $client->name }}')"
+                                        <li wire:click="selectClient({{ $client->id }}, '{{ $client->name }}', '{{ $client->phone }}')"
                                             class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between">
                                             <span class="font-medium text-gray-800">{{ $client->name }}</span>
                                             <span class="text-xs text-gray-500">{{ $client->phone ?? 'Sin teléfono' }}</span>
@@ -52,6 +59,86 @@
                         </button>
                     </div>
                     @error('client_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+
+                    {{-- Datos del cliente seleccionado --}}
+                    @if($selectedClient)
+                    <div class="mt-4 bg-white rounded-lg border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
+                            <span class="material-symbols-outlined text-gray-400">info</span>
+                            Datos del cliente seleccionado
+                        </h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">person</span>
+                                <div>
+                                    <p class="text-xs text-gray-500">Nombre</p>
+                                    <p class="text-gray-800 font-medium">{{ $selectedClient->name }}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">call</span>
+                                <div>
+                                    <p class="text-xs text-gray-500">Teléfono</p>
+                                    <p class="text-gray-800">{{ $selectedClient->phone ?? '—' }}</p>
+                                </div>
+                            </div>
+                            @if($selectedClient->document_type && $selectedClient->document_number)
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">fingerprint</span>
+                                <div>
+                                    <p class="text-xs text-gray-500">{{ strtoupper($selectedClient->document_type) }}</p>
+                                    <p class="text-gray-800">{{ $selectedClient->document_number }}</p>
+                                </div>
+                            </div>
+                            @endif
+                            @if($selectedClient->email)
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">mail</span>
+                                <div>
+                                    <p class="text-xs text-gray-500">Correo</p>
+                                    <p class="text-gray-800">{{ $selectedClient->email }}</p>
+                                </div>
+                            </div>
+                            @endif
+                            @if($selectedClient->address)
+                            <div class="flex items-start gap-2 col-span-2">
+                                <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">location_on</span>
+                                <div>
+                                    <p class="text-xs text-gray-500">Dirección</p>
+                                    <p class="text-gray-800">{{ $selectedClient->address }}</p>
+                                </div>
+                            </div>
+                            @endif
+                            @if($selectedClient->installation_address)
+                            <div class="flex items-start gap-2 col-span-2">
+                                <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">home_pin</span>
+                                <div>
+                                    <p class="text-xs text-gray-500">Instalación</p>
+                                    <p class="text-gray-800">{{ $selectedClient->installation_address }}</p>
+                                </div>
+                            </div>
+                            @endif
+                            @if($selectedClient->service)
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">tv</span>
+                                <div>
+                                    <p class="text-xs text-gray-500">Servicio</p>
+                                    <p class="text-gray-800">{{ $selectedClient->service }}</p>
+                                </div>
+                            </div>
+                            @endif
+                            @if($selectedClient->nro_luz)
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">bolt</span>
+                                <div>
+                                    <p class="text-xs text-gray-500">N.° de luz</p>
+                                    <p class="text-gray-800">{{ $selectedClient->nro_luz }}</p>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
                 </div>
 
                 <!-- Descripción -->
@@ -77,7 +164,7 @@
                         Tipo de servicio *
                     </label>
                     <div class="relative">
-                        <select wire:change="selectServiceType($event.target.value)"
+                        <select wire:model.live="service_type_id"
                             class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
                             <option value="">Seleccione</option>
                             @foreach($serviceTypes as $type)
@@ -159,7 +246,7 @@
                     </div>
                 @endif
 
-                <!-- Switch Requiere NOC (manual, con badge) -->
+                <!-- Switch Requiere NOC -->
                 <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
                     <div class="flex items-center justify-between gap-4">
                         <div>
@@ -177,7 +264,7 @@
                                 </span>
                             @endif
                             <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                                <input type="checkbox" wire:model="requires_noc" class="sr-only peer">
+                                <input type="checkbox" wire:model.live="requires_noc" class="sr-only peer">
                                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
@@ -191,7 +278,7 @@
                         Origen del ticket
                     </label>
                     <div class="relative">
-                        <select wire:model="origin"
+                        <select wire:model.live="origin"
                             class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
                             <option value="">Seleccione</option>
                             <option value="Facebook Messenger">Facebook Messenger</option>
@@ -218,7 +305,7 @@
                     <button type="submit"
                         class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition inline-flex items-center gap-2">
                         <span class="material-symbols-outlined text-base">save</span>
-                        Crear Ticket
+                        {{ $ticketId ? 'Actualizar Ticket' : 'Crear Ticket' }}
                     </button>
                 </div>
             </form>
@@ -241,20 +328,42 @@
                         </button>
                     </div>
                     <div class="p-5">
-                        <livewire:clients.client-form />
+                        <livewire:clients.client-form :key="$modalKey" />
                     </div>
                 </div>
             </div>
         </div>
+    @endif
 
-        <script>
-            document.addEventListener('livewire:init', () => {
-                Livewire.on('clientCreated', (clientId, clientName) => {
-                    @this.call('selectClient', clientId, clientName);
-                    @this.call('closeClientModal');
-                });
-            });
-        </script>
+    <!-- Modal de confirmación: Nuevo cliente -->
+    @if($confirmingNewClient)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="p-6 text-center">
+                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-yellow-100 mb-4">
+                            <span class="material-symbols-outlined text-yellow-600 text-2xl">warning</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">¿Registrar nuevo cliente?</h3>
+                        <p class="text-sm text-gray-600 mt-2">
+                            Al crear un nuevo cliente, los datos del ticket actual (descripción, tipo de servicio, etc.) se reiniciarán y podrías perder la información que ya habías ingresado.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                        <button type="button" wire:click="proceedToNewClient"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-yellow-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-yellow-600 transition">
+                            Sí, continuar
+                        </button>
+                        <button type="button" @click="open = false" wire:click="cancelNewClient"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     @endif
 
     <!-- Modal de confirmación de guardado -->
