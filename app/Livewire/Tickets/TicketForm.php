@@ -3,6 +3,7 @@
 namespace App\Livewire\Tickets;
 
 use Livewire\Component;
+use Livewire\Attributes\On;
 use App\Models\Client;
 use App\Models\Ticket;
 use App\Models\ServiceType;
@@ -16,13 +17,19 @@ class TicketForm extends Component
     public $service_type_id = '';
     public $priority = '';
     public $origin = '';
-    public $requires_noc = false;   // Switch manual (se inicializa según tipo de servicio)
+    public $requires_noc = false;
     public $status = 'pending';
 
     public $clientSearch = '';
     public $clientSearchResults = [];
+    public $selectedClient = null;
     public $showClientModal = false;
+    public $modalKey = '';
     public $confirmingSave = false;
+
+    // Nuevas propiedades
+    public $isDraft = false;
+    public $confirmingNewClient = false;
 
     public $knowledgeArticles = [];
 
@@ -33,10 +40,6 @@ class TicketForm extends Component
         'origin' => 'nullable|string|max:100',
         'requires_noc' => 'boolean',
         'status' => 'in:pending,in_progress,resolved,closed',
-    ];
-
-    protected $listeners = [
-        'clientCreated' => 'handleClientCreated',
     ];
 
     public function mount($id = null)
@@ -56,6 +59,7 @@ class TicketForm extends Component
             $this->requires_noc = $ticket->requires_noc;
             $this->status = $ticket->status;
             $this->clientSearch = $ticket->client->name;
+            $this->selectedClient = $ticket->client;
 
             $serviceType = ServiceType::where('name', $ticket->service_type)->first();
             $this->service_type_id = $serviceType ? $serviceType->id : '';
@@ -68,18 +72,69 @@ class TicketForm extends Component
             if ($user->cannot('create tickets')) {
                 abort(403, 'No tienes permiso para crear tickets.');
             }
-            // Al crear, si hay un tipo de servicio seleccionado por defecto (no hay), requires_noc se mantiene false.
-            // Se actualizará al elegir tipo de servicio.
+
+            // Recuperar borrador de la sesión
+            $draft = session()->get('ticket_draft');
+            if ($draft) {
+                $this->client_id = $draft['client_id'] ?? null;
+                $this->description = $draft['description'] ?? '';
+                $this->service_type_id = $draft['service_type_id'] ?? '';
+                $this->priority = $draft['priority'] ?? '';
+                $this->origin = $draft['origin'] ?? '';
+                $this->requires_noc = $draft['requires_noc'] ?? false;
+                $this->clientSearch = $draft['clientSearch'] ?? '';
+
+                if (!empty($draft['client_id'])) {
+                    $client = Client::find($draft['client_id']);
+                    if ($client) {
+                        $this->selectedClient = $client;
+                    }
+                }
+
+                if ($this->service_type_id) {
+                    $this->loadKnowledgeArticles($this->service_type_id);
+                    $this->calculatePriorityFromArticles();
+                }
+
+                // Activar el badge de borrador
+                $this->isDraft = true;
+            }
         }
     }
 
-    public function selectServiceType($value)
+    public function updated($property)
     {
-        $this->service_type_id = $value;
+        if (!$this->ticketId) {
+            $this->saveDraft();
+            // Si se modificó algún campo, aseguramos que el badge siga visible
+            $this->isDraft = true;
+        }
+    }
+
+    private function saveDraft()
+    {
+        session()->put('ticket_draft', [
+            'client_id' => $this->client_id,
+            'description' => $this->description,
+            'service_type_id' => $this->service_type_id,
+            'priority' => $this->priority,
+            'origin' => $this->origin,
+            'requires_noc' => $this->requires_noc,
+            'clientSearch' => $this->clientSearch,
+        ]);
+    }
+
+    public function updatedServiceTypeId($value)
+    {
+        if (empty($value)) {
+            $this->requires_noc = false;
+            $this->knowledgeArticles = collect();
+            $this->priority = 'P3';
+            return;
+        }
 
         $serviceType = ServiceType::find($value);
         if ($serviceType) {
-            // Establecer automáticamente según configuración del tipo de servicio
             $this->requires_noc = $serviceType->requires_noc;
         } else {
             $this->requires_noc = false;
@@ -123,16 +178,59 @@ class TicketForm extends Component
         }
     }
 
-    public function selectClient($id, $name)
+    public function selectClient($id, $name, $phone = null)
     {
+        $id = (int) $id;
+        $client = Client::find($id);
+
+        if (!$client) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente seleccionado ya no existe.');
+            return;
+        }
+
+        // Limpiar campos del ticket antes de asignar el nuevo cliente
+        $this->resetTicketFields();
+
         $this->client_id = $id;
-        $this->clientSearch = $name;
+        $this->selectedClient = $client;
+        $this->clientSearch = $name . ($phone ? ' (' . $phone . ')' : '');
         $this->clientSearchResults = [];
     }
 
     public function openClientModal()
     {
+        // Si el formulario tiene contenido, pedir confirmación
+        if ($this->hasDraftContent()) {
+            $this->confirmingNewClient = true;
+            return;
+        }
+
+        // Si no hay contenido, abrir el modal directamente
+        $this->modalKey = 'client-modal-' . uniqid();
         $this->showClientModal = true;
+    }
+
+    /**
+     * Determina si el formulario tiene datos que podrían perderse.
+     */
+    private function hasDraftContent()
+    {
+        return !empty(trim($this->description))
+            || !empty($this->service_type_id)
+            || !empty($this->origin)
+            || $this->requires_noc;
+    }
+
+    public function proceedToNewClient()
+    {
+        $this->confirmingNewClient = false;
+        $this->modalKey = 'client-modal-' . uniqid();
+        $this->showClientModal = true;
+    }
+
+    public function cancelNewClient()
+    {
+        $this->confirmingNewClient = false;
     }
 
     public function closeClientModal()
@@ -140,20 +238,33 @@ class TicketForm extends Component
         $this->showClientModal = false;
     }
 
-    public function handleClientCreated($clientId, $clientName)
+    #[On('clientCreated')]
+    public function handleClientCreated($id, $name, $phone = null)
     {
-        $this->selectClient($clientId, $clientName);
+        $this->selectClient($id, $name, $phone);
         $this->closeClientModal();
     }
 
-    // Reemplaza el método existente
+    private function resetTicketFields()
+    {
+        $this->description = '';
+        $this->service_type_id = '';
+        $this->priority = '';
+        $this->origin = '';
+        $this->requires_noc = false;
+        $this->knowledgeArticles = collect();
+
+        if (!$this->ticketId) {
+            $this->saveDraft();
+        }
+    }
+
     private function generateTicketCode($ticketId)
     {
         $user = Auth::user();
         $role = $user->roles()->first();
-        $prefix = $role->prefix ?? 'TK';   // Prefijo del rol, o 'TK' por defecto
+        $prefix = $role->prefix ?? 'TK';
 
-        // Mapear origen del ticket a código corto
         $originMap = [
             'Facebook Messenger' => 'FB',
             'SMS WhatsApp' => 'WH',
@@ -165,10 +276,8 @@ class TicketForm extends Component
         ];
         $originCode = $originMap[$this->origin] ?? 'GEN';
 
-        // Calcular el número consecutivo considerando el formato TK-{PREFIX}-{ORIGIN}-{SEQ}
         $nextNumber = $this->getNextTicketSequence($prefix, $originCode);
 
-        // Formato final: TK-SEC-LL-0001
         return sprintf('TK-%s-%s-%04d', $prefix, $originCode, $nextNumber);
     }
 
@@ -216,7 +325,7 @@ class TicketForm extends Component
             'service_type' => $serviceName,
             'priority' => $this->priority,
             'origin' => $this->origin,
-            'requires_noc' => $this->requires_noc,   // Se guarda el valor del switch
+            'requires_noc' => $this->requires_noc,
         ];
 
         if ($this->ticketId) {
@@ -242,6 +351,10 @@ class TicketForm extends Component
             }
 
             session()->flash('message', 'Ticket creado correctamente. Código: ' . $ticket->ticket_code);
+
+            // Limpiar borrador después de guardar exitosamente
+            session()->forget('ticket_draft');
+            $this->isDraft = false;
         }
 
         return redirect()->route('tickets.index');

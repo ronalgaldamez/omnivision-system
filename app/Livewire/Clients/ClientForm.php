@@ -115,8 +115,12 @@ class ClientForm extends Component
             }
         });
 
-        // Emitir evento con los datos del nuevo cliente
-        $this->dispatch('clientCreated', id: $client->id, name: $client->name, phone: $client->phone ?? '');
+        // Dispatch global — funciona para cualquier componente que escuche con #[On('clientCreated')]
+        $this->dispatch('clientCreated',
+            id: $client->id,
+            name: $client->name,
+            phone: $client->phone
+        );
     }
 
     public function render()
