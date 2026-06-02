@@ -18,19 +18,17 @@ class WorkOrderShow extends Component
     public $hasOpenRequisition = false;
     public $hasAnotherInProgress = false;
 
-    // Modal de consumo al completar
     public $showConsumptionModal = false;
     public $availableProducts = [];
     public $consumptionQuantities = [];
 
-    // Modal de selección de OTs para vincular
     public $showWorkOrderSelectionModal = false;
     public $eligibleWorkOrders = [];
     public $selectedWorkOrdersForLink = [];
 
     public $technicianHasOpenRequisition = false;
 
-    // ========== NUEVAS PROPIEDADES TÉCNICAS ==========
+    // Datos técnicos
     public $wifi_name;
     public $wifi_password;
     public $profile_name;
@@ -40,6 +38,10 @@ class WorkOrderShow extends Component
     public $mufa;
     public $installation_date;
     public $canEditTech = false;
+
+    // Coordenadas (se inicializan vacías)
+    public $latitude = null;
+    public $longitude = null;
 
     public function mount($id)
     {
@@ -55,7 +57,7 @@ class WorkOrderShow extends Component
             ->where('status', 'open')
             ->exists();
 
-        // ========== INICIALIZAR CAMPOS TÉCNICOS ==========
+        // Inicializar campos técnicos
         $this->wifi_name = $this->workOrder->wifi_name;
         $this->wifi_password = $this->workOrder->wifi_password;
         $this->profile_name = $this->workOrder->profile_name;
@@ -65,13 +67,15 @@ class WorkOrderShow extends Component
         $this->mufa = $this->workOrder->mufa;
         $this->installation_date = $this->workOrder->installation_date?->format('Y-m-d');
 
-        // Solo el técnico asignado puede editar si la OT está activa
+        // Las coordenadas se dejan vacías para que el técnico las complete
+        $this->latitude = null;
+        $this->longitude = null;
+
         $user = Auth::user();
         $this->canEditTech = $user->id === $this->workOrder->technician_id
             && in_array($this->workOrder->status, ['pending', 'in_progress']);
     }
 
-    // ========== MÉTODO PARA GUARDAR DATOS TÉCNICOS ==========
     public function saveTechnicalData()
     {
         if (!$this->canEditTech) {
@@ -87,8 +91,11 @@ class WorkOrderShow extends Component
             'pon' => 'nullable|string|max:255',
             'mufa' => 'nullable|string|max:255',
             'installation_date' => 'nullable|date',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ]);
 
+        // Actualizar OT
         $this->workOrder->update([
             'wifi_name' => $this->wifi_name,
             'wifi_password' => $this->wifi_password,
@@ -98,12 +105,23 @@ class WorkOrderShow extends Component
             'pon' => $this->pon,
             'mufa' => $this->mufa,
             'installation_date' => $this->installation_date,
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
         ]);
 
-        $this->dispatch('show-toast', type: 'success', message: 'Datos técnicos actualizados.');
+        // Actualizar también las coordenadas en el cliente
+        $client = $this->workOrder->client;
+        if ($client && ($this->latitude !== null || $this->longitude !== null)) {
+            $client->update([
+                'latitude' => $this->latitude,
+                'longitude' => $this->longitude,
+            ]);
+        }
+
+        $this->dispatch('show-toast', type: 'success', message: 'Datos técnicos y coordenadas actualizados.');
     }
 
-    // ========== MÉTODOS EXISTENTES (NO SE TOCAN) ==========
+    // ========== MÉTODOS EXISTENTES (SIN CAMBIOS) ==========
     protected function checkOpenRequisition()
     {
         $this->hasOpenRequisition = $this->workOrder->requisitions()
@@ -148,11 +166,9 @@ class WorkOrderShow extends Component
             ->toArray();
     }
 
-    // ========== VINCULACIÓN DE OTs ==========
     public function openWorkOrderSelectionModal()
     {
         $userId = Auth::id();
-
         $this->eligibleWorkOrders = WorkOrder::where('technician_id', $userId)
             ->whereIn('status', ['pending', 'in_progress'])
             ->whereDoesntHave('requisitions', function ($q) {
@@ -204,7 +220,6 @@ class WorkOrderShow extends Component
         $this->showWorkOrderSelectionModal = false;
     }
 
-    // ========== CONFIRMACIONES ==========
     public function promptStartWorkOrder()
     {
         if ($this->workOrder->status !== 'pending') {
@@ -275,7 +290,6 @@ class WorkOrderShow extends Component
         $this->confirmingMessage = '';
     }
 
-    // ========== ACCIONES REALES ==========
     public function startWorkOrder()
     {
         if ($this->workOrder->status !== 'pending') {
@@ -292,7 +306,7 @@ class WorkOrderShow extends Component
         $this->workOrder->save();
 
         $this->checkAnotherInProgress();
-        $this->canEditTech = true; // ahora puede editar datos técnicos
+        $this->canEditTech = true;
         $this->dispatch('show-toast', type: 'success', message: 'Orden iniciada correctamente.');
     }
 
@@ -356,7 +370,6 @@ class WorkOrderShow extends Component
         }
     }
 
-    // ========== CONSUMO DE MATERIAL ==========
     public function saveConsumption()
     {
         $requisition = $this->workOrder->requisitions()->where('status', 'open')->first();

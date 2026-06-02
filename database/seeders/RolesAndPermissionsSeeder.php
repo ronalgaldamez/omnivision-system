@@ -13,9 +13,7 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Lista oficial de permisos
         $permissions = [
-            // Inventario
             'view products',
             'create products',
             'edit products',
@@ -23,14 +21,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'view movements',
             'create movements',
             'view kardex',
-            // Proveedores y Compras
             'view suppliers',
             'create suppliers',
             'edit suppliers',
             'delete suppliers',
             'view purchases',
             'create purchases',
-            // Técnicos
             'view work_orders',
             'create work_orders',
             'edit work_orders',
@@ -41,18 +37,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'view all work orders',
             'view technician_returns',
             'create technician_returns',
-            // Catálogo
             'view catalog',
             'manage catalog',
-            // Reportes
             'view reports',
             'view dashboard',
-            // Clientes
             'view clients',
             'create clients',
             'edit clients',
             'delete clients',
-            // Tickets
             'view tickets',
             'create tickets',
             'edit tickets',
@@ -65,79 +57,62 @@ class RolesAndPermissionsSeeder extends Seeder
             'view pending noc tickets',
             'view resolutions',
             'view own work_orders',
-            // Requisiciones
             'view requisitions',
             'create requisitions',
-            // ACCESO A MÓDULOS
             'access_inventory',
             'access_suppliers',
             'access_technicians',
             'access_reports',
             'access_support',
             'access_admin',
-            // Submenús Inventario
             'view_movements_menu',
             'view_new_movement_menu',
             'view_products_menu',
             'view_kardex_menu',
-            // Submenús Compras
             'view_suppliers_menu',
             'view_purchase_history_menu',
             'view_new_purchase_menu',
-            // Submenús Técnicos
             'view_returns_menu',
             'view_register_return_menu',
             'view_work_orders_menu',
             'view_map_ot_menu',
             'view_requisitions_menu',
-            // Submenús Reportes
             'view_low_stock_menu',
             'view_movements_report_menu',
             'view_technician_performance_menu',
-            // Submenús Soporte
             'view_new_ticket_menu',
             'view_all_tickets_menu',
             'view_noc_panel_menu',
-            // Submenús Admin
             'view_users_menu',
             'view_roles_menu',
             'view_catalog_menu',
             'view_settings_menu',
-
             'view technician dashboard',
             'assign any technician in returns',
-
             'access my daily jobs',
-
-            // Captura de coordenadas (solo personal de campo/ventas)
             'capture coordinates',
         ];
 
-        // 🧹 Paso 1: Eliminar cualquier permiso que NO esté en la lista oficial
         Permission::whereNotIn('name', $permissions)->delete();
-
-        // Paso 2: Crear los permisos oficiales
         foreach ($permissions as $perm) {
             Permission::firstOrCreate(['name' => $perm]);
         }
 
-        // Roles
+        // Roles existentes (sin cambios)
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $warehouseRole = Role::firstOrCreate(['name' => 'warehouse']);
         $technicianRole = Role::firstOrCreate(['name' => 'technician']);
         $accountantRole = Role::firstOrCreate(['name' => 'accountant']);
         $buyerRole = Role::firstOrCreate(['name' => 'buyer']);
-
-        $atencionClienteRole = Role::firstOrCreate(
-            ['name' => 'atencion_al_cliente'],
-            ['prefix' => 'SAC']
-        );
+        $atencionClienteRole = Role::firstOrCreate(['name' => 'atencion_al_cliente'], ['prefix' => 'SAC']);
         $nocRole = Role::firstOrCreate(['name' => 'noc']);
         $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
 
+        // NUEVO: Sales Rep (Ventas)
+        $salesRepRole = Role::firstOrCreate(['name' => 'sales_rep'], ['prefix' => 'SR']);
+
         $adminRole->syncPermissions(Permission::all());
 
-        // Warehouse
         $warehouseRole->syncPermissions([
             'view products',
             'create products',
@@ -204,10 +179,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_requisitions_menu',
             'access my daily jobs',
             'view technician dashboard',
-            'capture coordinates',   // El técnico en campo puede tomar coordenadas
+            'capture coordinates',
         ]);
 
-        // Accountant
         $accountantRole->syncPermissions([
             'view products',
             'view movements',
@@ -221,7 +195,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_technician_performance_menu',
         ]);
 
-        // Buyer
         $buyerRole->syncPermissions([
             'view products',
             'view suppliers',
@@ -231,7 +204,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_new_purchase_menu',
         ]);
 
-        // Atención al Cliente: NO tiene 'capture coordinates'
         $atencionClienteRole->syncPermissions([
             'view clients',
             'create clients',
@@ -248,7 +220,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_all_tickets_menu',
         ]);
 
-        // NOC
         $nocRole->syncPermissions([
             'view dashboard',
             'view any tickets',
@@ -276,7 +247,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view requisitions',
         ]);
 
-        // Supervisor
         $supervisorRole->syncPermissions([
             'view work_orders',
             'edit work_orders',
@@ -298,6 +268,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_technician_performance_menu',
             'access_support',
             'view_all_tickets_menu',
+        ]);
+
+        // Sales Rep: puede crear OT y capturar coordenadas, pero NO asignar técnicos
+        $salesRepRole->syncPermissions([
+            'view work_orders',
+            'create work_orders',
+            'edit work_orders',
+            'view own work_orders',
+            'capture coordinates',
+            'access_technicians',
+            'view_work_orders_menu',
         ]);
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
