@@ -22,7 +22,6 @@
                 Datos del Cliente
             </h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {{-- Nombre --}}
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">person</span>
                     <div>
@@ -30,7 +29,6 @@
                         <p class="text-gray-800 font-medium">{{ $workOrder->client->name ?? 'No especificado' }}</p>
                     </div>
                 </div>
-                {{-- Documento (tipo + número) --}}
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">fingerprint</span>
                     <div>
@@ -44,7 +42,6 @@
                         </p>
                     </div>
                 </div>
-                {{-- Teléfono --}}
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">call</span>
                     <div>
@@ -60,7 +57,6 @@
                         </p>
                     </div>
                 </div>
-                {{-- Correo electrónico --}}
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">mail</span>
                     <div>
@@ -68,7 +64,6 @@
                         <p class="text-gray-700">{{ $workOrder->client->email ?? '—' }}</p>
                     </div>
                 </div>
-                {{-- Dirección --}}
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 sm:col-span-2">
                     <span class="material-symbols-outlined text-gray-400">location_on</span>
                     <div>
@@ -77,7 +72,6 @@
                     </div>
                 </div>
 
-                {{-- Nuevos campos del cliente (instalación, servicio, etc.) --}}
                 @if($workOrder->client->installation_address)
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 sm:col-span-2">
                     <span class="material-symbols-outlined text-gray-400">home_pin</span>
@@ -116,7 +110,7 @@
                 @endif
             </div>
 
-            {{-- ========== DATOS TÉCNICOS (con iconos) ========== --}}
+            {{-- ========== DATOS TÉCNICOS ========== --}}
             <div class="border-t border-gray-200 pt-5 space-y-3">
                 <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
                     <span class="material-symbols-outlined text-gray-500">settings</span>
@@ -124,7 +118,6 @@
                 </h2>
                 <form wire:submit.prevent="saveTechnicalData" class="space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {{-- Nombre de perfil --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">person</span>
@@ -133,7 +126,6 @@
                             <input type="text" wire:model="profile_name" {{ !$canEditTech ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
                         </div>
-                        {{-- Contraseña de perfil --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">key</span>
@@ -142,7 +134,6 @@
                             <input type="text" wire:model="profile_password" {{ !$canEditTech ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
                         </div>
-                        {{-- Nombre wifi --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">wifi</span>
@@ -151,7 +142,6 @@
                             <input type="text" wire:model="wifi_name" {{ !$canEditTech ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
                         </div>
-                        {{-- Contraseña wifi --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">key</span>
@@ -160,7 +150,6 @@
                             <input type="text" wire:model="wifi_password" {{ !$canEditTech ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
                         </div>
-                        {{-- MAC --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">lan</span>
@@ -169,7 +158,6 @@
                             <input type="text" wire:model="mac" {{ !$canEditTech ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
                         </div>
-                        {{-- PON --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">settings_input_antenna</span>
@@ -178,7 +166,6 @@
                             <input type="text" wire:model="pon" {{ !$canEditTech ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
                         </div>
-                        {{-- Mufa --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">cable</span>
@@ -187,7 +174,6 @@
                             <input type="text" wire:model="mufa" {{ !$canEditTech ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
                         </div>
-                        {{-- Fecha de instalación --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">calendar_today</span>
@@ -196,7 +182,52 @@
                             <input type="date" wire:model="installation_date" {{ !$canEditTech ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
                         </div>
+
+                        {{-- COORDENADAS --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>
+                                Latitud
+                            </label>
+                            <input type="text" wire:model="latitude" {{ !$canEditTech ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
+                                placeholder="Ej: 14.105025">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>
+                                Longitud
+                            </label>
+                            <input type="text" wire:model="longitude" {{ !$canEditTech ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
+                                placeholder="Ej: -89.148894">
+                        </div>
                     </div>
+
+                    {{-- MAPA --}}
+                    @if($canEditTech)
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-gray-400 text-sm">map</span>
+                            Mapa
+                        </label>
+                        <div id="map" style="height: 250px; width: 100%;"
+                            class="rounded-lg border border-gray-300 shadow-sm"></div>
+                        <div class="flex gap-2 mt-3">
+                            <button type="button" id="getLocationBtn"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
+                                <span class="material-symbols-outlined text-sm">my_location</span>
+                                Mi ubicación
+                            </button>
+                            <button type="button" id="clearLocationBtn"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-300 transition shadow-sm">
+                                <span class="material-symbols-outlined text-sm">delete</span>
+                                Limpiar
+                            </button>
+                        </div>
+                    </div>
+                    @endif
+
                     @if($canEditTech)
                     <div class="flex justify-end">
                         <button type="submit"
@@ -319,7 +350,6 @@
                             @endif
                         </div>
                     </div>
-                    {{-- Tiempo trabajado --}}
                     @if($workOrder->started_at || $workOrder->accumulated_seconds > 0)
                     <div class="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100 sm:col-span-2">
                         <span class="material-symbols-outlined text-blue-500">schedule</span>
@@ -344,7 +374,6 @@
                         </div>
                     </div>
                     @endif
-                    {{-- Notas --}}
                     <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 sm:col-span-2">
                         <span class="material-symbols-outlined text-gray-400">sticky_note_2</span>
                         <div>
@@ -396,7 +425,6 @@
             <!-- Botones de acción -->
             @if(!in_array($workOrder->status, ['completed', 'cancelled']))
                 <div class="border-t border-gray-200 pt-5 space-y-3">
-                    {{-- Pendiente: mostrar iniciar (si tiene requisición y no hay otra en progreso) --}}
                     @if($workOrder->status === 'pending' && $hasOpenRequisition && !$hasAnotherInProgress)
                         <button wire:click="promptStartWorkOrder"
                             class="block w-full text-center px-5 py-2.5 bg-yellow-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-yellow-600 transition">
@@ -438,7 +466,6 @@
                         </div>
                     @endif
 
-                    {{-- En progreso: mostrar Pausar y Completar --}}
                     @if($workOrder->status === 'in_progress')
                         <button wire:click="promptPauseWorkOrder"
                             class="block w-full text-center px-5 py-2.5 bg-gray-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-gray-600 transition">
@@ -451,7 +478,6 @@
                             </button>
                         @endif
                     @endif
-                    {{-- Pausada: solo Reanudar --}}
                     @if($workOrder->status === 'paused')
                         <button wire:click="promptResumeWorkOrder"
                             class="block w-full text-center px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-600 transition">
@@ -609,3 +635,67 @@
         [x-cloak] { display: none !important; }
     </style>
 </div>
+
+@push('scripts')
+    <script>
+        document.addEventListener('livewire:initialized', function () {
+            if (typeof L === 'undefined') {
+                console.warn('Leaflet no está cargado. El mapa no funcionará.');
+                return;
+            }
+
+            var mapContainer = document.getElementById('map');
+            if (!mapContainer) return;
+
+            var map = L.map('map').setView([14.105135, -89.148899], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+            }).addTo(map);
+            var marker = null;
+
+            // Si hay coordenadas previas en la OT, mostrarlas en el mapa
+            var lat = @json($workOrder->latitude ?? null);
+            var lng = @json($workOrder->longitude ?? null);
+            if (lat && lng) {
+                map.setView([lat, lng], 15);
+                marker = L.marker([lat, lng]).addTo(map);
+            }
+
+            map.on('click', function (e) {
+                if (marker) map.removeLayer(marker);
+                marker = L.marker(e.latlng).addTo(map);
+                @this.set('latitude', e.latlng.lat.toFixed(6));
+                @this.set('longitude', e.latlng.lng.toFixed(6));
+            });
+
+            var getLocationBtn = document.getElementById('getLocationBtn');
+            var clearLocationBtn = document.getElementById('clearLocationBtn');
+
+            if (getLocationBtn) {
+                getLocationBtn.addEventListener('click', function () {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(function (position) {
+                            var pos = [position.coords.latitude, position.coords.longitude];
+                            map.setView(pos, 15);
+                            if (marker) map.removeLayer(marker);
+                            marker = L.marker(pos).addTo(map);
+                            @this.set('latitude', pos[0].toFixed(6));
+                            @this.set('longitude', pos[1].toFixed(6));
+                        });
+                    } else {
+                        alert('Geolocalización no soportada');
+                    }
+                });
+            }
+
+            if (clearLocationBtn) {
+                clearLocationBtn.addEventListener('click', function () {
+                    if (marker) map.removeLayer(marker);
+                    @this.set('latitude', null);
+                    @this.set('longitude', null);
+                    map.setView([14.105135, -89.148899], 13);
+                });
+            }
+        });
+    </script>
+@endpush

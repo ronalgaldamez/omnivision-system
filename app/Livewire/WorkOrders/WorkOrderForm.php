@@ -21,7 +21,6 @@ class WorkOrderForm extends Component
     public $scheduled_date;
     public $notes;
 
-    // Datos técnicos
     public $wifi_name;
     public $wifi_password;
     public $profile_name;
@@ -32,21 +31,12 @@ class WorkOrderForm extends Component
     public $installation_date;
     public $canEditTech = false;
 
-    // Cliente seleccionado (para mostrar info en solo lectura)
     public $selectedClient = null;
-
-    // Búsqueda de clientes
     public $clientSearch = '';
     public $clientSearchResults = [];
-
-    // Modal para crear cliente
     public $showClientModal = false;
-    public $modalKey = ''; // Clave única para forzar nueva instancia
-
-    // Permiso granular
+    public $modalKey = '';
     public $canAssign = false;
-
-    // Buscador de técnicos
     public $technicianSearch = '';
     public $technicianResults = [];
 
@@ -120,7 +110,6 @@ class WorkOrderForm extends Component
             $this->client_id = null;
             $this->canEditTech = false;
 
-            // Si viene de un ticket, cargar cliente automáticamente
             if ($ticket_id) {
                 $ticket = Ticket::with('client')->find($ticket_id);
                 if ($ticket) {
@@ -190,14 +179,13 @@ class WorkOrderForm extends Component
         $this->clientSearch = $name . ($phone ? ' (' . $phone . ')' : '');
         $this->clientSearchResults = [];
 
-        // Cargar coordenadas del cliente
         $this->latitude = $client->latitude;
         $this->longitude = $client->longitude;
     }
 
     public function openClientModal()
     {
-        $this->modalKey = 'client-modal-' . uniqid(); // Nueva clave única
+        $this->modalKey = 'client-modal-' . uniqid();
         $this->showClientModal = true;
     }
 
@@ -279,6 +267,17 @@ class WorkOrderForm extends Component
             $orderData['created_by'] = Auth::id();
             $order = WorkOrder::create($orderData);
             session()->flash('message', 'Orden creada correctamente.');
+        }
+
+        // Si hay coordenadas, copiarlas al cliente
+        if ($this->client_id && ($this->latitude || $this->longitude)) {
+            $client = Client::find($this->client_id);
+            if ($client) {
+                $client->update([
+                    'latitude' => $this->latitude,
+                    'longitude' => $this->longitude,
+                ]);
+            }
         }
 
         return redirect()->route('work-orders.index');
