@@ -17,14 +17,48 @@
         </div>
 
         <div class="p-6">
-            @if($requisition->workOrders->isNotEmpty())
+            {{-- OTs Vinculadas (Verde) --}}
+            @if($linkedWorkOrders->isNotEmpty())
                 <div class="mb-4">
-                    <h3 class="text-sm font-medium text-gray-700 mb-2">Órdenes de Trabajo relacionadas:</h3>
+                    <h3 class="text-sm font-medium text-green-700 mb-2 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-green-500 text-base">link</span>
+                        OTs vinculadas a esta requisición
+                    </h3>
                     <div class="flex flex-wrap gap-2">
-                        @foreach($requisition->workOrders as $wo)
-                            <span class="px-3 py-1 bg-gray-100 rounded-full text-xs font-mono">#{{ $wo->id }}</span>
+                        @foreach($linkedWorkOrders as $wo)
+                            <a href="{{ route('work-orders.show', $wo->id) }}"
+                               class="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium hover:bg-green-100 transition">
+                                <span class="material-symbols-outlined text-sm">check_circle</span>
+                                {{ $wo->code ?? 'OT-'.$wo->id }} - {{ $wo->client->name ?? 'N/A' }}
+                            </a>
                         @endforeach
                     </div>
+                </div>
+            @endif
+
+            {{-- OTs NO Vinculadas (Rojo) --}}
+            @if($unlinkedWorkOrders->isNotEmpty())
+                <div class="mb-4">
+                    <h3 class="text-sm font-medium text-red-700 mb-2 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-red-500 text-base">link_off</span>
+                        OTs sin vincular (disponibles)
+                    </h3>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach($unlinkedWorkOrders as $wo)
+                            <a href="{{ route('work-orders.show', $wo->id) }}"
+                               class="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-medium hover:bg-red-100 transition">
+                                <span class="material-symbols-outlined text-sm">radio_button_unchecked</span>
+                                {{ $wo->code ?? 'OT-'.$wo->id }} - {{ $wo->client->name ?? 'N/A' }}
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            {{-- Si no hay ninguna OT --}}
+            @if($linkedWorkOrders->isEmpty() && $unlinkedWorkOrders->isEmpty())
+                <div class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <p class="text-sm text-gray-500">No hay órdenes de trabajo asociadas.</p>
                 </div>
             @endif
 

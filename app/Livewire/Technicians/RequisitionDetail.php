@@ -6,18 +6,22 @@ use Livewire\Component;
 use App\Models\Requisition;
 use App\Models\RequisitionItem;
 use App\Models\TechnicianInventory;
+use App\Models\WorkOrder;
 use Illuminate\Support\Facades\Auth;
 
 class RequisitionDetail extends Component
 {
     public $requisition;
     public $items = [];
+    public $linkedWorkOrders = [];
+    public $unlinkedWorkOrders = [];
 
     protected $listeners = ['refreshComponent' => '$refresh'];
 
     public function mount($id)
     {
         $this->requisition = Requisition::with('items.product', 'workOrders')->findOrFail($id);
+
         // Cargar items actuales
         foreach ($this->requisition->items as $item) {
             $this->items[$item->id] = [
@@ -26,6 +30,25 @@ class RequisitionDetail extends Component
                 'product_name' => $item->product->name,
             ];
         }
+
+        $this->loadWorkOrders();
+    }
+
+    protected function loadWorkOrders()
+    {
+        // OTs vinculadas directamente a esta requisición
+        $this->linkedWorkOrders = $this->requisition->workOrders()
+            ->with('client')
+            ->get();
+
+        // OTs del mismo técnico que NO están vinculadas a ninguna requisición abierta
+        $this->unlinkedWorkOrders = WorkOrder::where('technician_id', $this->requisition->technician_id)
+            ->whereIn('status', ['pending', 'in_progress'])
+            ->whereDoesntHave('requisitions', function ($q) {
+                $q->where('status', 'open');
+            })
+            ->with('client')
+            ->get();
     }
 
     public function increment($itemId)
@@ -61,8 +84,6 @@ class RequisitionDetail extends Component
         $item->save();
 
         if ($diff != 0) {
-            // Si diff > 0: usó más, hay que descontar del inventario del técnico
-            // Si diff < 0: usó menos, hay que devolver al inventario
             $this->updateInventory($item->product_id, abs($diff), $diff > 0 ? 'decrement' : 'increment');
         }
 
@@ -91,4 +112,4 @@ class RequisitionDetail extends Component
             'requisition' => $this->requisition,
         ])->layout('components.layouts.app');
     }
-}   
+}
