@@ -22,8 +22,14 @@ class RequisitionForm extends Component
     public $notes = '';
     public $confirmingSave = false;
 
-    // Inventario actual del técnico (para referencia)
     public $technicianStock = [];
+
+    // Modal de vista previa con slider
+    public $previewWorkOrder = null;
+    public $previewWorkOrderId = null;
+    public $previewIndex = 0;        // índice actual en la lista de OTs
+    public $previewTotal = 0;        // total de OTs disponibles
+    public $workOrderIds = [];       // lista ordenada de IDs para navegar
 
     protected function rules()
     {
@@ -105,6 +111,48 @@ class RequisitionForm extends Component
         $this->items = array_values($this->items);
     }
 
+    // Abre el modal cargando todas las OTs y posicionando en la seleccionada
+    public function openPreviewWorkOrder($id, $allIds = [])
+    {
+        $this->workOrderIds = array_values($allIds);
+        $this->previewTotal = count($this->workOrderIds);
+        $this->previewIndex = array_search($id, $this->workOrderIds) ?: 0;
+        $this->loadPreview($id);
+    }
+
+    // Navega a la OT anterior
+    public function previewPrev()
+    {
+        if ($this->previewIndex > 0) {
+            $this->previewIndex--;
+            $this->loadPreview($this->workOrderIds[$this->previewIndex]);
+        }
+    }
+
+    // Navega a la OT siguiente
+    public function previewNext()
+    {
+        if ($this->previewIndex < $this->previewTotal - 1) {
+            $this->previewIndex++;
+            $this->loadPreview($this->workOrderIds[$this->previewIndex]);
+        }
+    }
+
+    private function loadPreview($id)
+    {
+        $this->previewWorkOrderId = $id;
+        $this->previewWorkOrder = WorkOrder::with('client', 'ticket')->find($id);
+    }
+
+    public function closePreviewWorkOrder()
+    {
+        $this->previewWorkOrderId = null;
+        $this->previewWorkOrder = null;
+        $this->previewIndex = 0;
+        $this->previewTotal = 0;
+        $this->workOrderIds = [];
+    }
+
     public function promptSave()
     {
         $this->validate();
@@ -143,7 +191,6 @@ class RequisitionForm extends Component
                 'quantity_used' => 0,
             ]);
 
-            // Descontar de bodega (movimiento de salida)
             if ($product->current_stock >= $item['quantity']) {
                 \App\Models\Movement::create([
                     'product_id' => $product->id,
@@ -158,7 +205,6 @@ class RequisitionForm extends Component
                 $product->decrement('current_stock', $item['quantity']);
             }
 
-            // Sumar al inventario del técnico
             TechnicianInventory::updateOrCreate(
                 [
                     'technician_id' => Auth::id(),
@@ -178,6 +224,7 @@ class RequisitionForm extends Component
     {
         $workOrders = WorkOrder::where('technician_id', Auth::id())
             ->whereIn('status', ['pending', 'in_progress'])
+            ->with('client')
             ->get();
 
         return view('livewire.technicians.requisition-form', [
