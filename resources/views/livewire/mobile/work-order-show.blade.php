@@ -112,100 +112,192 @@
 
             {{-- ========== DATOS TÉCNICOS ========== --}}
             <div class="border-t border-gray-200 pt-5 space-y-3">
-                <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-gray-500">settings</span>
-                    Datos Técnicos
-                </h2>
+                <div class="flex items-center justify-between">
+                    <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-gray-500">settings</span>
+                        Datos Técnicos
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        @if($isDraft)
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+                                <span class="material-symbols-outlined text-sm">edit_note</span>
+                                Borrador
+                            </span>
+                        @endif
+                        {{-- Botón Editar (solo si está en modo lectura y puede editar) --}}
+                        @if($canEditTech && !$isEditing)
+                            <button type="button" wire:click="enableEditing"
+                                class="px-3 py-1.5 bg-yellow-500 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-yellow-600 transition inline-flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">edit</span>
+                                Editar
+                            </button>
+                        @endif
+                    </div>
+                </div>
                 <form wire:submit.prevent="saveTechnicalData" class="space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {{-- Nombre de perfil --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">person</span>
-                                Nombre de perfil
+                                Nombre de perfil *
                             </label>
-                            <input type="text" wire:model="profile_name" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model.live="profile_name"
+                                {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                            @error('profile_name') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
+
+                        {{-- Contraseña de perfil --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">key</span>
-                                Contraseña de perfil
+                                Contraseña de perfil *
                             </label>
-                            <input type="text" wire:model="profile_password" {{ !$canEditTech ? 'disabled' : '' }}
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                            <div class="relative" x-data="{ show: false }">
+                                <input :type="show ? 'text' : 'password'"
+                                    wire:model.live="profile_password"
+                                    {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}
+                                    class="w-full px-3 py-2 pr-10 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                                <button type="button"
+                                    x-on:click="show = !show"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition"
+                                    tabindex="-1"
+                                    {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}>
+                                    <span class="material-symbols-outlined text-sm" x-text="show ? 'visibility_off' : 'visibility'"></span>
+                                </button>
+                                @error('profile_password') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                            </div>
                         </div>
+
+                        {{-- Nombre wifi --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">wifi</span>
-                                Nombre wifi
+                                Nombre wifi *
                             </label>
-                            <input type="text" wire:model="wifi_name" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model.live="wifi_name"
+                                {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                            @error('wifi_name') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
+
+                        {{-- Contraseña wifi --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">key</span>
-                                Contraseña wifi
+                                Contraseña wifi *
                             </label>
-                            <input type="text" wire:model="wifi_password" {{ !$canEditTech ? 'disabled' : '' }}
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                            <div class="relative" x-data="{ show: false }">
+                                <input :type="show ? 'text' : 'password'"
+                                    wire:model.live="wifi_password"
+                                    {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}
+                                    class="w-full px-3 py-2 pr-10 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                                <button type="button"
+                                    x-on:click="show = !show"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition"
+                                    tabindex="-1"
+                                    {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}>
+                                    <span class="material-symbols-outlined text-sm" x-text="show ? 'visibility_off' : 'visibility'"></span>
+                                </button>
+                                @error('wifi_password') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                            </div>
                         </div>
+
+                        {{-- MAC --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">lan</span>
-                                MAC
+                                MAC *
                             </label>
-                            <input type="text" wire:model="mac" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text"
+                                wire:model.live="mac"
+                                x-data
+                                x-on:input="
+                                    let raw = $el.value.replace(/[^0-9a-fA-F]/g, '').slice(0,12);
+                                    let formatted = '';
+                                    for (let i = 0; i < raw.length; i += 2) {
+                                        if (i > 0) formatted += ':';
+                                        formatted += raw.substring(i, i+2);
+                                    }
+                                    if ($el.value !== formatted) {
+                                        $el.value = formatted;
+                                        $el.setSelectionRange(formatted.length, formatted.length);
+                                        $el.dispatchEvent(new Event('input', { bubbles: true }));
+                                    }
+                                "
+                                placeholder="00:00:00:00:00:00"
+                                maxlength="17"
+                                {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                            @error('mac') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
+
+                        {{-- PON --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">settings_input_antenna</span>
-                                PON
+                                PON *
                             </label>
-                            <input type="text" wire:model="pon" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model.live="pon"
+                                {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                            @error('pon') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
+
+                        {{-- Mufa --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">cable</span>
-                                Mufa
+                                Mufa *
                             </label>
-                            <input type="text" wire:model="mufa" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model.live="mufa"
+                                {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                            @error('mufa') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
+
+                        {{-- Fecha de instalación --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">calendar_today</span>
-                                Fecha de instalación
+                                Fecha de instalación *
                             </label>
-                            <input type="date" wire:model="installation_date" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="date" wire:model.live="installation_date"
+                                {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
+                            @error('installation_date') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 
-                        {{-- COORDENADAS --}}
+                        {{-- Latitud --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>
-                                Latitud
+                                Latitud *
                             </label>
-                            <input type="text" wire:model="latitude" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model.live="latitude"
+                                {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
                                 placeholder="Ej: 14.105025">
+                            @error('latitude') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
+
+                        {{-- Longitud --}}
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>
-                                Longitud
+                                Longitud *
                             </label>
-                            <input type="text" wire:model="longitude" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model.live="longitude"
+                                {{ (!$canEditTech || !$isEditing) ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
                                 placeholder="Ej: -89.148894">
+                            @error('longitude') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
                     </div>
 
                     {{-- MAPA --}}
-                    @if($canEditTech)
+                    @if($canEditTech && $isEditing)
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1.5">
                             <span class="material-symbols-outlined text-gray-400 text-sm">map</span>
@@ -228,7 +320,8 @@
                     </div>
                     @endif
 
-                    @if($canEditTech)
+                    {{-- Botón Guardar (solo si está en modo edición) --}}
+                    @if($canEditTech && $isEditing)
                     <div class="flex justify-end">
                         <button type="submit"
                             class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition inline-flex items-center gap-2">
@@ -615,20 +708,29 @@
     @endif
 
     {{-- Toast --}}
-    <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
-        x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 3500)"
-        x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"
-        style="display: none;">
-        <div x-show="toastType === 'success'"
-            class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span class="material-symbols-outlined">check_circle</span>
-            <span x-text="toastMessage" class="text-sm font-medium"></span>
-        </div>
-        <div x-show="toastType === 'error'"
-            class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span class="material-symbols-outlined">error</span>
-            <span x-text="toastMessage" class="text-sm font-medium"></span>
-        </div>
+    <div x-data="{ toasts: [] }"
+         x-on:show-toast.window="toasts.push({ id: Date.now() + Math.random(), type: $event.detail.type, message: $event.detail.message }); setTimeout(() => toasts.shift(), 3500)"
+         class="fixed bottom-5 right-5 z-50 flex flex-col-reverse gap-2 items-end"
+         style="max-height: 80vh; overflow-y: auto;">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div x-show="true" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100">
+                <div x-show="toast.type === 'success'"
+                     class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 whitespace-nowrap">
+                    <span class="material-symbols-outlined">check_circle</span>
+                    <span x-text="toast.message" class="text-sm font-medium"></span>
+                </div>
+                <div x-show="toast.type === 'error'"
+                     class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 whitespace-nowrap">
+                    <span class="material-symbols-outlined">error</span>
+                    <span x-text="toast.message" class="text-sm font-medium"></span>
+                </div>
+                <div x-show="toast.type === 'info'"
+                     class="bg-blue-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 whitespace-nowrap">
+                    <span class="material-symbols-outlined">info</span>
+                    <span x-text="toast.message" class="text-sm font-medium"></span>
+                </div>
+            </div>
+        </template>
     </div>
 
     <style>
@@ -653,9 +755,8 @@
             }).addTo(map);
             var marker = null;
 
-            // Si hay coordenadas previas en la OT, mostrarlas en el mapa
-            var lat = @json($workOrder->latitude ?? null);
-            var lng = @json($workOrder->longitude ?? null);
+            var lat = @json($latitude ?? null);
+            var lng = @json($longitude ?? null);
             if (lat && lng) {
                 map.setView([lat, lng], 15);
                 marker = L.marker([lat, lng]).addTo(map);

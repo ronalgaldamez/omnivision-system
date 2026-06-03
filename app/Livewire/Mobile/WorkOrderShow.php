@@ -9,6 +9,7 @@ use App\Models\RequisitionItem;
 use App\Models\TechnicianInventory;
 use App\Models\WorkOrderMaterial;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class WorkOrderShow extends Component
 {
@@ -38,10 +39,14 @@ class WorkOrderShow extends Component
     public $mufa;
     public $installation_date;
     public $canEditTech = false;
+    public $isEditing = false;       // Controla el modo edición
 
-    // Coordenadas (se inicializan vacías)
+    // Coordenadas
     public $latitude = null;
     public $longitude = null;
+
+    // Indicador de borrador
+    public $isDraft = false;
 
     public function mount($id)
     {
@@ -57,43 +62,90 @@ class WorkOrderShow extends Component
             ->where('status', 'open')
             ->exists();
 
-        // Inicializar campos técnicos
-        $this->wifi_name = $this->workOrder->wifi_name;
-        $this->wifi_password = $this->workOrder->wifi_password;
-        $this->profile_name = $this->workOrder->profile_name;
-        $this->profile_password = $this->workOrder->profile_password;
-        $this->mac = $this->workOrder->mac;
-        $this->pon = $this->workOrder->pon;
-        $this->mufa = $this->workOrder->mufa;
-        $this->installation_date = $this->workOrder->installation_date?->format('Y-m-d');
+        // Recuperar borrador de la sesión si existe
+        $draft = session()->get('work_order_draft_' . $this->workOrder->id);
 
-        // Las coordenadas se dejan vacías para que el técnico las complete
-        $this->latitude = null;
-        $this->longitude = null;
+        $this->wifi_name = $draft['wifi_name'] ?? $this->workOrder->wifi_name;
+        $this->wifi_password = $draft['wifi_password'] ?? $this->workOrder->wifi_password;
+        $this->profile_name = $draft['profile_name'] ?? $this->workOrder->profile_name;
+        $this->profile_password = $draft['profile_password'] ?? $this->workOrder->profile_password;
+        $this->mac = $draft['mac'] ?? $this->workOrder->mac;
+        $this->pon = $draft['pon'] ?? $this->workOrder->pon;
+        $this->mufa = $draft['mufa'] ?? $this->workOrder->mufa;
+        $this->installation_date = $draft['installation_date'] ?? $this->workOrder->installation_date?->format('Y-m-d');
+
+        // Cargar coordenadas desde la OT o el cliente, o desde el borrador
+        $client = $this->workOrder->client;
+        $this->latitude = $draft['latitude'] ?? $this->workOrder->latitude ?? $client->latitude ?? null;
+        $this->longitude = $draft['longitude'] ?? $this->workOrder->longitude ?? $client->longitude ?? null;
+
+        // Si se encontró borrador, activar el badge
+        if ($draft) {
+            $this->isDraft = true;
+        }
 
         $user = Auth::user();
         $this->canEditTech = $user->id === $this->workOrder->technician_id
-            && in_array($this->workOrder->status, ['pending', 'in_progress']);
+            && in_array($this->workOrder->status, ['in_progress']);
+
+        // Si la OT está en progreso y no tiene datos guardados, iniciar en modo edición
+        if ($this->canEditTech && $this->workOrder->wifi_name !== null) {
+            $this->isEditing = false; // Ya tiene datos -> modo lectura
+        } elseif ($this->canEditTech) {
+            $this->isEditing = true;  // Sin datos -> modo edición
+        }
+    }
+
+    public function enableEditing()
+    {
+        $this->isEditing = true;
+        $this->dispatch('$refresh'); // Asegura que el mapa se renderice si estaba oculto
+    }
+
+    public function updated($property)
+    {
+        session()->put('work_order_draft_' . $this->workOrder->id, [
+            'wifi_name' => $this->wifi_name,
+            'wifi_password' => $this->wifi_password,
+            'profile_name' => $this->profile_name,
+            'profile_password' => $this->profile_password,
+            'mac' => $this->mac,
+            'pon' => $this->pon,
+            'mufa' => $this->mufa,
+            'installation_date' => $this->installation_date,
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
+        ]);
+        $this->isDraft = true;
     }
 
     public function saveTechnicalData()
     {
-        if (!$this->canEditTech) {
+        if (!$this->canEditTech || !$this->isEditing) {
             abort(403);
         }
 
-        $this->validate([
-            'wifi_name' => 'nullable|string|max:255',
-            'wifi_password' => 'nullable|string|max:255',
-            'profile_name' => 'nullable|string|max:255',
-            'profile_password' => 'nullable|string|max:255',
-            'mac' => 'nullable|string|max:255',
-            'pon' => 'nullable|string|max:255',
-            'mufa' => 'nullable|string|max:255',
-            'installation_date' => 'nullable|date',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-        ]);
+        try {
+            $this->validate([
+                'wifi_name' => 'required|string|max:255',
+                'wifi_password' => 'required|string|max:255',
+                'profile_name' => 'required|string|max:255',
+                'profile_password' => 'required|string|max:255',
+                'mac' => ['required', 'string', 'max:17', 'regex:/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/'],
+                'pon' => 'required|string|max:255',
+                'mufa' => 'required|string|max:255',
+                'installation_date' => 'required|date',
+                'latitude' => 'required|numeric|between:-90,90',
+                'longitude' => 'required|numeric|between:-180,180',
+            ]);
+        } catch (ValidationException $e) {
+            foreach ($e->errors() as $field => $messages) {
+                foreach ($messages as $message) {
+                    $this->dispatch('show-toast', type: 'error', message: $message);
+                }
+            }
+            throw $e;
+        }
 
         // Actualizar OT
         $this->workOrder->update([
@@ -111,17 +163,23 @@ class WorkOrderShow extends Component
 
         // Actualizar también las coordenadas en el cliente
         $client = $this->workOrder->client;
-        if ($client && ($this->latitude !== null || $this->longitude !== null)) {
+        if ($client) {
             $client->update([
                 'latitude' => $this->latitude,
                 'longitude' => $this->longitude,
             ]);
         }
 
+        // Limpiar borrador tras guardar exitosamente
+        session()->forget('work_order_draft_' . $this->workOrder->id);
+        $this->isDraft = false;
+        $this->isEditing = false; // Volver a modo lectura
+
         $this->dispatch('show-toast', type: 'success', message: 'Datos técnicos y coordenadas actualizados.');
+        $this->dispatch('$refresh'); // Refrescar para ocultar mapa y botón guardar
     }
 
-    // ========== MÉTODOS EXISTENTES (SIN CAMBIOS) ==========
+    // ========== MÉTODOS EXISTENTES ==========
     protected function checkOpenRequisition()
     {
         $this->hasOpenRequisition = $this->workOrder->requisitions()
@@ -307,7 +365,10 @@ class WorkOrderShow extends Component
 
         $this->checkAnotherInProgress();
         $this->canEditTech = true;
+        $this->isEditing = true; // Iniciar en modo edición
+
         $this->dispatch('show-toast', type: 'success', message: 'Orden iniciada correctamente.');
+        $this->dispatch('$refresh'); // Forzar actualización visual
     }
 
     public function pauseWorkOrder()
@@ -323,8 +384,10 @@ class WorkOrderShow extends Component
         $this->workOrder->save();
 
         $this->canEditTech = false;
+        $this->isEditing = false;
         $this->checkAnotherInProgress();
         $this->dispatch('show-toast', type: 'success', message: 'Orden pausada. Tiempo guardado.');
+        $this->dispatch('$refresh');
     }
 
     public function resumeWorkOrder()
@@ -337,8 +400,10 @@ class WorkOrderShow extends Component
         $this->workOrder->save();
 
         $this->canEditTech = true;
+        $this->isEditing = false; // Volver a modo lectura, mostrar botón Editar
         $this->checkAnotherInProgress();
         $this->dispatch('show-toast', type: 'success', message: 'Orden reanudada.');
+        $this->dispatch('$refresh');
     }
 
     public function completeWorkOrder()
@@ -361,6 +426,7 @@ class WorkOrderShow extends Component
         $this->workOrder->save();
 
         $this->canEditTech = false;
+        $this->isEditing = false;
 
         if ($this->hasOpenRequisition) {
             $this->loadAvailableProducts();
@@ -368,6 +434,8 @@ class WorkOrderShow extends Component
         } else {
             $this->dispatch('show-toast', type: 'success', message: 'Orden completada.');
         }
+
+        $this->dispatch('$refresh');
     }
 
     public function saveConsumption()
