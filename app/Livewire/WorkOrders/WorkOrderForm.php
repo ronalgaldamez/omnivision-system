@@ -261,12 +261,15 @@ class WorkOrderForm extends Component
         if ($this->orderId) {
             $order = WorkOrder::findOrFail($this->orderId);
             $order->update($orderData);
-            session()->flash('message', 'Orden actualizada correctamente.');
         } else {
             $orderData['code'] = $this->generateWorkOrderCode();
             $orderData['created_by'] = Auth::id();
             $order = WorkOrder::create($orderData);
-            session()->flash('message', 'Orden creada correctamente.');
+        }
+
+        // Registrar la asignación si se asignó un técnico y aún no tiene assigned_at
+        if ($this->technician_id && !$order->assigned_at) {
+            $order->update(['assigned_at' => now()]);
         }
 
         // Si hay coordenadas, copiarlas al cliente

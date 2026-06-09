@@ -6,17 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
         Schema::table('work_orders', function (Blueprint $table) {
-            $table->timestamp('started_at')->nullable()->after('scheduled_date');
+            if (!Schema::hasColumn('work_orders', 'started_at')) {
+                $table->timestamp('started_at')->nullable()->after('status');
+            }
         });
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::table('work_orders', function (Blueprint $table) {
-            $table->dropColumn('started_at');
+            if (Schema::hasColumn('work_orders', 'started_at')) {
+                $table->dropColumn('started_at');
+            }
         });
     }
 };

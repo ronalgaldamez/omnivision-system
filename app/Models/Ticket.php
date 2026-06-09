@@ -21,6 +21,23 @@ class Ticket extends Model
         'resolved_by',
         'resolved_at',
         'ticket_code',
+        // Tiempos L1 — Atención al Cliente
+        'started_at',
+        'l1_ended_at',
+        'escalated_at',
+        // Tiempos L2 — NOC
+        'l2_started_at',
+        'l2_ended_at',
+    ];
+
+    protected $casts = [
+        'started_at'    => 'datetime',
+        'l1_ended_at'   => 'datetime',
+        'escalated_at'  => 'datetime',
+        'l2_started_at' => 'datetime',
+        'l2_ended_at'   => 'datetime',
+        'resolved_at'   => 'datetime',
+        'requires_noc'  => 'boolean',
     ];
 
     public function client()

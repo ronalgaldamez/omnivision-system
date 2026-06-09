@@ -34,6 +34,7 @@ class WorkOrder extends Model
         'pon',
         'mufa',
         'installation_date',
+        'assigned_at', // ← agregado
     ];
 
     protected $casts = [
@@ -42,6 +43,7 @@ class WorkOrder extends Model
         'started_at' => 'datetime',
         'accumulated_seconds' => 'integer',
         'installation_date' => 'date',
+        'assigned_at' => 'datetime', // ← agregado
     ];
 
     public function technician()
@@ -73,4 +75,10 @@ class WorkOrder extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function pauses()
+    {
+        return $this->hasMany(WorkOrderPause::class);
+    }
+    
 }

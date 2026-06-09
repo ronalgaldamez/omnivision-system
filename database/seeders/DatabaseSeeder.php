@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         $this->call(UsersTestSeeder::class);
         $this->call(ServiceTypeSeeder::class);
         $this->call(SalesRepSeeder::class);
+        $this->call(KnowledgeBaseSeeder::class);
         
         // Datos de demostración (marcas, modelos, categorías, productos)
         $this->call(DemoDataSeeder::class);

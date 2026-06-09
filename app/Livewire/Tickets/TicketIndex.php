@@ -58,6 +58,12 @@ class TicketIndex extends Component
     public function viewDetail($ticketId)
     {
         $this->selectedTicket = Ticket::with('client')->find($ticketId);
+
+        // Registrar cuando el NOC acepta/abre el ticket por primera vez
+        if ($this->selectedTicket && is_null($this->selectedTicket->l2_started_at)) {
+            $this->selectedTicket->update(['l2_started_at' => now()]);
+        }
+
         $this->showDetailModal = true;
     }
 
@@ -121,8 +127,11 @@ class TicketIndex extends Component
                 'description' => $ticket->description,
                 'service_type' => $ticket->service_type,
                 'status' => 'pending',
+                'started_at' => now(),
             ]);
             $ticket->status = 'in_progress';
+            $ticket->l2_ended_at = now();
+            $ticket->l2_started_at = $ticket->l2_started_at ?? now(); // ← Esto faltaba
             $ticket->save();
             $this->dispatch('show-toast', type: 'success', message: 'OT creada correctamente.');
         }

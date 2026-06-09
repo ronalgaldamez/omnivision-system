@@ -12,11 +12,18 @@
                     {{ $orders->total() }} órdenes asignadas
                 </p>
             </div>
-            <a href="{{ route('mobile.work-orders.map') }}"
-                class="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
-                <span class="material-symbols-outlined text-base">map</span>
-                Ver en mapa
-            </a>
+            <div class="flex items-center gap-2">
+                <button wire:click="openCreateModal"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-orange-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-orange-700 transition">
+                    <span class="material-symbols-outlined text-base">add_circle</span>
+                    + Nueva OT en Campo
+                </button>
+                <a href="{{ route('mobile.work-orders.map') }}"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
+                    <span class="material-symbols-outlined text-base">map</span>
+                    Ver en mapa
+                </a>
+            </div>
         </div>
 
         <div class="p-6 space-y-5">
@@ -199,5 +206,98 @@
                 </div>
             @endif
         </div>
+    </div>
+
+    {{-- Modal de creación rápida de OT en campo --}}
+    @if($showCreateModal)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                        <h3 class="text-lg font-semibold flex items-center gap-2">
+                            <span class="material-symbols-outlined text-gray-500">engineering</span>
+                            Nueva OT en Campo
+                        </h3>
+                        <button wire:click="closeCreateModal" class="text-gray-400 hover:text-gray-600 transition">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        <p class="text-sm text-gray-600">Registra un trabajo de campo que no tiene ticket previo.</p>
+
+                        {{-- Búsqueda de cliente --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Cliente *</label>
+                            <div class="relative">
+                                <input type="text" wire:model.live.debounce.300ms="newClientSearch"
+                                    placeholder="Buscar por nombre o teléfono..."
+                                    class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                @if(count($newClientResults) > 0)
+                                    <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-40 overflow-auto divide-y divide-gray-100">
+                                        @foreach($newClientResults as $client)
+                                            <li wire:click="selectNewClient({{ $client->id }}, '{{ $client->name }}')"
+                                                class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm">
+                                                <span class="font-medium text-gray-800">{{ $client->name }}</span>
+                                                <span class="text-xs text-gray-500 ml-2">{{ $client->phone ?? 'Sin teléfono' }}</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </div>
+                            @if($newClientName)
+                                <p class="text-sm text-green-700 mt-1 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">check_circle</span>
+                                    Seleccionado: {{ $newClientName }}
+                                </p>
+                            @endif
+                            @error('newClientId') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+
+                        {{-- Descripción --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Descripción del trabajo *</label>
+                            <textarea wire:model="newDescription" rows="3"
+                                class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"
+                                placeholder="Describe el problema o trabajo a realizar..."></textarea>
+                            @error('newDescription') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                        <button wire:click="createFieldOT"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
+                            Crear e Iniciar OT
+                        </button>
+                        <button wire:click="closeCreateModal"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Toast --}}
+    <div x-data="{ toasts: [] }"
+        x-on:show-toast.window="toasts.push({ id: Date.now() + Math.random(), type: $event.detail.type, message: $event.detail.message }); setTimeout(() => toasts.shift(), 3500)"
+        class="fixed bottom-5 right-5 z-50 flex flex-col-reverse gap-2 items-end"
+        style="max-height: 80vh; overflow-y: auto;">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div x-show="true" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100">
+                <div x-show="toast.type === 'success'"
+                    class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 whitespace-nowrap">
+                    <span class="material-symbols-outlined">check_circle</span>
+                    <span x-text="toast.message" class="text-sm font-medium"></span>
+                </div>
+                <div x-show="toast.type === 'error'"
+                    class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 whitespace-nowrap">
+                    <span class="material-symbols-outlined">error</span>
+                    <span x-text="toast.message" class="text-sm font-medium"></span>
+                </div>
+            </div>
+        </template>
     </div>
 </div>

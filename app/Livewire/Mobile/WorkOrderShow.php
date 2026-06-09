@@ -4,12 +4,14 @@ namespace App\Livewire\Mobile;
 
 use Livewire\Component;
 use App\Models\WorkOrder;
+use App\Models\WorkOrderPause;
 use App\Models\Requisition;
 use App\Models\RequisitionItem;
 use App\Models\TechnicianInventory;
 use App\Models\WorkOrderMaterial;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 
 class WorkOrderShow extends Component
 {
@@ -50,6 +52,11 @@ class WorkOrderShow extends Component
 
     // Indicador de datos técnicos completos (guardados)
     public $technicalDataComplete = false;
+
+    // Tiempos
+    public $elapsedSeconds = 0;
+    public $totalWorkedSeconds = 0;
+    public $pauses = [];
 
     public function mount($id)
     {
@@ -96,11 +103,29 @@ class WorkOrderShow extends Component
         } else {
             $this->isEditing = false;
         }
+
+        $this->updateTimers();
+        $this->loadPauses();
     }
 
-    /**
-     * Compara los valores actuales con los guardados en la OT para actualizar $isDraft.
-     */
+    public function updateTimers()
+    {
+        if ($this->workOrder->status === 'in_progress' && $this->workOrder->started_at) {
+            $this->elapsedSeconds = Carbon::parse($this->workOrder->started_at)->diffInSeconds(now());
+        } else {
+            $this->elapsedSeconds = 0;
+        }
+
+        $this->totalWorkedSeconds = ($this->workOrder->accumulated_seconds ?? 0) + $this->elapsedSeconds;
+    }
+
+    public function loadPauses()
+    {
+        $this->pauses = $this->workOrder->pauses()
+            ->orderBy('paused_at', 'asc')
+            ->get();
+    }
+
     private function updateDraftStatus()
     {
         if (!$this->workOrder) {
@@ -122,9 +147,6 @@ class WorkOrderShow extends Component
         );
     }
 
-    /**
-     * Verifica si todos los campos técnicos obligatorios tienen valor en la BD.
-     */
     private function checkTechnicalDataComplete()
     {
         $wo = $this->workOrder;
@@ -218,13 +240,12 @@ class WorkOrderShow extends Component
         session()->forget('work_order_draft_' . $this->workOrder->id);
         $this->isDraft = false;
         $this->isEditing = false;
-        $this->checkTechnicalDataComplete(); // Revisar si ya están completos
+        $this->checkTechnicalDataComplete();
 
         $this->dispatch('show-toast', type: 'success', message: 'Datos técnicos y coordenadas actualizados.');
         $this->dispatch('$refresh');
     }
 
-    // ========== MÉTODOS EXISTENTES (SIN CAMBIOS IMPORTANTES) ==========
     protected function checkOpenRequisition()
     {
         $this->hasOpenRequisition = $this->workOrder->requisitions()
@@ -410,9 +431,10 @@ class WorkOrderShow extends Component
 
         $this->checkAnotherInProgress();
         $this->canEditTech = true;
-        $this->isEditing = true; // Iniciar en modo edición
-        $this->checkTechnicalDataComplete(); // Aún no hay datos, será false
+        $this->isEditing = true;
+        $this->checkTechnicalDataComplete();
 
+        $this->updateTimers();
         $this->dispatch('show-toast', type: 'success', message: 'Orden iniciada correctamente.');
         $this->dispatch('$refresh');
     }
@@ -429,9 +451,17 @@ class WorkOrderShow extends Component
         $this->workOrder->started_at = null;
         $this->workOrder->save();
 
+        // Registrar la pausa
+        WorkOrderPause::create([
+            'work_order_id' => $this->workOrder->id,
+            'paused_at' => $now,
+        ]);
+
         $this->canEditTech = false;
         $this->isEditing = false;
         $this->checkAnotherInProgress();
+        $this->updateTimers();
+        $this->loadPauses();
         $this->dispatch('show-toast', type: 'success', message: 'Orden pausada. Tiempo guardado.');
         $this->dispatch('$refresh');
     }
@@ -441,14 +471,25 @@ class WorkOrderShow extends Component
         if ($this->workOrder->status !== 'paused')
             return;
 
+        // Buscar la última pausa sin reanudar y marcarla
+        $lastPause = WorkOrderPause::where('work_order_id', $this->workOrder->id)
+            ->whereNull('resumed_at')
+            ->orderBy('paused_at', 'desc')
+            ->first();
+        if ($lastPause) {
+            $lastPause->update(['resumed_at' => now()]);
+        }
+
         $this->workOrder->status = 'in_progress';
         $this->workOrder->started_at = now();
         $this->workOrder->save();
 
         $this->canEditTech = true;
-        $this->isEditing = false; // Vuelve en modo lectura, con botón Editar
-        $this->checkTechnicalDataComplete(); // Conserva el estado anterior
+        $this->isEditing = false;
+        $this->checkTechnicalDataComplete();
         $this->checkAnotherInProgress();
+        $this->updateTimers();
+        $this->loadPauses();
         $this->dispatch('show-toast', type: 'success', message: 'Orden reanudada.');
         $this->dispatch('$refresh');
     }
@@ -472,14 +513,24 @@ class WorkOrderShow extends Component
         $this->workOrder->accumulated_seconds = $totalSeconds;
         $this->workOrder->save();
 
+        // Cerrar el ticket asociado
+        if ($this->workOrder->ticket) {
+            $this->workOrder->ticket->update([
+                'status' => 'resolved',
+                'resolved_at' => now(),
+            ]);
+        }
+
         $this->canEditTech = false;
         $this->isEditing = false;
+        $this->updateTimers();
+        $this->loadPauses();
 
         if ($this->hasOpenRequisition) {
             $this->loadAvailableProducts();
             $this->showConsumptionModal = true;
         } else {
-            $this->dispatch('show-toast', type: 'success', message: 'Orden completada.');
+            $this->dispatch('show-toast', type: 'success', message: 'Orden completada y ticket cerrado.');
         }
 
         $this->dispatch('$refresh');
@@ -554,6 +605,11 @@ class WorkOrderShow extends Component
 
     public function render()
     {
+        // Actualizar cronómetro en cada render si la OT está en progreso
+        if ($this->workOrder->status === 'in_progress' && $this->workOrder->started_at) {
+            $this->updateTimers();
+        }
+
         return view('livewire.mobile.work-order-show')->layout('components.layouts.app');
     }
 }

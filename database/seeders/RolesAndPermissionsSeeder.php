@@ -98,7 +98,7 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::firstOrCreate(['name' => $perm]);
         }
 
-        // Roles existentes (sin cambios)
+        // Roles
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $warehouseRole = Role::firstOrCreate(['name' => 'warehouse']);
         $technicianRole = Role::firstOrCreate(['name' => 'technician']);
@@ -106,11 +106,10 @@ class RolesAndPermissionsSeeder extends Seeder
         $buyerRole = Role::firstOrCreate(['name' => 'buyer']);
         $atencionClienteRole = Role::firstOrCreate(['name' => 'atencion_al_cliente'], ['prefix' => 'SAC']);
         $nocRole = Role::firstOrCreate(['name' => 'noc']);
-        $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
-
-        // NUEVO: Sales Rep (Ventas)
+        $fieldSupervisorRole = Role::firstOrCreate(['name' => 'field_supervisor'], ['prefix' => 'FS']);
         $salesRepRole = Role::firstOrCreate(['name' => 'sales_rep'], ['prefix' => 'SR']);
 
+        // Asignación de permisos
         $adminRole->syncPermissions(Permission::all());
 
         $warehouseRole->syncPermissions([
@@ -247,8 +246,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'view requisitions',
         ]);
 
-        $supervisorRole->syncPermissions([
+        $fieldSupervisorRole->syncPermissions([
             'view work_orders',
+            'create work_orders',
             'edit work_orders',
             'view low stock',
             'view reports',
@@ -270,7 +270,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_all_tickets_menu',
         ]);
 
-        // Sales Rep: puede crear OT y capturar coordenadas, pero NO asignar técnicos
         $salesRepRole->syncPermissions([
             'view work_orders',
             'create work_orders',
