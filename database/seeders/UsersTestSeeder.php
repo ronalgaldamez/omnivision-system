@@ -48,13 +48,13 @@ class UsersTestSeeder extends Seeder
             ['name' => 'Técnico Dos', 'password' => Hash::make('123456789'), 'email_verified_at' => now()]
         )->assignRole('technician');
 
-        // Supervisor
+        // Field Supervisor
         User::firstOrCreate(
             ['email' => 'supervisor@omnivision.com'],
-            ['name' => 'Supervisor Uno', 'password' => Hash::make('123456789'), 'email_verified_at' => now()]
-        )->assignRole('supervisor');
+            ['name' => 'Field Supervisor', 'password' => Hash::make('123456789'), 'email_verified_at' => now()]
+        )->assignRole('field_supervisor');
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
-        $this->command->info('Usuarios de prueba creados: Atención al cliente, NOC, 2 técnicos y supervisor.');
+        $this->command->info('Usuarios de prueba creados: Atención al cliente, NOC, 2 técnicos y field supervisor.');
     }
 }

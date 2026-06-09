@@ -16,15 +16,37 @@
                         {{ $ticketId ? 'Modificar solicitud de servicio' : 'Generar una nueva solicitud de servicio' }}
                     </p>
                 </div>
-                <a href="{{ route('tickets.index') }}"
-                    class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition">
-                    <span class="material-symbols-outlined text-base">arrow_back</span>
-                    Volver al listado
-                </a>
+                <div class="flex items-center gap-3">
+                    {{-- Cronómetro --}}
+                    @if($ticketOpened)
+                        <div class="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
+                            <span class="material-symbols-outlined text-green-600 text-lg">timer</span>
+                            <span class="text-sm font-mono font-medium text-green-800" wire:poll.1s="updateElapsedSeconds">
+                                {{ gmdate('H:i:s', $elapsedSeconds) }}
+                            </span>
+                        </div>
+                    @endif
+                    <a href="{{ route('tickets.index') }}"
+                        class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition">
+                        <span class="material-symbols-outlined text-base">arrow_back</span>
+                        Volver al listado
+                    </a>
+                </div>
             </div>
         </div>
 
         <div class="p-6">
+            {{-- Botón Abrir Ticket (solo si no hay ticketId y no está abierto) --}}
+            @if(!$ticketId && !$ticketOpened)
+                <div class="mb-6 flex justify-center">
+                    <button type="button" wire:click="openTicket"
+                        class="px-8 py-3 bg-green-600 text-white text-base font-medium rounded-xl shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 transition inline-flex items-center gap-2">
+                        <span class="material-symbols-outlined text-xl">play_arrow</span>
+                        Abrir Ticket
+                    </button>
+                </div>
+            @endif
+
             <form wire:submit.prevent="promptSave" class="space-y-6">
                 <!-- Cliente -->
                 <div>
@@ -36,7 +58,8 @@
                         <div class="relative flex-1">
                             <input type="text" wire:model.live.debounce.300ms="clientSearch"
                                 placeholder="Buscar por nombre o teléfono..."
-                                class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                {{ $editingEnabled ? '' : 'disabled' }}
+                                class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm disabled:bg-gray-100 disabled:text-gray-500">
                             <span
                                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                             @if(count($clientSearchResults) > 0)
@@ -52,11 +75,13 @@
                                 </ul>
                             @endif
                         </div>
+                        @if($editingEnabled)
                         <button type="button" wire:click="openClientModal"
                             class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition flex items-center gap-1.5">
                             <span class="material-symbols-outlined text-base">person_add</span>
                             Nuevo
                         </button>
+                        @endif
                     </div>
                     @error('client_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
 
@@ -149,7 +174,8 @@
                     </label>
                     <div class="relative">
                         <textarea wire:model="description" rows="3"
-                            class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"
+                            {{ $editingEnabled ? '' : 'disabled' }}
+                            class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none disabled:bg-gray-100 disabled:text-gray-500"
                             placeholder="Describe el problema o servicio..."></textarea>
                         <span
                             class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
@@ -165,7 +191,8 @@
                     </label>
                     <div class="relative">
                         <select wire:model.live="service_type_id"
-                            class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
+                            {{ $editingEnabled ? '' : 'disabled' }}
+                            class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none disabled:bg-gray-100 disabled:text-gray-500">
                             <option value="">Seleccione</option>
                             @foreach($serviceTypes as $type)
                                 <option value="{{ $type->id }}">{{ str_replace('_', ' ', $type->name) }}</option>
@@ -264,7 +291,7 @@
                                 </span>
                             @endif
                             <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                                <input type="checkbox" wire:model.live="requires_noc" class="sr-only peer">
+                                <input type="checkbox" wire:model.live="requires_noc" {{ $editingEnabled ? '' : 'disabled' }} class="sr-only peer">
                                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
@@ -279,7 +306,8 @@
                     </label>
                     <div class="relative">
                         <select wire:model.live="origin"
-                            class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
+                            {{ $editingEnabled ? '' : 'disabled' }}
+                            class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none disabled:bg-gray-100 disabled:text-gray-500">
                             <option value="">Seleccione</option>
                             <option value="Facebook Messenger">Facebook Messenger</option>
                             <option value="SMS WhatsApp">SMS WhatsApp</option>
@@ -302,11 +330,27 @@
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition shadow-sm">
                         Cancelar
                     </a>
-                    <button type="submit"
+               @if($ticketOpened)
+                @if($requires_noc)
+                    <button type="button" wire:click="confirmGenerate"
                         class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition inline-flex items-center gap-2">
-                        <span class="material-symbols-outlined text-base">save</span>
-                        {{ $ticketId ? 'Actualizar Ticket' : 'Crear Ticket' }}
+                        <span class="material-symbols-outlined text-base">send</span>
+                        Generar Ticket
                     </button>
+                @else
+                    <button type="button" wire:click="confirmSolve"
+                        class="px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 transition inline-flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">check_circle</span>
+                        Solucionar Ticket
+                    </button>
+                @endif
+            @else
+                <button type="submit"
+                    class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition inline-flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">save</span>
+                    {{ $ticketId ? 'Actualizar Ticket' : 'Crear Ticket' }}
+                </button>
+            @endif
                 </div>
             </form>
         </div>
@@ -391,6 +435,73 @@
                             Sí, continuar
                         </button>
                         <button type="button" @click="open = false" wire:click="cancelSave"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Modal de confirmación para Solucionar Ticket -->
+    @if($confirmingSolve)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="p-6 text-center">
+                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 mb-4">
+                            <span class="material-symbols-outlined text-green-600 text-2xl">check_circle</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">¿Solucionar ticket?</h3>
+                        <p class="text-sm text-gray-600 mt-2">
+                            Se guardarán todos los datos y se marcará el ticket como resuelto. El cronómetro se detendrá.
+                        </p>
+                        @if($elapsedSeconds > 0)
+                            <p class="text-sm text-gray-500 mt-1">
+                                Tiempo transcurrido: <strong>{{ gmdate('H:i:s', $elapsedSeconds) }}</strong>
+                            </p>
+                        @endif
+                    </div>
+                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                        <button type="button" wire:click="executeSolve"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
+                            Sí, solucionar
+                        </button>
+                        <button type="button" @click="open = false" wire:click="cancelSolve"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Modal de confirmación para Generar Ticket (NOC) -->
+    @if($confirmingGenerate)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="p-6 text-center">
+                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 mb-4">
+                            <span class="material-symbols-outlined text-blue-600 text-2xl">send</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">¿Generar ticket para NOC?</h3>
+                        <p class="text-sm text-gray-600 mt-2">
+                            El ticket se enviará al panel del NOC para su revisión y derivación.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                        <button type="button" wire:click="executeGenerate"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
+                            Sí, generar
+                        </button>
+                        <button type="button" @click="open = false" wire:click="cancelGenerate"
                             class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
                             Cancelar
                         </button>

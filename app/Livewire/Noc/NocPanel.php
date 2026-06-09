@@ -44,6 +44,11 @@ class NocPanel extends Component
     {
         $this->selectedTicket = Ticket::with('client', 'createdBy')->find($ticketId);
         $this->showDetailModal = true;
+
+        // Registrar cuando el NOC acepta/abre el ticket por primera vez
+        if ($this->selectedTicket && is_null($this->selectedTicket->l2_started_at)) {
+            $this->selectedTicket->update(['l2_started_at' => now()]);
+        }
     }
 
     public function closeModal()
@@ -94,11 +99,14 @@ class NocPanel extends Component
             $ticket->status = 'resolved';
             $ticket->resolved_by = Auth::id();
             $ticket->resolved_at = now();
+            $ticket->l2_started_at = $ticket->l2_started_at ?? now(); // si no había aceptado antes
+            $ticket->l2_ended_at = now();
+            // $ticket->l1_ended_at = now();
             $ticket->save();
             session()->flash('message', 'Ticket resuelto remotamente.');
         }
-        $this->mount(); // refrescar la lista
-        $this->closeModal(); // cerrar modal si estaba abierto
+        $this->mount();
+        $this->closeModal();
     }
 
     public function createWorkOrder($ticketId)
@@ -111,13 +119,16 @@ class NocPanel extends Component
                 'description' => $ticket->description,
                 'service_type' => $ticket->service_type,
                 'status' => 'pending',
+                // 'started_at' => now(),
             ]);
             $ticket->status = 'in_progress';
+            $ticket->l2_ended_at = now();
+            $ticket->l2_started_at = $ticket->l2_started_at ?? now();
             $ticket->save();
             session()->flash('message', 'OT creada a partir del ticket.');
         }
-        $this->mount(); // refrescar lista
-        $this->closeModal(); // cerrar modal
+        $this->mount();
+        $this->closeModal();
     }
 
     public function render()

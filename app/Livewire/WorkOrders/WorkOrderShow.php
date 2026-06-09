@@ -97,25 +97,33 @@ class WorkOrderShow extends Component
     }
 
     // Métodos existentes
-    public function completeWorkOrder()
-    {
-        if (!Auth::user()->can('complete work_orders')) {
-            $this->dispatch('showToast', ['type' => 'error', 'message' => 'No tienes permiso.']);
-            return;
-        }
-
-        if ($this->order->status === 'completed') {
-            $this->dispatch('showToast', ['type' => 'error', 'message' => 'Ya está completada.']);
-            return;
-        }
-
-        $this->order->status = 'completed';
-        $this->order->completed_date = now();
-        $this->order->save();
-
-        $this->dispatch('showToast', ['type' => 'success', 'message' => 'Orden completada.']);
-        return redirect()->route('work-orders.index');
+public function completeWorkOrder()
+{
+    if (!Auth::user()->can('complete work_orders')) {
+        $this->dispatch('showToast', ['type' => 'error', 'message' => 'No tienes permiso.']);
+        return;
     }
+
+    if ($this->order->status === 'completed') {
+        $this->dispatch('showToast', ['type' => 'error', 'message' => 'Ya está completada.']);
+        return;
+    }
+
+    $this->order->status = 'completed';
+    $this->order->completed_date = now();
+    $this->order->save();
+
+    // Cerrar el ticket asociado
+    if ($this->order->ticket) {
+        $this->order->ticket->update([
+            'status' => 'resolved',
+            'resolved_at' => now(),
+        ]);
+    }
+
+    $this->dispatch('showToast', ['type' => 'success', 'message' => 'Orden completada y ticket cerrado.']);
+    return redirect()->route('work-orders.index');
+}
 
     public function cancelWorkOrder()
     {
@@ -139,7 +147,8 @@ class WorkOrderShow extends Component
     public function getTicketOriginLabel()
     {
         $ticket = $this->order->ticket;
-        if (!$ticket) return null;
+        if (!$ticket)
+            return null;
         $map = [
             'Facebook Messenger' => 'Facebook Messenger',
             'SMS WhatsApp' => 'SMS WhatsApp',
