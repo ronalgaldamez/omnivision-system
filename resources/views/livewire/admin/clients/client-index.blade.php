@@ -52,6 +52,11 @@
                                 <td class="px-4 py-3 text-gray-700">{{ $client->service ?? 'N/A' }}</td>
                                 <td class="px-4 py-3 text-center">
                                     <div class="flex items-center justify-center gap-1">
+                                        <a href="{{ route('admin.clients.show', $client->id) }}"
+                                            class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                            title="Ver detalle">
+                                            <span class="material-symbols-outlined text-lg">visibility</span>
+                                        </a>
                                         @can('edit clients')
                                             <a href="{{ route('admin.clients.edit', $client->id) }}"
                                                 class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"

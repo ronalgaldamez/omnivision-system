@@ -1,4 +1,5 @@
-<div class="max-w-3xl mx-auto">
+<div>
+    <div class="max-w-3xl mx-auto">
     <!-- Tarjeta principal -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
         <!-- Encabezado con fondo sutil -->
@@ -16,15 +17,16 @@
 
         <!-- Contenido del formulario -->
         <div class="p-6">
-            <form wire:submit="save" class="space-y-6">
+            <form wire:submit="promptSave" class="space-y-6">
                 <!-- Nombre -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-gray-400 text-base">badge</span>
                         Nombre *
                     </label>
-                    <div class="relative">
+                    <div class="relative" x-data>
                         <input type="text" wire:model="name"
+                            x-on:input="if ($event.isTrusted) { $el.value = $el.value.replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]/g, ''); $el.dispatchEvent(new Event('input', { bubbles: true })); }"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                             placeholder="Nombre completo del cliente">
                         <span
@@ -45,9 +47,6 @@
                                 class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
                                 <option value="">Seleccionar tipo</option>
                                 <option value="dui">DUI</option>
-                                <option value="cedula">Cédula</option>
-                                <option value="ruc">RUC</option>
-                                <option value="pasaporte">Pasaporte</option>
                             </select>
                             <span
                                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">description</span>
@@ -60,10 +59,18 @@
                             <span class="material-symbols-outlined text-gray-400 text-base">pin</span>
                             Número de documento
                         </label>
-                        <div class="relative">
+                        <div class="relative" x-data>
                             <input type="text" wire:model="document_number"
+                                x-on:input="
+                                    if ($event.isTrusted) {
+                                        let val = $el.value.replace(/[^0-9]/g, '').slice(0,9);
+                                        if (val.length > 8) val = val.slice(0,8) + '-' + val.slice(8);
+                                        $el.value = val;
+                                        $el.dispatchEvent(new Event('input', { bubbles: true }));
+                                    }
+                                "
                                 class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                placeholder="Número de identificación">
+                                placeholder="00000000-0" maxlength="10">
                             <span
                                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">tag</span>
                         </div>
@@ -78,10 +85,18 @@
                         <span class="material-symbols-outlined text-gray-400 text-base">call</span>
                         Teléfono principal
                     </label>
-                    <div class="relative">
+                    <div class="relative" x-data>
                         <input type="text" wire:model="phone"
+                            x-on:input="
+                                if ($event.isTrusted) {
+                                    let val = $el.value.replace(/[^0-9]/g, '').slice(0,8);
+                                    if (val.length > 4) val = val.slice(0,4) + '-' + val.slice(4);
+                                    $el.value = val;
+                                    $el.dispatchEvent(new Event('input', { bubbles: true }));
+                                }
+                            "
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                            placeholder="Número de teléfono">
+                            placeholder="0000-0000" maxlength="9">
                         <span
                             class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">phone</span>
                     </div>
@@ -97,11 +112,19 @@
                         </label>
                         <div class="space-y-2">
                             @foreach($phones as $index => $phone)
-                                <div class="flex items-start gap-2">
+                                <div class="flex items-start gap-2" x-data>
                                     <div class="flex-1 relative">
                                         <input type="text" wire:model="phones.{{ $index }}.number"
+                                            x-on:input="
+                                                if ($event.isTrusted) {
+                                                    let val = $el.value.replace(/[^0-9]/g, '').slice(0,8);
+                                                    if (val.length > 4) val = val.slice(0,4) + '-' + val.slice(4);
+                                                    $el.value = val;
+                                                    $el.dispatchEvent(new Event('input', { bubbles: true }));
+                                                }
+                                            "
                                             class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                            placeholder="Número adicional">
+                                            placeholder="0000-0000" maxlength="9">
                                         <span
                                             class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">phone</span>
                                         @error('phones.' . $index . '.number') <span
@@ -188,10 +211,19 @@
                             <span class="material-symbols-outlined text-gray-400 text-base">explore</span>
                             Latitud
                         </label>
-                        <div class="relative">
-                            <input type="number" step="any" wire:model="latitude"
+                        <div class="relative" x-data="{
+                            formatCoordinate(value) {
+                                let clean = value.replace(/[^0-9]/g, '');
+                                if (clean.length > 2) {
+                                    clean = clean.slice(0, 2) + '.' + clean.slice(2, 6);
+                                }
+                                return clean;
+                            }
+                        }">
+                            <input type="text" wire:model="latitude"
+                                x-on:input="$el.value = formatCoordinate($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
                                 class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                placeholder="Ej: 13.6929">
+                                placeholder="00.0000" maxlength="7" inputmode="decimal">
                             <span
                                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">pin_drop</span>
                         </div>
@@ -202,10 +234,20 @@
                             <span class="material-symbols-outlined text-gray-400 text-base">explore</span>
                             Longitud
                         </label>
-                        <div class="relative">
-                            <input type="number" step="any" wire:model="longitude"
+                        <div class="relative" x-data="{
+                            formatCoordinate(value) {
+                                let hasMinus = value.startsWith('-');
+                                let clean = value.replace(/[^0-9]/g, '');
+                                if (clean.length > 2) {
+                                    clean = clean.slice(0, 2) + '.' + clean.slice(2, 6);
+                                }
+                                return (hasMinus ? '-' : '') + clean;
+                            }
+                        }">
+                            <input type="text" wire:model="longitude"
+                                x-on:input="$el.value = formatCoordinate($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
                                 class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                placeholder="Ej: -89.1825">
+                                placeholder="-00.0000" maxlength="8" inputmode="decimal">
                             <span
                                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">pin_drop</span>
                         </div>
@@ -215,19 +257,21 @@
                 </div>
                 @endcan
 
-                <!-- Número de luz -->
+                <!-- NC (Número de Contrato) -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-gray-400 text-base">bolt</span>
-                        N.° de luz
+                        NC
                     </label>
-                    <div class="relative">
+                    <div class="relative" x-data>
                         <input type="text" wire:model="nro_luz"
+                            x-on:input="if ($event.isTrusted) { $el.value = $el.value.replace(/[^0-9]/g, '').slice(0,12); $el.dispatchEvent(new Event('input', { bubbles: true })); }"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                            placeholder="Número de medidor">
+                            placeholder="000000000000" maxlength="12">
                         <span
                             class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">electric_meter</span>
                     </div>
+                    @error('nro_luz') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
                 <!-- Servicio contratado -->
@@ -262,10 +306,15 @@
 
                 <!-- Botones de acción -->
                 <div class="flex justify-end gap-3 pt-2">
-                    <a href="{{ route('admin.clients.index') }}"
+                    <button type="button" wire:click="promptCancel"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition shadow-sm">
                         Cancelar
-                    </a>
+                    </button>
+                    <button type="button" wire:click="promptClear"
+                        class="px-5 py-2.5 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 transition shadow-sm inline-flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">delete_sweep</span>
+                        Limpiar
+                    </button>
                     <button type="submit"
                         class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition inline-flex items-center gap-2">
                         <span class="material-symbols-outlined text-base">save</span>
@@ -275,4 +324,95 @@
             </form>
         </div>
     </div>
+</div>
+
+{{-- Modal confirmar guardar --}}
+@if($confirmingSave)
+    <div x-data="{ open: true }" x-show="open" x-cloak
+        class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        style="display: none;">
+        <div class="relative mx-auto p-5 w-full max-w-md">
+            <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                <div class="p-6 text-center">
+                    <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 mb-4">
+                        <span class="material-symbols-outlined text-blue-600 text-2xl">help</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">Confirmar acción</h3>
+                    <p class="text-sm text-gray-600 mt-2">{{ $clientId ? '¿Guardar los cambios del cliente?' : '¿Registrar este nuevo cliente?' }}</p>
+                </div>
+                <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                    <button type="button" wire:click="executeSave"
+                        class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition inline-flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-base">check</span>
+                        Sí, continuar
+                    </button>
+                    <button type="button" @click="open = false" wire:click="cancelSave"
+                        class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition shadow-sm">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
+
+{{-- Modal confirmar limpiar --}}
+@if($confirmingClear)
+    <div x-data="{ open: true }" x-show="open" x-cloak
+        class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        style="display: none;">
+        <div class="relative mx-auto p-5 w-full max-w-md">
+            <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                <div class="p-6 text-center">
+                    <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 mb-4">
+                        <span class="material-symbols-outlined text-red-600 text-2xl">delete_sweep</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">Limpiar campos</h3>
+                    <p class="text-sm text-gray-600 mt-2">¿Estás seguro de limpiar todos los campos? Se perderán los datos ingresados.</p>
+                </div>
+                <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                    <button type="button" wire:click="executeClear"
+                        class="w-full sm:w-auto px-5 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 transition inline-flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-base">delete_sweep</span>
+                        Sí, limpiar
+                    </button>
+                    <button type="button" @click="open = false" wire:click="cancelClear"
+                        class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition shadow-sm">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
+
+{{-- Modal confirmar cancelar (Alpine) --}}
+<div x-data="{ showCancelModal: false }"
+    x-on:confirm-cancel.window="showCancelModal = true"
+    x-show="showCancelModal" x-cloak
+    class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+    style="display: none;">
+    <div class="relative mx-auto p-5 w-full max-w-md">
+        <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+            <div class="p-6 text-center">
+                <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-gray-100 mb-4">
+                    <span class="material-symbols-outlined text-gray-600 text-2xl">arrow_back</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">¿Salir del formulario?</h3>
+                <p class="text-sm text-gray-600 mt-2">Los cambios no guardados se perderán.</p>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                <button type="button" wire:click="executeCancel"
+                    class="w-full sm:w-auto px-5 py-2.5 bg-gray-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 transition inline-flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-base">logout</span>
+                    Salir
+                </button>
+                <button type="button" @click="showCancelModal = false"
+                    class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition shadow-sm">
+                    Seguir editando
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
