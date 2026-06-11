@@ -6,8 +6,9 @@
                 <span class="material-symbols-outlined text-gray-400 text-base">badge</span>
                 Nombre *
             </label>
-            <div class="relative">
+            <div class="relative" x-data>
                 <input type="text" wire:model="name"
+                    x-on:input="if ($event.isTrusted) { $el.value = $el.value.replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]/g, ''); $el.dispatchEvent(new Event('input', { bubbles: true })); }"
                     class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                     placeholder="Nombre completo del cliente">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">edit_note</span>
@@ -26,9 +27,6 @@
                     class="w-full py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
                     <option value="">Seleccionar tipo</option>
                     <option value="dui">DUI</option>
-                    <option value="cedula">Cédula</option>
-                    <option value="ruc">RUC</option>
-                    <option value="pasaporte">Pasaporte</option>
                 </select>
             </div>
             <div>
@@ -36,10 +34,18 @@
                     <span class="material-symbols-outlined text-gray-400 text-base">pin</span>
                     Número de documento
                 </label>
-                <div class="relative">
-                    <input type="text" wire:model="document_number"
+                <div class="relative" x-data>
+                <input type="text" wire:model="document_number"
+                    x-on:input="
+                        if ($event.isTrusted) {
+                            let val = $el.value.replace(/[^0-9]/g, '').slice(0,9);
+                            if (val.length > 8) val = val.slice(0,8) + '-' + val.slice(8);
+                            $el.value = val;
+                            $el.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                    "
                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                        placeholder="Número de identificación">
+                        placeholder="00000000-0" maxlength="10">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">tag</span>
                 </div>
                 @error('document_number') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
@@ -54,19 +60,35 @@
             </label>
             <div class="space-y-2">
                 <div class="flex items-start gap-2">
-                    <div class="flex-1 relative">
+                    <div class="flex-1 relative" x-data>
                         <input type="text" wire:model="phone"
+                            x-on:input="
+                                if ($event.isTrusted) {
+                                    let val = $el.value.replace(/[^0-9]/g, '').slice(0,8);
+                                    if (val.length > 4) val = val.slice(0,4) + '-' + val.slice(4);
+                                    $el.value = val;
+                                    $el.dispatchEvent(new Event('input', { bubbles: true }));
+                                }
+                            "
                             class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                            placeholder="Teléfono principal">
+                            placeholder="0000-0000" maxlength="9">
                         <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">phone</span>
                     </div>
                 </div>
                 @foreach($phones as $index => $phone)
-                    <div class="flex items-start gap-2">
+                    <div class="flex items-start gap-2" x-data>
                         <div class="flex-1 relative">
                             <input type="text" wire:model="phones.{{ $index }}.number"
+                                x-on:input="
+                                    if ($event.isTrusted) {
+                                        let val = $el.value.replace(/[^0-9]/g, '').slice(0,8);
+                                        if (val.length > 4) val = val.slice(0,4) + '-' + val.slice(4);
+                                        $el.value = val;
+                                        $el.dispatchEvent(new Event('input', { bubbles: true }));
+                                    }
+                                "
                                 class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                placeholder="Número adicional">
+                                placeholder="0000-0000" maxlength="9">
                             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">phone</span>
                             @error('phones.' . $index . '.number') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                         </div>
@@ -148,10 +170,19 @@
                     <span class="material-symbols-outlined text-gray-400 text-base">explore</span>
                     Latitud
                 </label>
-                <div class="relative">
-                    <input type="number" step="any" wire:model="latitude"
+                <div class="relative" x-data="{
+                    formatCoordinate(value) {
+                        let clean = value.replace(/[^0-9]/g, '');
+                        if (clean.length > 2) {
+                            clean = clean.slice(0, 2) + '.' + clean.slice(2, 6);
+                        }
+                        return clean;
+                    }
+                }">
+                    <input type="text" wire:model="latitude"
+                        x-on:input="$el.value = formatCoordinate($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                        placeholder="Ej: 13.6929">
+                        placeholder="00.0000" maxlength="7" inputmode="decimal">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">pin_drop</span>
                 </div>
                 @error('latitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
@@ -161,27 +192,39 @@
                     <span class="material-symbols-outlined text-gray-400 text-base">explore</span>
                     Longitud
                 </label>
-                <div class="relative">
-                    <input type="number" step="any" wire:model="longitude"
+                <div class="relative" x-data="{
+                    formatCoordinate(value) {
+                        let hasMinus = value.startsWith('-');
+                        let clean = value.replace(/[^0-9]/g, '');
+                        if (clean.length > 2) {
+                            clean = clean.slice(0, 2) + '.' + clean.slice(2, 6);
+                        }
+                        return (hasMinus ? '-' : '') + clean;
+                    }
+                }">
+                    <input type="text" wire:model="longitude"
+                        x-on:input="$el.value = formatCoordinate($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                        placeholder="Ej: -89.1825">
+                        placeholder="-00.0000" maxlength="8" inputmode="decimal">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">pin_drop</span>
                 </div>
-                @error('longitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                @error('longitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
+                @enderror
             </div>
         </div>
         @endcan
 
-        {{-- Número de luz --}}
+        {{-- NC --}}
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-gray-400 text-base">bolt</span>
-                N.° de luz
+                NC
             </label>
-            <div class="relative">
+            <div class="relative" x-data>
                 <input type="text" wire:model="nro_luz"
+                    x-on:input="if ($event.isTrusted) { $el.value = $el.value.replace(/[^0-9]/g, '').slice(0,12); $el.dispatchEvent(new Event('input', { bubbles: true })); }"
                     class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                    placeholder="Número de medidor">
+                    placeholder="000000000000" maxlength="12">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">electric_meter</span>
             </div>
         </div>

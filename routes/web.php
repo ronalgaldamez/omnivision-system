@@ -140,17 +140,27 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/reports/technicians', \App\Livewire\Reports\TechnicianPerformance::class)->name('reports.technicians');
         });
     }
-
+    
     // ========== CLIENTS ==========
     Route::prefix('admin/clients')->middleware(['auth'])->group(function () {
-        Route::middleware('can:view clients')->group(function () {
-            Route::get('/', \App\Livewire\Admin\Clients\ClientIndex::class)->name('admin.clients.index');
-        });
+        // Rutas fijas primero
         Route::middleware('can:create clients')->group(function () {
             Route::get('/create', \App\Livewire\Admin\Clients\ClientForm::class)->name('admin.clients.create');
         });
+
+        // Ruta de edición (contiene barra, no compite con /{id})
         Route::middleware('can:edit clients')->group(function () {
             Route::get('/{id}/edit', \App\Livewire\Admin\Clients\ClientForm::class)->name('admin.clients.edit');
+        });
+
+        // Ruta de índice (sin parámetro)
+        Route::middleware('can:view clients')->group(function () {
+            Route::get('/', \App\Livewire\Admin\Clients\ClientIndex::class)->name('admin.clients.index');
+        });
+
+        // Ruta de show (con parámetro) DEBE IR AL FINAL
+        Route::middleware('can:view clients')->group(function () {
+            Route::get('/{id}', \App\Livewire\Admin\Clients\ClientShow::class)->name('admin.clients.show');
         });
     });
 

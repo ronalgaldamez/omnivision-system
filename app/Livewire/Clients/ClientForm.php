@@ -5,6 +5,7 @@ namespace App\Livewire\Clients;
 use Livewire\Component;
 use App\Models\Client;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ClientForm extends Component
 {
@@ -26,27 +27,60 @@ class ClientForm extends Component
     protected function rules()
     {
         return [
-            'name' => 'required|string|max:255',
-            'document_type' => 'nullable|in:dui,cedula,ruc,pasaporte',
-            'document_number' => 'nullable|string|max:50',
+            'name' => ['required', 'string', 'max:255', 'regex:/^[a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]+$/'],
+            'document_type' => 'nullable|in:dui',
+            'document_number' => ['required', 'string', 'max:10', 'regex:/^\d{8}-\d{1}$/', Rule::unique('clients', 'document_number')],
             'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:20',
+            'phone' => ['required', 'string', 'max:9', 'regex:/^\d{4}-\d{4}$/'],
             'address' => 'nullable|string',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'nro_luz' => 'nullable|string|max:50',
-            'installation_address' => 'nullable|string',
+            'nro_luz' => ['nullable', 'string', 'max:12', 'regex:/^\d{12}$/', Rule::unique('clients', 'nro_luz')],
+            'installation_address' => 'required|string',
             'service' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'phones' => 'nullable|array',
-            'phones.*.number' => 'required_with:phones.*.number|string|max:20',
+            'phones.*.number' => ['required_with:phones', 'string', 'max:9', 'regex:/^\d{4}-\d{4}$/'],
             'phones.*.type' => 'nullable|in:personal,casa,referencia,trabajo,otro',
         ];
     }
 
     public function mount()
     {
-        $this->phones = [];
+        // Recuperar borrador de sesión para el modal
+        $draft = session()->get('client_modal_draft', []);
+        $this->name = $draft['name'] ?? '';
+        $this->document_type = $draft['document_type'] ?? null;
+        $this->document_number = $draft['document_number'] ?? '';
+        $this->email = $draft['email'] ?? '';
+        $this->phone = $draft['phone'] ?? '';
+        $this->address = $draft['address'] ?? '';
+        $this->latitude = $draft['latitude'] ?? null;
+        $this->longitude = $draft['longitude'] ?? null;
+        $this->nro_luz = $draft['nro_luz'] ?? '';
+        $this->installation_address = $draft['installation_address'] ?? '';
+        $this->service = $draft['service'] ?? '';
+        $this->notes = $draft['notes'] ?? '';
+        $this->phones = $draft['phones'] ?? [];
+    }
+
+    public function updated($property)
+    {
+        session()->put('client_modal_draft', [
+            'name' => $this->name,
+            'document_type' => $this->document_type,
+            'document_number' => $this->document_number,
+            'email' => $this->email,
+            'phone' => $this->phone,
+            'address' => $this->address,
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
+            'nro_luz' => $this->nro_luz,
+            'installation_address' => $this->installation_address,
+            'service' => $this->service,
+            'notes' => $this->notes,
+            'phones' => $this->phones,
+        ]);
     }
 
     public function addPhone()
@@ -65,6 +99,9 @@ class ClientForm extends Component
         $this->latitude = is_numeric($this->latitude) ? (float) $this->latitude : null;
         $this->longitude = is_numeric($this->longitude) ? (float) $this->longitude : null;
 
+        // Limpiar nombre
+        $this->name = trim(preg_replace('/\s+/', ' ', $this->name));
+
         $errors = [];
         if ($this->latitude !== null) {
             $latStr = (string) $this->latitude;
@@ -82,8 +119,18 @@ class ClientForm extends Component
                 $errors[] = 'Longitud: valor fuera de rango (-180 a 180).';
             }
         }
+        if ($this->document_number) {
+            if (Client::where('document_number', $this->document_number)->exists()) {
+                $errors[] = 'El DUI ingresado ya pertenece a otro cliente.';
+            }
+        }
+        if ($this->nro_luz) {
+            if (Client::where('nro_luz', $this->nro_luz)->exists()) {
+                $errors[] = 'El NC ingresado ya pertenece a otro cliente.';
+            }
+        }
         if (!empty($errors)) {
-            $this->dispatch('show-toast', type: 'error', message: implode(' ', $errors));
+            $this->dispatch('show-toasts', errors: $errors);
             return;
         }
 
@@ -115,8 +162,9 @@ class ClientForm extends Component
             }
         });
 
-        // Dispatch global — funciona para cualquier componente que escuche con #[On('clientCreated')]
-        $this->dispatch('clientCreated',
+        session()->forget('client_modal_draft');
+        $this->dispatch(
+            'clientCreated',
             id: $client->id,
             name: $client->name,
             phone: $client->phone
