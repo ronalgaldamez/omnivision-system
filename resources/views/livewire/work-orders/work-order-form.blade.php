@@ -25,7 +25,54 @@
         <div class="p-6">
             <form wire:submit.prevent="save" class="space-y-6">
 
-                {{-- ========== SECCIÓN 1: ASIGNACIÓN ========== --}}
+                {{-- ========== SECCIÓN 1: SERVICIO ========== --}}
+                <div class="bg-gray-50/50 rounded-xl border border-gray-200 p-5 space-y-5">
+                    <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-gray-500">handyman</span>
+                        Tipo de Servicio
+                        @if(!$canEditNocAndService)
+                            <span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">Solo lectura</span>
+                        @endif
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Tipo de servicio *</label>
+                            @if($canEditNocAndService)
+                                <select wire:model.live="service_type_id"
+                                    class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
+                                    <option value="">Seleccione</option>
+                                    @foreach($serviceTypes as $type)
+                                        <option value="{{ $type->id }}">{{ str_replace('_', ' ', $type->name) }}</option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <div class="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700">
+                                    @php $selectedType = $serviceTypes->firstWhere('id', $service_type_id); @endphp
+                                    {{ $selectedType ? str_replace('_', ' ', $selectedType->name) : 'No definido' }}
+                                </div>
+                            @endif
+                            @error('service_type_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">¿Requiere NOC?</label>
+                                <p class="text-xs text-gray-500 mt-0.5">Si se activa, el ticket se enviará al panel NOC.</p>
+                            </div>
+                            @if($canEditNocAndService)
+                                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                    <input type="checkbox" wire:model.live="requires_noc" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            @else
+                                <span class="px-3 py-1.5 rounded-full text-xs font-medium {{ $requires_noc ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600' }}">
+                                    {{ $requires_noc ? 'Sí' : 'No' }}
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ========== SECCIÓN 2: ASIGNACIÓN ========== --}}
                 <div class="bg-gray-50/50 rounded-xl border border-gray-200 p-5 space-y-5">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
                         <span class="material-symbols-outlined text-gray-500">assignment_ind</span>
@@ -183,7 +230,7 @@
                     @endif
                 </div>
 
-                {{-- ========== SECCIÓN 2: PROGRAMACIÓN ========== --}}
+                {{-- ========== SECCIÓN 3: PROGRAMACIÓN ========== --}}
                 <div class="bg-gray-50/50 rounded-xl border border-gray-200 p-5 space-y-5">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
                         <span class="material-symbols-outlined text-gray-500">calendar_month</span>
@@ -228,7 +275,7 @@
                     </div>
                 </div>
 
-                {{-- ========== SECCIÓN 3: UBICACIÓN ========== --}}
+                {{-- ========== SECCIÓN 4: UBICACIÓN ========== --}}
                 <div class="bg-gray-50/50 rounded-xl border border-gray-200 p-5 space-y-5">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
                         <span class="material-symbols-outlined text-gray-500">location_on</span>
@@ -286,11 +333,16 @@
                     </div>
                 </div>
 
-                {{-- ========== SECCIÓN 4: DATOS TÉCNICOS ========== --}}
+                {{-- ========== SECCIÓN 5: DATOS TÉCNICOS ========== --}}
                 <div class="bg-gray-50/50 rounded-xl border border-gray-200 p-5 space-y-5">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
                         <span class="material-symbols-outlined text-gray-500">settings</span>
                         Datos Técnicos
+                        @if($technicalDataLoaded)
+                            <span
+                                class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Precargados
+                                del cliente</span>
+                        @endif
                     </h2>
                     <p class="text-xs text-gray-500">Estos campos serán llenados por el técnico durante la instalación.
                     </p>
@@ -300,7 +352,7 @@
                                 <span class="material-symbols-outlined text-gray-400 text-sm">person</span>
                                 Nombre de perfil
                             </label>
-                            <input type="text" wire:model="profile_name" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model="profile_name" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
                                 placeholder="Ej: Usuario1">
                         </div>
@@ -309,7 +361,7 @@
                                 <span class="material-symbols-outlined text-gray-400 text-sm">key</span>
                                 Contraseña de perfil
                             </label>
-                            <input type="text" wire:model="profile_password" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model="profile_password" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
                                 placeholder="Contraseña">
                         </div>
@@ -318,7 +370,7 @@
                                 <span class="material-symbols-outlined text-gray-400 text-sm">wifi</span>
                                 Nombre wifi
                             </label>
-                            <input type="text" wire:model="wifi_name" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model="wifi_name" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
                                 placeholder="SSID">
                         </div>
@@ -327,7 +379,7 @@
                                 <span class="material-symbols-outlined text-gray-400 text-sm">key</span>
                                 Contraseña wifi
                             </label>
-                            <input type="text" wire:model="wifi_password" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model="wifi_password" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
                                 placeholder="Contraseña">
                         </div>
@@ -336,7 +388,7 @@
                                 <span class="material-symbols-outlined text-gray-400 text-sm">lan</span>
                                 MAC
                             </label>
-                            <input type="text" wire:model="mac" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model="mac" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
                                 placeholder="00:00:00:00:00:00">
                         </div>
@@ -346,7 +398,7 @@
                                     class="material-symbols-outlined text-gray-400 text-sm">settings_input_antenna</span>
                                 PON
                             </label>
-                            <input type="text" wire:model="pon" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model="pon" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
                                 placeholder="PON">
                         </div>
@@ -355,7 +407,7 @@
                                 <span class="material-symbols-outlined text-gray-400 text-sm">cable</span>
                                 Mufa
                             </label>
-                            <input type="text" wire:model="mufa" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="text" wire:model="mufa" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
                                 placeholder="Número de mufa">
                         </div>
@@ -364,13 +416,13 @@
                                 <span class="material-symbols-outlined text-gray-400 text-sm">calendar_today</span>
                                 Fecha de instalación
                             </label>
-                            <input type="date" wire:model="installation_date" {{ !$canEditTech ? 'disabled' : '' }}
+                            <input type="date" wire:model="installation_date" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100">
                         </div>
                     </div>
                 </div>
 
-                {{-- ========== SECCIÓN 5: NOTAS ========== --}}
+                {{-- ========== SECCIÓN 6: NOTAS ========== --}}
                 <div class="bg-gray-50/50 rounded-xl border border-gray-200 p-5 space-y-5">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
                         <span class="material-symbols-outlined text-gray-500">sticky_note_2</span>
