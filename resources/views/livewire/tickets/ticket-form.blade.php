@@ -273,27 +273,67 @@
                     </div>
                 @endif
 
-                <!-- Switch Requiere NOC -->
-                <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
-                    <div class="flex items-center justify-between gap-4">
-                        <div>
-                            <label class="text-sm font-medium text-gray-700">¿Requiere intervención del NOC?</label>
-                            <p class="text-xs text-gray-500 mt-0.5">Si se activa, el ticket se enviará al panel NOC y no se creará OT automáticamente.</p>
+                <!-- Switches: Crear OT / Requiere NOC -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Crear OT</label>
+                                <p class="text-xs text-gray-500 mt-0.5">Generar orden de trabajo directamente desde el ticket.</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                @if($create_ot)
+                                    <span class="px-2.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
+                                        OT: Sí
+                                    </span>
+                                @else
+                                    <span class="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                                        OT: No
+                                    </span>
+                                @endif
+                                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                    <input type="checkbox" wire:model.live="create_ot" {{ $editingEnabled ? '' : 'disabled' }} class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                                </label>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-3">
-                            @if($requires_noc)
-                                <span class="px-2.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                    NOC: Sí
-                                </span>
-                            @else
-                                <span class="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                                    NOC: No
-                                </span>
-                            @endif
-                            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                                <input type="checkbox" wire:model.live="requires_noc" {{ $editingEnabled ? '' : 'disabled' }} class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
+                    </div>
+                    <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">¿Requiere intervención del NOC?</label>
+                                <p class="text-xs text-gray-500 mt-0.5">Se enviará al panel NOC para su resolución.</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                @if($requires_noc)
+                                    <span class="px-2.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                        NOC: Sí
+                                    </span>
+                                @else
+                                    <span class="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                                        NOC: No
+                                    </span>
+                                @endif
+                                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                    <input type="checkbox" wire:model.live="requires_noc" {{ $editingEnabled ? '' : 'disabled' }} class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Info: cuándo usar OT vs NOC --}}
+                <div class="bg-amber-50/80 border border-amber-200 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined text-amber-500 text-xl flex-shrink-0">info</span>
+                        <div class="text-xs text-amber-800 space-y-1.5">
+                            <p class="font-medium">¿Cuándo usar cada opción?</p>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li><strong>Crear OT</strong> — El problema requiere visita técnica en campo. Se genera una orden de trabajo para que el supervisor asigne a un técnico.</li>
+                                <li><strong>Requiere NOC</strong> — El problema puede resolverse de forma remota (configuración, señal, plataforma). El NOC lo evaluará y, si no puede resolverlo, generará una OT.</li>
+                                <li><strong>Ninguno</strong> — El ticket se soluciona directamente desde la mesa de ayuda (L1), sin necesidad de escalar ni enviar técnico.</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -336,6 +376,12 @@
                         class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition inline-flex items-center gap-2">
                         <span class="material-symbols-outlined text-base">send</span>
                         Generar Ticket
+                    </button>
+                @elseif($create_ot)
+                    <button type="button" wire:click="confirmSolve"
+                        class="px-5 py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 transition inline-flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">engineering</span>
+                        Crear OT y Finalizar
                     </button>
                 @else
                     <button type="button" wire:click="confirmSolve"
@@ -424,8 +470,12 @@
                         <h3 class="text-lg font-semibold text-gray-900">Confirmar acción</h3>
                         <p class="text-sm text-gray-600 mt-2">
                             ¿Estás seguro de guardar este ticket?
-                            @if(!$ticketId && !$requires_noc)
-                                <span class="block text-xs text-gray-500 mt-1">Se creará automáticamente la orden de trabajo correspondiente.</span>
+                            @if(!$ticketId && $create_ot)
+                                <span class="block text-xs text-amber-600 mt-1">Se creará una orden de trabajo a partir del ticket.</span>
+                            @elseif(!$ticketId && $requires_noc)
+                                <span class="block text-xs text-blue-600 mt-1">El ticket será escalado al panel NOC.</span>
+                            @elseif(!$ticketId)
+                                <span class="block text-xs text-gray-500 mt-1">El ticket quedará registrado sin generar OT.</span>
                             @endif
                         </p>
                     </div>
@@ -455,9 +505,16 @@
                         <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 mb-4">
                             <span class="material-symbols-outlined text-green-600 text-2xl">check_circle</span>
                         </div>
-                        <h3 class="text-lg font-semibold text-gray-900">¿Solucionar ticket?</h3>
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            {{ $create_ot ? '¿Crear OT?' : '¿Solucionar ticket?' }}
+                        </h3>
                         <p class="text-sm text-gray-600 mt-2">
-                            Se guardarán todos los datos y se marcará el ticket como resuelto. El cronómetro se detendrá.
+                            @if($create_ot)
+                                Se creará una orden de trabajo vinculada al ticket. El ticket quedará <strong>en seguimiento</strong> hasta que la OT se complete.
+                            @else
+                                Se guardarán todos los datos y se marcará el ticket como resuelto.
+                            @endif
+                            El cronómetro se detendrá.
                         </p>
                         @if($elapsedSeconds > 0)
                             <p class="text-sm text-gray-500 mt-1">
@@ -467,8 +524,8 @@
                     </div>
                     <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
                         <button type="button" wire:click="executeSolve"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
-                            Sí, solucionar
+                            class="w-full sm:w-auto px-5 py-2.5 {{ $create_ot ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700' }} text-white text-sm font-medium rounded-lg shadow-sm transition">
+                            {{ $create_ot ? 'Sí, crear OT' : 'Sí, solucionar' }}
                         </button>
                         <button type="button" @click="open = false" wire:click="cancelSolve"
                             class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">

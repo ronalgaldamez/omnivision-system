@@ -71,10 +71,17 @@
                     <span class="material-symbols-outlined text-gray-400">account_balance</span>
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Cuentas bancarias</p>
-                        @if($supplier->bank_accounts)
+                        @php
+                            $accounts = $supplier->bank_accounts;
+                            if (is_string($accounts)) {
+                                $accounts = array_filter(explode("\n", $accounts));
+                            }
+                        @endphp
+                        @if(!empty($accounts))
                             <ul class="list-disc list-inside text-gray-700">
-                                @foreach($supplier->bank_accounts as $account)
-                                    <li>{{ $account['bank_name'] ?? '' }}: {{ $account['account_number'] ?? '' }}</li>
+                                @foreach($accounts as $account)
+                                    <li>{{ is_array($account) ? ($account['bank_name'] ?? $account['account_number'] ?? '') : trim($account) }}
+                                    </li>
                                 @endforeach
                             </ul>
                         @else
@@ -211,7 +218,8 @@
                             @forelse($movements as $mov)
                                 <tr class="hover:bg-gray-50/80 transition">
                                     <td class="px-4 py-3 font-mono text-xs text-gray-700">
-                                        {{ $mov->created_at->format('d/m/Y H:i') }}</td>
+                                        {{ $mov->created_at->format('d/m/Y H:i') }}
+                                    </td>
                                     <td class="px-4 py-3 text-gray-800">{{ $mov->product->name }}</td>
                                     <td class="px-4 py-3 text-center text-gray-700">{{ $mov->type }}</td>
                                     <td class="px-4 py-3 text-right text-gray-800">{{ $mov->quantity }}</td>

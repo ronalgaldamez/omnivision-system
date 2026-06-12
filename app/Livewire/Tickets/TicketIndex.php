@@ -32,7 +32,7 @@ class TicketIndex extends Component
         } elseif ($user->can('view own tickets')) {
             $query->where('created_by', $user->id);
         } else {
-            $tickets = collect();
+            $tickets = Ticket::query()->whereKey(0)->paginate(15);
             return view('livewire.tickets.ticket-index', compact('tickets'))->layout('components.layouts.app');
         }
 

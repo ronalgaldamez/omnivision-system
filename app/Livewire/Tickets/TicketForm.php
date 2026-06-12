@@ -19,6 +19,7 @@ class TicketForm extends Component
     public $priority = '';
     public $origin = '';
     public $requires_noc = false;
+    public $create_ot = false;
     public $status = 'pending';
 
     public $clientSearch = '';
@@ -140,6 +141,7 @@ class TicketForm extends Component
             $this->priority = $draft['priority'] ?? '';
             $this->origin = $draft['origin'] ?? '';
             $this->requires_noc = $draft['requires_noc'] ?? false;
+            $this->create_ot = $draft['create_ot'] ?? false;
             $this->clientSearch = $draft['clientSearch'] ?? '';
 
             if (!empty($draft['client_id'])) {
@@ -177,6 +179,7 @@ class TicketForm extends Component
             'priority' => $this->priority,
             'origin' => $this->origin,
             'requires_noc' => $this->requires_noc,
+            'create_ot' => $this->create_ot,
             'clientSearch' => $this->clientSearch,
         ]);
     }
@@ -185,6 +188,7 @@ class TicketForm extends Component
     {
         if (empty($value)) {
             $this->requires_noc = false;
+            $this->create_ot = false;
             $this->knowledgeArticles = collect();
             $this->priority = 'P3';
             return;
@@ -193,6 +197,7 @@ class TicketForm extends Component
         $serviceType = ServiceType::find($value);
         if ($serviceType) {
             $this->requires_noc = $serviceType->requires_noc;
+            $this->create_ot = false; // si el servicio requiere NOC, anula crear OT
         } else {
             $this->requires_noc = false;
         }
@@ -203,6 +208,20 @@ class TicketForm extends Component
         // Persistir el cambio en el ticket abierto
         if ($this->ticketOpened && $this->ticketId) {
             $this->persistOpenTicket('service_type_id');
+        }
+    }
+
+    public function updatedCreateOt($value)
+    {
+        if ($value) {
+            $this->requires_noc = false;
+        }
+    }
+
+    public function updatedRequiresNoc($value)
+    {
+        if ($value) {
+            $this->create_ot = false;
         }
     }
 
@@ -279,7 +298,8 @@ class TicketForm extends Component
         return !empty(trim($this->description))
             || !empty($this->service_type_id)
             || !empty($this->origin)
-            || $this->requires_noc;
+            || $this->requires_noc
+            || $this->create_ot;
     }
 
     public function proceedToNewClient()
@@ -313,6 +333,7 @@ class TicketForm extends Component
         $this->priority = '';
         $this->origin = '';
         $this->requires_noc = false;
+        $this->create_ot = false;
         $this->knowledgeArticles = collect();
 
         if (!$this->ticketId && !$this->ticketOpened) {
@@ -392,23 +413,43 @@ class TicketForm extends Component
         $serviceType = ServiceType::find($this->service_type_id);
         $serviceName = $serviceType ? $serviceType->name : '';
 
-        $ticket->update([
-            'client_id' => $this->client_id,
-            'description' => $this->description,
-            'service_type' => $serviceName,
-            'priority' => $this->priority,
-            'origin' => $this->origin,
-            'requires_noc' => $this->requires_noc,
-            'status' => 'resolved',
-            'resolved_at' => now(),
-            'l1_ended_at' => now(),
-        ]);
+        if ($this->create_ot) {
+            // Crear OT sin resolver el ticket (igual que flujo NOC)
+            $this->createWorkOrder($ticket);
+
+            $ticket->update([
+                'client_id' => $this->client_id,
+                'description' => $this->description,
+                'service_type' => $serviceName,
+                'priority' => $this->priority,
+                'origin' => $this->origin,
+                'status' => 'in_progress',
+                'l1_ended_at' => now(),
+            ]);
+        } else {
+            // Solucionar ticket normalmente
+            $ticket->update([
+                'client_id' => $this->client_id,
+                'description' => $this->description,
+                'service_type' => $serviceName,
+                'priority' => $this->priority,
+                'origin' => $this->origin,
+                'requires_noc' => $this->requires_noc,
+                'status' => 'resolved',
+                'resolved_at' => now(),
+                'l1_ended_at' => now(),
+            ]);
+        }
 
         // Limpiar sesión
         session()->forget('open_ticket_id');
         session()->forget('ticket_draft');
 
-        session()->flash('message', 'Ticket resuelto correctamente. Tiempo total: ' . gmdate('H:i:s', $this->elapsedSeconds));
+        $message = $this->create_ot
+            ? 'OT generada correctamente. Ticket en seguimiento.'
+            : 'Ticket resuelto correctamente. Tiempo total: ' . gmdate('H:i:s', $this->elapsedSeconds);
+
+        session()->flash('message', $message);
 
         return redirect()->route('tickets.index');
     }
@@ -502,11 +543,9 @@ class TicketForm extends Component
             $ticket->ticket_code = $this->generateTicketCode($ticket->id);
             $ticket->save();
 
-            if (!$this->requires_noc) {
+            if ($this->create_ot) {
                 $this->createWorkOrder($ticket);
-            }
-
-            if ($this->requires_noc) {
+            } elseif ($this->requires_noc) {
                 $this->dispatch('ticket-created-for-noc');
                 $this->dispatch('show-toast', type: 'info', message: 'Nuevo ticket requiere atención del NOC.');
             }
@@ -528,7 +567,7 @@ class TicketForm extends Component
             'description' => $ticket->description,
             'service_type' => $ticket->service_type,
             'status' => 'pending',
-            // 'started_at' => now(),   // ← añadir esta línea
+            'created_by' => Auth::id(),
         ]);
     }
 

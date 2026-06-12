@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\WorkOrder;
 use App\Models\Client;
 use App\Models\Ticket;
+use App\Models\ServiceType;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
@@ -40,6 +41,13 @@ class WorkOrderForm extends Component
     public $technicianSearch = '';
     public $technicianResults = [];
 
+    // Nuevos campos para OT puras
+    public $service_type_id = '';
+    public $requires_noc = false;
+    public $isPureOT = false;
+    public $technicalDataLoaded = false;
+    public $canEditNocAndService = false; // ← NUEVO
+
     protected function rules()
     {
         $rules = [
@@ -57,6 +65,8 @@ class WorkOrderForm extends Component
             'pon' => 'nullable|string|max:255',
             'mufa' => 'nullable|string|max:255',
             'installation_date' => 'nullable|date',
+            'service_type_id' => 'required|exists:service_types,id',
+            'requires_noc' => 'boolean',
         ];
 
         if ($this->canAssign) {
@@ -72,8 +82,12 @@ class WorkOrderForm extends Component
     {
         $user = Auth::user();
         $this->canAssign = $user->can('assign technicians');
+        $this->canEditNocAndService = !$id && !$ticket_id; // solo editable en creación de OT pura
+
+        $this->isPureOT = !$id && !$ticket_id;
 
         if ($id) {
+            // Edición de OT existente
             $order = WorkOrder::with('products')->findOrFail($id);
             $this->orderId = $order->id;
             $this->technician_id = $order->technician_id;
@@ -87,11 +101,9 @@ class WorkOrderForm extends Component
             $this->status = $order->status;
             $this->scheduled_date = $order->scheduled_date?->format('Y-m-d');
             $this->notes = $order->notes;
-
             if ($order->technician) {
                 $this->technicianSearch = $order->technician->name;
             }
-
             $this->wifi_name = $order->wifi_name;
             $this->wifi_password = $order->wifi_password;
             $this->profile_name = $order->profile_name;
@@ -100,10 +112,17 @@ class WorkOrderForm extends Component
             $this->pon = $order->pon;
             $this->mufa = $order->mufa;
             $this->installation_date = $order->installation_date?->format('Y-m-d');
-
             $this->canEditTech = $user->id === $order->technician_id
                 && in_array($order->status, ['pending', 'in_progress']);
+
+            // Cargar requires_noc desde la BD
+            $this->requires_noc = (bool) $order->requires_noc;
+
+            // Cargar service_type_id buscando por nombre
+            $serviceType = ServiceType::where('name', $order->service_type)->first();
+            $this->service_type_id = $serviceType ? $serviceType->id : '';
         } else {
+            // Creación
             if ($user->cannot('create work_orders')) {
                 abort(403, 'No tienes permiso para crear órdenes de trabajo.');
             }
@@ -124,6 +143,10 @@ class WorkOrderForm extends Component
                         $this->latitude = $client->latitude;
                         $this->longitude = $client->longitude;
                     }
+                    // Heredar datos del ticket
+                    $this->requires_noc = (bool) $ticket->requires_noc;
+                    $serviceType = ServiceType::where('name', $ticket->service_type)->first();
+                    $this->service_type_id = $serviceType ? $serviceType->id : '';
                 }
             }
         }
@@ -168,19 +191,17 @@ class WorkOrderForm extends Component
     {
         $id = (int) $id;
         $client = Client::find($id);
-
         if (!$client) {
             $this->dispatch('show-toast', type: 'error', message: 'El cliente seleccionado ya no existe.');
             return;
         }
-
         $this->client_id = $id;
         $this->selectedClient = $client;
         $this->clientSearch = $name . ($phone ? ' (' . $phone . ')' : '');
         $this->clientSearchResults = [];
-
         $this->latitude = $client->latitude;
         $this->longitude = $client->longitude;
+        $this->loadTechnicalDataFromClient();
     }
 
     public function openClientModal()
@@ -192,6 +213,34 @@ class WorkOrderForm extends Component
     public function closeClientModal()
     {
         $this->showClientModal = false;
+    }
+
+    private function loadTechnicalDataFromClient()
+    {
+        if (!$this->client_id || !$this->isPureOT) {
+            $this->technicalDataLoaded = false;
+            return;
+        }
+
+        $lastCompleted = WorkOrder::where('client_id', $this->client_id)
+            ->where('status', 'completed')
+            ->whereNotNull('wifi_name')
+            ->orderBy('completed_date', 'desc')
+            ->first();
+
+        if ($lastCompleted) {
+            $this->wifi_name = $lastCompleted->wifi_name;
+            $this->wifi_password = $lastCompleted->wifi_password;
+            $this->profile_name = $lastCompleted->profile_name;
+            $this->profile_password = $lastCompleted->profile_password;
+            $this->mac = $lastCompleted->mac;
+            $this->pon = $lastCompleted->pon;
+            $this->mufa = $lastCompleted->mufa;
+            $this->installation_date = $lastCompleted->installation_date?->format('Y-m-d');
+            $this->technicalDataLoaded = true;
+        } else {
+            $this->technicalDataLoaded = false;
+        }
     }
 
     private function generateWorkOrderCode(): string
@@ -240,6 +289,9 @@ class WorkOrderForm extends Component
             throw $e;
         }
 
+        $serviceType = ServiceType::find($this->service_type_id);
+        $serviceName = $serviceType ? $serviceType->name : '';
+
         $orderData = [
             'technician_id' => $this->technician_id,
             'client_id' => $this->client_id,
@@ -248,6 +300,8 @@ class WorkOrderForm extends Component
             'status' => $this->status,
             'scheduled_date' => $this->scheduled_date,
             'notes' => $this->notes,
+            'service_type' => $serviceName,
+            'requires_noc' => $this->requires_noc,
             'wifi_name' => $this->wifi_name,
             'wifi_password' => $this->wifi_password,
             'profile_name' => $this->profile_name,
@@ -264,15 +318,21 @@ class WorkOrderForm extends Component
         } else {
             $orderData['code'] = $this->generateWorkOrderCode();
             $orderData['created_by'] = Auth::id();
+
+            // Si es OT pura, arrancar SLA
+            if ($this->isPureOT) {
+                $orderData['sla_started_at'] = now();
+            }
+
             $order = WorkOrder::create($orderData);
         }
 
-        // Registrar la asignación si se asignó un técnico y aún no tiene assigned_at
+        // Registrar asignación si se asignó un técnico
         if ($this->technician_id && !$order->assigned_at) {
             $order->update(['assigned_at' => now()]);
         }
 
-        // Si hay coordenadas, copiarlas al cliente
+        // Copiar coordenadas al cliente
         if ($this->client_id && ($this->latitude || $this->longitude)) {
             $client = Client::find($this->client_id);
             if ($client) {
@@ -288,6 +348,8 @@ class WorkOrderForm extends Component
 
     public function render()
     {
-        return view('livewire.work-orders.work-order-form')->layout('components.layouts.app');
+        $serviceTypes = ServiceType::orderBy('name')->get();
+        return view('livewire.work-orders.work-order-form', compact('serviceTypes'))
+            ->layout('components.layouts.app');
     }
 }

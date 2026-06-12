@@ -23,9 +23,9 @@ class WorkOrder extends Model
         'description',
         'code',
         'started_at',
+        'sla_started_at',
         'accumulated_seconds',
         'created_by',
-        // Nuevos campos técnicos
         'wifi_name',
         'wifi_password',
         'profile_name',
@@ -34,16 +34,19 @@ class WorkOrder extends Model
         'pon',
         'mufa',
         'installation_date',
-        'assigned_at', // ← agregado
+        'assigned_at',
+        'requires_noc',
     ];
 
     protected $casts = [
         'scheduled_date' => 'date',
         'completed_date' => 'datetime',
         'started_at' => 'datetime',
+        'sla_started_at' => 'datetime',
         'accumulated_seconds' => 'integer',
         'installation_date' => 'date',
-        'assigned_at' => 'datetime', // ← agregado
+        'assigned_at' => 'datetime',
+        'requires_noc' => 'boolean',
     ];
 
     public function technician()
@@ -80,5 +83,4 @@ class WorkOrder extends Model
     {
         return $this->hasMany(WorkOrderPause::class);
     }
-    
 }
