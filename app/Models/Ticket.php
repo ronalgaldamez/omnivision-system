@@ -21,6 +21,8 @@ class Ticket extends Model
         'resolved_by',
         'resolved_at',
         'ticket_code',
+        'zone_id',
+        'plan_id',
         // Tiempos L1 — Atención al Cliente
         'started_at',
         'l1_ended_at',
@@ -58,5 +60,15 @@ class Ticket extends Model
     public function workOrder()
     {
         return $this->hasOne(WorkOrder::class);
+    }
+
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class);
+    }
+
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
     }
 }

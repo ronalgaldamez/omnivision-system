@@ -179,4 +179,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin/catalog')->middleware(['auth', 'can:manage catalog'])->group(function () {
         Route::get('/', \App\Livewire\Admin\Catalog\CatalogManager::class)->name('admin.catalog');
     });
+    Route::prefix('admin/plans')->middleware(['auth', 'can:manage catalog'])->group(function () {
+        Route::get('/', \App\Livewire\Admin\Plans\PlanManager::class)->name('admin.plans');
+    });
 });

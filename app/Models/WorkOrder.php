@@ -36,6 +36,8 @@ class WorkOrder extends Model
         'installation_date',
         'assigned_at',
         'requires_noc',
+        'zone_id',
+        'plan_id',
     ];
 
     protected $casts = [
@@ -82,5 +84,15 @@ class WorkOrder extends Model
     public function pauses()
     {
         return $this->hasMany(WorkOrderPause::class);
+    }
+
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class);
+    }
+
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
     }
 }
