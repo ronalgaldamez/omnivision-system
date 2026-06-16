@@ -2,6 +2,15 @@
     $hasChildren = $zone->children->count() > 0;
     $isExpanded = in_array($zone->id, $expandedZones);
     $isSelected = $selectedZoneId === $zone->id;
+    if ($zone->has_internet && $zone->has_cable) {
+        $serviceBadge = ['label' => 'Internet + Cable', 'class' => 'bg-green-100 text-green-700'];
+    } elseif ($zone->has_internet) {
+        $serviceBadge = ['label' => 'Solo Internet', 'class' => 'bg-blue-100 text-blue-700'];
+    } elseif ($zone->has_cable) {
+        $serviceBadge = ['label' => 'Solo Cable', 'class' => 'bg-amber-100 text-amber-700'];
+    } else {
+        $serviceBadge = ['label' => 'Sin servicio', 'class' => 'bg-gray-100 text-gray-400'];
+    }
 @endphp
 <div class="relative" style="padding-left: {{ $depth * 1.5 }}rem;">
     @if($depth > 0)
@@ -25,16 +34,40 @@
         @endif
 
         <button wire:click="selectZone({{ $zone->id }})"
-            class="flex-1 text-left text-sm {{ $isSelected ? 'text-blue-700 font-semibold' : 'text-gray-800' }} hover:text-blue-600 truncate">
+            class="flex-shrink-0 text-left text-sm {{ $isSelected ? 'text-blue-700 font-semibold' : 'text-gray-800' }} hover:text-blue-600 truncate min-w-0">
             {{ $zone->name }}
         </button>
 
+        <span class="flex-shrink-0 text-xs {{ $serviceBadge['class'] }} px-1.5 py-0.5 rounded font-medium">{{ $serviceBadge['label'] }}</span>
+
         <span class="flex-shrink-0 text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{{ ucfirst($zone->level) }}</span>
 
-        <button wire:click="openSubZoneModal({{ $zone->id }})"
-            class="flex-shrink-0 opacity-0 group-hover:opacity-100 text-green-600 hover:text-green-700 transition-opacity"
-            title="Agregar sub-zona">
-            <span class="material-symbols-outlined text-base">add_circle</span>
+        <div class="relative flex-shrink-0">
+            <button wire:click="toggleZoneMenu({{ $zone->id }})"
+                class="opacity-0 group-hover:opacity-100 text-green-600 hover:text-green-700 transition-opacity"
+                title="Acciones">
+                <span class="material-symbols-outlined text-base">add_circle</span>
+            </button>
+            @if($zoneActionMenu === $zone->id)
+            <div class="absolute right-0 top-7 z-50 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-1 text-sm">
+                <button wire:click="openSubZoneModal({{ $zone->id }})"
+                    class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
+                    <span class="material-symbols-outlined text-sm text-green-600">add</span>
+                    Agregar sub-zona
+                </button>
+                <button wire:click="openQuickPriceModal({{ $zone->id }})"
+                    class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
+                    <span class="material-symbols-outlined text-sm text-amber-600">attach_money</span>
+                    Ajustar precios
+                </button>
+            </div>
+            @endif
+        </div>
+
+        <button wire:click="viewZone({{ $zone->id }})"
+            class="flex-shrink-0 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-opacity"
+            title="Ver detalles">
+            <span class="material-symbols-outlined text-base">visibility</span>
         </button>
 
         <button wire:click="openZoneModal({{ $zone->id }})"

@@ -26,6 +26,7 @@ class PlanManager extends Component
     public $zone_has_internet = true;
     public $zone_has_cable = true;
     public $expandedZones = [];
+    public $zoneActionMenu = null;
 
     // ========== PLANES ==========
     public $showPlanModal = false;
@@ -140,6 +141,74 @@ class PlanManager extends Component
             $current = $current->parent;
         }
         return array_reverse($names);
+    }
+
+    // ========== PRECIOS RÁPIDOS (modal desde ⊕) ==========
+    public $showQuickPriceModal = false;
+    public $quickPriceZoneId = null;
+    public $quickPrices = [];
+
+    public function openQuickPriceModal($zoneId)
+    {
+        $this->zoneActionMenu = null;
+        $this->quickPriceZoneId = $zoneId;
+        $zone = Zone::find($zoneId);
+        $plans = Plan::where('is_active', true)
+            ->where(function ($q) use ($zone) {
+                if ($zone->has_internet && $zone->has_cable) return;
+                if ($zone->has_internet) { $q->whereIn('service_type', ['internet', 'internet_cable']); return; }
+                if ($zone->has_cable) { $q->whereIn('service_type', ['cable', 'internet_cable']); return; }
+                $q->whereRaw('1=0');
+            })
+            ->orderBy('name')->get();
+
+        $this->quickPrices = $plans->mapWithKeys(function ($plan) use ($zone) {
+            $price = ZonePlanPrice::firstOrNew(['zone_id' => $zone->id, 'plan_id' => $plan->id]);
+            return [$plan->id => [
+                'plan_name' => $plan->name,
+                'plan_speed' => $plan->speed,
+                'plan_service' => $plan->service_type,
+                'base_price' => (float) $plan->base_price,
+                'effective_price' => $zone->getEffectivePriceForPlan($plan),
+                'override_price' => $price->price,
+                'value' => $price->price,
+            ]];
+        })->toArray();
+
+        $this->showQuickPriceModal = true;
+    }
+
+    public function saveQuickPrices()
+    {
+        foreach ($this->quickPrices as $planId => $data) {
+            $val = $data['value'] ?? '';
+            ZonePlanPrice::updateOrCreate(
+                ['zone_id' => $this->quickPriceZoneId, 'plan_id' => $planId],
+                ['price' => ($val !== '' && $val !== null) ? $val : null]
+            );
+        }
+        $this->showQuickPriceModal = false;
+        if ($this->selectedZoneId == $this->quickPriceZoneId) {
+            $this->loadPrices();
+        }
+        $this->dispatch('show-toast', type: 'success', message: 'Precios actualizados.');
+    }
+
+    public function toggleZoneMenu($zoneId)
+    {
+        $this->zoneActionMenu = $this->zoneActionMenu === $zoneId ? null : $zoneId;
+    }
+
+    public $viewingZone = null;
+
+    public function viewZone($id)
+    {
+        $this->viewingZone = Zone::with('branch', 'parent', 'children')->find($id);
+    }
+
+    public function closeViewZone()
+    {
+        $this->viewingZone = null;
     }
 
     public function saveZone()

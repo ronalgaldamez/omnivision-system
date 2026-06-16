@@ -79,7 +79,7 @@
 
                 {{-- ========== PANEL DE PRECIOS ========== --}}
                 @if($selectedZone)
-                <div class="bg-white rounded-xl border border-blue-200 overflow-hidden shadow-sm">
+                <div id="price-panel" class="bg-white rounded-xl border border-blue-200 overflow-hidden shadow-sm">
                     <div class="px-4 py-3 bg-blue-50 border-b border-blue-200 flex items-center justify-between">
                         <div>
                             <h3 class="text-sm font-semibold text-blue-800 flex items-center gap-2">
@@ -470,6 +470,195 @@
                     </button>
                 </div>
 
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- ========== MODAL PRECIOS RÁPIDOS (desde ⊕) ========== --}}
+    @if($showQuickPriceModal && $quickPriceZoneId)
+    @php $qpZone = \App\Models\Zone::find($quickPriceZoneId); @endphp
+    <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+        <div class="relative mx-auto p-5 w-full max-w-2xl">
+            <div class="bg-white rounded-xl shadow-xl border border-gray-200 max-h-[90vh] flex flex-col">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between flex-shrink-0">
+                    <div>
+                        <h3 class="text-lg font-semibold flex items-center gap-2">
+                            <span class="material-symbols-outlined text-amber-600 text-base">attach_money</span>
+                            Precios para: {{ $qpZone?->name ?? '—' }}
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            {{ $qpZone?->branch->name ?? '—' }} — {{ ucfirst($qpZone?->level ?? '') }}
+                        </p>
+                    </div>
+                    <button wire:click="$set('showQuickPriceModal', false)" class="text-gray-400 hover:text-gray-600">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <div class="overflow-y-auto p-5">
+                    <p class="text-xs text-gray-500 mb-3">
+                        Asigná el precio que querés para cada plan en esta zona.
+                        Si dejás vacío, heredará el precio de la zona padre
+                        (o usará el precio base del plan si ningún ancestro tiene precio personalizado).
+                    </p>
+
+                    @if(count($quickPrices) > 0)
+                    <div class="space-y-2">
+                        @foreach($quickPrices as $planId => $item)
+                        @php
+                            $hasOverride = $item['override_price'] !== null;
+                            $isInherited = $item['effective_price'] != $item['base_price'] && !$hasOverride;
+                        @endphp
+                        <div class="flex items-center gap-3 p-3 rounded-lg border {{ $hasOverride ? 'border-amber-200 bg-amber-50/50' : 'border-gray-200 bg-white' }} hover:border-gray-300 transition">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-medium text-gray-800">{{ $item['plan_name'] }}</span>
+                                    @if($item['plan_speed'])
+                                    <span class="text-xs text-gray-400">({{ $item['plan_speed'] }})</span>
+                                    @endif
+                                    <span class="text-xs px-1.5 py-0.5 rounded-full
+                                        {{ $item['plan_service'] === 'internet' ? 'bg-blue-100 text-blue-700' : '' }}
+                                        {{ $item['plan_service'] === 'cable' ? 'bg-amber-100 text-amber-700' : '' }}
+                                        {{ $item['plan_service'] === 'internet_cable' ? 'bg-green-100 text-green-700' : '' }}">
+                                        {{ str_replace('_', ' + ', ucfirst($item['plan_service'])) }}
+                                    </span>
+                                </div>
+                                <div class="text-xs text-gray-400 mt-0.5">
+                                    Base: <strong>${{ number_format($item['base_price'], 2) }}</strong>
+                                    @if($hasOverride)
+                                        · <span class="text-green-600">Tiene precio propio</span>
+                                    @elseif($isInherited)
+                                        · <span class="text-amber-600">Heredado (efectivo: ${{ number_format($item['effective_price'], 2) }})</span>
+                                    @else
+                                        · <span class="text-gray-400">Usa precio base</span>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                                    <input type="number" step="0.01" wire:model="quickPrices.{{ $planId }}.value"
+                                        placeholder="Heredar"
+                                        class="w-28 pl-7 pr-3 py-2 rounded-lg border border-gray-300 text-sm text-right">
+                                </div>
+                                @if($hasOverride)
+                                <button wire:click="$set('quickPrices.{{ $planId }}.value', '')"
+                                    class="text-xs text-red-500 hover:text-red-700 flex-shrink-0" title="Restablecer herencia">
+                                    <span class="material-symbols-outlined text-sm">undo</span>
+                                </button>
+                                @endif
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @else
+                    <div class="text-center py-8 text-gray-500">
+                        <p>No hay planes disponibles para esta zona según sus servicios (Internet/Cable).</p>
+                    </div>
+                    @endif
+                </div>
+
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3 flex-shrink-0">
+                    <button wire:click="$set('showQuickPriceModal', false)"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                    <button wire:click="saveQuickPrices"
+                        class="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-base">save</span>
+                        Guardar precios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- ========== MODAL VER ZONA (solo lectura) ========== --}}
+    @if($viewingZone)
+    <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+        <div class="relative mx-auto p-5 w-full max-w-lg">
+            <div class="bg-white rounded-xl shadow-xl border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-gray-500 text-base">visibility</span>
+                        {{ $viewingZone->name }}
+                    </h3>
+                    <button wire:click="closeViewZone" class="text-gray-400 hover:text-gray-600">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="p-5 space-y-4">
+                    @php
+                        $ancestry = $this->zoneAncestry($viewingZone->id);
+                    @endphp
+
+                    <div class="bg-gray-50 rounded-lg border border-gray-200 px-4 py-3">
+                        <label class="text-xs font-medium text-gray-500 mb-2 block">📍 Ruta completa</label>
+                        <div class="flex items-center flex-wrap gap-1">
+                            @foreach($ancestry as $i => $item)
+                            <span class="px-2 py-0.5 rounded text-xs font-medium
+                                {{ $item['level'] === 'departamento' ? 'bg-purple-100 text-purple-700' : '' }}
+                                {{ $item['level'] === 'municipio' ? 'bg-blue-100 text-blue-700' : '' }}
+                                {{ $item['level'] === 'distrito' ? 'bg-cyan-100 text-cyan-700' : '' }}
+                                {{ $item['level'] === 'cantón' ? 'bg-amber-100 text-amber-700' : '' }}
+                                {{ !in_array($item['level'], ['departamento','municipio','distrito','cantón']) ? 'bg-gray-100 text-gray-600' : '' }}">
+                                {{ $item['name'] }}
+                            </span>
+                            @if($i < count($ancestry) - 1)
+                            <span class="text-gray-300 text-xs">›</span>
+                            @endif
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs text-gray-500">Nivel</label>
+                            <p class="text-sm font-medium text-gray-800">{{ ucfirst($viewingZone->level) }}</p>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500">Sucursal</label>
+                            <p class="text-sm font-medium text-gray-800">{{ $viewingZone->branch->name ?? '—' }}</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-gray-500 mb-1.5 block">Servicios disponibles</label>
+                        <div class="flex gap-3">
+                            <span class="px-3 py-1 rounded-lg text-sm font-medium {{ $viewingZone->has_internet ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400' }}">
+                                🌐 Internet {{ $viewingZone->has_internet ? '✔' : '✖' }}
+                            </span>
+                            <span class="px-3 py-1 rounded-lg text-sm font-medium {{ $viewingZone->has_cable ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-400' }}">
+                                📺 Cable {{ $viewingZone->has_cable ? '✔' : '✖' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-gray-500 mb-1.5 block">Sub-zonas ({{ $viewingZone->children->count() }})</label>
+                        @if($viewingZone->children->count() > 0)
+                        <ul class="text-sm text-gray-700 space-y-0.5">
+                            @foreach($viewingZone->children as $child)
+                            <li class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-xs text-gray-300">subdirectory_arrow_right</span>
+                                {{ $child->name }}
+                                <span class="text-xs text-gray-400">({{ ucfirst($child->level) }})</span>
+                            </li>
+                            @endforeach
+                        </ul>
+                        @else
+                        <p class="text-sm text-gray-400">No tiene sub-zonas</p>
+                        @endif
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+                    <button wire:click="closeViewZone"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+                        Cerrar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
