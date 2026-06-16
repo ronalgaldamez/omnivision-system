@@ -21,6 +21,7 @@ class PlanManager extends Component
     public $zone_branch_id = '';
     public $zone_parent_id = '';
     public $zone_name = '';
+    public $zone_municipio_name = '';
     public $zone_level = 'departamento';
     public $zone_has_internet = true;
     public $zone_has_cable = true;
@@ -52,16 +53,6 @@ class PlanManager extends Component
 
     protected function rules()
     {
-        if ($this->activeTab === 'zones') {
-            return [
-                'zone_name' => 'required|string|max:255',
-                'zone_branch_id' => 'required|exists:branches,id',
-                'zone_level' => 'required|string|max:50',
-                'zone_has_internet' => 'boolean',
-                'zone_has_cable' => 'boolean',
-                'zone_parent_id' => 'nullable|exists:zones,id',
-            ];
-        }
         if ($this->activeTab === 'plans') {
             return [
                 'plan_name' => 'required|string|max:255',
@@ -96,6 +87,7 @@ class PlanManager extends Component
             $this->zone_branch_id = $zone->branch_id;
             $this->zone_parent_id = $zone->parent_id;
             $this->zone_name = $zone->name;
+            $this->zone_municipio_name = '';
             $this->zone_level = $zone->level;
             $this->zone_has_internet = $zone->has_internet;
             $this->zone_has_cable = $zone->has_cable;
@@ -103,6 +95,7 @@ class PlanManager extends Component
             $this->zone_branch_id = '';
             $this->zone_parent_id = '';
             $this->zone_name = '';
+            $this->zone_municipio_name = '';
             $this->zone_level = 'departamento';
             $this->zone_has_internet = true;
             $this->zone_has_cable = true;
@@ -118,6 +111,7 @@ class PlanManager extends Component
         $this->zone_branch_id = $parent->branch_id;
         $this->zone_parent_id = $parentId;
         $this->zone_name = '';
+        $this->zone_municipio_name = '';
         $this->zone_has_internet = $parent->has_internet;
         $this->zone_has_cable = $parent->has_cable;
         $nextLevels = ['departamento' => 'municipio', 'municipio' => 'distrito', 'distrito' => 'cantón', 'cantón' => 'caserío'];
@@ -150,19 +144,69 @@ class PlanManager extends Component
 
     public function saveZone()
     {
-        $this->validate();
+        if ($this->editingZoneId) {
+            $this->validate([
+                'zone_name' => 'required|string|max:255',
+                'zone_level' => 'required|string|max:50',
+            ]);
+            Zone::updateOrCreate(['id' => $this->editingZoneId], [
+                'name' => $this->zone_name,
+                'level' => $this->zone_level,
+                'has_internet' => $this->zone_has_internet,
+                'has_cable' => $this->zone_has_cable,
+            ]);
+            $this->showZoneModal = false;
+            $this->dispatch('show-toast', type: 'success', message: 'Zona actualizada.');
+            return;
+        }
 
-        Zone::updateOrCreate(['id' => $this->editingZoneId], [
+        // ——— Nueva Zona Raíz: crea Departamento (+ opcional Municipio) ———
+        if (!$this->zone_parent_id) {
+            $this->validate([
+                'zone_name' => 'required|string|max:255',
+                'zone_branch_id' => 'required|exists:branches,id',
+            ]);
+
+            $depto = Zone::create([
+                'branch_id' => $this->zone_branch_id,
+                'parent_id' => null,
+                'name' => $this->zone_name,
+                'level' => 'departamento',
+                'has_internet' => $this->zone_has_internet,
+                'has_cable' => $this->zone_has_cable,
+            ]);
+
+            if ($this->zone_municipio_name) {
+                $nextLevels = ['departamento' => 'municipio', 'municipio' => 'distrito', 'distrito' => 'cantón', 'cantón' => 'caserío'];
+                Zone::create([
+                    'branch_id' => $this->zone_branch_id,
+                    'parent_id' => $depto->id,
+                    'name' => $this->zone_municipio_name,
+                    'level' => $nextLevels['departamento'],
+                    'has_internet' => $this->zone_has_internet,
+                    'has_cable' => $this->zone_has_cable,
+                ]);
+            }
+
+            $this->showZoneModal = false;
+            $this->dispatch('show-toast', type: 'success', message: $this->zone_municipio_name
+                ? "Departamento «{$this->zone_name}» y municipio «{$this->zone_municipio_name}» creados."
+                : "Departamento «{$this->zone_name}» creado.");
+            return;
+        }
+
+        // ——— Sub-zona (vía +) : solo nombre + servicios ———
+        $this->validate(['zone_name' => 'required|string|max:255']);
+        Zone::create([
             'branch_id' => $this->zone_branch_id,
-            'parent_id' => $this->zone_parent_id ?: null,
+            'parent_id' => $this->zone_parent_id,
             'name' => $this->zone_name,
             'level' => $this->zone_level,
             'has_internet' => $this->zone_has_internet,
             'has_cable' => $this->zone_has_cable,
         ]);
-
         $this->showZoneModal = false;
-        $this->dispatch('show-toast', type: 'success', message: $this->editingZoneId ? 'Zona actualizada.' : 'Zona creada.');
+        $this->dispatch('show-toast', type: 'success', message: "Sub-zona «{$this->zone_name}» creada.");
     }
 
     public function toggleExpand($zoneId)

@@ -248,27 +248,102 @@
     <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
         <div class="relative mx-auto p-5 w-full max-w-xl">
             <div class="bg-white rounded-xl shadow-xl border border-gray-200">
+
+                {{-- === HEADER === --}}
                 <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
                     <h3 class="text-lg font-semibold flex items-center gap-2">
                         <span class="material-symbols-outlined text-blue-600 text-base">add_location</span>
-                        {{ $editingZoneId ? 'Editar Zona' : ($zone_parent_id ? 'Nueva Sub-zona' : 'Nueva Zona Raíz') }}
+                        @if($editingZoneId)
+                            Editar: {{ \App\Models\Zone::find($editingZoneId)?->name }}
+                        @elseif($zone_parent_id)
+                            Agregar sub-zona
+                        @else
+                            Nueva Zona Raíz
+                        @endif
                     </h3>
                     <button wire:click="$set('showZoneModal', false)" class="text-gray-400 hover:text-gray-600">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
-                <div class="p-5 space-y-4">
 
-                    {{-- Breadcrumb de ubicación (solo sub-zonas o edición) --}}
-                    @if($zone_parent_id || $editingZoneId)
-                    @php
-                        $targetId = $zone_parent_id ?: ($editingZoneId ? \App\Models\Zone::find($editingZoneId)?->parent_id : null);
-                    @endphp
-                    @if($targetId)
-                    @php $ancestry = $this->zoneAncestry($targetId); @endphp
+                <div class="p-5 space-y-5">
+
+                    {{-- ====== MODO: NUEVA ZONA RAÍZ (crea Depto + Municipio) ====== --}}
+                    @if(!$editingZoneId && !$zone_parent_id)
+
+                    <div class="bg-amber-50/60 border border-amber-200 rounded-lg px-4 py-3">
+                        <p class="text-xs text-amber-700 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">info</span>
+                            Vas a crear un Departamento. Opcionalmente podés crear también su primer Municipio ahora mismo.
+                        </p>
+                    </div>
+
+                    {{-- Depto --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">🏛 Departamento *</label>
+                        <input type="text" wire:model="zone_name" placeholder="ej. Chalatenango"
+                            class="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm">
+                        @error('zone_name') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                    </div>
+
+                    {{-- Sucursal --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">🏢 Sucursal *</label>
+                        <select wire:model="zone_branch_id" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm">
+                            <option value="">Seleccione la sucursal</option>
+                            @foreach($branches as $b)
+                            <option value="{{ $b->id }}">{{ $b->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('zone_branch_id') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                    </div>
+
+                    {{-- Municipio opcional --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            🏘 Municipio <span class="text-gray-400 font-normal">(opcional — podés crearlo después con ⊕)</span>
+                        </label>
+                        <input type="text" wire:model="zone_municipio_name" placeholder="ej. Chalatenango Sur"
+                            class="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm">
+                    </div>
+
+                    {{-- Preview --}}
+                    @if($zone_name)
+                    <div class="bg-gray-50 rounded-lg border border-gray-200 px-4 py-3">
+                        <p class="text-xs text-gray-500 mb-1">Se va a crear:</p>
+                        <div class="flex items-center gap-1.5 text-sm">
+                            <span class="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">{{ $zone_name ?: '—' }}</span>
+                            @if($zone_municipio_name)
+                            <span class="text-gray-300 text-xs">›</span>
+                            <span class="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">{{ $zone_municipio_name }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- Servicios --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Servicios disponibles</label>
+                        <div class="flex gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" wire:model="zone_has_internet" class="rounded text-blue-600">
+                                <span class="text-sm text-gray-700">Internet</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" wire:model="zone_has_cable" class="rounded text-blue-600">
+                                <span class="text-sm text-gray-700">Cable</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- ====== MODO: SUB-ZONA (vía ⊕) ====== --}}
+                    @elseif($zone_parent_id && !$editingZoneId)
+
+                    {{-- Breadcrumb --}}
+                    @php $ancestry = $this->zoneAncestry($zone_parent_id); @endphp
                     @if(count($ancestry) > 0)
                     <div class="bg-blue-50/80 border border-blue-200 rounded-lg px-4 py-3">
-                        <label class="text-xs font-medium text-blue-600 mb-1.5 block">Ubicación en la jerarquía</label>
+                        <label class="text-xs font-medium text-blue-600 mb-1.5 block">📍 Dónde se ubica</label>
                         <div class="flex items-center flex-wrap gap-1 text-sm">
                             @foreach($ancestry as $i => $item)
                             <span class="px-2 py-0.5 rounded text-xs font-medium
@@ -283,70 +358,26 @@
                             <span class="text-gray-300 text-xs">›</span>
                             @endif
                             @endforeach
-                            @if(!$editingZoneId)
                             <span class="text-gray-300 text-xs mx-1">›</span>
                             <span class="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-300 border-dashed">
                                 {{ $zone_name ?: 'Nuevo' }}
                             </span>
-                            @endif
+                            <span class="text-xs text-gray-400 ml-1">({{ ucfirst($zone_level) }})</span>
                         </div>
                     </div>
                     @endif
-                    @endif
-                    @endif
 
-                    {{-- 1. SELECCIONAR PADRE (solo crear raíz) --}}
-                    @if(!$editingZoneId && !$zone_parent_id)
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Depende de (zona padre)</label>
-                        <select wire:model.live="zone_parent_id" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                            <option value="">Ninguna — es una zona raíz</option>
-                            @foreach(\App\Models\Zone::where('branch_id', $zone_branch_id ?: 0)->orderBy('name')->get() as $p)
-                            <option value="{{ $p->id }}">
-                                {{ $p->name }} ({{ ucfirst($p->level) }})
-                            </option>
-                            @endforeach
-                        </select>
-                        <p class="text-xs text-gray-400 mt-1">Si seleccionás un padre, el nivel se calculará automáticamente.</p>
-                    </div>
-                    @endif
-
-                    {{-- 2. NOMBRE --}}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                        <input type="text" wire:model="zone_name" placeholder="ej. Chalatenango Sur"
-                            class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                        @error('zone_name') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
-                    </div>
-
-                    {{-- 3. SUCURSAL --}}
-                    @if(!$zone_parent_id && !$editingZoneId)
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Sucursal *</label>
-                        <select wire:model="zone_branch_id" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                            <option value="">Seleccione</option>
-                            @foreach($branches as $b)
-                            <option value="{{ $b->id }}">{{ $b->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('zone_branch_id') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
-                    </div>
-                    @elseif($zone_branch_id)
+                    {{-- Sucursal readonly --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
                         <input type="text" readonly value="{{ \App\Models\Branch::find($zone_branch_id)?->name ?? '—' }}"
-                            class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-gray-50 text-gray-500">
+                            class="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-gray-50 text-gray-500">
                     </div>
-                    @endif
 
-                    {{-- 4. NIVEL --}}
+                    {{-- Nivel --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Nivel</label>
-                        @if($zone_parent_id || $editingZoneId)
-                        <select wire:model="zone_level" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                            <option value="">Seleccione</option>
-                            <option value="departamento">Departamento</option>
-                            <option value="municipio">Municipio</option>
+                        <select wire:model="zone_level" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm">
                             <option value="distrito">Distrito</option>
                             <option value="cantón">Cantón</option>
                             <option value="caserío">Caserío</option>
@@ -354,18 +385,20 @@
                             <option value="barrio">Barrio</option>
                             <option value="localidad">Localidad</option>
                         </select>
-                        @if($zone_parent_id && !$editingZoneId)
-                        <p class="text-xs text-amber-600 mt-1">Nivel sugerido: <strong>{{ ucfirst($zone_level ?: '...') }}</strong> (según el padre)</p>
-                        @endif
-                        @else
-                        <input type="text" readonly value="Departamento"
-                            class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-gray-50 text-gray-500">
-                        @endif
+                        <p class="text-xs text-amber-600 mt-1">Nivel sugerido: <strong>{{ ucfirst($zone_level) }}</strong></p>
                     </div>
 
-                    {{-- 5. INTERNET / CABLE --}}
+                    {{-- Nombre --}}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Servicios disponibles en esta zona</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                        <input type="text" wire:model="zone_name" placeholder="ej. El Paraíso"
+                            class="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm">
+                        @error('zone_name') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                    </div>
+
+                    {{-- Servicios --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Servicios disponibles</label>
                         <div class="flex gap-6">
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" wire:model="zone_has_internet" class="rounded text-blue-600">
@@ -376,9 +409,50 @@
                                 <span class="text-sm text-gray-700">Cable</span>
                             </label>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">Esto filtra qué planes estarán disponibles en el panel de precios.</p>
                     </div>
+
+                    {{-- ====== MODO: EDITAR ZONA ====== --}}
+                    @elseif($editingZoneId)
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                        <input type="text" wire:model="zone_name" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm">
+                        @error('zone_name') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nivel</label>
+                        <select wire:model="zone_level" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm">
+                            <option value="departamento">Departamento</option>
+                            <option value="municipio">Municipio</option>
+                            <option value="distrito">Distrito</option>
+                            <option value="cantón">Cantón</option>
+                            <option value="caserío">Caserío</option>
+                            <option value="colonia">Colonia</option>
+                            <option value="barrio">Barrio</option>
+                            <option value="localidad">Localidad</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Servicios disponibles</label>
+                        <div class="flex gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" wire:model="zone_has_internet" class="rounded text-blue-600">
+                                <span class="text-sm text-gray-700">Internet</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" wire:model="zone_has_cable" class="rounded text-blue-600">
+                                <span class="text-sm text-gray-700">Cable</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    @endif
+
                 </div>
+
+                {{-- === FOOTER === --}}
                 <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
                     <button wire:click="$set('showZoneModal', false)"
                         class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
@@ -386,9 +460,16 @@
                     </button>
                     <button wire:click="saveZone"
                         class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-                        {{ $editingZoneId ? 'Actualizar' : 'Crear' }}
+                        @if($editingZoneId)
+                            Guardar cambios
+                        @elseif($zone_parent_id)
+                            Crear sub-zona
+                        @else
+                            Crear
+                        @endif
                     </button>
                 </div>
+
             </div>
         </div>
     </div>
