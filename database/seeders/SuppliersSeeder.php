@@ -71,4 +71,4 @@ class SuppliersSeeder extends Seeder
 
         $this->command->info('✅ Proveedores actualizados con NRC, NIT y cuentas bancarias sin duplicados.');
     }
-}
+}  

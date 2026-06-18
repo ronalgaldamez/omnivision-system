@@ -42,23 +42,18 @@
 
         <span class="flex-shrink-0 text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{{ ucfirst($zone->level) }}</span>
 
-        <div class="relative flex-shrink-0">
+        <div wire:click.away="$set('zoneActionMenu', null)" class="relative flex-shrink-0">
             <button wire:click="toggleZoneMenu({{ $zone->id }})"
                 class="opacity-0 group-hover:opacity-100 text-green-600 hover:text-green-700 transition-opacity"
                 title="Acciones">
                 <span class="material-symbols-outlined text-base">add_circle</span>
             </button>
             @if($zoneActionMenu === $zone->id)
-            <div class="absolute right-0 top-7 z-50 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-1 text-sm">
+            <div class="absolute left-0 top-7 z-50 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-1 text-sm">
                 <button wire:click="openSubZoneModal({{ $zone->id }})"
                     class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
                     <span class="material-symbols-outlined text-sm text-green-600">add</span>
                     Agregar sub-zona
-                </button>
-                <button wire:click="openQuickPriceModal({{ $zone->id }})"
-                    class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700">
-                    <span class="material-symbols-outlined text-sm text-amber-600">attach_money</span>
-                    Ajustar precios
                 </button>
             </div>
             @endif

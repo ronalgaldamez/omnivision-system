@@ -27,6 +27,11 @@ class PlanManager extends Component
     public $zone_has_cable = true;
     public $expandedZones = [];
     public $zoneActionMenu = null;
+    public $zone_plan_prices = [];
+    public $plan_search = '';
+    public $showPlanSearchResults = false;
+    public $group_search = '';
+    public $collapsedTypes = [];
 
     // ========== PLANES ==========
     public $showPlanModal = false;
@@ -38,6 +43,22 @@ class PlanManager extends Component
     public $plan_speed = '';
     public $plan_channels = null;
     public $planSearch = '';
+    public $planFilterType = '';
+    public $planPriceMin = '';
+    public $planPriceMax = '';
+
+    // ========== HISTORIAL ==========
+    public $historySearch = '';
+    public $historyDateFrom = '';
+    public $historyDateTo = '';
+
+    // ========== GRUPOS ==========
+    public $showGroupModal = false;
+    public $editingGroupId = null;
+    public $group_name = '';
+    public $group_description = '';
+    public $group_plan_ids = [];
+    public $groupPlanFilterType = '';
 
     // ========== PRECIOS ==========
     public $selectedZoneId = null;
@@ -46,6 +67,20 @@ class PlanManager extends Component
     public $editingPriceId = null;
     public $price_plan_id = '';
     public $price_value = '';
+
+    // ========== VISUALIZAR ZONA ==========
+    public $viewingZone = null;
+    public $viewingZonePriceHistories = [];
+
+    // ========== VISUALIZAR PLAN ==========
+    public $viewingPlan = null;
+    public $viewingPlanHistories = [];
+
+    // ========== HISTORIAL ==========
+    public $showHistoryModal = false;
+    public $historyPlanId = null;
+    public $historyZoneId = null;
+    public $historyRecords = [];
 
     // ========== CONFIRMACIONES ==========
     public $confirmingAction = null;
@@ -71,6 +106,8 @@ class PlanManager extends Component
         if (Auth::user()->cannot('manage catalog')) {
             abort(403);
         }
+        $this->cleanZonePlanPrices();
+        $this->collapsedTypes = ['internet', 'cable'];
     }
 
     public function setTab($tab)
@@ -82,6 +119,7 @@ class PlanManager extends Component
     public function openZoneModal($id = null)
     {
         $this->resetValidation();
+        $this->cleanZonePlanPrices();
         $this->editingZoneId = $id;
         if ($id) {
             $zone = Zone::findOrFail($id);
@@ -92,6 +130,7 @@ class PlanManager extends Component
             $this->zone_level = $zone->level;
             $this->zone_has_internet = $zone->has_internet;
             $this->zone_has_cable = $zone->has_cable;
+            $this->loadZonePlanPrices($zone);
         } else {
             $this->zone_branch_id = '';
             $this->zone_parent_id = '';
@@ -100,13 +139,16 @@ class PlanManager extends Component
             $this->zone_level = 'departamento';
             $this->zone_has_internet = true;
             $this->zone_has_cable = true;
+            $this->loadZonePlanPrices();
         }
         $this->showZoneModal = true;
     }
 
     public function openSubZoneModal($parentId)
     {
+        $this->zoneActionMenu = null;
         $this->resetValidation();
+        $this->cleanZonePlanPrices();
         $this->editingZoneId = null;
         $parent = Zone::findOrFail($parentId);
         $this->zone_branch_id = $parent->branch_id;
@@ -117,6 +159,7 @@ class PlanManager extends Component
         $this->zone_has_cable = $parent->has_cable;
         $nextLevels = ['departamento' => 'municipio', 'municipio' => 'distrito', 'distrito' => 'cantón', 'cantón' => 'caserío'];
         $this->zone_level = $nextLevels[$parent->level] ?? 'localidad';
+        $this->loadZonePlanPrices();
         $this->showZoneModal = true;
     }
 
@@ -143,55 +186,106 @@ class PlanManager extends Component
         return array_reverse($names);
     }
 
-    // ========== PRECIOS RÁPIDOS (modal desde ⊕) ==========
-    public $showQuickPriceModal = false;
-    public $quickPriceZoneId = null;
-    public $quickPrices = [];
-
-    public function openQuickPriceModal($zoneId)
+    public function loadZonePlanPrices($zone = null)
     {
-        $this->zoneActionMenu = null;
-        $this->quickPriceZoneId = $zoneId;
-        $zone = Zone::find($zoneId);
-        $plans = Plan::where('is_active', true)
-            ->where(function ($q) use ($zone) {
-                if ($zone->has_internet && $zone->has_cable) return;
-                if ($zone->has_internet) { $q->whereIn('service_type', ['internet', 'internet_cable']); return; }
-                if ($zone->has_cable) { $q->whereIn('service_type', ['cable', 'internet_cable']); return; }
-                $q->whereRaw('1=0');
-            })
-            ->orderBy('name')->get();
+        $zoneId = $zone?->id;
+        $existing = $zoneId ? ZonePlanPrice::where('zone_id', $zoneId)->with('plan')->get() : collect();
 
-        $this->quickPrices = $plans->mapWithKeys(function ($plan) use ($zone) {
-            $price = ZonePlanPrice::firstOrNew(['zone_id' => $zone->id, 'plan_id' => $plan->id]);
-            return [$plan->id => [
-                'plan_name' => $plan->name,
-                'plan_speed' => $plan->speed,
-                'plan_service' => $plan->service_type,
-                'base_price' => (float) $plan->base_price,
-                'effective_price' => $zone->getEffectivePriceForPlan($plan),
-                'override_price' => $price->price,
-                'value' => $price->price,
+        $this->zone_plan_prices = $existing->mapWithKeys(function ($zp) use ($zoneId) {
+            $histories = $zoneId ? \App\Models\PriceHistory::where('plan_id', $zp->plan_id)
+                ->where('zone_id', $zoneId)
+                ->orderByDesc('created_at')
+                ->take(2)
+                ->get() : collect();
+            return [$zp->plan_id => [
+                'plan_name' => $zp->plan->name,
+                'plan_speed' => $zp->plan->speed,
+                'plan_service' => $zp->plan->service_type,
+                'base_price' => (float) $zp->plan->base_price,
+                'value' => $zp->price,
+                'history' => $histories->map(fn($h) => [
+                    'old_price' => $h->old_price,
+                    'new_price' => $h->new_price,
+                ])->toArray(),
             ]];
         })->toArray();
-
-        $this->showQuickPriceModal = true;
+        $this->plan_search = '';
+        $this->showPlanSearchResults = false;
     }
 
-    public function saveQuickPrices()
+    public function getSearchedPlansProperty()
     {
-        foreach ($this->quickPrices as $planId => $data) {
-            $val = $data['value'] ?? '';
-            ZonePlanPrice::updateOrCreate(
-                ['zone_id' => $this->quickPriceZoneId, 'plan_id' => $planId],
-                ['price' => ($val !== '' && $val !== null) ? $val : null]
-            );
+        if (strlen($this->plan_search) < 1) return collect();
+        return Plan::where('is_active', true)
+            ->where('name', 'like', '%' . $this->plan_search . '%')
+            ->orderBy('name')
+            ->take(10)
+            ->get();
+    }
+
+    public function getSearchedGroupsProperty()
+    {
+        if (strlen($this->group_search) < 1) return collect();
+        return \App\Models\PlanGroup::with('plans')
+            ->where('name', 'like', '%' . $this->group_search . '%')
+            ->orderBy('name')
+            ->take(10)
+            ->get();
+    }
+
+    public function addGroupToZone($groupId)
+    {
+        $group = \App\Models\PlanGroup::with('plans')->find($groupId);
+        if (!$group) return;
+        foreach ($group->plans as $plan) {
+            if (!isset($this->zone_plan_prices[$plan->id])) {
+                $this->zone_plan_prices[$plan->id] = [
+                    'plan_name' => $plan->name,
+                    'plan_speed' => $plan->speed,
+                    'plan_service' => $plan->service_type,
+                    'base_price' => (float) $plan->base_price,
+                    'value' => null,
+                ];
+            }
         }
-        $this->showQuickPriceModal = false;
-        if ($this->selectedZoneId == $this->quickPriceZoneId) {
-            $this->loadPrices();
+        $this->group_search = '';
+    }
+
+    public function addPlanToZone($planId)
+    {
+        $plan = Plan::find($planId);
+        if (!$plan) return;
+        if (isset($this->zone_plan_prices[$planId])) return; // already added
+        $this->zone_plan_prices[$planId] = [
+            'plan_name' => $plan->name,
+            'plan_speed' => $plan->speed,
+            'plan_service' => $plan->service_type,
+            'base_price' => (float) $plan->base_price,
+            'value' => null,
+        ];
+        $this->plan_search = '';
+        $this->showPlanSearchResults = false;
+    }
+
+    public function removePlanFromZone($planId)
+    {
+        unset($this->zone_plan_prices[$planId]);
+    }
+
+    private function cleanZonePlanPrices()
+    {
+        $this->zone_plan_prices = collect($this->zone_plan_prices)
+            ->filter(fn($d, $id) => is_numeric($id) && $id > 0 && is_array($d) && isset($d['plan_service']))
+            ->toArray();
+    }
+
+    public function updatedZoneLevel($value)
+    {
+        if (in_array($value, ['departamento', 'municipio'])) {
+            $this->zone_has_internet = false;
+            $this->zone_has_cable = false;
+            $this->zone_plan_prices = [];
         }
-        $this->dispatch('show-toast', type: 'success', message: 'Precios actualizados.');
     }
 
     public function toggleZoneMenu($zoneId)
@@ -199,31 +293,65 @@ class PlanManager extends Component
         $this->zoneActionMenu = $this->zoneActionMenu === $zoneId ? null : $zoneId;
     }
 
-    public $viewingZone = null;
-
     public function viewZone($id)
     {
         $this->viewingZone = Zone::with('branch', 'parent', 'children')->find($id);
+        $this->viewingZonePriceHistories = [];
+        if ($this->viewingZone) {
+            $plans = $this->viewingZone->prices()->pluck('plan_id');
+            foreach ($plans as $pid) {
+                $histories = \App\Models\PriceHistory::where('plan_id', $pid)
+                    ->where('zone_id', $this->viewingZone->id)
+                    ->orderByDesc('created_at')
+                    ->take(2)
+                    ->get();
+                $this->viewingZonePriceHistories[$pid] = $histories;
+            }
+        }
     }
 
     public function closeViewZone()
     {
         $this->viewingZone = null;
+        $this->viewingZonePriceHistories = [];
+    }
+
+    public function viewPlan($id)
+    {
+        $this->viewingPlan = Plan::find($id);
+        $this->viewingPlanHistories = collect();
+        if ($this->viewingPlan) {
+            $this->viewingPlanHistories = \App\Models\PriceHistory::where('plan_id', $id)
+                ->whereNull('zone_id')
+                ->with('user')
+                ->orderByDesc('created_at')
+                ->get();
+        }
+    }
+
+    public function closeViewPlan()
+    {
+        $this->viewingPlan = null;
+        $this->viewingPlanHistories = collect();
     }
 
     public function saveZone()
     {
+        $isContainer = fn($l) => in_array($l, ['departamento', 'municipio']);
+
+        // ——— Editar zona existente ———
         if ($this->editingZoneId) {
             $this->validate([
                 'zone_name' => 'required|string|max:255',
                 'zone_level' => 'required|string|max:50',
             ]);
-            Zone::updateOrCreate(['id' => $this->editingZoneId], [
+            $zone = Zone::updateOrCreate(['id' => $this->editingZoneId], [
                 'name' => $this->zone_name,
                 'level' => $this->zone_level,
-                'has_internet' => $this->zone_has_internet,
-                'has_cable' => $this->zone_has_cable,
+                'has_internet' => $isContainer($this->zone_level) ? false : $this->zone_has_internet,
+                'has_cable' => $isContainer($this->zone_level) ? false : $this->zone_has_cable,
             ]);
+            if (!$isContainer($this->zone_level)) $this->saveInlinePrices($zone->id);
             $this->showZoneModal = false;
             $this->dispatch('show-toast', type: 'success', message: 'Zona actualizada.');
             return;
@@ -241,19 +369,19 @@ class PlanManager extends Component
                 'parent_id' => null,
                 'name' => $this->zone_name,
                 'level' => 'departamento',
-                'has_internet' => $this->zone_has_internet,
-                'has_cable' => $this->zone_has_cable,
+                'has_internet' => false,
+                'has_cable' => false,
             ]);
 
+            $municipio = null;
             if ($this->zone_municipio_name) {
-                $nextLevels = ['departamento' => 'municipio', 'municipio' => 'distrito', 'distrito' => 'cantón', 'cantón' => 'caserío'];
-                Zone::create([
+                $municipio = Zone::create([
                     'branch_id' => $this->zone_branch_id,
                     'parent_id' => $depto->id,
                     'name' => $this->zone_municipio_name,
-                    'level' => $nextLevels['departamento'],
-                    'has_internet' => $this->zone_has_internet,
-                    'has_cable' => $this->zone_has_cable,
+                    'level' => 'municipio',
+                    'has_internet' => false,
+                    'has_cable' => false,
                 ]);
             }
 
@@ -264,18 +392,55 @@ class PlanManager extends Component
             return;
         }
 
-        // ——— Sub-zona (vía +) : solo nombre + servicios ———
+        // ——— Sub-zona (vía +) ———
         $this->validate(['zone_name' => 'required|string|max:255']);
-        Zone::create([
+        $zone = Zone::create([
             'branch_id' => $this->zone_branch_id,
             'parent_id' => $this->zone_parent_id,
             'name' => $this->zone_name,
             'level' => $this->zone_level,
-            'has_internet' => $this->zone_has_internet,
-            'has_cable' => $this->zone_has_cable,
+            'has_internet' => $isContainer($this->zone_level) ? false : $this->zone_has_internet,
+            'has_cable' => $isContainer($this->zone_level) ? false : $this->zone_has_cable,
         ]);
+        if (!$isContainer($this->zone_level)) $this->saveInlinePrices($zone->id);
         $this->showZoneModal = false;
         $this->dispatch('show-toast', type: 'success', message: "Sub-zona «{$this->zone_name}» creada.");
+    }
+
+    private function saveInlinePrices($zoneId)
+    {
+        $this->cleanZonePlanPrices();
+
+        $submittedIds = array_keys($this->zone_plan_prices);
+
+        // Eliminar los que ya no están en la lista
+        ZonePlanPrice::where('zone_id', $zoneId)->whereNotIn('plan_id', $submittedIds)->delete();
+
+        foreach ($this->zone_plan_prices as $planId => $data) {
+            $val = $data['value'] ?? '';
+            $existing = ZonePlanPrice::where('zone_id', $zoneId)->where('plan_id', $planId)->first();
+            $oldPrice = $existing?->price;
+            $newPrice = ($val !== '' && $val !== null) ? $val : null;
+
+            ZonePlanPrice::updateOrCreate(
+                ['zone_id' => $zoneId, 'plan_id' => $planId],
+                ['price' => $newPrice]
+            );
+
+            if ($oldPrice != $newPrice) {
+                \App\Models\PriceHistory::create([
+                    'zone_plan_price_id' => $existing?->id,
+                    'plan_id' => $planId,
+                    'zone_id' => $zoneId,
+                    'old_price' => $oldPrice,
+                    'new_price' => $newPrice,
+                    'user_id' => Auth::id(),
+                ]);
+            }
+        }
+        if ($this->selectedZoneId == $zoneId) {
+            $this->loadPrices();
+        }
     }
 
     public function toggleExpand($zoneId)
@@ -319,6 +484,10 @@ class PlanManager extends Component
             Plan::find($this->confirmingId)?->delete();
             $this->dispatch('show-toast', type: 'success', message: 'Plan eliminado.');
         }
+        if ($this->confirmingAction === 'delete_group') {
+            \App\Models\PlanGroup::find($this->confirmingId)?->delete();
+            $this->dispatch('show-toast', type: 'success', message: 'Grupo eliminado.');
+        }
         $this->confirmingAction = null;
         $this->confirmingId = null;
     }
@@ -357,24 +526,119 @@ class PlanManager extends Component
     {
         $this->validate();
 
+        $speed = $this->plan_speed ? trim($this->plan_speed) : null;
+        if ($speed && !str_contains(strtolower($speed), 'mbps') && !str_contains(strtolower($speed), 'gbps')) {
+            $speed .= ' Mbps';
+        }
+
+        if ($this->editingPlanId) {
+            $old = Plan::find($this->editingPlanId);
+            $oldPrice = $old?->base_price;
+        } else {
+            $oldPrice = null;
+        }
+
         Plan::updateOrCreate(['id' => $this->editingPlanId], [
             'name' => $this->plan_name,
             'description' => $this->plan_description,
             'service_type' => $this->plan_service_type,
             'base_price' => $this->plan_base_price,
-            'speed' => $this->plan_speed ?: null,
+            'speed' => $speed,
             'channels' => $this->plan_channels ?: null,
         ]);
 
+        if ($this->editingPlanId && $oldPrice != $this->plan_base_price) {
+            \App\Models\PriceHistory::create([
+                'zone_plan_price_id' => null,
+                'plan_id' => $this->editingPlanId,
+                'zone_id' => null,
+                'old_price' => $oldPrice,
+                'new_price' => $this->plan_base_price,
+                'user_id' => Auth::id(),
+            ]);
+        }
+
         $this->showPlanModal = false;
         $this->dispatch('show-toast', type: 'success', message: $this->editingPlanId ? 'Plan actualizado.' : 'Plan creado.');
+    }
+
+    // ========== GRUPOS ==========
+    public function openGroupModal($id = null)
+    {
+        $this->resetValidation();
+        $this->editingGroupId = $id;
+        if ($id) {
+            $group = \App\Models\PlanGroup::with('plans')->findOrFail($id);
+            $this->group_name = $group->name;
+            $this->group_description = $group->description;
+            $this->group_plan_ids = $group->plans->pluck('id')->toArray();
+        } else {
+            $this->group_name = '';
+            $this->group_description = '';
+            $this->group_plan_ids = [];
+        }
+        $this->showGroupModal = true;
+    }
+
+    public function saveGroup()
+    {
+        $this->validate([
+            'group_name' => 'required|string|max:255',
+            'group_plan_ids' => 'required|array|min:1',
+        ]);
+
+        $group = \App\Models\PlanGroup::updateOrCreate(
+            ['id' => $this->editingGroupId],
+            ['name' => $this->group_name, 'description' => $this->group_description]
+        );
+        $group->plans()->sync($this->group_plan_ids);
+        $this->showGroupModal = false;
+        $this->dispatch('show-toast', type: 'success', message: $this->editingGroupId ? 'Grupo actualizado.' : 'Grupo creado.');
+    }
+
+    public function toggleCollapseType($type)
+    {
+        if (in_array($type, $this->collapsedTypes)) {
+            $this->collapsedTypes = array_values(array_diff($this->collapsedTypes, [$type]));
+        } else {
+            $this->collapsedTypes[] = $type;
+        }
+    }
+
+    public function confirmDeleteGroup($id)
+    {
+        $this->confirmingAction = 'delete_group';
+        $this->confirmingId = $id;
+        $this->confirmMessage = '¿Eliminar este grupo?';
+    }
+
+    public function toggleAllFilteredPlans($select)
+    {
+        $allPlans = Plan::where('is_active', true)->orderBy('name')->get();
+        $filteredIds = $this->groupPlanFilterType
+            ? $allPlans->where('service_type', $this->groupPlanFilterType)->pluck('id')->toArray()
+            : $allPlans->pluck('id')->toArray();
+
+        if ($select) {
+            $this->group_plan_ids = array_values(array_unique(array_merge($this->group_plan_ids ?? [], $filteredIds)));
+        } else {
+            $this->group_plan_ids = array_values(array_diff($this->group_plan_ids ?? [], $filteredIds));
+        }
+    }
+
+    public function togglePlanActive($id)
+    {
+        $plan = Plan::find($id);
+        if (!$plan) return;
+        $plan->update(['is_active' => !$plan->is_active]);
+        $this->dispatch('show-toast', type: 'success', message: $plan->is_active ? 'Plan activado.' : 'Plan desactivado.');
     }
 
     public function promptDeletePlan($id)
     {
         $this->confirmingAction = 'delete_plan';
         $this->confirmingId = $id;
-        $this->confirmMessage = '¿Eliminar este plan?';
+        $this->confirmMessage = '¿Eliminar este plan permanentemente?';
     }
 
     // ========== PRECIOS ==========
@@ -385,26 +649,14 @@ class PlanManager extends Component
             return;
         }
         $zone = Zone::find($this->selectedZoneId);
-        $plans = Plan::where('is_active', true)
-            ->where(function ($q) use ($zone) {
-                if ($zone->has_internet && $zone->has_cable) {
-                    // todos
-                } elseif ($zone->has_internet) {
-                    $q->whereIn('service_type', ['internet', 'internet_cable']);
-                } elseif ($zone->has_cable) {
-                    $q->whereIn('service_type', ['cable', 'internet_cable']);
-                } else {
-                    $q->whereRaw('1=0');
-                }
-            })
-            ->orderBy('name')->get();
-        $this->zonePrices = $plans->map(function ($plan) use ($zone) {
-            $price = ZonePlanPrice::firstOrNew([
-                'zone_id' => $zone->id,
-                'plan_id' => $plan->id,
-            ]);
+        $prices = ZonePlanPrice::where('zone_id', $zone->id)
+            ->with('plan')
+            ->get()
+            ->sortBy(fn($zp) => $zp->plan->name);
+
+        $this->zonePrices = $prices->map(function ($price) use ($zone) {
+            $plan = $price->plan;
             $effective = $zone->getEffectivePriceForPlan($plan);
-            // Find inheritance source
             $inheritedFrom = $this->findInheritedFrom($zone, $plan);
             return [
                 'id' => $price->id,
@@ -449,10 +701,25 @@ class PlanManager extends Component
     {
         $this->validate(['price_value' => 'nullable|numeric|min:0']);
 
+        $newPrice = ($this->price_value !== '' && $this->price_value !== null) ? $this->price_value : null;
+        $existing = ZonePlanPrice::where('zone_id', $this->selectedZoneId)->where('plan_id', $this->editingPriceId)->first();
+        $oldPrice = $existing?->price;
+
         ZonePlanPrice::updateOrCreate(
             ['zone_id' => $this->selectedZoneId, 'plan_id' => $this->editingPriceId],
-            ['price' => ($this->price_value !== '' && $this->price_value !== null) ? $this->price_value : null]
+            ['price' => $newPrice]
         );
+
+        if ($oldPrice != $newPrice) {
+            \App\Models\PriceHistory::create([
+                'zone_plan_price_id' => $existing?->id,
+                'plan_id' => $this->editingPriceId,
+                'zone_id' => $this->selectedZoneId,
+                'old_price' => $oldPrice,
+                'new_price' => $newPrice,
+                'user_id' => Auth::id(),
+            ]);
+        }
 
         $this->showPriceModal = false;
         $this->loadPrices();
@@ -461,9 +728,42 @@ class PlanManager extends Component
 
     public function removePriceOverride($planId)
     {
+        $existing = ZonePlanPrice::where('zone_id', $this->selectedZoneId)->where('plan_id', $planId)->first();
+        $oldPrice = $existing?->price;
+
         ZonePlanPrice::where('zone_id', $this->selectedZoneId)->where('plan_id', $planId)->delete();
+
+        \App\Models\PriceHistory::create([
+            'zone_plan_price_id' => $existing?->id,
+            'plan_id' => $planId,
+            'zone_id' => $this->selectedZoneId,
+            'old_price' => $oldPrice,
+            'new_price' => null,
+            'user_id' => Auth::id(),
+        ]);
+
         $this->loadPrices();
         $this->dispatch('show-toast', type: 'success', message: 'Precio restablecido (hereda del padre).');
+    }
+
+    public function loadPriceHistory($planId, $zoneId = null)
+    {
+        $this->historyPlanId = $planId;
+        $this->historyZoneId = $zoneId ?? $this->selectedZoneId;
+        $query = \App\Models\PriceHistory::where('plan_id', $planId);
+        if ($this->historyZoneId) {
+            $query->where('zone_id', $this->historyZoneId);
+        }
+        $this->historyRecords = $query->with('user')->orderByDesc('created_at')->get();
+        $this->showHistoryModal = true;
+    }
+
+    public function closeHistoryModal()
+    {
+        $this->showHistoryModal = false;
+        $this->historyPlanId = null;
+        $this->historyZoneId = null;
+        $this->historyRecords = [];
     }
 
     public function render()
@@ -480,16 +780,39 @@ class PlanManager extends Component
 
         if ($this->activeTab === 'plans') {
             $plans = Plan::when($this->planSearch, fn($q) => $q->where('name', 'like', '%' . $this->planSearch . '%'))
-                ->orderBy('name')
-                ->paginate(20);
+                ->when($this->planFilterType, fn($q) => $q->where('service_type', $this->planFilterType))
+                ->when($this->planPriceMin !== '', fn($q) => $q->where('base_price', '>=', $this->planPriceMin))
+                ->when($this->planPriceMax !== '', fn($q) => $q->where('base_price', '<=', $this->planPriceMax))
+                ->orderByRaw('CAST(SUBSTRING_INDEX(COALESCE(speed, name), " ", 1) AS UNSIGNED) ASC')
+                ->paginate(50);
         } else {
             $plans = collect();
+        }
+
+        $planGroups = \App\Models\PlanGroup::withCount('plans')->orderBy('name')->get();
+        $allPlans = Plan::where('is_active', true)->orderBy('name')->get();
+
+        if ($this->activeTab === 'history') {
+            $historyQuery = \App\Models\PriceHistory::with('plan', 'zone', 'user');
+            if ($this->historySearch) {
+                $historyQuery->whereHas('plan', fn($q) => $q->where('name', 'like', '%' . $this->historySearch . '%'))
+                    ->orWhereHas('zone', fn($q) => $q->where('name', 'like', '%' . $this->historySearch . '%'));
+            }
+            if ($this->historyDateFrom) {
+                $historyQuery->whereDate('created_at', '>=', $this->historyDateFrom);
+            }
+            if ($this->historyDateTo) {
+                $historyQuery->whereDate('created_at', '<=', $this->historyDateTo);
+            }
+            $priceHistories = $historyQuery->orderByDesc('created_at')->paginate(50);
+        } else {
+            $priceHistories = collect();
         }
 
         $selectedZone = $this->selectedZoneId ? Zone::with('branch')->find($this->selectedZoneId) : null;
 
         return view('livewire.admin.plans.plan-manager', compact(
-            'branches', 'allZones', 'rootZones', 'plans', 'selectedZone'
+            'branches', 'allZones', 'rootZones', 'plans', 'selectedZone', 'planGroups', 'allPlans', 'priceHistories'
         ))->layout('components.layouts.app');
     }
 }
