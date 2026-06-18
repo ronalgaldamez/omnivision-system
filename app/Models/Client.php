@@ -10,23 +10,17 @@ class Client extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name',
-        'phone',
-        'address',
-        'service',
-        'document_type',
-        'document_number',
-        'email',
-        'latitude',
-        'longitude',
-        'nro_luz',
-        'installation_address',
-        'notes',
+        'name', 'phone', 'address', 'service',
+        'document_type', 'document_number', 'email',
+        'latitude', 'longitude', 'nro_luz',
+        'installation_address', 'notes',
+        'branch_id', 'zone_id', 'plan_id', 'contract_date',
     ];
 
     protected $casts = [
         'latitude' => 'float',
         'longitude' => 'float',
+        'contract_date' => 'date',
     ];
 
     public function tickets()
@@ -42,5 +36,20 @@ class Client extends Model
     public function phones()
     {
         return $this->hasMany(ClientPhone::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class);
+    }
+
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
     }
 }

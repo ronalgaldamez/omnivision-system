@@ -7,6 +7,8 @@ use Livewire\Attributes\On;
 use App\Models\Client;
 use App\Models\Ticket;
 use App\Models\ServiceType;
+use App\Models\Zone;
+use App\Models\Plan;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
@@ -33,6 +35,13 @@ class TicketForm extends Component
     public $confirmingNewClient = false;
 
     public $knowledgeArticles = [];
+
+    // --- ZONAS Y PLANES ---
+    public $zone_id = '';
+    public $plan_id = '';
+    public $availableZones = [];
+    public $availablePlans = [];
+    public $selectedPlanPrice = null;
 
     // --- NUEVAS PROPIEDADES PARA CRONOMETRO Y FLUJO ---
     public $editingEnabled = false;      // Controla si los campos están habilitados
@@ -67,6 +76,8 @@ class TicketForm extends Component
             $this->origin = $ticket->origin ?? '';
             $this->requires_noc = $ticket->requires_noc;
             $this->status = $ticket->status;
+            $this->zone_id = $ticket->zone_id;
+            $this->plan_id = $ticket->plan_id;
             $this->clientSearch = $ticket->client->name;
             $this->selectedClient = $ticket->client;
 
@@ -77,6 +88,10 @@ class TicketForm extends Component
                 $this->loadKnowledgeArticles($this->service_type_id);
                 $this->calculatePriorityFromArticles();
             }
+
+            $this->loadAvailableZones();
+            if ($this->zone_id) $this->updatedZoneId($this->zone_id);
+            if ($this->plan_id) $this->updatedPlanId($this->plan_id);
 
             // Si es edición, los campos se muestran editables (como siempre)
             $this->editingEnabled = true;
@@ -99,8 +114,10 @@ class TicketForm extends Component
                     $this->origin = $ticket->origin ?? '';
                     $this->requires_noc = $ticket->requires_noc;
                     $this->status = $ticket->status;
+                    $this->zone_id = $ticket->zone_id;
+                    $this->plan_id = $ticket->plan_id;
                     if ($ticket->client_id) {
-                        $client = Client::find($ticket->client_id);
+                        $client = Client::with('branch', 'zone')->find($ticket->client_id);
                         if ($client) {
                             $this->selectedClient = $client;
                             $this->clientSearch = $client->name;
@@ -112,6 +129,9 @@ class TicketForm extends Component
                         $this->loadKnowledgeArticles($this->service_type_id);
                         $this->calculatePriorityFromArticles();
                     }
+                    $this->loadAvailableZones();
+                    if ($this->zone_id) $this->updatedZoneId($this->zone_id);
+                    if ($this->plan_id) $this->updatedPlanId($this->plan_id);
                     $this->editingEnabled = true;
                     $this->ticketOpened = true;
                     // Calcular tiempo transcurrido
@@ -142,18 +162,28 @@ class TicketForm extends Component
             $this->origin = $draft['origin'] ?? '';
             $this->requires_noc = $draft['requires_noc'] ?? false;
             $this->create_ot = $draft['create_ot'] ?? false;
+            $this->zone_id = $draft['zone_id'] ?? '';
+            $this->plan_id = $draft['plan_id'] ?? '';
             $this->clientSearch = $draft['clientSearch'] ?? '';
 
             if (!empty($draft['client_id'])) {
-                $client = Client::find($draft['client_id']);
+                $client = Client::with('branch', 'zone')->find($draft['client_id']);
                 if ($client) {
                     $this->selectedClient = $client;
+                    $this->loadAvailableZones();
                 }
             }
 
             if ($this->service_type_id) {
                 $this->loadKnowledgeArticles($this->service_type_id);
                 $this->calculatePriorityFromArticles();
+            }
+
+            if ($this->zone_id) {
+                $this->updatedZoneId($this->zone_id);
+            }
+            if ($this->plan_id) {
+                $this->updatedPlanId($this->plan_id);
             }
 
             $this->isDraft = true;
@@ -180,6 +210,8 @@ class TicketForm extends Component
             'origin' => $this->origin,
             'requires_noc' => $this->requires_noc,
             'create_ot' => $this->create_ot,
+            'zone_id' => $this->zone_id,
+            'plan_id' => $this->plan_id,
             'clientSearch' => $this->clientSearch,
         ]);
     }
@@ -204,6 +236,11 @@ class TicketForm extends Component
 
         $this->loadKnowledgeArticles($value);
         $this->calculatePriorityFromArticles();
+
+        // Recargar planes disponibles según el nuevo tipo de servicio
+        if ($this->zone_id) {
+            $this->updatedZoneId($this->zone_id);
+        }
 
         // Persistir el cambio en el ticket abierto
         if ($this->ticketOpened && $this->ticketId) {
@@ -262,7 +299,7 @@ class TicketForm extends Component
     public function selectClient($id, $name, $phone = null)
     {
         $id = (int) $id;
-        $client = Client::find($id);
+        $client = Client::with('branch', 'zone')->find($id);
 
         if (!$client) {
             $this->dispatch('show-toast', type: 'error', message: 'El cliente seleccionado ya no existe.');
@@ -276,9 +313,77 @@ class TicketForm extends Component
         $this->clientSearch = $name . ($phone ? ' (' . $phone . ')' : '');
         $this->clientSearchResults = [];
 
+        // Cargar zonas disponibles para la sucursal del cliente
+        $this->loadAvailableZones();
+        if ($client->zone_id) {
+            $this->zone_id = $client->zone_id;
+            $this->updatedZoneId($client->zone_id);
+        }
+
         // Si el ticket ya está abierto, actualizar BD inmediatamente
         if ($this->ticketOpened && $this->ticketId) {
             Ticket::where('id', $this->ticketId)->update(['client_id' => $id]);
+        }
+    }
+
+    public function loadAvailableZones()
+    {
+        if (!$this->selectedClient || !$this->selectedClient->branch_id) {
+            $this->availableZones = [];
+            return;
+        }
+        $this->availableZones = Zone::where('branch_id', $this->selectedClient->branch_id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function updatedZoneId($value)
+    {
+        $this->plan_id = '';
+        $this->selectedPlanPrice = null;
+        $this->availablePlans = [];
+
+        if (!$value) return;
+
+        $zone = Zone::with('branch')->find($value);
+        if (!$zone) return;
+
+        $serviceType = ServiceType::find($this->service_type_id);
+        $serviceName = $serviceType?->name;
+
+        // Filtrar planes según disponibilidad de la zona + tipo de servicio
+        $plans = Plan::where('is_active', true);
+
+        if ($serviceName === 'internet' && !$zone->has_internet) {
+            $this->dispatch('show-toast', type: 'warning', message: 'Esta zona no tiene cobertura de internet.');
+            return;
+        }
+        if ($serviceName === 'cable' && !$zone->has_cable) {
+            $this->dispatch('show-toast', type: 'warning', message: 'Esta zona no tiene cobertura de cable.');
+            return;
+        }
+
+        $plans = $plans->get()->filter(function ($plan) use ($serviceName) {
+            if (!$serviceName) return true;
+            if ($serviceName === 'internet') return in_array($plan->service_type, ['internet', 'internet_cable']);
+            if ($serviceName === 'cable') return in_array($plan->service_type, ['cable', 'internet_cable']);
+            return true;
+        });
+
+        $this->availablePlans = $plans->values();
+    }
+
+    public function updatedPlanId($value)
+    {
+        if (!$value || !$this->zone_id) {
+            $this->selectedPlanPrice = null;
+            return;
+        }
+        $zone = Zone::find($this->zone_id);
+        $plan = Plan::find($value);
+        if ($zone && $plan) {
+            $this->selectedPlanPrice = $zone->getEffectivePriceForPlan($plan);
         }
     }
 
@@ -334,6 +439,10 @@ class TicketForm extends Component
         $this->origin = '';
         $this->requires_noc = false;
         $this->create_ot = false;
+        $this->zone_id = '';
+        $this->plan_id = '';
+        $this->availablePlans = [];
+        $this->selectedPlanPrice = null;
         $this->knowledgeArticles = collect();
 
         if (!$this->ticketId && !$this->ticketOpened) {
@@ -355,6 +464,8 @@ class TicketForm extends Component
             'priority' => $this->priority ?: 'P3',
             'origin' => $this->origin ?: '',
             'requires_noc' => false,
+            'zone_id' => $this->zone_id ?: null,
+            'plan_id' => $this->plan_id ?: null,
             'status' => 'open',
             'started_at' => now(),
             'created_by' => Auth::id(),
@@ -413,8 +524,10 @@ class TicketForm extends Component
         $serviceType = ServiceType::find($this->service_type_id);
         $serviceName = $serviceType ? $serviceType->name : '';
 
+        $zoneId = $this->zone_id ?: null;
+        $planId = $this->plan_id ?: null;
+
         if ($this->create_ot) {
-            // Crear OT sin resolver el ticket (igual que flujo NOC)
             $this->createWorkOrder($ticket);
 
             $ticket->update([
@@ -423,21 +536,33 @@ class TicketForm extends Component
                 'service_type' => $serviceName,
                 'priority' => $this->priority,
                 'origin' => $this->origin,
+                'zone_id' => $zoneId,
+                'plan_id' => $planId,
                 'status' => 'in_progress',
                 'l1_ended_at' => now(),
             ]);
         } else {
-            // Solucionar ticket normalmente
             $ticket->update([
                 'client_id' => $this->client_id,
                 'description' => $this->description,
                 'service_type' => $serviceName,
                 'priority' => $this->priority,
                 'origin' => $this->origin,
+                'zone_id' => $zoneId,
+                'plan_id' => $planId,
                 'requires_noc' => $this->requires_noc,
                 'status' => 'resolved',
                 'resolved_at' => now(),
                 'l1_ended_at' => now(),
+            ]);
+        }
+
+        // Actualizar datos de contratación del cliente
+        if ($zoneId || $planId) {
+            $ticket->client->update([
+                'zone_id' => $zoneId,
+                'plan_id' => $planId,
+                'contract_date' => now(),
             ]);
         }
 
@@ -528,6 +653,8 @@ class TicketForm extends Component
             'priority' => $this->priority,
             'origin' => $this->origin,
             'requires_noc' => $this->requires_noc,
+            'zone_id' => $this->zone_id ?: null,
+            'plan_id' => $this->plan_id ?: null,
         ];
 
         if ($this->ticketId) {
@@ -545,6 +672,14 @@ class TicketForm extends Component
 
             if ($this->create_ot) {
                 $this->createWorkOrder($ticket);
+                // Actualizar datos de contratación del cliente
+                if ($this->zone_id || $this->plan_id) {
+                    $ticket->client->update([
+                        'zone_id' => $this->zone_id ?: null,
+                        'plan_id' => $this->plan_id ?: null,
+                        'contract_date' => now(),
+                    ]);
+                }
             } elseif ($this->requires_noc) {
                 $this->dispatch('ticket-created-for-noc');
                 $this->dispatch('show-toast', type: 'info', message: 'Nuevo ticket requiere atención del NOC.');
@@ -561,11 +696,17 @@ class TicketForm extends Component
 
     protected function createWorkOrder($ticket)
     {
+        $zoneId = $ticket->zone_id ?? $this->zone_id;
+        $planId = $ticket->plan_id ?? $this->plan_id;
+
         \App\Models\WorkOrder::create([
             'ticket_id' => $ticket->id,
             'client_id' => $ticket->client_id,
             'description' => $ticket->description,
             'service_type' => $ticket->service_type,
+            'requires_noc' => $ticket->requires_noc ?? $this->requires_noc,
+            'zone_id' => $zoneId ?: null,
+            'plan_id' => $planId ?: null,
             'status' => 'pending',
             'created_by' => Auth::id(),
         ]);
@@ -582,6 +723,8 @@ class TicketForm extends Component
             'origin' => 'origin',
             'requires_noc' => 'requires_noc',
             'priority' => 'priority',
+            'zone_id' => 'zone_id',
+            'plan_id' => 'plan_id',
         ];
 
         if (array_key_exists($property, $map)) {
