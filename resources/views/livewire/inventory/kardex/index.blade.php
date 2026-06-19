@@ -83,6 +83,7 @@
                                 <option value="technician_return">Devolución técnico</option>
                                 <option value="damage">Dañado</option>
                                 <option value="return_to_supplier">Dev. proveedor</option>
+                                <option value="requisition_out">Requisición</option>
                             </select>
                             <span
                                 class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">swap_vert</span>
@@ -238,6 +239,11 @@
                                         <span
                                             class="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
                                             <span class="material-symbols-outlined text-xs">local_shipping</span> DEV. PROVEEDOR
+                                        </span>
+                                    @elseif($item->type == 'requisition_out')
+                                        <span
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">
+                                            <span class="material-symbols-outlined text-xs">handyman</span> REQUISICIÓN
                                         </span>
                                     @else
                                         <span class="text-gray-600 text-xs">{{ strtoupper($item->type) }}</span>

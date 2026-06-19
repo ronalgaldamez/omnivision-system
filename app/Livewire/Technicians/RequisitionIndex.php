@@ -28,36 +28,29 @@ class RequisitionIndex extends Component
             return;
         }
 
-        // Crear una devolución de técnico (technician_return)
-        $return = \App\Models\TechnicianReturn::create([
-            'technician_id' => $user->id,
-            'return_date' => now(),
-            'status' => 'completed',
-            'notes' => 'Cierre semanal automático - Material sobrante de requisiciones',
-        ]);
-
+        // Crear una devolución por producto (una fila por producto en la tabla technician_returns)
         foreach ($inventoryItems as $inv) {
             if ($inv->quantity_in_hand > 0) {
-                \App\Models\ReturnProduct::create([
-                    'technician_return_id' => $return->id,
+                \App\Models\TechnicianReturn::create([
+                    'user_id' => $user->id,
                     'product_id' => $inv->product_id,
                     'quantity' => $inv->quantity_in_hand,
-                    'condition' => 'good', // asumimos bueno, ajustable luego
+                    'type' => 'surplus',
+                    'notes' => 'Cierre semanal automático - Material sobrante de requisiciones',
                 ]);
 
                 // Devolver stock a bodega
                 $product = $inv->product;
                 $product->increment('current_stock', $inv->quantity_in_hand);
 
-                // Registrar movimiento
+                // Registrar movimiento en kardex
                 \App\Models\Movement::create([
                     'product_id' => $inv->product_id,
                     'type' => 'technician_return',
                     'quantity' => $inv->quantity_in_hand,
                     'description' => 'Devolución cierre semanal (Req. agrupadas)',
                     'user_id' => $user->id,
-                    'reference_type' => 'technician_return',
-                    'reference_id' => $return->id,
+                    'reference_type' => 'weekly_close',
                 ]);
 
                 // Limpiar inventario del técnico

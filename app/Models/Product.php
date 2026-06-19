@@ -77,7 +77,7 @@ class Product extends Model
     {
         if (in_array($type, ['entry', 'technician_return'])) {
             $this->increment('current_stock', $quantity);
-        } elseif (in_array($type, ['exit', 'technician_out', 'damage', 'return_to_supplier'])) {
+        } elseif (in_array($type, ['exit', 'technician_out', 'damage', 'return_to_supplier', 'requisition_out'])) {
             $this->decrement('current_stock', $quantity);
         }
     }
