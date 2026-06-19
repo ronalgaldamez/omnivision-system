@@ -65,7 +65,7 @@ class KardexIndex extends Component
             $item->line_number = $index + 1;
 
             $isEntry = in_array($mov->type, ['entry', 'technician_return']);
-            $isExit = in_array($mov->type, ['exit', 'technician_out', 'damage', 'return_to_supplier']);
+            $isExit = in_array($mov->type, ['exit', 'technician_out', 'damage', 'return_to_supplier', 'requisition_out']);
 
             if ($isEntry) {
                 $newTotalQty = $balanceQty + $mov->quantity;
