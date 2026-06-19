@@ -50,13 +50,17 @@ class TicketForm extends Component
     public $elapsedSeconds = 0;
     public $confirmingGenerate = false;
 
+    // --- CANCELACIÓN ---
+    public $confirmingCancel = false;
+    public $cancelReason = '';
+
     protected $rules = [
         'client_id' => 'required|exists:clients,id',
         'description' => 'required|string|min:5',
         'service_type_id' => 'required|exists:service_types,id',
         'origin' => 'nullable|string|max:100',
         'requires_noc' => 'boolean',
-        'status' => 'in:pending,in_progress,resolved,closed,open',
+        'status' => 'in:pending,in_progress,resolved,closed,open,cancelled',
     ];
 
     public function mount($id = null)
@@ -422,6 +426,7 @@ class TicketForm extends Component
     public function closeClientModal()
     {
         $this->showClientModal = false;
+        session()->forget('client_modal_draft');
     }
 
     #[On('clientCreated')]
@@ -558,7 +563,7 @@ class TicketForm extends Component
         }
 
         // Actualizar datos de contratación del cliente
-        if ($zoneId || $planId) {
+        if (($zoneId || $planId) && $ticket->client) {
             $ticket->client->update([
                 'zone_id' => $zoneId,
                 'plan_id' => $planId,
@@ -582,6 +587,40 @@ class TicketForm extends Component
     public function cancelSolve()
     {
         $this->confirmingSolve = false;
+    }
+
+    // ==================== CANCELACIÓN DE TICKET ====================
+    public function confirmCancel()
+    {
+        $this->resetValidation();
+        $this->cancelReason = '';
+        $this->confirmingCancel = true;
+    }
+
+    public function executeCancel()
+    {
+        $this->validate(['cancelReason' => 'required|string|min:5']);
+        $this->confirmingCancel = false;
+
+        $ticket = Ticket::findOrFail($this->ticketId);
+
+        $ticket->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancellation_reason' => $this->cancelReason,
+        ]);
+
+        session()->forget('open_ticket_id');
+        session()->forget('ticket_draft');
+
+        session()->flash('message', 'Ticket cancelado: ' . $this->cancelReason);
+        return redirect()->route('tickets.index');
+    }
+
+    public function cancelCancel()
+    {
+        $this->confirmingCancel = false;
+        $this->cancelReason = '';
     }
 
     // ==================== FIN NUEVOS MÉTODOS ====================
@@ -639,6 +678,14 @@ class TicketForm extends Component
     public function cancelSave()
     {
         $this->confirmingSave = false;
+    }
+
+    public function goBack()
+    {
+        if (!$this->ticketId) {
+            session()->forget('ticket_draft');
+        }
+        return redirect()->route('tickets.index');
     }
 
     public function save()

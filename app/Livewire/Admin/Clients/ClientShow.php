@@ -14,7 +14,7 @@ class ClientShow extends Component
 
     public function mount($id)
     {
-        $this->client = Client::with('phones')->findOrFail($id);
+        $this->client = Client::with('phones', 'branch', 'zone', 'plan')->findOrFail($id);
         $this->tickets = $this->client->tickets()
             ->orderBy('created_at', 'desc')
             ->get();

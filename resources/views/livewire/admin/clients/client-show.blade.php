@@ -123,6 +123,33 @@
                         </div>
                     </div>
                     @endif
+                    @if($client->branch)
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/70 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">business</span>
+                        <div>
+                            <p class="text-xs text-gray-500">Sucursal</p>
+                            <p class="text-gray-800">{{ $client->branch->name }}</p>
+                        </div>
+                    </div>
+                    @endif
+                    @if($client->zone)
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/70 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">map</span>
+                        <div>
+                            <p class="text-xs text-gray-500">Zona</p>
+                            <p class="text-gray-800">{{ $client->zone->name }} ({{ ucfirst($client->zone->level) }})</p>
+                        </div>
+                    </div>
+                    @endif
+                    @if($client->plan)
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/70 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">subscriptions</span>
+                        <div>
+                            <p class="text-xs text-gray-500">Plan</p>
+                            <p class="text-gray-800">{{ $client->plan->name }} @if($client->plan->speed)({{ $client->plan->speed }})@endif</p>
+                        </div>
+                    </div>
+                    @endif
                     @if($client->notes)
                     <div class="flex items-start gap-3 p-3 bg-gray-50/70 rounded-lg border border-gray-100 sm:col-span-2">
                         <span class="material-symbols-outlined text-gray-400">sticky_note_2</span>

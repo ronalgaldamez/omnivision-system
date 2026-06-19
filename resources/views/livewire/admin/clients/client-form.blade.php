@@ -274,20 +274,159 @@
                     @error('nro_luz') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Servicio contratado -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-gray-400 text-base">tv</span>
+                <!-- Servicio contratado (sucursal + zona + plan) -->
+                <div class="bg-blue-50/40 border border-blue-200 rounded-xl p-4 space-y-4">
+                    <h3 class="text-sm font-semibold text-blue-800 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-base">assignment</span>
                         Servicio contratado
-                    </label>
-                    <div class="relative">
-                        <input type="text" wire:model="service"
-                            class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                            placeholder="Ej: Internet, Cable, IPTV, etc.">
-                        <span
-                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">devices</span>
+                        <span class="text-xs font-normal text-blue-500">(opcional)</span>
+                    </h3>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">🏢 Sucursal</label>
+                        <div class="relative">
+                            <select wire:model.live="branch_id"
+                                class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white text-sm appearance-none">
+                                <option value="">Seleccionar sucursal</option>
+                                @foreach($branches as $b)
+                                <option value="{{ $b->id }}">{{ $b->name }}</option>
+                                @endforeach
+                            </select>
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">business</span>
+                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                        </div>
+                    </div>
+
+                    @if($branch_id)
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">📍 Zona</label>
+                        <div class="relative">
+                            <select wire:model.live="zone_id"
+                                class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white text-sm appearance-none">
+                                <option value="">Seleccionar zona</option>
+                                @foreach($availableZones as $z)
+                                <option value="{{ $z['id'] }}">{{ $z['name'] }}</option>
+                                @endforeach
+                            </select>
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">map</span>
+                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                        </div>
+                    </div>
+                    @endif
+
+                    @if($zone_id)
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">📦 Plan</label>
+                        <div class="relative">
+                            <select wire:model.live="plan_id"
+                                class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white text-sm appearance-none">
+                                <option value="">Seleccionar plan</option>
+                                @forelse($availablePlans as $p)
+                                <option value="{{ $p['id'] }}">
+                                    {{ $p['name'] }} @if($p['speed'])({{ $p['speed'] }})@endif
+                                    — ${{ number_format($p['price'], 2) }}
+                                </option>
+                                @empty
+                                <option value="" disabled>No hay planes asignados a esta zona</option>
+                                @endforelse
+                            </select>
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">subscriptions</span>
+                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                        </div>
+                        @if(count($availablePlans) === 0)
+                        <p class="text-xs text-amber-600 mt-1">Asigná planes a esta zona desde <strong>Gestión de Planes y Zonas</strong>.</p>
+                        @endif
+                    </div>
+                    @endif
+
+                    {{-- Card visual del plan seleccionado --}}
+                    @php $selPlan = collect($availablePlans)->firstWhere('id', $plan_id); @endphp
+                    @if($selPlan)
+                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                        <div class="p-4">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h4 class="font-semibold text-gray-900">{{ $selPlan['name'] }}</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        @if($selPlan['speed'])
+                                        <span class="text-xs text-gray-500">{{ $selPlan['speed'] }}</span>
+                                        <span class="text-gray-300">|</span>
+                                        @endif
+                                        <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                                            {{ $selPlan['service_type'] === 'internet_cable' ? 'bg-green-100 text-green-700' : ($selPlan['service_type'] === 'internet' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700') }}">
+                                            @php
+                                                $icons = ['internet_cable' => '🌐+📺', 'internet' => '🌐', 'cable' => '📺'];
+                                            @endphp
+                                            {{ $icons[$selPlan['service_type']] ?? '' }}
+                                            {{ str_replace('_', ' + ', ucfirst($selPlan['service_type'])) }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-400">Precio en esta zona</p>
+                                    <p class="text-xl font-bold text-green-600">${{ number_format($selectedPlanPrice, 2) }}</p>
+                                    @if(($selPlan['base_price'] ?? 0) != $selectedPlanPrice)
+                                    <p class="text-xs text-gray-400 line-through">Base: ${{ number_format($selPlan['base_price'], 2) }}</p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Resumen de contratación --}}
+                    <div class="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Resumen</p>
+                        <div class="flex items-center gap-2 text-sm text-gray-700 flex-wrap">
+                            <span class="font-medium">{{ $branches->firstWhere('id', $branch_id)?->name ?? '—' }}</span>
+                            <span class="text-gray-400 material-symbols-outlined text-base">chevron_right</span>
+                            <span class="font-medium">{{ collect($availableZones)->firstWhere('id', $zone_id)['name'] ?? '—' }}</span>
+                            <span class="text-gray-400 material-symbols-outlined text-base">chevron_right</span>
+                            <span class="font-medium">{{ $selPlan['name'] }}</span>
+                        </div>
+                        <div class="mt-1 text-sm">
+                            <span class="text-green-700 font-semibold">${{ number_format($selectedPlanPrice, 2) }}/mes</span>
+                            <span class="text-gray-400 mx-1">•</span>
+                            <span class="text-gray-500">{{ $service ?: 'Servicio a definir' }}</span>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+
+                {{-- Historial de contratos --}}
+                @if(!empty($contractHistory))
+                <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                        <h4 class="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-base text-gray-500">history</span>
+                            Historial de contratos
+                        </h4>
+                    </div>
+                    <div class="divide-y divide-gray-100">
+                        @foreach($contractHistory as $entry)
+                        <div class="px-4 py-3 flex items-center justify-between text-sm">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="material-symbols-outlined text-base text-gray-400 flex-shrink-0">assignment</span>
+                                <div class="min-w-0">
+                                    <p class="font-medium text-gray-800 truncate">{{ $entry['plan_name'] }}</p>
+                                    <p class="text-xs text-gray-500">{{ $entry['zone_name'] }} — {{ $entry['date'] }}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 flex-shrink-0">
+                                @if($entry['price'])
+                                <span class="text-sm font-semibold text-green-600">${{ number_format($entry['price'], 2) }}</span>
+                                @endif
+                                <span class="text-xs px-2 py-0.5 rounded-full
+                                    {{ $entry['status'] === 'open' ? 'bg-yellow-100 text-yellow-700' : ($entry['status'] === 'resolved' ? 'bg-green-100 text-green-700' : ($entry['status'] === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700')) }}">
+                                    {{ ucfirst($entry['status']) }}
+                                </span>
+                            </div>
+                        </div>
+                        @endforeach
                     </div>
                 </div>
+                @endif
+
+                <input type="hidden" wire:model="service">
 
                 <!-- Notas -->
                 <div>
