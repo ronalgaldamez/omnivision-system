@@ -419,11 +419,16 @@
 
                 <!-- Botones -->
                 <div class="flex justify-end gap-3 pt-2">
-                    <a href="{{ route('tickets.index') }}"
+                    <button type="button" wire:click="goBack"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition shadow-sm">
-                        Cancelar
-                    </a>
+                        @if($ticketOpened) Salir @else Cancelar @endif
+                    </button>
                @if($ticketOpened)
+                    <button type="button" wire:click="confirmCancel"
+                        class="px-5 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 transition inline-flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">block</span>
+                        Cancelar Ticket
+                    </button>
                 @if($requires_noc)
                     <button type="button" wire:click="confirmGenerate"
                         class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition inline-flex items-center gap-2">
@@ -614,6 +619,51 @@
                         <button type="button" @click="open = false" wire:click="cancelGenerate"
                             class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
                             Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Modal de cancelación con motivo obligatorio -->
+    @if($confirmingCancel)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="p-6">
+                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 mb-4">
+                            <span class="material-symbols-outlined text-red-600 text-2xl">block</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 text-center">Cancelar Ticket</h3>
+                        <p class="text-sm text-gray-600 mt-2 text-center">
+                            Se detendrá el cronómetro y el ticket quedará como <strong>cancelado</strong>.
+                        </p>
+                        @if($elapsedSeconds > 0)
+                            <p class="text-sm text-gray-500 mt-1 text-center">
+                                Tiempo transcurrido: <strong>{{ gmdate('H:i:s', $elapsedSeconds) }}</strong>
+                            </p>
+                        @endif
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Motivo de cancelación <span class="text-red-500">*</span>
+                            </label>
+                            <textarea wire:model="cancelReason" rows="3"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                                placeholder="Ej: El cliente ya no quiere el servicio..."></textarea>
+                            @error('cancelReason') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                        <button type="button" wire:click="executeCancel"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg shadow-sm transition">
+                            Sí, cancelar ticket
+                        </button>
+                        <button type="button" @click="open = false" wire:click="cancelCancel"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                            Volver
                         </button>
                     </div>
                 </div>

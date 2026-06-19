@@ -19,7 +19,8 @@ class SettingsManager extends Component
     public $showServiceModal = false;
     public $editingServiceId = null;
     public $serviceName = '';
-    public $serviceRequiresNoc = false;
+    public $serviceRequiresNoc = [];
+    public $serviceRequiresNocModal = false;
 
     // ========== PROPIEDADES DE BASE DE CONOCIMIENTO ==========
     public $articles;
@@ -96,6 +97,9 @@ class SettingsManager extends Component
     public function loadServiceTypes()
     {
         $this->serviceTypes = ServiceType::orderBy('name')->get();
+        foreach ($this->serviceTypes as $type) {
+            $this->serviceRequiresNoc[$type->id] = $type->requires_noc;
+        }
     }
 
     public function updatedServiceRequiresNoc($value, $id)
@@ -118,7 +122,7 @@ class SettingsManager extends Component
         $serviceType = ServiceType::findOrFail($id);
         $this->editingServiceId = $serviceType->id;
         $this->serviceName = $serviceType->name;
-        $this->serviceRequiresNoc = $serviceType->requires_noc;
+        $this->serviceRequiresNocModal = $serviceType->requires_noc;
         $this->showServiceModal = true;
     }
 
@@ -126,20 +130,20 @@ class SettingsManager extends Component
     {
         $this->validate([
             'serviceName' => 'required|string|max:255|unique:service_types,name,' . $this->editingServiceId,
-            'serviceRequiresNoc' => 'boolean',
+            'serviceRequiresNocModal' => 'boolean',
         ]);
 
         if ($this->editingServiceId) {
             $serviceType = ServiceType::findOrFail($this->editingServiceId);
             $serviceType->update([
                 'name' => $this->serviceName,
-                'requires_noc' => $this->serviceRequiresNoc,
+                'requires_noc' => $this->serviceRequiresNocModal,
             ]);
             $message = "Tipo de servicio '{$this->serviceName}' actualizado.";
         } else {
             ServiceType::create([
                 'name' => $this->serviceName,
-                'requires_noc' => $this->serviceRequiresNoc,
+                'requires_noc' => $this->serviceRequiresNocModal,
             ]);
             $message = "Tipo de servicio '{$this->serviceName}' creado.";
         }
@@ -168,7 +172,7 @@ class SettingsManager extends Component
     {
         $this->editingServiceId = null;
         $this->serviceName = '';
-        $this->serviceRequiresNoc = false;
+        $this->serviceRequiresNocModal = false;
     }
 
     // ========== MÉTODOS PARA BASE DE CONOCIMIENTO ==========

@@ -20,6 +20,8 @@ class Ticket extends Model
         'created_by',
         'resolved_by',
         'resolved_at',
+        'cancelled_at',
+        'cancellation_reason',
         'ticket_code',
         'zone_id',
         'plan_id',
@@ -39,6 +41,7 @@ class Ticket extends Model
         'l2_started_at' => 'datetime',
         'l2_ended_at'   => 'datetime',
         'resolved_at'   => 'datetime',
+        'cancelled_at'  => 'datetime',
         'requires_noc'  => 'boolean',
     ];
 

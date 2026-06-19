@@ -4,6 +4,10 @@ namespace App\Livewire\Clients;
 
 use Livewire\Component;
 use App\Models\Client;
+use App\Models\Branch;
+use App\Models\Zone;
+use App\Models\Plan;
+use App\Models\ZonePlanPrice;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -22,6 +26,15 @@ class ClientForm extends Component
     public $service = '';
     public $notes = '';
 
+    // === ZONAS Y PLANES ===
+    public $branch_id = '';
+    public $zone_id = '';
+    public $plan_id = '';
+    public $availableZones = [];
+    public $availablePlans = [];
+    public $selectedPlanPrice = null;
+    public $selectedPlanService = '';
+
     public $phones = [];
 
     protected function rules()
@@ -38,6 +51,9 @@ class ClientForm extends Component
             'nro_luz' => ['nullable', 'string', 'max:12', 'regex:/^\d{12}$/', Rule::unique('clients', 'nro_luz')],
             'installation_address' => 'required|string',
             'service' => 'nullable|string|max:255',
+            'branch_id' => 'nullable|exists:branches,id',
+            'zone_id' => 'nullable|exists:zones,id',
+            'plan_id' => 'nullable|exists:plans,id',
             'notes' => 'nullable|string',
             'phones' => 'nullable|array',
             'phones.*.number' => ['required_with:phones', 'string', 'max:9', 'regex:/^\d{4}-\d{4}$/'],
@@ -60,8 +76,14 @@ class ClientForm extends Component
         $this->nro_luz = $draft['nro_luz'] ?? '';
         $this->installation_address = $draft['installation_address'] ?? '';
         $this->service = $draft['service'] ?? '';
+        $this->branch_id = $draft['branch_id'] ?? '';
+        $this->zone_id = $draft['zone_id'] ?? '';
+        $this->plan_id = $draft['plan_id'] ?? '';
         $this->notes = $draft['notes'] ?? '';
         $this->phones = $draft['phones'] ?? [];
+        if ($this->branch_id) $this->loadZones();
+        if ($this->zone_id) $this->loadPlans();
+        if ($this->plan_id) $this->loadSelectedPlan();
     }
 
     public function updated($property)
@@ -78,6 +100,9 @@ class ClientForm extends Component
             'nro_luz' => $this->nro_luz,
             'installation_address' => $this->installation_address,
             'service' => $this->service,
+            'branch_id' => $this->branch_id,
+            'zone_id' => $this->zone_id,
+            'plan_id' => $this->plan_id,
             'notes' => $this->notes,
             'phones' => $this->phones,
         ]);
@@ -92,6 +117,96 @@ class ClientForm extends Component
     {
         unset($this->phones[$index]);
         $this->phones = array_values($this->phones);
+    }
+
+    // ========== ZONAS Y PLANES ==========
+
+    public function updatedBranchId($value)
+    {
+        $this->zone_id = '';
+        $this->plan_id = '';
+        $this->availablePlans = [];
+        $this->selectedPlanPrice = null;
+        $this->selectedPlanService = '';
+        if ($value) {
+            $this->loadZones();
+        } else {
+            $this->availableZones = [];
+        }
+    }
+
+    private function loadZones()
+    {
+        $this->availableZones = Zone::where('branch_id', $this->branch_id)
+            ->orderBy('name')
+            ->get()
+            ->map(fn($z) => ['id' => $z->id, 'name' => $z->name . ' (' . ucfirst($z->level) . ')'])
+            ->toArray();
+    }
+
+    public function updatedZoneId($value)
+    {
+        $this->plan_id = '';
+        $this->selectedPlanPrice = null;
+        $this->selectedPlanService = '';
+        if ($value) {
+            $this->loadPlans();
+        } else {
+            $this->availablePlans = [];
+        }
+    }
+
+    private function loadPlans()
+    {
+        $zone = Zone::find($this->zone_id);
+        if (!$zone) {
+            $this->availablePlans = [];
+            return;
+        }
+        $prices = ZonePlanPrice::where('zone_id', $zone->id)
+            ->with('plan')
+            ->get()
+            ->sortBy(fn($zp) => $zp->plan->name);
+        $this->availablePlans = $prices->map(function ($zp) use ($zone) {
+            $effective = $zone->getEffectivePriceForPlan($zp->plan);
+            return [
+                'id' => $zp->plan->id,
+                'name' => $zp->plan->name,
+                'speed' => $zp->plan->speed,
+                'service_type' => $zp->plan->service_type,
+                'base_price' => $zp->plan->base_price,
+                'price' => $effective,
+            ];
+        })->values()->toArray();
+    }
+
+    private function loadSelectedPlan()
+    {
+        $plan = Plan::find($this->plan_id);
+        if (!$plan || !$this->zone_id) return;
+        $zone = Zone::find($this->zone_id);
+        $this->selectedPlanPrice = $zone?->getEffectivePriceForPlan($plan);
+        $this->selectedPlanService = $plan->service_type;
+    }
+
+    public function updatedPlanId($value)
+    {
+        $this->selectedPlanPrice = null;
+        $this->selectedPlanService = '';
+        if ($value) {
+            $this->loadSelectedPlan();
+            $plan = Plan::find($value);
+            if ($plan) {
+                $this->service = match ($plan->service_type) {
+                    'internet' => 'Solo Internet',
+                    'cable' => 'Solo Cable',
+                    'internet_cable' => 'Internet + Cable',
+                    default => $plan->service_type,
+                };
+            }
+        } else {
+            $this->service = '';
+        }
     }
 
     public function save()
@@ -148,6 +263,9 @@ class ClientForm extends Component
             'nro_luz' => $this->nro_luz,
             'installation_address' => $this->installation_address,
             'service' => $this->service,
+            'branch_id' => $this->branch_id ?: null,
+            'zone_id' => $this->zone_id ?: null,
+            'plan_id' => $this->plan_id ?: null,
             'notes' => $this->notes,
         ]);
 
@@ -173,6 +291,7 @@ class ClientForm extends Component
 
     public function render()
     {
-        return view('livewire.clients.client-form');
+        $branches = Branch::where('is_active', true)->orderBy('name')->get();
+        return view('livewire.clients.client-form', compact('branches'));
     }
 }

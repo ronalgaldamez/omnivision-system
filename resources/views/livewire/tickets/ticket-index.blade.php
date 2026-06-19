@@ -40,6 +40,7 @@
                         <option value="in_progress">En progreso</option>
                         <option value="resolved">Resuelto</option>
                         <option value="closed">Cerrado</option>
+                        <option value="cancelled">Cancelado</option>
                     </select>
                     <span
                         class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
@@ -75,7 +76,7 @@
                                     {{ $ticket->ticket_code ?? '—' }}
                                 </td>
                                 <td class="px-4 py-3 font-mono text-xs text-gray-700">#{{ $ticket->id }}</td>
-                                <td class="px-4 py-3 text-gray-800">{{ $ticket->client->name }}</td>
+                                <td class="px-4 py-3 text-gray-800">{{ $ticket->client?->name ?? '—' }}</td>
                                 <td class="px-4 py-3">
                                     <span
                                         class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
@@ -123,6 +124,9 @@
                                     @elseif($ticket->status == 'closed')
                                         <span
                                             class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">Cerrado</span>
+                                    @elseif($ticket->status == 'cancelled')
+                                        <span
+                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-red-50 text-red-700 rounded-full text-xs font-medium">Cancelado</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-gray-700 font-mono text-xs">
