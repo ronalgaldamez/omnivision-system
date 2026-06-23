@@ -15,6 +15,7 @@ class Client extends Model
         'latitude', 'longitude', 'nro_luz',
         'installation_address', 'notes',
         'branch_id', 'zone_id', 'plan_id', 'contract_date',
+        'departamento', 'municipio', 'distrito',
     ];
 
     protected $casts = [

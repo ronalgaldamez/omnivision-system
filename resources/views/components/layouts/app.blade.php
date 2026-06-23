@@ -288,6 +288,9 @@
                                 @can('manage catalog')<a href="{{ route('admin.plans') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">assignment</span> Planes y Zonas</a>@endcan
+                                @can('access_admin')<a href="{{ route('admin.shelves') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">shelves</span> Estanterías</a>@endcan
                                 @can('view_settings_menu')<a href="{{ route('admin.settings') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">settings</span> Configuración</a>@endcan

@@ -49,8 +49,8 @@
                                         <span class="text-xs text-gray-500">NIT: {{ $supplier->nit ?? 'N/A' }} | NRC:
                                             {{ $supplier->nrc ?? 'N/A' }}</span>
                                     </li>
-                                @endforeach>
-                            </ul>
+                                 @endforeach
+                             </ul>
                         @endif
                         @error('supplier_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
                         @enderror
@@ -386,6 +386,72 @@
                 </div>
             </div>
         </div>
+    @endif
+
+    {{-- Modal asignación a estanterías --}}
+    @if($showShelfModal)
+    <div x-data="{ open: true }" x-show="open" x-cloak
+        class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        style="display: none;">
+        <div class="relative mx-auto p-5 w-full max-w-2xl" @@click.away="open = false">
+            <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-gray-500">shelves</span>
+                        Asignar productos a estanterías
+                    </h3>
+                    <p class="text-sm text-gray-500 mt-1">Seleccioná dónde se guardará cada producto. Podés omitir este paso.</p>
+                </div>
+                <div class="px-6 pt-3">
+                    <p class="text-xs text-gray-400">Las estanterías raíz son solo referencia. Seleccioná un contenedor hijo (con código indentado) para asignar.</p>
+                </div>
+                <div class="p-6 max-h-96 overflow-y-auto space-y-4">
+                    @foreach($shelfAssignments as $index => $assign)
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div class="flex items-start justify-between mb-2">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ $assign['product_name'] }}</p>
+                                <p class="text-xs text-gray-500">{{ $assign['product_sku'] }} · {{ $assign['quantity'] }} unidades</p>
+                            </div>
+                            @if($assign['current_shelves'])
+                            <span class="text-xs text-gray-400">Ya en: {{ $assign['current_shelves'] }}</span>
+                            @endif
+                        </div>
+                        <select wire:model="shelfAssignments.{{ $index }}.shelf_id"
+                            class="w-full py-2 rounded-lg border border-gray-300 bg-white text-sm">
+                            <option value="">— Sin asignar —</option>
+                            @foreach($allShelves as $shelf)
+                            @if($shelf['is_root'])
+                            <option disabled class="text-gray-400 bg-gray-50">{{ $shelf['display'] }}</option>
+                            @else
+                            <option value="{{ $shelf['id'] }}" {{ $shelf['is_full'] ? 'disabled' : '' }}>{{ $shelf['display'] }}</option>
+                            @endif
+                            @endforeach
+                        </select>
+                        @php $selectedShelf = collect($allShelves)->firstWhere('id', $shelfAssignments[$index]['shelf_id']); @endphp
+                        @if($selectedShelf && $selectedShelf['is_full'])
+                        <p class="text-xs text-red-500 mt-1.5 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">warning</span>
+                            Esta ubicación está marcada como llena. Seleccioná otra.
+                        </p>
+                        @endif
+                    </div>
+                    @endforeach
+                </div>
+                <div class="bg-gray-50 px-6 py-4 flex justify-between">
+                    <button type="button" wire:click="skipShelfAssignment"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition">
+                        Omitir — asignar después
+                    </button>
+                    <button type="button" wire:click="saveShelfAssignments"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 transition inline-flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">save</span>
+                        Guardar asignación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     @endif
 
     <!-- Toast -->

@@ -42,7 +42,7 @@ class WorkOrderShow extends Component
 
     public function mount($id)
     {
-        $this->order = WorkOrder::with('technician', 'products.product', 'client', 'ticket', 'createdBy')->findOrFail($id);
+        $this->order = WorkOrder::with('technician', 'products.product', 'client.branch', 'client.phones', 'ticket', 'createdBy', 'zone', 'plan')->findOrFail($id);
 
         // Inicializar campos técnicos desde la orden
         $this->wifi_name = $this->order->wifi_name;

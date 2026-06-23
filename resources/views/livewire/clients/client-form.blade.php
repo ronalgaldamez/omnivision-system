@@ -134,6 +134,28 @@
             @error('email') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
         </div>
 
+        {{-- Departamento, Municipio, Distrito --}}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Departamento</label>
+                <input type="text" wire:model="departamento"
+                    class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                    placeholder="Ej: San Salvador">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Municipio</label>
+                <input type="text" wire:model="municipio"
+                    class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                    placeholder="Ej: San Salvador Centro">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Distrito</label>
+                <input type="text" wire:model="distrito"
+                    class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                    placeholder="Ej: Distrito 1">
+            </div>
+        </div>
+
         {{-- Dirección --}}
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
@@ -180,7 +202,7 @@
                     }
                 }">
                     <input type="text" wire:model="latitude"
-                        x-on:input="$el.value = formatCoordinate($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
+                        x-on:input="if ($event.isTrusted) { $el.value = formatCoordinate($el.value); $el.dispatchEvent(new Event('input', { bubbles: true })); }"
                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                         placeholder="00.0000" maxlength="7" inputmode="decimal">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">pin_drop</span>
@@ -203,7 +225,7 @@
                     }
                 }">
                     <input type="text" wire:model="longitude"
-                        x-on:input="$el.value = formatCoordinate($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
+                        x-on:input="if ($event.isTrusted) { $el.value = formatCoordinate($el.value); $el.dispatchEvent(new Event('input', { bubbles: true })); }"
                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
                         placeholder="-00.0000" maxlength="8" inputmode="decimal">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">pin_drop</span>
@@ -229,91 +251,71 @@
             </div>
         </div>
 
-        {{-- Servicio contratado (sucursal + zona + plan) --}}
-        <div class="bg-blue-50/40 border border-blue-200 rounded-xl p-3 space-y-3">
-            <h3 class="text-xs font-semibold text-blue-800 flex items-center gap-1">
+        <label class="inline-flex items-center gap-2 text-xs text-gray-600 cursor-pointer py-1">
+            <input type="checkbox" wire:model.live="no_price"
+                class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+            <span>Sin precio</span>
+        </label>
+        @if($no_price)
+        <p class="text-xs text-gray-400 -mt-2">Nota: más adelante se le puede asignar el paquete al cliente.</p>
+        @endif
+
+        @if(!$no_price)
+        <div class="bg-gray-50/50 rounded-xl border border-gray-200 p-3 space-y-3">
+            <h3 class="text-xs font-semibold text-gray-800 flex items-center gap-1">
                 <span class="material-symbols-outlined text-sm">assignment</span>
                 Servicio contratado
-                <span class="text-xs font-normal text-blue-500">(opcional)</span>
+                <span class="text-xs font-normal text-gray-500">(opcional)</span>
             </h3>
 
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Sucursal</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-gray-400 text-base">business</span>
+                    Sucursal
+                </label>
                 <select wire:model.live="branch_id"
                     class="w-full py-2 rounded-lg border border-gray-300 bg-white text-sm">
-                    <option value="">Seleccionar</option>
+                    <option value="">Seleccionar sucursal</option>
                     @foreach($branches as $b)
                     <option value="{{ $b->id }}">{{ $b->name }}</option>
                     @endforeach
                 </select>
             </div>
 
-            @if($branch_id)
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Zona</label>
-                <select wire:model.live="zone_id"
-                    class="w-full py-2 rounded-lg border border-gray-300 bg-white text-sm">
-                    <option value="">Seleccionar</option>
-                    @foreach($availableZones as $z)
-                    <option value="{{ $z['id'] }}">{{ $z['name'] }}</option>
-                    @endforeach
-                </select>
-            </div>
-            @endif
-
-            @if($zone_id)
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Plan</label>
                 <select wire:model.live="plan_id"
                     class="w-full py-2 rounded-lg border border-gray-300 bg-white text-sm">
                     <option value="">Seleccionar</option>
-                    @forelse($availablePlans as $p)
+                    @foreach($availablePlans as $p)
                     <option value="{{ $p['id'] }}">
-                        {{ $p['name'] }} @if($p['speed'])({{ $p['speed'] }})@endif — ${{ number_format($p['price'], 2) }}
+                        {{ $p['name'] }} @if($p['speed'])({{ $p['speed'] }})@endif
+                        — ${{ number_format($p['price'], 2) }}
                     </option>
-                    @empty
-                    <option value="" disabled>No hay planes asignados</option>
-                    @endforelse
+                    @endforeach
                 </select>
-                @if(count($availablePlans) === 0)
-                <p class="text-xs text-amber-600 mt-1">Asigná planes desde Gestión de Planes.</p>
-                @endif
             </div>
-            @endif
 
-            {{-- Card compacta del plan seleccionado --}}
             @php $selPlan = collect($availablePlans)->firstWhere('id', $plan_id); @endphp
             @if($selPlan)
-            <div class="bg-white rounded-lg border border-gray-200 p-3 space-y-2">
+            <div class="bg-white rounded-lg border border-gray-200 p-3">
                 <div class="flex items-start justify-between">
                     <div>
                         <p class="text-sm font-semibold text-gray-900">{{ $selPlan['name'] }}</p>
-                        <div class="flex items-center gap-1.5 mt-0.5">
-                            @if($selPlan['speed'])
-                            <span class="text-xs text-gray-500">{{ $selPlan['speed'] }}</span>
-                            <span class="text-gray-300">|</span>
-                            @endif
-                            <span class="text-xs px-1.5 py-0.5 rounded font-medium
-                                {{ $selPlan['service_type'] === 'internet_cable' ? 'bg-green-100 text-green-700' : ($selPlan['service_type'] === 'internet' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700') }}">
-                                {{ str_replace('_', ' + ', ucfirst($selPlan['service_type'])) }}
-                            </span>
-                        </div>
+                        @if($branch_id && $selPlan['price'] != $selPlan['base_price'])
+                        <span class="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full inline-block mt-1">
+                            Precio base: ${{ number_format($selPlan['base_price'], 2) }}
+                        </span>
+                        @endif
                     </div>
                     <div class="text-right">
                         <p class="text-base font-bold text-green-600">${{ number_format($selectedPlanPrice, 2) }}</p>
-                        @if(($selPlan['base_price'] ?? 0) != $selectedPlanPrice)
-                        <p class="text-xs text-gray-400 line-through">${{ number_format($selPlan['base_price'], 2) }}</p>
-                        @endif
                     </div>
-                </div>
-                <div class="flex items-center gap-1 text-xs text-gray-500 pt-1 border-t border-gray-100">
-                    <span>{{ $branches->firstWhere('id', $branch_id)?->name ?? '—' }}</span>
-                    <span class="text-gray-300">→</span>
-                    <span>{{ collect($availableZones)->firstWhere('id', $zone_id)['name'] ?? '—' }}</span>
                 </div>
             </div>
             @endif
         </div>
+        @endif
 
         <input type="hidden" wire:model="service">
 

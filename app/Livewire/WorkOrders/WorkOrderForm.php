@@ -55,7 +55,7 @@ class WorkOrderForm extends Component
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
             'status' => 'required|in:pending,in_progress,completed,cancelled',
-            'scheduled_date' => 'required|date',
+            'scheduled_date' => 'nullable|date',
             'notes' => 'required|string|min:5',
             'wifi_name' => 'nullable|string|max:255',
             'wifi_password' => 'nullable|string|max:255',
@@ -96,8 +96,8 @@ class WorkOrderForm extends Component
                 $this->selectedClient = $order->client;
                 $this->clientSearch = $order->client->name . ' (' . ($order->client->phone ?? 'Sin teléfono') . ')';
             }
-            $this->latitude = $order->latitude;
-            $this->longitude = $order->longitude;
+            $this->latitude = $order->latitude ?? $order->client?->latitude;
+            $this->longitude = $order->longitude ?? $order->client?->longitude;
             $this->status = $order->status;
             $this->scheduled_date = $order->scheduled_date?->format('Y-m-d');
             $this->notes = $order->notes;

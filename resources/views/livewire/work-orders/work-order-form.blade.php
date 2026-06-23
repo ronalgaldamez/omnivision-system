@@ -240,7 +240,10 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-base">calendar_today</span>
-                                Fecha programada *
+                                Fecha programada
+                                @if(!$scheduled_date)
+                                    <span class="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">Pendiente</span>
+                                @endif
                             </label>
                             <div class="relative">
                                 <input type="date" wire:model="scheduled_date"
@@ -250,6 +253,7 @@
                             </div>
                             @error('scheduled_date') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
                             @enderror
+                            <p class="text-xs text-gray-400 mt-1">Si no se programa, quedará como pendiente de programación.</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
