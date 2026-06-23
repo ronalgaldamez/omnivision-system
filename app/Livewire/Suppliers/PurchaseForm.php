@@ -8,6 +8,8 @@ use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
 use App\Models\Movement;
+use App\Models\Shelf;
+use App\Models\ProductShelf;
 use App\Services\InventoryService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +46,12 @@ class PurchaseForm extends Component
 
     // Modal para crear producto rápidamente
     public $showProductModal = false;
+
+    // Asignación a estanterías post-guardado
+    public $showShelfModal = false;
+    public $purchasedId = null;
+    public $shelfAssignments = [];
+    public $allShelves = [];
 
     protected $rules = [
         'supplier_id' => 'required|exists:suppliers,id',
@@ -293,11 +301,109 @@ class PurchaseForm extends Component
 
             DB::commit();
             $this->dispatch('show-toast', type: 'success', message: 'Compra registrada exitosamente.');
-            $this->redirectRoute('purchases.index');
+
+            // Mostrar modal de asignación a estanterías
+            $this->purchasedId = $purchase->id;
+            $this->loadShelfAssignments();
+            $this->loadAllShelves();
+            $this->showShelfModal = true;
         } catch (\Exception $e) {
             DB::rollBack();
             $this->dispatch('show-toast', type: 'error', message: 'Error: ' . $e->getMessage());
         }
+    }
+
+    // ==================== Estanterías ====================
+
+    private function loadShelfAssignments()
+    {
+        $this->shelfAssignments = [];
+        foreach ($this->items as $item) {
+            $existing = ProductShelf::where('product_id', $item['product_id'])
+                ->with('shelf')
+                ->get();
+
+            $this->shelfAssignments[] = [
+                'product_id' => $item['product_id'],
+                'product_name' => $item['product_name'],
+                'product_sku' => $item['product_sku'],
+                'quantity' => $item['quantity'],
+                'shelf_id' => $existing->first()?->shelf_id ?? '',
+                'current_shelves' => $existing->map(fn($ps) => $ps->shelf->code . ' (' . $ps->quantity . ')')->implode(', '),
+            ];
+        }
+    }
+
+    private function loadAllShelves()
+    {
+        $this->allShelves = [];
+        $roots = Shelf::with('children')
+            ->whereNull('parent_id')
+            ->where('is_active', true)
+            ->orderBy('code')
+            ->get();
+        foreach ($roots as $root) {
+            $this->flattenShelfTree($root, 0);
+        }
+    }
+
+    private function flattenShelfTree($shelf, $depth)
+    {
+        $indent = str_repeat('  ', $depth);
+        $branch = $depth === 0 ? '' : ($depth === 1 ? '└─ ' : '  └─ ');
+        $fullLabel = $shelf->is_full ? ' 🔴 LLENO' : '';
+        $this->allShelves[] = [
+            'id' => $shelf->id,
+            'code' => $shelf->code,
+            'label' => $shelf->label,
+            'display' => $indent . $branch . $shelf->code . ' — ' . $shelf->label . $fullLabel,
+            'is_full' => $shelf->is_full,
+            'is_root' => $depth === 0,
+        ];
+        foreach ($shelf->children as $child) {
+            $this->flattenShelfTree($child, $depth + 1);
+        }
+    }
+
+    public function saveShelfAssignments()
+    {
+        $assignedIds = collect($this->shelfAssignments)->pluck('shelf_id')->filter();
+
+        if ($assignedIds->isEmpty()) {
+            $this->dispatch('show-toast', type: 'error', message: 'Seleccioná al menos una estantería para guardar la asignación.');
+            return;
+        }
+
+        $fullShelves = Shelf::whereIn('id', $assignedIds)
+            ->where('is_full', true)
+            ->pluck('code')
+            ->toArray();
+
+        if (!empty($fullShelves)) {
+            $this->dispatch('show-toast', type: 'error', message: 'No se puede asignar: estas ubicaciones están llenas: ' . implode(', ', $fullShelves));
+            return;
+        }
+
+        foreach ($this->shelfAssignments as $assign) {
+            if (!empty($assign['shelf_id'])) {
+                $record = ProductShelf::firstOrNew([
+                    'product_id' => $assign['product_id'],
+                    'shelf_id' => $assign['shelf_id'],
+                ]);
+                $record->quantity += intval($assign['quantity']);
+                $record->save();
+            }
+        }
+
+        $this->showShelfModal = false;
+        $this->dispatch('show-toast', type: 'success', message: 'Productos asignados a estanterías.');
+        $this->redirectRoute('purchases.index');
+    }
+
+    public function skipShelfAssignment()
+    {
+        $this->showShelfModal = false;
+        $this->redirectRoute('purchases.index');
     }
 
     public function render()

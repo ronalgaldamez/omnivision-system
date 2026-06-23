@@ -96,4 +96,11 @@ class Product extends Model
     {
         return $this->belongsTo(Category::class);
     }
+
+    public function shelves()
+    {
+        return $this->belongsToMany(Shelf::class, 'product_shelf')
+            ->withPivot('quantity')
+            ->withTimestamps();
+    }
 }

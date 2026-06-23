@@ -5,9 +5,9 @@
             <div>
                 <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
                     <span class="material-symbols-outlined text-gray-500">work</span>
-                    {{ $workOrder->code ?? 'OT-'.$workOrder->id }}
+                    OT: {{ $workOrder->code ?? 'OT-'.$workOrder->id }}
                 </h1>
-                <p class="text-sm text-gray-500 mt-1">Detalle de la orden asignada</p>
+                <p class="text-sm text-gray-500 mt-1">Detalle de la orden de trabajo</p>
             </div>
             <a href="{{ route('mobile.work-orders.list') }}"
                 class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition">
@@ -63,6 +63,24 @@
                     </div>
                 </div>
                 @endif
+                @if($workOrder->client->document_type && $workOrder->client->document_number)
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">fingerprint</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">{{ strtoupper($workOrder->client->document_type) }}</p>
+                        <p class="text-gray-700">{{ $workOrder->client->document_number }}</p>
+                    </div>
+                </div>
+                @endif
+                @if($workOrder->client->email)
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">mail</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Correo</p>
+                        <p class="text-gray-700">{{ $workOrder->client->email }}</p>
+                    </div>
+                </div>
+                @endif
                 @if($workOrder->client->service)
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">tv</span>
@@ -81,12 +99,34 @@
                     </div>
                 </div>
                 @endif
-                @if($workOrder->latitude && $workOrder->longitude)
+                @if($workOrder->client->departamento || $workOrder->client->municipio || $workOrder->client->distrito)
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">map</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Ubicación</p>
+                        <p class="text-gray-700">{{ implode(', ', array_filter([$workOrder->client->departamento, $workOrder->client->municipio, $workOrder->client->distrito])) }}</p>
+                    </div>
+                </div>
+                @endif
+                @if($workOrder->client->branch)
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">business</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Sucursal</p>
+                        <p class="text-gray-700">{{ $workOrder->client->branch->name }}</p>
+                    </div>
+                </div>
+                @endif
+                @php
+                    $lat = $workOrder->latitude ?? $workOrder->client?->latitude;
+                    $lng = $workOrder->longitude ?? $workOrder->client?->longitude;
+                @endphp
+                @if($lat && $lng)
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 sm:col-span-2">
                     <span class="material-symbols-outlined text-gray-400">explore</span>
                     <div>
-                        <p class="text-xs text-gray-500 uppercase tracking-wide">Coordenadas</p>
-                        <p class="text-gray-700">{{ $workOrder->latitude }}, {{ $workOrder->longitude }}</p>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Coordenadas {{ $workOrder->latitude ? '(OT)' : '(Cliente)' }}</p>
+                        <p class="text-gray-700">{{ $lat }}, {{ $lng }}</p>
                     </div>
                 </div>
                 @endif
@@ -158,7 +198,7 @@
                 <div class="border-t border-gray-200 pt-5 space-y-3">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
                         <span class="material-symbols-outlined text-gray-500">confirmation_number</span>
-                        Ticket #{{ $workOrder->ticket->id }}
+                        {{ $workOrder->ticket->ticket_code ?? 'Ticket #'.$workOrder->ticket->id }}
                     </h2>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
@@ -230,10 +270,60 @@
                         </div>
                     </div>
                     <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">handyman</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Tipo de servicio</p>
+                            <p class="text-gray-700">{{ $workOrder->service_type ? str_replace('_', ' ', ucfirst($workOrder->service_type)) : '—' }}</p>
+                        </div>
+                    </div>
+                    @if($workOrder->zone)
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">map</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Zona</p>
+                            <p class="text-gray-700">{{ $workOrder->zone->name }}</p>
+                        </div>
+                    </div>
+                    @endif
+                    @if($workOrder->plan)
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">satellite_alt</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Plan</p>
+                            <p class="text-gray-700">{{ $workOrder->plan->name }} @if($workOrder->plan->speed)({{ $workOrder->plan->speed }})@endif</p>
+                        </div>
+                    </div>
+                    @endif
+                    @if($workOrder->requires_noc)
+                    <div class="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-200">
+                        <span class="material-symbols-outlined text-blue-500">router</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Requiere NOC</p>
+                            <p class="text-sm text-blue-700 font-medium">Sí — requiere intervención remota</p>
+                        </div>
+                    </div>
+                    @endif
+                    @if($workOrder->assigned_at)
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                        <span class="material-symbols-outlined text-gray-400">assignment_ind</span>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Asignado el</p>
+                            <p class="text-gray-700">{{ $workOrder->assigned_at->format('d/m/Y H:i') }}</p>
+                        </div>
+                    </div>
+                    @endif
+                    <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                         <span class="material-symbols-outlined text-gray-400">calendar_month</span>
                         <div>
                             <p class="text-xs text-gray-500 uppercase tracking-wide">Fecha programada</p>
-                            <p class="text-gray-700">{{ $workOrder->scheduled_date?->format('d/m/Y') ?? '—' }}</p>
+                            @if($workOrder->scheduled_date)
+                                <p class="text-gray-700">{{ $workOrder->scheduled_date->format('d/m/Y') }}</p>
+                            @else
+                                <p class="text-gray-400 italic flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">schedule</span>
+                                    Pendiente de programación
+                                </p>
+                            @endif
                         </div>
                     </div>
                     <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">

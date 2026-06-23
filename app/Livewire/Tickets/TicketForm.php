@@ -317,16 +317,24 @@ class TicketForm extends Component
         $this->clientSearch = $name . ($phone ? ' (' . $phone . ')' : '');
         $this->clientSearchResults = [];
 
-        // Cargar zonas disponibles para la sucursal del cliente
+        // Copiar zona y plan desde el cliente
         $this->loadAvailableZones();
         if ($client->zone_id) {
             $this->zone_id = $client->zone_id;
             $this->updatedZoneId($client->zone_id);
         }
+        if ($client->plan_id) {
+            $this->plan_id = $client->plan_id;
+            $this->updatedPlanId($client->plan_id);
+        }
 
         // Si el ticket ya está abierto, actualizar BD inmediatamente
         if ($this->ticketOpened && $this->ticketId) {
-            Ticket::where('id', $this->ticketId)->update(['client_id' => $id]);
+            Ticket::where('id', $this->ticketId)->update([
+                'client_id' => $id,
+                'zone_id' => $client->zone_id,
+                'plan_id' => $client->plan_id,
+            ]);
         }
     }
 
@@ -746,6 +754,11 @@ class TicketForm extends Component
         $zoneId = $ticket->zone_id ?? $this->zone_id;
         $planId = $ticket->plan_id ?? $this->plan_id;
 
+        // Obtener coordenadas del cliente asociado
+        $client = $ticket->client;
+        $latitude = $client?->latitude;
+        $longitude = $client?->longitude;
+
         \App\Models\WorkOrder::create([
             'ticket_id' => $ticket->id,
             'client_id' => $ticket->client_id,
@@ -754,6 +767,8 @@ class TicketForm extends Component
             'requires_noc' => $ticket->requires_noc ?? $this->requires_noc,
             'zone_id' => $zoneId ?: null,
             'plan_id' => $planId ?: null,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
             'status' => 'pending',
             'created_by' => Auth::id(),
         ]);
