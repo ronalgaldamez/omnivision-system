@@ -63,6 +63,7 @@
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">Estado</th>
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">Creado</th>
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">OT</th>
+                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Timeline</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -148,10 +149,16 @@
                                         <span class="text-gray-400">—</span>
                                     @endif
                                 </td>
+                                <td class="px-4 py-3 text-center">
+                                    <a href="{{ route('sla.ticket-timeline', $ticket->id) }}"
+                                        class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 transition">
+                                        <span class="material-symbols-outlined text-sm">account_tree</span>
+                                    </a>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="px-4 py-12 text-center bg-gray-50/50">
+                                <td colspan="12" class="px-4 py-12 text-center bg-gray-50/50">
                                     <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">inbox</span>
                                     <p class="text-gray-500">No hay tickets registrados</p>
                                     <p class="text-sm text-gray-400 mt-1">Haz clic en "Nuevo Ticket" para crear uno</p>

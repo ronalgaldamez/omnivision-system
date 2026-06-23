@@ -5,6 +5,7 @@ namespace App\Livewire\Noc;
 use Livewire\Component;
 use App\Models\Ticket;
 use App\Models\WorkOrder;
+use App\Services\SlaService;
 use Illuminate\Support\Facades\Auth;
 
 class NocPanel extends Component
@@ -99,10 +100,11 @@ class NocPanel extends Component
             $ticket->status = 'resolved';
             $ticket->resolved_by = Auth::id();
             $ticket->resolved_at = now();
-            $ticket->l2_started_at = $ticket->l2_started_at ?? now(); // si no había aceptado antes
+            $ticket->l2_started_at = $ticket->l2_started_at ?? now();
             $ticket->l2_ended_at = now();
-            // $ticket->l1_ended_at = now();
             $ticket->save();
+
+            app(SlaService::class)->evaluateSla($ticket);
             session()->flash('message', 'Ticket resuelto remotamente.');
         }
         $this->mount();
@@ -125,6 +127,8 @@ class NocPanel extends Component
             $ticket->l2_ended_at = now();
             $ticket->l2_started_at = $ticket->l2_started_at ?? now();
             $ticket->save();
+
+            app(SlaService::class)->evaluateSla($ticket);
             session()->flash('message', 'OT creada a partir del ticket.');
         }
         $this->mount();

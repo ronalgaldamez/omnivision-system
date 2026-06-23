@@ -16,6 +16,7 @@ return [
         'work_orders' => true,        // Órdenes de trabajo (opcional)
         'geolocation' => false,        // Mapas y coordenadas (opcional)
         'reports' => true,             // Reportes y dashboards
+        'sla' => true,                 // Metas y cumplimiento SLA
     ],
 
     /*

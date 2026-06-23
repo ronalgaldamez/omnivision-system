@@ -146,6 +146,19 @@
                                             title="Eliminar">
                                             <span class="material-symbols-outlined text-lg">delete</span>
                                         </button>
+                                        @if($order->ticket_id)
+                                            <a href="{{ route('sla.ticket-timeline', $order->ticket_id) }}"
+                                                class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                                                title="Ver Timeline">
+                                                <span class="material-symbols-outlined text-lg">account_tree</span>
+                                            </a>
+                                        @else
+                                            <a href="{{ route('sla.work-order-timeline', $order->id) }}"
+                                                class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                                                title="Ver Timeline">
+                                                <span class="material-symbols-outlined text-lg">account_tree</span>
+                                            </a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
