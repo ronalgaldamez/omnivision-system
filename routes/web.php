@@ -185,4 +185,28 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin/shelves')->middleware(['auth', 'can:access_admin'])->group(function () {
         Route::get('/', \App\Livewire\Admin\ShelvesManager::class)->name('admin.shelves');
     });
+
+    // ========== SLA ==========
+    Route::prefix('sla')->middleware(['auth'])->group(function () {
+        Route::middleware('can:view sla goals')->group(function () {
+            Route::get('/goals', \App\Livewire\Admin\Sla\SlaGoalIndex::class)->name('admin.sla.goals.index');
+        });
+        Route::middleware('can:create sla goals')->group(function () {
+            Route::get('/goals/create', \App\Livewire\Admin\Sla\SlaGoalForm::class)->name('admin.sla.goals.create');
+        });
+        Route::middleware('can:edit sla goals')->group(function () {
+            Route::get('/goals/{id}/edit', \App\Livewire\Admin\Sla\SlaGoalForm::class)->name('admin.sla.goals.edit');
+        });
+    });
+
+    // ========== SLA DASHBOARD ==========
+    Route::middleware(['auth', 'can:view sla dashboard'])->group(function () {
+        Route::get('/sla/dashboard', \App\Livewire\Sla\SlaDashboard::class)->name('sla.dashboard');
+    });
+
+    // ========== SLA TIMELINES ==========
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/sla/tickets/{id}/timeline', \App\Livewire\Sla\TicketTimeline::class)->name('sla.ticket-timeline');
+        Route::get('/sla/work-orders/{id}/timeline', \App\Livewire\Sla\WorkOrderTimeline::class)->name('sla.work-order-timeline');
+    });
 });

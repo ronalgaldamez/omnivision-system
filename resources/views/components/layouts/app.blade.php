@@ -236,6 +236,10 @@
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                         class="material-symbols-outlined text-base">settings_overscan</span> Panel
                                 NOC</a>@endcan
+                                @can('view sla dashboard')<a href="{{ route('sla.dashboard') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                        class="material-symbols-outlined text-base">monitoring</span> Dashboard SLA</a>@endcan
+
                             </div>
                         </div>
                     @endif
@@ -293,7 +297,10 @@
                                 class="material-symbols-outlined text-base">shelves</span> Estanterías</a>@endcan
                                 @can('view_settings_menu')<a href="{{ route('admin.settings') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
-                                class="material-symbols-outlined text-base">settings</span> Configuración</a>@endcan
+                                        class="material-symbols-outlined text-base">settings</span> Configuración</a>@endcan
+                                @can('view sla goals')<a href="{{ route('admin.sla.goals.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                        class="material-symbols-outlined text-base">timer</span> Metas SLA</a>@endcan
                             </div>
                         </div>
                     @endif

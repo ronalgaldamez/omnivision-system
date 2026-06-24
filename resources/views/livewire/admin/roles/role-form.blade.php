@@ -148,6 +148,12 @@
                             'view_roles_menu' => 'Submenús Admin',
                             'view_catalog_menu' => 'Submenús Admin',
                             'view_settings_menu' => 'Submenús Admin',
+                            // SLA
+                            'view sla goals' => 'SLA',
+                            'create sla goals' => 'SLA',
+                            'edit sla goals' => 'SLA',
+                            'delete sla goals' => 'SLA',
+                            'view sla dashboard' => 'SLA',
                             // Otros
                             'view low stock' => 'General',
                             'view requisitions' => 'General',
@@ -181,6 +187,7 @@
                             'Submenús Reportes',
                             'Submenús Soporte',
                             'Submenús Admin',
+                            'SLA',
                             'General',
                         ];
 
@@ -217,6 +224,7 @@
                             'Submenús Reportes' => 'assessment',
                             'Submenús Soporte' => 'support_agent',
                             'Submenús Admin' => 'admin_panel_settings',
+                            'SLA' => 'timer',
                             'General' => 'settings',
                         ];
                     @endphp

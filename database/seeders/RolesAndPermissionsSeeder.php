@@ -91,6 +91,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'assign any technician in returns',
             'access my daily jobs',
             'capture coordinates',
+            // SLA
+            'view sla goals',
+            'create sla goals',
+            'edit sla goals',
+            'delete sla goals',
+            'view sla dashboard',
         ];
 
         Permission::whereNotIn('name', $permissions)->delete();

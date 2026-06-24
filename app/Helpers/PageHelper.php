@@ -38,6 +38,12 @@ if (!function_exists('page_title_from_route')) {
             'purchases.index'             => 'Historial de Compras',
             'purchases.create'            => 'Nueva Compra',
             'purchases.show'              => 'Ver Compra',
+            'sla.dashboard'               => 'Dashboard SLA',
+            'admin.sla.goals.index'       => 'Metas SLA',
+            'admin.sla.goals.create'      => 'Nueva Meta SLA',
+            'admin.sla.goals.edit'        => 'Editar Meta SLA',
+            'sla.ticket-timeline'         => 'Timeline del Ticket',
+            'sla.work-order-timeline'     => 'Timeline de OT',
         ];
 
         if (array_key_exists($routeName, $custom)) {

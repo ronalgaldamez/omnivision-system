@@ -9,6 +9,7 @@ use App\Models\WorkOrder;
 use App\Models\Movement;
 use App\Models\Ticket;
 use App\Models\Client;
+use App\Services\SlaService;
 use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends Component
@@ -127,6 +128,8 @@ class Dashboard extends Component
             $ticket->status = 'resolved';
             $ticket->resolved_by = auth()->id();
             $ticket->resolved_at = now();
+            $ticket->save();
+            app(SlaService::class)->evaluateSla($ticket);
             session()->flash('message', 'Ticket resuelto remotamente.');
         }
         return redirect()->route('noc.panel');
@@ -144,6 +147,7 @@ class Dashboard extends Component
             ]);
             $ticket->status = 'in_progress';
             $ticket->save();
+            app(SlaService::class)->evaluateSla($ticket);
             session()->flash('message', 'OT creada a partir del ticket.');
         }
         return redirect()->route('work-orders.index');

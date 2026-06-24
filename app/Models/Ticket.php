@@ -32,6 +32,11 @@ class Ticket extends Model
         // Tiempos L2 — NOC
         'l2_started_at',
         'l2_ended_at',
+        // SLA
+        'sla_goal_id',
+        'sla_deadline_at',
+        'sla_met',
+        'sla_evaluated_at',
     ];
 
     protected $casts = [
@@ -42,7 +47,10 @@ class Ticket extends Model
         'l2_ended_at'   => 'datetime',
         'resolved_at'   => 'datetime',
         'cancelled_at'  => 'datetime',
-        'requires_noc'  => 'boolean',
+        'requires_noc'      => 'boolean',
+        'sla_deadline_at'   => 'datetime',
+        'sla_met'           => 'boolean',
+        'sla_evaluated_at'  => 'datetime',
     ];
 
     public function client()
@@ -73,5 +81,10 @@ class Ticket extends Model
     public function plan()
     {
         return $this->belongsTo(Plan::class);
+    }
+
+    public function slaGoal()
+    {
+        return $this->belongsTo(SlaGoal::class);
     }
 }

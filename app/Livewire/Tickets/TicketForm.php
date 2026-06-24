@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Models\ServiceType;
 use App\Models\Zone;
 use App\Models\Plan;
+use App\Services\SlaService;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
@@ -488,6 +489,9 @@ class TicketForm extends Component
         $ticket->ticket_code = $this->generateTicketCode($ticket->id);
         $ticket->save();
 
+        // Asignar meta SLA
+        app(SlaService::class)->assignSlaToTicket($ticket);
+
         $this->ticketId = $ticket->id;
         $this->ticketOpened = true;
         $this->editingEnabled = true;
@@ -569,6 +573,9 @@ class TicketForm extends Component
                 'l1_ended_at' => now(),
             ]);
         }
+
+        // Evaluar SLA
+        app(SlaService::class)->evaluateSla($ticket);
 
         // Actualizar datos de contratación del cliente
         if (($zoneId || $planId) && $ticket->client) {
@@ -716,6 +723,12 @@ class TicketForm extends Component
             $ticket = Ticket::findOrFail($this->ticketId);
             $data['status'] = $this->status;
             $ticket->update($data);
+
+            app(SlaService::class)->assignSlaToTicket($ticket);
+            if (in_array($ticket->status, ['resolved', 'closed'])) {
+                app(SlaService::class)->evaluateSla($ticket);
+            }
+
             session()->flash('message', 'Ticket actualizado correctamente.');
         } else {
             $data['created_by'] = Auth::id();
@@ -724,6 +737,8 @@ class TicketForm extends Component
 
             $ticket->ticket_code = $this->generateTicketCode($ticket->id);
             $ticket->save();
+
+            app(SlaService::class)->assignSlaToTicket($ticket);
 
             if ($this->create_ot) {
                 $this->createWorkOrder($ticket);
@@ -829,6 +844,9 @@ class TicketForm extends Component
             'l1_ended_at' => now(),   // ← L1 termina su parte
             'escalated_at' => now(),   // ← momento del traspaso a NOC
         ]);
+
+        // Evaluar SLA para el nivel L1
+        app(SlaService::class)->evaluateSla($ticket);
 
         session()->forget('open_ticket_id');
         session()->forget('ticket_draft');
