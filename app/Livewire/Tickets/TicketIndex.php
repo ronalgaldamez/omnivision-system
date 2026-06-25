@@ -36,10 +36,6 @@ class TicketIndex extends Component
             return view('livewire.tickets.ticket-index', compact('tickets'))->layout('components.layouts.app');
         }
 
-        if ($user->can('view pending noc tickets') && !$user->can('view any tickets')) {
-            $query->where('requires_noc', true);
-        }
-
         if ($this->statusFilter) {
             $query->where('status', $this->statusFilter);
         }
@@ -58,12 +54,6 @@ class TicketIndex extends Component
     public function viewDetail($ticketId)
     {
         $this->selectedTicket = Ticket::with('client')->find($ticketId);
-
-        // Registrar cuando el NOC acepta/abre el ticket por primera vez
-        if ($this->selectedTicket && is_null($this->selectedTicket->l2_started_at)) {
-            $this->selectedTicket->update(['l2_started_at' => now()]);
-        }
-
         $this->showDetailModal = true;
     }
 
@@ -128,6 +118,7 @@ class TicketIndex extends Component
                 'service_type' => $ticket->service_type,
                 'status' => 'pending',
                 'started_at' => now(),
+                'created_by' => $user->id,
             ]);
             $ticket->status = 'in_progress';
             $ticket->l2_ended_at = now();

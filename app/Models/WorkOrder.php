@@ -35,6 +35,7 @@ class WorkOrder extends Model
         'mufa',
         'installation_date',
         'assigned_at',
+        'assigned_by',
         'requires_noc',
         'zone_id',
         'plan_id',
@@ -79,6 +80,11 @@ class WorkOrder extends Model
     public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function assignedBy()
+    {
+        return $this->belongsTo(User::class, 'assigned_by');
     }
 
     public function pauses()

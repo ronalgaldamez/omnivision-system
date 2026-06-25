@@ -76,6 +76,7 @@ class TimelineService
         // ==========================================
         if ($ticket->requires_noc && $ticket->escalated_at) {
             $nocSub = [];
+            $activeNocSeconds = 0;
 
             // Espera NOC (desde escalado hasta que abren el ticket)
             if ($ticket->l2_started_at && $ticket->l2_started_at->gt($ticket->escalated_at)) {
@@ -86,12 +87,12 @@ class TimelineService
             // Atención NOC
             if ($ticket->l2_started_at) {
                 $nocEnd = $ticket->l2_ended_at ?? $endTime;
-                $activeNoc = $ticket->l2_started_at->diffInSeconds($nocEnd);
+                $activeNocSeconds = $ticket->l2_started_at->diffInSeconds($nocEnd);
                 $nocSub[] = $this->makeSubSegment(
                     'Atención',
                     $ticket->l2_started_at,
                     $ticket->l2_ended_at,
-                    $activeNoc,
+                    $activeNocSeconds,
                     !$ticket->l2_ended_at && !$isResolved,
                     (bool)($ticket->l2_ended_at ?? $isResolved),
                 );
@@ -100,7 +101,7 @@ class TimelineService
                 $nocSub[] = $this->makeSubSegment('Pendiente', $ticket->escalated_at, null, $waitNocPending, true, false);
             }
 
-            $totalNoc = array_sum(array_column($nocSub, 'durationSeconds'));
+            $totalNoc = $activeNocSeconds;
             $areas[] = $this->makeArea(
                 key: 'noc',
                 label: 'NOC (Soporte Técnico L2)',
@@ -120,28 +121,50 @@ class TimelineService
         if ($ticket->workOrder) {
             $wo = $ticket->workOrder;
 
-            // --- Supervisor: Espera de asignación ---
-            $techStart = $wo->started_at ?? $wo->assigned_at;
-            if ($wo->assigned_at && $wo->assigned_at->gt($wo->created_at)) {
-                $waitAssign = $wo->created_at->diffInSeconds($wo->assigned_at);
-                $areas[] = $this->makeArea(
-                    key: 'supervisor',
-                    label: 'Supervisor (Asignación)',
-                    responsible: $wo->createdBy?->name,
-                    icon: 'supervisor_account',
-                    color: 'cyan',
-                    totalSeconds: $waitAssign,
-                    subSegments: [
-                        $this->makeSubSegment('Espera de asignación', $wo->created_at, $wo->assigned_at, $waitAssign, true, true),
-                    ],
-                    isActive: false,
-                    isCompleted: $wo->assigned_at !== null,
-                    technician: null,
-                );
+            // Determinar supervisor responsable de la zona (con herencia)
+            $responsibleSupervisor = null;
+            if ($ticket->relationLoaded('zone') && $ticket->zone) {
+                $zoneSupervisors = $ticket->zone->effectiveSupervisors();
+                if ($zoneSupervisors->isNotEmpty()) {
+                    $responsibleSupervisor = $zoneSupervisors->pluck('name')->implode(', ');
+                }
             }
+
+            // --- Supervisor: SIEMPRE aparece cuando hay OT ---
+            $supervisorSub = [];
+
+            if ($wo->assigned_at) {
+                // Hubo asignación: mostrar espera + completado
+                if ($wo->assigned_at->gt($wo->created_at)) {
+                    $waitAssign = $wo->created_at->diffInSeconds($wo->assigned_at);
+                    $supervisorSub[] = $this->makeSubSegment('Espera de asignación', $wo->created_at, $wo->assigned_at, $waitAssign, true, true);
+                }
+                $supervisorSub[] = $this->makeSubSegment('Asignado a técnico', $wo->assigned_at, null, 0, false, true);
+            } else {
+                // Aún sin asignar
+                $waitSecs = $wo->created_at->diffInSeconds($now);
+                $supervisorSub[] = $this->makeSubSegment('Pendiente de asignación', $wo->created_at, null, $waitSecs, true, false);
+            }
+
+            $totalSupervisor = array_sum(array_column($supervisorSub, 'durationSeconds'));
+            $areas[] = $this->makeArea(
+                key: 'supervisor',
+                label: 'Supervisor (Asignación)',
+                responsible: $responsibleSupervisor ?? $wo->assignedBy?->name,
+                icon: 'supervisor_account',
+                color: 'cyan',
+                totalSeconds: $totalSupervisor,
+                subSegments: $supervisorSub,
+                isActive: !$wo->assigned_at && !$isResolved,
+                isCompleted: $wo->assigned_at !== null,
+                technician: null,
+                responsibleLabel: 'Responsable de asignar:',
+                createdByName: $wo->createdBy?->name,
+            );
 
             // --- Técnico ---
             $techSub = [];
+            $workTechSeconds = 0;
 
             // Espera técnico (desde asignado hasta que inicia)
             if ($wo->assigned_at && $wo->started_at && $wo->started_at->gt($wo->assigned_at)) {
@@ -152,36 +175,35 @@ class TimelineService
             // Trabajo técnico
             if ($wo->started_at) {
                 $techEnd = $wo->completed_date ?? ($isResolved ? $endTime : $now);
-                $workTech = $wo->started_at->diffInSeconds($techEnd);
+                $workTechSeconds = $wo->started_at->diffInSeconds($techEnd);
                 $techSub[] = $this->makeSubSegment(
                     'Trabajo en campo',
                     $wo->started_at,
                     $wo->completed_date,
-                    $workTech,
+                    $workTechSeconds,
                     $wo->status === 'in_progress',
                     (bool)$wo->completed_date,
                 );
-            } elseif (!$wo->assigned_at) {
-                $waitSecs = $wo->created_at->diffInSeconds($now);
-                $techSub[] = $this->makeSubSegment('Pendiente de asignación', $wo->created_at, null, $waitSecs, true, false);
-            } elseif (!$wo->started_at) {
-                $waitSecs = $wo->assigned_at->diffInSeconds($now);
-                $techSub[] = $this->makeSubSegment('Pendiente de inicio', $wo->assigned_at, null, $waitSecs, true, false);
+            } elseif ($wo->assigned_at && !$wo->started_at) {
+                // Asignado pero no ha iniciado — solo muestra timestamp, sin contador
+                $techSub[] = $this->makeSubSegment('Asignado a técnico', $wo->assigned_at, null, 0, false, true);
             }
 
-            $totalTech = array_sum(array_column($techSub, 'durationSeconds'));
-            $areas[] = $this->makeArea(
-                key: 'technician',
-                label: 'Técnico en Campo',
-                responsible: $wo->technician?->name,
-                icon: 'handyman',
-                color: 'orange',
-                totalSeconds: $totalTech,
-                subSegments: $techSub,
-                isActive: $wo->status === 'in_progress' || ($wo->status === 'pending' && !$isResolved),
-                isCompleted: (bool)$wo->completed_date,
-                technician: $wo->technician?->name,
-            );
+            if (!empty($techSub)) {
+                $totalTech = $workTechSeconds;
+                $areas[] = $this->makeArea(
+                    key: 'technician',
+                    label: 'Técnico en Campo',
+                    responsible: $wo->technician?->name,
+                    icon: 'handyman',
+                    color: 'orange',
+                    totalSeconds: $totalTech,
+                    subSegments: $techSub,
+                    isActive: $wo->status === 'in_progress',
+                    isCompleted: (bool)$wo->completed_date || ($wo->assigned_at && !$wo->started_at),
+                    technician: $wo->technician?->name,
+                );
+            }
 
             // Pausas
             $pausesSeconds = 0;
@@ -250,13 +272,22 @@ class TimelineService
 
         $areas = [];
 
+        // Determinar supervisor responsable de la zona (con herencia)
+        $responsibleSupervisor = null;
+        if ($workOrder->relationLoaded('zone') && $workOrder->zone) {
+            $zoneSupervisors = $workOrder->zone->effectiveSupervisors();
+            if ($zoneSupervisors->isNotEmpty()) {
+                $responsibleSupervisor = $zoneSupervisors->pluck('name')->implode(', ');
+            }
+        }
+
         // Supervisor
         if ($workOrder->assigned_at && $workOrder->assigned_at->gt($workOrder->created_at)) {
             $waitAssign = $workOrder->created_at->diffInSeconds($workOrder->assigned_at);
             $areas[] = $this->makeArea(
                 key: 'supervisor',
                 label: 'Supervisor (Asignación)',
-                responsible: $workOrder->createdBy?->name,
+                responsible: $responsibleSupervisor ?? $workOrder->createdBy?->name,
                 icon: 'supervisor_account',
                 color: 'cyan',
                 totalSeconds: $waitAssign,
@@ -265,36 +296,54 @@ class TimelineService
                 ],
                 isActive: false,
                 isCompleted: true,
+                createdByName: $workOrder->createdBy?->name,
+                responsibleLabel: 'Responsable de asignar:',
+            );
+        } elseif (!$workOrder->assigned_at && $responsibleSupervisor) {
+            // Supervisor responsable pero aún no ha asignado
+            $waitSecs = $workOrder->created_at->diffInSeconds($now);
+            $areas[] = $this->makeArea(
+                key: 'supervisor',
+                label: 'Supervisor (Asignación)',
+                responsible: $responsibleSupervisor,
+                icon: 'supervisor_account',
+                color: 'cyan',
+                totalSeconds: $waitSecs,
+                subSegments: [
+                    $this->makeSubSegment('Pendiente de asignación', $workOrder->created_at, null, $waitSecs, true, false),
+                ],
+                isActive: true,
+                isCompleted: false,
+                createdByName: $workOrder->createdBy?->name,
+                responsibleLabel: 'Responsable de asignar:',
             );
         }
 
         // Técnico
         $techSub = [];
+        $workTechSeconds = 0;
         if ($workOrder->assigned_at && $workOrder->started_at && $workOrder->started_at->gt($workOrder->assigned_at)) {
             $waitTech = $workOrder->assigned_at->diffInSeconds($workOrder->started_at);
             $techSub[] = $this->makeSubSegment('Espera', $workOrder->assigned_at, $workOrder->started_at, $waitTech, true, true);
         }
         if ($workOrder->started_at) {
             $techEnd = $workOrder->completed_date ?? $endTime;
-            $work = $workOrder->started_at->diffInSeconds($techEnd);
+            $workTechSeconds = $workOrder->started_at->diffInSeconds($techEnd);
             $techSub[] = $this->makeSubSegment(
                 'Trabajo en campo',
                 $workOrder->started_at,
                 $workOrder->completed_date,
-                $work,
+                $workTechSeconds,
                 $workOrder->status === 'in_progress',
                 (bool)$workOrder->completed_date,
             );
-            } elseif (!$workOrder->assigned_at) {
-                $waitSecs = $workOrder->created_at->diffInSeconds($now);
-                $techSub[] = $this->makeSubSegment('Pendiente de asignación', $workOrder->created_at, null, $waitSecs, true, false);
-            } elseif (!$workOrder->started_at) {
+            } elseif ($workOrder->assigned_at && !$workOrder->started_at) {
                 $waitSecs = $workOrder->assigned_at->diffInSeconds($now);
                 $techSub[] = $this->makeSubSegment('Pendiente de inicio', $workOrder->assigned_at, null, $waitSecs, true, false);
         }
 
         if (!empty($techSub)) {
-            $totalTech = array_sum(array_column($techSub, 'durationSeconds'));
+            $totalTech = $workTechSeconds;
             $areas[] = $this->makeArea(
                 key: 'technician',
                 label: 'Técnico en Campo',
@@ -303,7 +352,7 @@ class TimelineService
                 color: 'orange',
                 totalSeconds: $totalTech,
                 subSegments: $techSub,
-                isActive: $workOrder->status === 'in_progress',
+                isActive: $workOrder->status === 'in_progress' || ($workOrder->assigned_at && !$workOrder->started_at && !$isCompleted),
                 isCompleted: (bool)$workOrder->completed_date,
                 technician: $workOrder->technician?->name,
             );
@@ -348,11 +397,15 @@ class TimelineService
         bool $isActive,
         bool $isCompleted,
         ?string $technician = null,
+        string $responsibleLabel = 'Responsable:',
+        ?string $createdByName = null,
     ): array {
         return [
             'key' => $key,
             'label' => $label,
             'responsible' => $responsible,
+            'responsibleLabel' => $responsibleLabel,
+            'createdByName' => $createdByName,
             'icon' => $icon,
             'color' => $color,
             'totalSeconds' => $totalSeconds,
@@ -383,7 +436,7 @@ class TimelineService
         ];
     }
 
-    private function formatDuration(int $seconds): string
+    public static function formatDuration(int $seconds): string
     {
         $abs = abs($seconds);
         if ($abs < 60) return "{$abs}s";

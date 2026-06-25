@@ -42,6 +42,30 @@ class Zone extends Model
         return $this->hasMany(Client::class);
     }
 
+    public function supervisors()
+    {
+        return $this->belongsToMany(User::class, 'supervisor_zone');
+    }
+
+    public function effectiveSupervisors(): \Illuminate\Support\Collection
+    {
+        if ($this->supervisors->isNotEmpty()) {
+            return $this->supervisors;
+        }
+        if ($this->parent) {
+            return $this->parent->effectiveSupervisors();
+        }
+        return collect();
+    }
+
+    public function inheritedSupervisors(): \Illuminate\Support\Collection
+    {
+        if (!$this->parent) {
+            return collect();
+        }
+        return $this->parent->effectiveSupervisors()->diff($this->supervisors);
+    }
+
     public function tickets()
     {
         return $this->hasMany(Ticket::class);

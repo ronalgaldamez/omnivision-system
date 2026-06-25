@@ -329,7 +329,7 @@ class WorkOrderForm extends Component
 
         // Registrar asignación si se asignó un técnico
         if ($this->technician_id && !$order->assigned_at) {
-            $order->update(['assigned_at' => now()]);
+            $order->update(['assigned_at' => now(), 'assigned_by' => Auth::id()]);
         }
 
         // Copiar coordenadas al cliente

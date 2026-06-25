@@ -102,10 +102,10 @@
                     @if($showNocButton ?? false)
                         <button wire:click="goToNocPanel"
                             class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
-                            Ir al panel del NOC
+                            Ir a bandeja NOC
                         </button>
                     @endif
-                    @if(($showCreateOtButton ?? true) && auth()->user()->can('create work_orders'))
+                    @if(($showCreateOtButton ?? true) && auth()->user()->can('create work_orders') && (!$ticket->requires_noc || $ticket->l2_started_at))
                         <button wire:click="promptCreateWorkOrder({{ $ticket->id }})"
                             class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
                             Crear OT
