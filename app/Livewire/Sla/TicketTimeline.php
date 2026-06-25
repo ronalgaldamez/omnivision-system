@@ -17,6 +17,7 @@ class TicketTimeline extends Component
     {
         $this->ticket = Ticket::with([
             'client', 'createdBy', 'resolvedBy', 'slaGoal',
+            'zone.supervisors', 'zone.parent.supervisors', 'zone.parent.parent.supervisors',
             'workOrder.technician', 'workOrder.createdBy', 'workOrder.pauses',
         ])->findOrFail($id);
 
@@ -30,7 +31,12 @@ class TicketTimeline extends Component
     #[On('refresh-timeline')]
     public function refreshTimeline()
     {
-        $this->ticket->refresh();
+        $this->ticket = Ticket::with([
+            'client', 'createdBy', 'resolvedBy', 'slaGoal',
+            'zone.supervisors', 'zone.parent.supervisors', 'zone.parent.parent.supervisors',
+            'workOrder.technician', 'workOrder.createdBy', 'workOrder.pauses',
+        ])->find($this->ticket->id);
+
         $this->timeline = app(TimelineService::class)->buildFromTicket($this->ticket);
     }
 

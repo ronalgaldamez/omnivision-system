@@ -1,5 +1,5 @@
 {{-- resources/views/livewire/mobile/work-order-list.blade.php --}}
-<div class="max-w-4xl mx-auto">
+<div class="max-w-4xl mx-auto" wire:poll.30s="$refresh">
     <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
         {{-- Header --}}
         <div class="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex flex-wrap items-center justify-between gap-4">

@@ -119,7 +119,7 @@ Route::middleware(['auth'])->group(function () {
 
     // ========== NOC ==========
     Route::middleware(['auth', 'can:access noc panel'])->group(function () {
-        Route::get('/noc', \App\Livewire\Noc\NocPanel::class)->name('noc.panel');
+        Route::get('/noc', \App\Livewire\Noc\NocInbox::class)->name('noc.panel');
     });
 
     // ========== TECHNICIAN RETURNS ==========
@@ -184,6 +184,10 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::prefix('admin/shelves')->middleware(['auth', 'can:access_admin'])->group(function () {
         Route::get('/', \App\Livewire\Admin\ShelvesManager::class)->name('admin.shelves');
+    });
+
+    Route::prefix('admin/supervisor-zones')->middleware(['auth', 'can:assign supervisors to zones'])->group(function () {
+        Route::get('/', \App\Livewire\Admin\SupervisorZones\SupervisorZoneManager::class)->name('admin.supervisor-zones');
     });
 
     // ========== SLA ==========

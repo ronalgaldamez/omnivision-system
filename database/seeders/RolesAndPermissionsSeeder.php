@@ -91,6 +91,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'assign any technician in returns',
             'access my daily jobs',
             'capture coordinates',
+            // Supervisor zones
+            'assign supervisors to zones',
             // SLA
             'view sla goals',
             'create sla goals',

@@ -31,6 +31,13 @@ class ClientForm extends Component
     public $departamento = '';
     public $municipio = '';
     public $distrito = '';
+    public $departamento_id = '';
+    public $municipio_id = '';
+    public $distrito_id = '';
+    public $availableDepartamentos = [];
+    public $availableMunicipios = [];
+    public $availableDistritos = [];
+    public $assignedSupervisor = '';
 
 
     // === SERVICIO CONTRATADO ===
@@ -71,9 +78,11 @@ class ClientForm extends Component
 
     public function mount($id = null)
     {
+        $this->loadDepartamentos();
+
         if ($id) {
             $this->clientId = $id;
-            $client = Client::with('phones')->findOrFail($id);
+            $client = Client::with('phones', 'zone', 'zone.parent', 'zone.parent.parent')->findOrFail($id);
             $this->name = $client->name;
             $this->document_type = $client->document_type;
             $this->document_number = $client->document_number;
@@ -91,6 +100,29 @@ class ClientForm extends Component
             $this->municipio = $client->municipio;
             $this->distrito = $client->distrito;
             $this->phones = $client->phones->toArray();
+
+            // Restaurar cascada de zonas desde el zone_id del cliente
+            if ($client->zone) {
+                $zone = $client->zone;
+                if ($zone->level === 'distrito' || $zone->level === 'localidad') {
+                    $this->distrito_id = $zone->id;
+                    if ($zone->parent) {
+                        $this->municipio_id = $zone->parent->id;
+                        $this->updatedMunicipioId($zone->parent->id);
+                        if ($zone->parent->parent) {
+                            $this->departamento_id = $zone->parent->parent->id;
+                        }
+                    }
+                } elseif ($zone->level === 'municipio') {
+                    $this->municipio_id = $zone->id;
+                    if ($zone->parent) {
+                        $this->departamento_id = $zone->parent->id;
+                        $this->updatedDepartamentoId($zone->parent->id);
+                    }
+                } elseif ($zone->level === 'departamento') {
+                    $this->departamento_id = $zone->id;
+                }
+            }
 
             if ($this->plan_id) $this->loadSelectedPlan();
 
@@ -129,6 +161,9 @@ class ClientForm extends Component
             $this->departamento = $draft['departamento'] ?? '';
             $this->municipio = $draft['municipio'] ?? '';
             $this->distrito = $draft['distrito'] ?? '';
+            $this->departamento_id = $draft['departamento_id'] ?? '';
+            $this->municipio_id = $draft['municipio_id'] ?? '';
+            $this->distrito_id = $draft['distrito_id'] ?? '';
             $this->plan_id = $draft['plan_id'] ?? '';
             $this->no_price = $draft['no_price'] ?? false;
             $this->notes = $draft['notes'] ?? '';
@@ -137,6 +172,14 @@ class ClientForm extends Component
                 $this->loadBranchPlans($this->branch_id);
             } else {
                 $this->loadAllPlans();
+            }
+
+            // Restaurar cascada desde borrador
+            if ($this->departamento_id) {
+                $this->updatedDepartamentoId($this->departamento_id);
+            }
+            if ($this->municipio_id) {
+                $this->updatedMunicipioId($this->municipio_id);
             }
         }
     }
@@ -175,10 +218,30 @@ class ClientForm extends Component
         $this->plan_id = '';
         $this->selectedPlanPrice = null;
         $this->service = '';
+        $this->departamento_id = '';
+        $this->municipio_id = '';
+        $this->distrito_id = '';
+        $this->availableMunicipios = [];
+        $this->availableDistritos = [];
+        $this->departamento = '';
+        $this->municipio = '';
+        $this->distrito = '';
+        $this->assignedSupervisor = '';
         if ($value) {
             $this->loadBranchPlans($value);
+            $this->availableDepartamentos = Zone::whereNull('parent_id')
+                ->where('level', 'departamento')
+                ->where('branch_id', $value)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->toArray();
         } else {
             $this->loadAllPlans();
+            $this->availableDepartamentos = Zone::whereNull('parent_id')
+                ->where('level', 'departamento')
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->toArray();
         }
     }
 
@@ -253,6 +316,78 @@ class ClientForm extends Component
         }
     }
 
+    // ========== CASCADA DE ZONAS ==========
+
+    private function loadDepartamentos()
+    {
+        $query = Zone::whereNull('parent_id')
+            ->where('level', 'departamento');
+        if ($this->branch_id) {
+            $query->where('branch_id', $this->branch_id);
+        }
+        $this->availableDepartamentos = $query->orderBy('name')
+            ->get(['id', 'name'])
+            ->toArray();
+    }
+
+    public function updatedDepartamentoId($value)
+    {
+        $this->municipio_id = '';
+        $this->distrito_id = '';
+        $this->availableMunicipios = [];
+        $this->availableDistritos = [];
+        $this->distrito = '';
+        $this->municipio = '';
+        $this->assignedSupervisor = '';
+
+        if ($value) {
+            $dep = Zone::find($value);
+            $this->departamento = $dep?->name ?? '';
+            $this->availableMunicipios = Zone::where('parent_id', $value)
+                ->where('level', 'municipio')
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->toArray();
+        } else {
+            $this->departamento = '';
+        }
+    }
+
+    public function updatedMunicipioId($value)
+    {
+        $this->distrito_id = '';
+        $this->availableDistritos = [];
+        $this->distrito = '';
+        $this->assignedSupervisor = '';
+
+        if ($value) {
+            $mun = Zone::find($value);
+            $this->municipio = $mun?->name ?? '';
+            $this->availableDistritos = Zone::where('parent_id', $value)
+                ->whereIn('level', ['distrito', 'localidad'])
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->toArray();
+        } else {
+            $this->municipio = '';
+        }
+    }
+
+    public function updatedDistritoId($value)
+    {
+        $this->assignedSupervisor = '';
+        if ($value) {
+            $dis = Zone::with('supervisors', 'parent.supervisors', 'parent.parent.supervisors')->find($value);
+            $this->distrito = $dis?->name ?? '';
+            $supervisorName = $dis?->effectiveSupervisors()->pluck('name')->implode(', ');
+            if ($supervisorName) {
+                $this->assignedSupervisor = $supervisorName;
+            }
+        } else {
+            $this->distrito = '';
+        }
+    }
+
     public function updated($property)
     {
         if (!$this->clientId) {
@@ -271,6 +406,9 @@ class ClientForm extends Component
                 'departamento' => $this->departamento,
                 'municipio' => $this->municipio,
                 'distrito' => $this->distrito,
+                'departamento_id' => $this->departamento_id,
+                'municipio_id' => $this->municipio_id,
+                'distrito_id' => $this->distrito_id,
                 'plan_id' => $this->plan_id,
                 'no_price' => $this->no_price,
                 'notes' => $this->notes,
@@ -334,6 +472,7 @@ class ClientForm extends Component
                 'installation_address' => $this->installation_address,
                 'branch_id' => $this->branch_id ?: null,
                 'plan_id' => $this->plan_id ?: null,
+                'zone_id' => $this->distrito_id ?: null,
                 'departamento' => $this->departamento ?: null,
                 'municipio' => $this->municipio ?: null,
                 'distrito' => $this->distrito ?: null,
@@ -393,6 +532,12 @@ class ClientForm extends Component
         $this->departamento = '';
         $this->municipio = '';
         $this->distrito = '';
+        $this->departamento_id = '';
+        $this->municipio_id = '';
+        $this->distrito_id = '';
+        $this->availableMunicipios = [];
+        $this->availableDistritos = [];
+        $this->assignedSupervisor = '';
         $this->plan_id = '';
         $this->no_price = false;
         $this->selectedPlanPrice = null;

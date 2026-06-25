@@ -41,7 +41,13 @@ class User extends Authenticatable
     {
         return $this->hasMany(Requisition::class, 'technician_id');
     }
-   
+
+    // Zonas que supervisa (rol field_supervisor)
+    public function supervisedZones()
+    {
+        return $this->belongsToMany(Zone::class, 'supervisor_zone');
+    }
+    
     public function getRolePrefixAttribute(): string
     {
         return $this->roles()->first()?->prefix ?? 'OT';

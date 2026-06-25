@@ -234,7 +234,7 @@
                                 class="material-symbols-outlined text-base">list_alt</span> Todos los Tickets</a>@endcan
                                 @can('view_noc_panel_menu')<a href="{{ route('noc.panel') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
-                                        class="material-symbols-outlined text-base">settings_overscan</span> Panel
+                                        class="material-symbols-outlined text-base">settings_overscan</span> Bandeja
                                 NOC</a>@endcan
                                 @can('view sla dashboard')<a href="{{ route('sla.dashboard') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
@@ -292,6 +292,9 @@
                                 @can('manage catalog')<a href="{{ route('admin.plans') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">assignment</span> Planes y Zonas</a>@endcan
+                                @can('assign supervisors to zones')<a href="{{ route('admin.supervisor-zones') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">supervisor_account</span> Supervisores x Zona</a>@endcan
                                 @can('access_admin')<a href="{{ route('admin.shelves') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">shelves</span> Estanterías</a>@endcan

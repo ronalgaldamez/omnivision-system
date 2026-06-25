@@ -173,8 +173,11 @@
                             <h3 class="text-sm font-semibold {{ $area['isActive'] ? 'text-blue-800' : 'text-gray-800' }}">
                                 {{ $area['label'] }}
                             </h3>
+                            @if($area['createdByName'] ?? false)
+                                <p class="text-xs text-gray-400">Creado por: {{ $area['createdByName'] }}</p>
+                            @endif
                             @if($area['responsible'])
-                                <p class="text-xs text-gray-500">Responsable: {{ $area['responsible'] }}</p>
+                                <p class="text-xs text-gray-500">{{ $area['responsibleLabel'] ?? 'Responsable:' }} {{ $area['responsible'] }}</p>
                             @endif
                         </div>
                     </div>
@@ -256,6 +259,12 @@
             @foreach($areas as $area)
                 <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <p class="text-xs text-gray-500">{{ $area['label'] }}</p>
+                    @if($area['createdByName'] ?? false)
+                        <p class="text-xs text-gray-400 mt-0.5">Creado por: {{ $area['createdByName'] }}</p>
+                    @endif
+                    @if($area['responsible'])
+                        <p class="text-xs text-gray-400 mt-0.5">{{ $area['responsibleLabel'] ?? 'Responsable:' }} {{ $area['responsible'] }}</p>
+                    @endif
                     <p class="text-lg font-mono font-bold text-gray-700 mt-1">{{ $area['totalFormatted'] }}</p>
                 </div>
             @endforeach

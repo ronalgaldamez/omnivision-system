@@ -21,7 +21,7 @@ if (!function_exists('page_title_from_route')) {
             'technician.requisitions.index' => 'Mis Requisiciones',
             'technician.requisitions.create' => 'Nueva Requisición',
             'technician.requisitions.show'   => 'Detalle de Requisición',
-            'noc.panel'                   => 'Panel NOC',
+            'noc.panel'                   => 'Bandeja NOC',
             'work-orders.index'           => 'Órdenes de Trabajo',
             'work-orders.show'            => 'Detalle de Orden',
             'tickets.index'               => 'Tickets',

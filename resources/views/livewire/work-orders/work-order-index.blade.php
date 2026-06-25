@@ -1,4 +1,4 @@
-<div class="max-w-7xl mx-auto">
+<div class="max-w-7xl mx-auto" wire:poll.15s="$refresh">
     <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
         <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-4">
             <div>

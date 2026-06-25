@@ -19,6 +19,7 @@ class WorkOrderTimeline extends Component
             'client',
             'ticket',
             'pauses',
+            'zone.supervisors', 'zone.parent.supervisors', 'zone.parent.parent.supervisors',
         ])->findOrFail($id);
 
         if (!$this->workOrder->ticket) {

@@ -104,6 +104,7 @@ class WorkOrderList extends Component
             'code' => $this->generateFieldWorkOrderCode(),
             'started_at' => now(),
             'assigned_at' => now(),
+            'assigned_by' => Auth::id(),
             'created_by' => Auth::id(),
         ]);
 
