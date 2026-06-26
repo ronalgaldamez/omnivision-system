@@ -78,9 +78,17 @@
                                 @if(count($productResults))
                                     <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
                                         @foreach($productResults as $product)
+                                            @php
+                                                $stockQty = $technicianStock[$product->id]['quantity'] ?? 0;
+                                            @endphp
                                             <li wire:click="selectProduct({{ $product->id }})"
-                                                class="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm">
-                                                {{ $product->name }} ({{ $product->sku }})
+                                                class="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm flex items-center justify-between gap-2">
+                                                <span>{{ $product->name }} ({{ $product->sku }})</span>
+                                                @if($stockQty > 0)
+                                                    <span class="text-xs text-amber-600 font-medium whitespace-nowrap">
+                                                        En inventario: {{ $stockQty }}
+                                                    </span>
+                                                @endif
                                             </li>
                                         @endforeach
                                     </ul>
@@ -88,8 +96,14 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Cantidad</label>
-                                <input type="number" step="any" wire:model="currentQuantity"
+                                <input type="number" step="any" wire:model="currentQuantity" min="0"
                                     class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                @if($currentProductId && isset($technicianStock[$currentProductId]))
+                                    <p class="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-sm">inventory</span>
+                                        Ya tienes <strong>{{ $technicianStock[$currentProductId]['quantity'] }}</strong> en inventario
+                                    </p>
+                                @endif
                             </div>
                         </div>
                         <div class="mt-4 flex justify-end">
@@ -108,15 +122,30 @@
                             <thead>
                                 <tr class="bg-gray-50 border-b border-gray-200">
                                     <th class="px-4 py-3 text-left text-gray-600 font-medium">Producto</th>
-                                    <th class="px-4 py-3 text-center text-gray-600 font-medium">Cantidad</th>
+                                    <th class="px-4 py-3 text-center text-gray-600 font-medium">En inventario</th>
+                                    <th class="px-4 py-3 text-center text-gray-600 font-medium">Solicitando</th>
                                     <th class="px-4 py-3 text-center text-gray-600 font-medium">Acción</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
                                 @foreach($items as $index => $item)
-                                <tr class="hover:bg-gray-50/80 transition">
-                                    <td class="px-4 py-3 text-gray-800">{{ $item['product_name'] }} ({{ $item['product_sku'] }})</td>
-                                    <td class="px-4 py-3 text-center">{{ $item['quantity'] }}</td>
+                                @php
+                                    $onHand = $technicianStock[$item['product_id']]['quantity'] ?? 0;
+                                    $isInherited = $item['inherited'] ?? false;
+                                @endphp
+                                <tr class="hover:bg-gray-50/80 transition {{ $isInherited ? 'bg-blue-50/30' : '' }}">
+                                    <td class="px-4 py-3 text-gray-800">
+                                        {{ $item['product_name'] }} ({{ $item['product_sku'] }})
+                                        @if($isInherited)
+                                            <span class="ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-medium">
+                                                Heredado
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-center font-mono text-sm {{ $onHand > 0 ? 'text-amber-600' : 'text-gray-400' }}">
+                                        {{ $onHand > 0 ? $onHand : '—' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-center font-mono">{{ $item['quantity'] }}</td>
                                     <td class="px-4 py-3 text-center">
                                         <button type="button" wire:click="removeItem({{ $index }})"
                                             class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition">

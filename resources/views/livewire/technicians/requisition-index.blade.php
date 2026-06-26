@@ -38,6 +38,8 @@
                                     <span class="text-xs text-gray-500 ml-2">{{ $req->created_at->format('d/m/Y') }}</span>
                                     @if($req->status === 'closed')
                                         <span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">Cerrada</span>
+                                    @elseif($req->status === 'heredada')
+                                        <span class="ml-2 px-2 py-0.5 bg-yellow-50 text-yellow-700 rounded-full text-xs">Heredada</span>
                                     @else
                                         <span class="ml-2 px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs">Abierta</span>
                                     @endif
