@@ -5,6 +5,7 @@ namespace App\Livewire\Technicians;
 use Livewire\Component;
 use App\Models\Requisition;
 use App\Models\TechnicianInventory;
+use App\Services\InventoryService;
 use Illuminate\Support\Facades\Auth;
 
 class RequisitionIndex extends Component
@@ -39,12 +40,11 @@ class RequisitionIndex extends Component
                     'notes' => 'Cierre semanal automático - Material sobrante de requisiciones',
                 ]);
 
-                // Devolver stock a bodega
+                // Devolver stock a bodega con costo actual
                 $product = $inv->product;
-                $product->increment('current_stock', $inv->quantity_in_hand);
+                $returnCost = $product->average_cost ?? 0;
 
-                // Registrar movimiento en kardex
-                \App\Models\Movement::create([
+                $movement = \App\Models\Movement::create([
                     'product_id' => $inv->product_id,
                     'type' => 'technician_return',
                     'quantity' => $inv->quantity_in_hand,
@@ -52,6 +52,8 @@ class RequisitionIndex extends Component
                     'user_id' => $user->id,
                     'reference_type' => 'weekly_close',
                 ]);
+
+                app(InventoryService::class)->processPurchaseEntry($product, $inv->quantity_in_hand, $returnCost, $movement);
 
                 // Limpiar inventario del técnico
                 $inv->update(['quantity_in_hand' => 0]);

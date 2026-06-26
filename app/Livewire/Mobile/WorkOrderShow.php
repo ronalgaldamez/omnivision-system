@@ -268,25 +268,26 @@ class WorkOrderShow extends Component
             return;
         }
 
-        $requisition = $this->workOrder->requisitions()->where('status', 'open')->first();
-        if (!$requisition) {
-            $this->availableProducts = [];
-            return;
-        }
-
-        $this->availableProducts = RequisitionItem::where('requisition_id', $requisition->id)
+        $this->availableProducts = RequisitionItem::whereHas('requisition', function ($q) {
+            $q->where('status', 'open')
+              ->whereHas('workOrders', fn($w) => $w->where('work_order_id', $this->workOrder->id));
+        })
             ->with('product')
             ->get()
-            ->map(function ($item) {
-                $available = $item->quantity_requested - $item->quantity_used;
+            ->groupBy('product_id')
+            ->map(function ($items) {
+                $first = $items->first();
+                $available = $items->sum(fn($i) => $i->quantity_requested - $i->quantity_used);
                 return [
-                    'requisition_item_id' => $item->id,
-                    'product_name' => $item->product->name,
-                    'product_sku' => $item->product->sku,
+                    'product_id' => $first->product_id,
+                    'product_name' => $first->product->name,
+                    'product_sku' => $first->product->sku,
                     'available' => max(0, $available),
+                    'requisition_item_ids' => $items->pluck('id')->toArray(),
                     'quantity' => 0,
                 ];
             })
+            ->values()
             ->toArray();
     }
 
@@ -538,8 +539,7 @@ class WorkOrderShow extends Component
 
     public function saveConsumption()
     {
-        $requisition = $this->workOrder->requisitions()->where('status', 'open')->first();
-        if (!$requisition) {
+        if (!$this->hasOpenRequisition) {
             $this->dispatch('show-toast', type: 'error', message: 'No hay requisición activa.');
             return;
         }
@@ -554,22 +554,33 @@ class WorkOrderShow extends Component
                 return;
             }
 
-            $reqItem = RequisitionItem::find($product['requisition_item_id']);
+            $remaining = $quantity;
+            $reqItems = RequisitionItem::whereIn('id', $product['requisition_item_ids'])
+                ->orderBy('requisition_id')
+                ->get();
 
-            WorkOrderMaterial::create([
-                'work_order_id' => $this->workOrder->id,
-                'product_id' => $reqItem->product_id,
-                'quantity_used' => $quantity,
-                'requisition_item_id' => $product['requisition_item_id'],
-            ]);
+            foreach ($reqItems as $reqItem) {
+                if ($remaining <= 0) break;
 
-            if ($reqItem) {
-                $reqItem->quantity_used += $quantity;
-                $reqItem->save();
+                $itemAvailable = $reqItem->quantity_requested - $reqItem->quantity_used;
+                $take = min($remaining, $itemAvailable);
+
+                if ($take > 0) {
+                    WorkOrderMaterial::create([
+                        'work_order_id' => $this->workOrder->id,
+                        'product_id' => $product['product_id'],
+                        'quantity_used' => $take,
+                        'requisition_item_id' => $reqItem->id,
+                    ]);
+
+                    $reqItem->quantity_used += $take;
+                    $reqItem->save();
+                    $remaining -= $take;
+                }
             }
 
             $inventory = TechnicianInventory::where('technician_id', Auth::id())
-                ->where('product_id', $reqItem->product_id)
+                ->where('product_id', $product['product_id'])
                 ->first();
             if ($inventory) {
                 $inventory->decrement('quantity_in_hand', $quantity);

@@ -99,6 +99,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit sla goals',
             'delete sla goals',
             'view sla dashboard',
+            // Requisitions
+            'adjust requisitions',
         ];
 
         Permission::whereNotIn('name', $permissions)->delete();
@@ -168,6 +170,37 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_new_ticket_menu',
             'view_all_tickets_menu',
             'view_noc_panel_menu',
+            'capture coordinates',
+        ]);
+
+        $fieldSupervisorRole->syncPermissions([
+            'view work_orders',
+            'edit work_orders',
+            'complete work_orders',
+            'view own work_orders',
+            'view dashboard',
+            'view requisitions',
+            'create requisitions',
+            'adjust requisitions',
+            'view technician_returns',
+            'create technician_returns',
+            'view catalog',
+            'manage catalog',
+            'view reports',
+            'access_technicians',
+            'view_work_orders_menu',
+            'view_map_ot_menu',
+            'view_requisitions_menu',
+            'access_reports',
+            'view_low_stock_menu',
+            'view_movements_report_menu',
+            'view_technician_performance_menu',
+            'access_support',
+            'view_new_ticket_menu',
+            'view_all_tickets_menu',
+            'view_noc_panel_menu',
+            'access my daily jobs',
+            'view technician dashboard',
             'capture coordinates',
         ]);
 

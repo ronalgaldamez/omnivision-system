@@ -46,7 +46,7 @@
                 <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4 mb-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Órdenes de Trabajo obligatorias</label>
-                        <p class="text-xs text-gray-500 mt-0.5">Si está activo, los técnicos no podrán crear solicitudes sin una OT asignada.</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Si está activo, los técnicos no podrán crear requisiciones sin una OT asignada.</p>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
                         <input type="checkbox" wire:model.live="otRequired" class="sr-only peer">

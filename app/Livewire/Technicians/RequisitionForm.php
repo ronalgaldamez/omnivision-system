@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Requisition;
 use App\Models\RequisitionItem;
 use App\Models\TechnicianInventory;
+use App\Services\InventoryService;
 use Illuminate\Support\Facades\Auth;
 
 class RequisitionForm extends Component
@@ -33,9 +34,18 @@ class RequisitionForm extends Component
 
     protected function rules()
     {
+        $otRequired = \App\Models\Setting::get('ot_required', 'false') === 'true';
+
         return [
-            'selectedWorkOrders' => 'required|array|min:1',
-            'selectedWorkOrders.*' => 'exists:work_orders,id',
+            'selectedWorkOrders' => $otRequired ? 'required|array|min:1' : 'nullable|array',
+            'selectedWorkOrders.*' => ['exists:work_orders,id', function ($attribute, $value, $fail) {
+                if (\App\Models\WorkOrder::whereHas('requisitions', fn($q) => $q->where('status', 'open'))
+                    ->where('id', $value)
+                    ->exists()
+                ) {
+                    $fail("La OT #{$value} ya pertenece a una requisición abierta.");
+                }
+            }],
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
@@ -43,9 +53,34 @@ class RequisitionForm extends Component
         ];
     }
 
+    public $inheritedItemIds = [];
+
     public function mount()
     {
         $this->loadTechnicianStock();
+        $this->loadInheritedItems();
+    }
+
+    public function loadInheritedItems()
+    {
+        $inventory = TechnicianInventory::where('technician_id', Auth::id())
+            ->where('quantity_in_hand', '>', 0)
+            ->with('product')
+            ->get();
+
+        foreach ($inventory as $inv) {
+            $exists = collect($this->items)->firstWhere('product_id', $inv->product_id);
+            if (!$exists) {
+                $this->items[] = [
+                    'product_id' => $inv->product_id,
+                    'product_name' => $inv->product->name,
+                    'product_sku' => $inv->product->sku,
+                    'quantity' => $inv->quantity_in_hand,
+                    'inherited' => true,
+                ];
+                $this->inheritedItemIds[] = $inv->product_id;
+            }
+        }
     }
 
     public function loadTechnicianStock()
@@ -172,6 +207,10 @@ class RequisitionForm extends Component
 
     public function save()
     {
+        \App\Models\Requisition::where('technician_id', Auth::id())
+            ->where('status', 'open')
+            ->update(['status' => 'heredada']);
+
         $requisition = Requisition::create([
             'technician_id' => Auth::id(),
             'status' => 'open',
@@ -183,6 +222,7 @@ class RequisitionForm extends Component
 
         foreach ($this->items as $item) {
             $product = Product::find($item['product_id']);
+            $isInherited = $item['inherited'] ?? false;
 
             RequisitionItem::create([
                 'requisition_id' => $requisition->id,
@@ -191,29 +231,28 @@ class RequisitionForm extends Component
                 'quantity_used' => 0,
             ]);
 
-            if ($product->current_stock >= $item['quantity']) {
-                \App\Models\Movement::create([
-                    'product_id' => $product->id,
-                    'type' => 'requisition_out',
-                    'quantity' => $item['quantity'],
-                    'description' => 'Requisición #' . $requisition->id,
-                    'user_id' => Auth::id(),
-                    'reference_type' => 'requisition',
-                    'reference_id' => $requisition->id,
-                ]);
+            if (!$isInherited) {
+                if ($product->current_stock >= $item['quantity']) {
+                    $movement = \App\Models\Movement::create([
+                        'product_id' => $product->id,
+                        'type' => 'requisition_out',
+                        'quantity' => $item['quantity'],
+                        'description' => 'Requisición #' . $requisition->id,
+                        'user_id' => Auth::id(),
+                        'reference_type' => 'requisition',
+                        'reference_id' => $requisition->id,
+                    ]);
 
-                $product->decrement('current_stock', $item['quantity']);
-            }
+                    app(InventoryService::class)->processExit($product, $item['quantity'], $movement);
+                }
 
-            TechnicianInventory::updateOrCreate(
-                [
+                $inv = TechnicianInventory::firstOrNew([
                     'technician_id' => Auth::id(),
                     'product_id' => $product->id,
-                ],
-                [
-                    'quantity_in_hand' => \DB::raw('quantity_in_hand + ' . $item['quantity']),
-                ]
-            );
+                ]);
+                $inv->quantity_in_hand = ($inv->quantity_in_hand ?? 0) + $item['quantity'];
+                $inv->save();
+            }
         }
 
         $this->dispatch('show-toast', type: 'success', message: 'Requisición creada correctamente.');
@@ -224,6 +263,7 @@ class RequisitionForm extends Component
     {
         $workOrders = WorkOrder::where('technician_id', Auth::id())
             ->whereIn('status', ['pending', 'in_progress'])
+            ->whereDoesntHave('requisitions', fn($q) => $q->where('status', 'open'))
             ->with('client')
             ->get();
 
