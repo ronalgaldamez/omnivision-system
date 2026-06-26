@@ -6,7 +6,7 @@ use Livewire\Component;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 
 class Register extends Component
 {
@@ -33,9 +33,8 @@ class Register extends Component
             'password' => Hash::make($this->password),
         ]);
 
-        // Asignar rol por defecto 'buyer'
         $buyerRole = Role::firstOrCreate(['name' => 'buyer']);
-        $user->assignRole($buyerRole);
+        $user->syncRoles([$buyerRole]);
 
         Auth::login($user);
         session()->regenerate();

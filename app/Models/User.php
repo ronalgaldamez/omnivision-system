@@ -15,6 +15,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_active',
     ];
 
     protected $hidden = [
@@ -27,29 +28,53 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
     }
 
-    // Relación con órdenes de trabajo
     public function workOrders()
     {
         return $this->hasMany(WorkOrder::class, 'technician_id');
     }
 
-    // Relación con requisiciones
     public function requisitions()
     {
         return $this->hasMany(Requisition::class, 'technician_id');
     }
 
-    // Zonas que supervisa (rol field_supervisor)
     public function supervisedZones()
     {
         return $this->belongsToMany(Zone::class, 'supervisor_zone');
     }
-    
+
     public function getRolePrefixAttribute(): string
     {
         return $this->roles()->first()?->prefix ?? 'OT';
+    }
+
+    /**
+     * Indica si el usuario tiene permisos personalizados
+     * (asignados directamente, no heredados del rol).
+     */
+    public function hasPersonalizedPermissions(): bool
+    {
+        return $this->permissions()->count() > 0;
+    }
+
+    /**
+     * Sistema híbrido de permisos:
+     * - Si el usuario tiene permisos directos → solo esos valen (rol ignorado).
+     * - Si no tiene permisos directos → hereda los del rol (comportamiento normal).
+     */
+    public function hasPermissionTo($permission, $guardName = null): bool
+    {
+        if ($this->hasPersonalizedPermissions()) {
+            return $this->hasDirectPermission($permission);
+        }
+
+        $permission = $this->filterPermission($permission, $guardName);
+
+        return $this->hasDirectPermission($permission)
+            || $this->hasPermissionViaRole($permission);
     }
 }

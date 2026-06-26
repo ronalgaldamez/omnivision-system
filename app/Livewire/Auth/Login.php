@@ -11,7 +11,6 @@ class Login extends Component
     public $password = '';
     public $remember = false;
 
-    // Define el layout a usar
     protected $layout = 'components.layouts.app';
 
     protected $rules = [
@@ -24,6 +23,16 @@ class Login extends Component
         $this->validate();
 
         if (Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
+            $user = Auth::user();
+
+            if (!$user->is_active) {
+                Auth::logout();
+                session()->invalidate();
+                session()->regenerateToken();
+                $this->addError('email', 'Tu cuenta ha sido desactivada. Contacta al administrador.');
+                return;
+            }
+
             session()->regenerate();
             return redirect()->intended('/dashboard');
         }
