@@ -14,6 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
+            'can-any' => \App\Http\Middleware\CheckPermission::class,
+        ]);
+
+        $middleware->web(append: [
+            \App\Http\Middleware\CheckActiveUser::class,
         ]);
     })
     ->withSchedule(function ($schedule) {

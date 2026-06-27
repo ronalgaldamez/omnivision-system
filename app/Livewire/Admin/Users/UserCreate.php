@@ -4,7 +4,7 @@ namespace App\Livewire\Admin\Users;
 
 use Livewire\Component;
 use App\Models\User;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
 class UserCreate extends Component
@@ -30,7 +30,7 @@ class UserCreate extends Component
             'password' => Hash::make($this->password),
         ]);
 
-        $user->assignRole($this->selectedRole);
+        $user->syncRoles([$this->selectedRole]);
 
         session()->flash('message', 'Usuario creado exitosamente.');
         return redirect()->route('admin.users.index');

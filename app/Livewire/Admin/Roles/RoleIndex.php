@@ -4,8 +4,8 @@ namespace App\Livewire\Admin\Roles;
 
 use Livewire\Component;
 use Livewire\WithPagination;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use App\Models\Role;
+use App\Models\Permission;
 
 class RoleIndex extends Component
 {

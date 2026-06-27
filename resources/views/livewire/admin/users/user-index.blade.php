@@ -1,7 +1,5 @@
 <div class="max-w-7xl mx-auto">
-    <!-- Tarjeta principal -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <!-- Encabezado con fondo sutil -->
         <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-4">
             <div>
                 <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -17,17 +15,13 @@
             </a>
         </div>
 
-        <!-- Contenido -->
         <div class="p-6 space-y-5">
-            <!-- Filtro de búsqueda -->
             <div class="relative w-full">
-                <span
-                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                 <input type="text" wire:model.live="search" placeholder="Buscar por nombre o email..."
                     class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
             </div>
 
-            <!-- Tabla de usuarios -->
             <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                 <table class="min-w-full text-sm">
                     <thead>
@@ -52,6 +46,12 @@
                             </th>
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">
                                 <div class="flex items-center justify-center gap-1.5">
+                                    <span class="material-symbols-outlined text-gray-400 text-base">toggle_on</span>
+                                    Estado
+                                </div>
+                            </th>
+                            <th class="px-4 py-3 text-center text-gray-600 font-medium">
+                                <div class="flex items-center justify-center gap-1.5">
                                     <span class="material-symbols-outlined text-gray-400 text-base">settings</span>
                                     Acciones
                                 </div>
@@ -60,14 +60,20 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @forelse($users as $user)
-                            <tr class="hover:bg-gray-50/80 transition">
+                            <tr class="hover:bg-gray-50/80 transition {{ !$user->is_active ? 'opacity-60' : '' }}">
                                 <td class="px-4 py-3 text-gray-800">{{ $user->name }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ $user->email }}</td>
                                 <td class="px-4 py-3">
-                                    <span
-                                        class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
                                         {{ $user->roles->first()->name ?? 'Sin rol' }}
                                     </span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <button wire:click="toggleActive({{ $user->id }})"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition {{ $user->is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200' }}">
+                                        <span class="material-symbols-outlined text-sm">{{ $user->is_active ? 'check_circle' : 'block' }}</span>
+                                        {{ $user->is_active ? 'Activo' : 'Inactivo' }}
+                                    </button>
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     <div class="flex items-center justify-center gap-1">
@@ -87,7 +93,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-4 py-12 text-center bg-gray-50/50">
+                                <td colspan="5" class="px-4 py-12 text-center bg-gray-50/50">
                                     <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">inbox</span>
                                     <p class="text-gray-500">No hay usuarios registrados</p>
                                     <p class="text-sm text-gray-400 mt-1">Haz clic en "Nuevo usuario" para agregar uno</p>
@@ -98,24 +104,20 @@
                 </table>
             </div>
 
-            <!-- Paginación -->
             @if($users->hasPages())
                 <div class="mt-5">
                     {{ $users->links() }}
                 </div>
             @endif
 
-            <!-- Mensajes de sesión (estilo unificado) -->
             @if(session('message'))
-                <div
-                    class="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg border border-green-200">
+                <div class="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg border border-green-200">
                     <span class="material-symbols-outlined text-green-600">check_circle</span>
                     {{ session('message') }}
                 </div>
             @endif
             @if(session('error'))
-                <div
-                    class="flex items-center gap-2 text-sm text-red-700 bg-red-50 px-4 py-3 rounded-lg border border-red-200">
+                <div class="flex items-center gap-2 text-sm text-red-700 bg-red-50 px-4 py-3 rounded-lg border border-red-200">
                     <span class="material-symbols-outlined text-red-600">error</span>
                     {{ session('error') }}
                 </div>

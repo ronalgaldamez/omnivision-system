@@ -15,11 +15,11 @@ class DatabaseSeeder extends Seeder
         // Seeders base del sistema
         $this->call(RolesAndPermissionsSeeder::class);
         $this->call(UsersSeeder::class);
-        $this->call(ServiceTypeSeeder::class);
-        $this->call(KnowledgeBaseSeeder::class);
+        // $this->call(ServiceTypeSeeder::class);
+        // $this->call(KnowledgeBaseSeeder::class);
         
         // Datos de demostración (marcas, modelos, categorías, productos)
-        $this->call(DemoDataSeeder::class);
-        $this->call(SuppliersSeeder::class);
+        // $this->call(DemoDataSeeder::class);
+        // $this->call(SuppliersSeeder::class);
     }
 }

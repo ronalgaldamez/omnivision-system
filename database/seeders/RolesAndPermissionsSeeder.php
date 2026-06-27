@@ -3,8 +3,9 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use App\Enums\PermissionEnum;
+use App\Models\Role;
+use App\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
@@ -13,312 +14,241 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $permissions = [
-            'view products',
-            'create products',
-            'edit products',
-            'delete products',
-            'view movements',
-            'create movements',
-            'view kardex',
-            'view suppliers',
-            'create suppliers',
-            'edit suppliers',
-            'delete suppliers',
-            'view purchases',
-            'create purchases',
-            'view work_orders',
-            'create work_orders',
-            'edit work_orders',
-            'delete work_orders',
-            'complete work_orders',
-            'assign technicians',
-            'cancel work orders',
-            'view all work orders',
-            'view technician_returns',
-            'create technician_returns',
-            'view catalog',
-            'manage catalog',
-            'view reports',
-            'view dashboard',
-            'view clients',
-            'create clients',
-            'edit clients',
-            'delete clients',
-            'view tickets',
-            'create tickets',
-            'edit tickets',
-            'view any tickets',
-            'view own tickets',
-            'update tickets',
-            'delete tickets',
-            'access noc panel',
-            'view low stock',
-            'view pending noc tickets',
-            'view resolutions',
-            'view own work_orders',
-            'view requisitions',
-            'create requisitions',
-            'access_inventory',
-            'access_suppliers',
-            'access_technicians',
-            'access_reports',
-            'access_support',
-            'access_admin',
-            'view_movements_menu',
-            'view_new_movement_menu',
-            'view_products_menu',
-            'view_kardex_menu',
-            'view_suppliers_menu',
-            'view_purchase_history_menu',
-            'view_new_purchase_menu',
-            'view_returns_menu',
-            'view_register_return_menu',
-            'view_work_orders_menu',
-            'view_map_ot_menu',
-            'view_requisitions_menu',
-            'view_low_stock_menu',
-            'view_movements_report_menu',
-            'view_technician_performance_menu',
-            'view_new_ticket_menu',
-            'view_all_tickets_menu',
-            'view_noc_panel_menu',
-            'view_users_menu',
-            'view_roles_menu',
-            'view_catalog_menu',
-            'view_settings_menu',
-            'view technician dashboard',
-            'assign any technician in returns',
-            'access my daily jobs',
-            'capture coordinates',
-            // Supervisor zones
-            'assign supervisors to zones',
-            // SLA
-            'view sla goals',
-            'create sla goals',
-            'edit sla goals',
-            'delete sla goals',
-            'view sla dashboard',
-            // Requisitions
-            'adjust requisitions',
-        ];
+        // ═══════════════════════════════════════════
+        // CAPA 1 — Definir todos los permisos
+        // ═══════════════════════════════════════════
 
-        Permission::whereNotIn('name', $permissions)->delete();
-        foreach ($permissions as $perm) {
+        Permission::whereNotIn('name', PermissionEnum::allPermissions())->delete();
+
+        foreach (PermissionEnum::allPermissions() as $perm) {
             Permission::firstOrCreate(['name' => $perm]);
         }
 
-        // Roles
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $warehouseRole = Role::firstOrCreate(['name' => 'warehouse']);
-        $technicianRole = Role::firstOrCreate(['name' => 'technician']);
-        $accountantRole = Role::firstOrCreate(['name' => 'accountant']);
-        $buyerRole = Role::firstOrCreate(['name' => 'buyer']);
-        $atencionClienteRole = Role::firstOrCreate(['name' => 'atencion_al_cliente'], ['prefix' => 'SAC']);
-        $nocRole = Role::firstOrCreate(['name' => 'noc']);
-        $fieldSupervisorRole = Role::firstOrCreate(['name' => 'field_supervisor'], ['prefix' => 'FS']);
-        $salesRepRole = Role::firstOrCreate(['name' => 'sales_rep'], ['prefix' => 'SR']);
+        // ═══════════════════════════════════════════
+        // CAPA 2 — Crear roles (sin permisos aún)
+        // ═══════════════════════════════════════════
 
-        // Asignación de permisos
-        $adminRole->syncPermissions(Permission::all());
+        $admin             = Role::firstOrCreate(['name' => 'admin']);
+        $warehouse         = Role::firstOrCreate(['name' => 'warehouse']);
+        $technician        = Role::firstOrCreate(['name' => 'technician']);
+        $accountant        = Role::firstOrCreate(['name' => 'accountant']);
+        $buyer             = Role::firstOrCreate(['name' => 'buyer']);
+        $atencionCliente   = Role::firstOrCreate(['name' => 'atencion_al_cliente'], ['prefix' => 'SAC']);
+        $noc               = Role::firstOrCreate(['name' => 'noc']);
+        $fieldSupervisor   = Role::firstOrCreate(['name' => 'field_supervisor'], ['prefix' => 'FS']);
+        $salesRep          = Role::firstOrCreate(['name' => 'sales_rep'], ['prefix' => 'SR']);
 
-        $warehouseRole->syncPermissions([
-            'view products',
-            'create products',
-            'edit products',
-            'view movements',
-            'create movements',
-            'view kardex',
-            'view suppliers',
-            'create suppliers',
-            'edit suppliers',
-            'view purchases',
-            'create purchases',
-            'view work_orders',
-            'create work_orders',
-            'edit work_orders',
-            'delete work_orders',
-            'complete work_orders',
-            'assign technicians',
-            'view technician_returns',
-            'create technician_returns',
-            'view catalog',
-            'manage catalog',
-            'view reports',
-            'view dashboard',
-            'view low stock',
-            'access_inventory',
-            'view_movements_menu',
-            'view_new_movement_menu',
-            'view_products_menu',
-            'view_kardex_menu',
-            'access_suppliers',
-            'view_suppliers_menu',
-            'view_purchase_history_menu',
-            'view_new_purchase_menu',
-            'access_technicians',
-            'view_returns_menu',
-            'view_register_return_menu',
-            'view_work_orders_menu',
-            'view_map_ot_menu',
-            'view_requisitions_menu',
-            'access_reports',
-            'view_low_stock_menu',
-            'view_movements_report_menu',
-            'view_technician_performance_menu',
-            'access_support',
-            'view_new_ticket_menu',
-            'view_all_tickets_menu',
-            'view_noc_panel_menu',
-            'capture coordinates',
+        // ═══════════════════════════════════════════
+        // CAPA 3 — Matriz de asignación (rol → permisos)
+        // ═══════════════════════════════════════════
+
+        // ── Admin: todos los permisos ──
+        $admin->syncPermissions(Permission::all());
+
+        // ── Warehouse / Bodeguero ──
+        $warehouse->syncPermissions([
+            PermissionEnum::AccessInventory,
+            PermissionEnum::ViewProducts,
+            PermissionEnum::CreateProducts,
+            PermissionEnum::EditProducts,
+            PermissionEnum::ViewMovements,
+            PermissionEnum::CreateMovements,
+            PermissionEnum::ViewKardex,
+            PermissionEnum::ViewProductsMenu,
+            PermissionEnum::ViewMovementsMenu,
+            PermissionEnum::ViewNewMovementMenu,
+            PermissionEnum::ViewKardexMenu,
+
+            PermissionEnum::AccessSuppliers,
+            PermissionEnum::ViewSuppliers,
+            PermissionEnum::CreateSuppliers,
+            PermissionEnum::EditSuppliers,
+            PermissionEnum::ViewPurchases,
+            PermissionEnum::CreatePurchases,
+            PermissionEnum::ViewSuppliersMenu,
+            PermissionEnum::ViewPurchaseHistoryMenu,
+            PermissionEnum::ViewNewPurchaseMenu,
+
+            PermissionEnum::AccessTechnicians,
+            PermissionEnum::ViewTechnicianReturns,
+            PermissionEnum::CreateTechnicianReturns,
+            PermissionEnum::ViewReturnsMenu,
+            PermissionEnum::ViewRegisterReturnMenu,
+
+            PermissionEnum::ViewWorkOrders,
+            PermissionEnum::CreateWorkOrders,
+            PermissionEnum::EditWorkOrders,
+            PermissionEnum::DeleteWorkOrders,
+            PermissionEnum::CompleteWorkOrders,
+            PermissionEnum::AssignTechnicians,
+            PermissionEnum::ViewWorkOrdersMenu,
+            PermissionEnum::ViewMapOtMenu,
+            PermissionEnum::ViewRequisitionsMenu,
+
+            PermissionEnum::AccessReports,
+            PermissionEnum::ViewReports,
+            PermissionEnum::ViewLowStock,
+            PermissionEnum::ViewLowStockMenu,
+            PermissionEnum::ViewMovementsReportMenu,
+            PermissionEnum::ViewTechnicianPerformanceMenu,
+
+            PermissionEnum::AccessSupport,
+            PermissionEnum::ViewNewTicketMenu,
+            PermissionEnum::ViewAllTicketsMenu,
+            PermissionEnum::ViewNocPanelMenu,
+
+            PermissionEnum::ViewDashboard,
+            PermissionEnum::ViewCatalog,
+            PermissionEnum::ManageCatalog,
+            PermissionEnum::CaptureCoordinates,
         ]);
 
-        $fieldSupervisorRole->syncPermissions([
-            'view work_orders',
-            'edit work_orders',
-            'complete work_orders',
-            'view own work_orders',
-            'view dashboard',
-            'view requisitions',
-            'create requisitions',
-            'adjust requisitions',
-            'view technician_returns',
-            'create technician_returns',
-            'view catalog',
-            'manage catalog',
-            'view reports',
-            'access_technicians',
-            'view_work_orders_menu',
-            'view_map_ot_menu',
-            'view_requisitions_menu',
-            'access_reports',
-            'view_low_stock_menu',
-            'view_movements_report_menu',
-            'view_technician_performance_menu',
-            'access_support',
-            'view_new_ticket_menu',
-            'view_all_tickets_menu',
-            'view_noc_panel_menu',
-            'access my daily jobs',
-            'view technician dashboard',
-            'capture coordinates',
+        // ── Technician / Técnico de campo ──
+        $technician->syncPermissions([
+            PermissionEnum::AccessTechnicians,
+            PermissionEnum::ViewWorkOrders,
+            PermissionEnum::CreateWorkOrders,
+            PermissionEnum::EditWorkOrders,
+            PermissionEnum::CompleteWorkOrders,
+            PermissionEnum::ViewOwnWorkOrders,
+            PermissionEnum::ViewWorkOrdersMenu,
+            PermissionEnum::ViewMapOtMenu,
+
+            PermissionEnum::ViewRequisitions,
+            PermissionEnum::CreateRequisitions,
+            PermissionEnum::ViewRequisitionsMenu,
+
+            PermissionEnum::ViewDashboard,
+            PermissionEnum::ViewTechnicianDashboard,
+            PermissionEnum::AccessMyDailyJobs,
+            PermissionEnum::CaptureCoordinates,
         ]);
 
-        $technicianRole->syncPermissions([
-            'view work_orders',
-            'create work_orders',
-            'edit work_orders',
-            'complete work_orders',
-            'view own work_orders',
-            'view dashboard',
-            'view requisitions',
-            'create requisitions',
-            'access_technicians',
-            'view_work_orders_menu',
-            'view_map_ot_menu',
-            'view_requisitions_menu',
-            'access my daily jobs',
-            'view technician dashboard',
-            'capture coordinates',
+        // ── Accountant / Contador ──
+        $accountant->syncPermissions([
+            PermissionEnum::AccessReports,
+            PermissionEnum::ViewReports,
+            PermissionEnum::ViewProducts,
+            PermissionEnum::ViewMovements,
+            PermissionEnum::ViewKardex,
+            PermissionEnum::ViewPurchases,
+            PermissionEnum::ViewDashboard,
+            PermissionEnum::ViewLowStock,
+            PermissionEnum::ViewLowStockMenu,
+            PermissionEnum::ViewMovementsReportMenu,
+            PermissionEnum::ViewTechnicianPerformanceMenu,
         ]);
 
-        $accountantRole->syncPermissions([
-            'view products',
-            'view movements',
-            'view kardex',
-            'view purchases',
-            'view reports',
-            'view dashboard',
-            'access_reports',
-            'view_low_stock_menu',
-            'view_movements_report_menu',
-            'view_technician_performance_menu',
+        // ── Buyer / Comprador ──
+        $buyer->syncPermissions([
+            PermissionEnum::AccessSuppliers,
+            PermissionEnum::ViewProducts,
+            PermissionEnum::ViewSuppliers,
+            PermissionEnum::CreatePurchases,
+            PermissionEnum::ViewSuppliersMenu,
+            PermissionEnum::ViewNewPurchaseMenu,
         ]);
 
-        $buyerRole->syncPermissions([
-            'view products',
-            'view suppliers',
-            'create purchases',
-            'access_suppliers',
-            'view_suppliers_menu',
-            'view_new_purchase_menu',
+        // ── Atención al Cliente (SAC) ──
+        $atencionCliente->syncPermissions([
+            PermissionEnum::AccessSupport,
+            PermissionEnum::ViewClients,
+            PermissionEnum::CreateClients,
+            PermissionEnum::EditClients,
+            PermissionEnum::DeleteClients,
+            PermissionEnum::ViewOwnTickets,
+            PermissionEnum::CreateTickets,
+            PermissionEnum::ViewOwnWorkOrders,
+            PermissionEnum::ViewWorkOrders,
+            PermissionEnum::CreateWorkOrders,
+            PermissionEnum::EditWorkOrders,
+            PermissionEnum::ViewNewTicketMenu,
+            PermissionEnum::ViewAllTicketsMenu,
         ]);
 
-        $atencionClienteRole->syncPermissions([
-            'view clients',
-            'create clients',
-            'edit clients',
-            'delete clients',
-            'view own tickets',
-            'create tickets',
-            'view own work_orders',
-            'view work_orders',
-            'create work_orders',
-            'edit work_orders',
-            'access_support',
-            'view_new_ticket_menu',
-            'view_all_tickets_menu',
+        // ── NOC ──
+        $noc->syncPermissions([
+            PermissionEnum::AccessNocPanel,
+            PermissionEnum::ViewPendingNocTickets,
+            PermissionEnum::ViewResolutions,
+            PermissionEnum::ViewNocPanelMenu,
+
+            PermissionEnum::AccessSupport,
+            PermissionEnum::ViewAnyTickets,
+            PermissionEnum::ViewOwnTickets,
+            PermissionEnum::CreateTickets,
+            PermissionEnum::UpdateTickets,
+            PermissionEnum::ViewNewTicketMenu,
+            PermissionEnum::ViewAllTicketsMenu,
+
+            PermissionEnum::AccessTechnicians,
+            PermissionEnum::ViewAllWorkOrders,
+            PermissionEnum::ViewOwnWorkOrders,
+            PermissionEnum::ViewWorkOrders,
+            PermissionEnum::CreateWorkOrders,
+            PermissionEnum::EditWorkOrders,
+            PermissionEnum::AssignTechnicians,
+            PermissionEnum::ViewWorkOrdersMenu,
+            PermissionEnum::ViewTechnicianDashboard,
+
+            PermissionEnum::ViewDashboard,
+            PermissionEnum::ViewMovements,
+            PermissionEnum::ViewLowStock,
+            PermissionEnum::ViewRequisitions,
         ]);
 
-        $nocRole->syncPermissions([
-            'view dashboard',
-            'view any tickets',
-            'view own tickets',
-            'create tickets',
-            'update tickets',
-            'access noc panel',
-            'view pending noc tickets',
-            'view resolutions',
-            'view own work_orders',
-            'view all work orders',
-            'view work_orders',
-            'create work_orders',
-            'edit work_orders',
-            'assign technicians',
-            'access_support',
-            'view_new_ticket_menu',
-            'view_all_tickets_menu',
-            'view_noc_panel_menu',
-            'access_technicians',
-            'view_work_orders_menu',
-            'view technician dashboard',
-            'view movements',
-            'view low stock',
-            'view requisitions',
+        // ── Field Supervisor / Supervisor de campo ──
+        $fieldSupervisor->syncPermissions([
+            PermissionEnum::AccessTechnicians,
+            PermissionEnum::ViewAllWorkOrders,
+            PermissionEnum::ViewOwnWorkOrders,
+            PermissionEnum::ViewWorkOrders,
+            PermissionEnum::CreateWorkOrders,
+            PermissionEnum::EditWorkOrders,
+            PermissionEnum::CompleteWorkOrders,
+            PermissionEnum::AssignTechnicians,
+            PermissionEnum::CancelWorkOrders,
+            PermissionEnum::ViewWorkOrdersMenu,
+            PermissionEnum::ViewMapOtMenu,
+
+            PermissionEnum::ViewRequisitions,
+            PermissionEnum::CreateRequisitions,
+            PermissionEnum::AdjustRequisitions,
+            PermissionEnum::ViewRequisitionsMenu,
+
+            PermissionEnum::ViewTechnicianReturns,
+            PermissionEnum::CreateTechnicianReturns,
+
+            PermissionEnum::AccessReports,
+            PermissionEnum::ViewReports,
+            PermissionEnum::ViewLowStock,
+            PermissionEnum::ViewLowStockMenu,
+            PermissionEnum::ViewMovementsReportMenu,
+            PermissionEnum::ViewTechnicianPerformanceMenu,
+
+            PermissionEnum::AccessSupport,
+            PermissionEnum::ViewNewTicketMenu,
+            PermissionEnum::ViewAllTicketsMenu,
+            PermissionEnum::ViewNocPanelMenu,
+
+            PermissionEnum::ViewDashboard,
+            PermissionEnum::ViewTechnicianDashboard,
+            PermissionEnum::ViewCatalog,
+            PermissionEnum::ManageCatalog,
+            PermissionEnum::AccessMyDailyJobs,
+            PermissionEnum::CaptureCoordinates,
+            PermissionEnum::AssignSupervisorsToZones,
         ]);
 
-        $fieldSupervisorRole->syncPermissions([
-            'view work_orders',
-            'create work_orders',
-            'edit work_orders',
-            'view low stock',
-            'view reports',
-            'view dashboard',
-            'assign technicians',
-            'cancel work orders',
-            'view all work orders',
-            'complete work_orders',
-            'view requisitions',
-            'access_technicians',
-            'view_work_orders_menu',
-            'view_map_ot_menu',
-            'view_requisitions_menu',
-            'access_reports',
-            'view_low_stock_menu',
-            'view_movements_report_menu',
-            'view_technician_performance_menu',
-            'access_support',
-            'view_all_tickets_menu',
-        ]);
-
-        $salesRepRole->syncPermissions([
-            'view work_orders',
-            'create work_orders',
-            'edit work_orders',
-            'view own work_orders',
-            'capture coordinates',
-            'access_technicians',
-            'view_work_orders_menu',
+        // ── Sales Rep / Vendedor ──
+        $salesRep->syncPermissions([
+            PermissionEnum::AccessTechnicians,
+            PermissionEnum::ViewWorkOrders,
+            PermissionEnum::CreateWorkOrders,
+            PermissionEnum::EditWorkOrders,
+            PermissionEnum::ViewOwnWorkOrders,
+            PermissionEnum::ViewWorkOrdersMenu,
+            PermissionEnum::CaptureCoordinates,
         ]);
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();

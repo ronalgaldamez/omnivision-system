@@ -3,15 +3,16 @@
 namespace App\Livewire\Admin\Roles;
 
 use Livewire\Component;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use App\Models\Role;
+use App\Enums\PermissionEnum;
 
 class RoleForm extends Component
 {
     public $roleId;
     public $name;
-    public $prefix = '';            // ← nuevo campo
+    public $prefix = '';
     public $selectedPermissions = [];
+    public $activeTab = '';
 
     public function mount($id = null)
     {
@@ -22,6 +23,15 @@ class RoleForm extends Component
             $this->prefix = $role->prefix ?? '';
             $this->selectedPermissions = $role->permissions->pluck('name')->toArray();
         }
+
+        if (empty($this->activeTab)) {
+            $this->activeTab = '';
+        }
+    }
+
+    public function setTab($tab)
+    {
+        $this->activeTab = $tab;
     }
 
     public function save()
@@ -46,12 +56,42 @@ class RoleForm extends Component
         $role->syncPermissions($this->selectedPermissions);
 
         session()->flash('message', 'Rol guardado correctamente.');
-        return redirect()->route('admin.roles.index');
+    }
+
+    public function getPermissionsGroupedProperty(): array
+    {
+        return [
+            'Inventario'            => $this->categorize(PermissionEnum::inventory()),
+            'Proveedores'           => $this->categorize(PermissionEnum::suppliers()),
+            'Órdenes de Trabajo'    => $this->categorize(PermissionEnum::workOrders()),
+            'Técnicos'              => $this->categorize(PermissionEnum::technicians()),
+            'Reportes'              => $this->categorize(PermissionEnum::reports()),
+            'Soporte / Tickets'     => $this->categorize(PermissionEnum::support()),
+            'Panel NOC'             => $this->categorize(PermissionEnum::noc()),
+            'Clientes'              => $this->categorize(PermissionEnum::clients()),
+            'Administración'        => $this->categorize(PermissionEnum::admin()),
+            'SLA'                   => $this->categorize(PermissionEnum::sla()),
+            'Campo / Móvil'         => $this->categorize(PermissionEnum::field()),
+            'Supervisor de Zona'    => $this->categorize(PermissionEnum::supervisor()),
+        ];
+    }
+
+    private function categorize(array $enumCases): array
+    {
+        $values = array_map(fn($c) => $c->value, $enumCases);
+
+        return [
+            'gates'   => array_values(array_filter($values, fn($p) => str_starts_with($p, 'access_'))),
+            'menus'   => array_values(array_filter($values, fn($p) => str_ends_with($p, '_menu'))),
+            'actions' => array_values(array_filter($values, fn($p) => !str_starts_with($p, 'access_') && !str_ends_with($p, '_menu'))),
+        ];
     }
 
     public function render()
     {
-        $permissions = Permission::orderBy('name')->get();
-        return view('livewire.admin.roles.role-form', compact('permissions'));
+        $grouped = $this->permissionsGrouped;
+        $tabModules = array_keys($grouped);
+
+        return view('livewire.admin.roles.role-form', compact('grouped', 'tabModules'));
     }
 }
