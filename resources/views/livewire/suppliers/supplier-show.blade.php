@@ -40,7 +40,14 @@
                     <span class="material-symbols-outlined text-gray-400">call</span>
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Teléfono</p>
-                        <p class="text-gray-700">{{ $supplier->phone ?? '—' }}</p>
+                        @php $phones = $supplier->phones ?? []; @endphp
+                        @if(!empty($phones))
+                            @foreach($phones as $phone)
+                                <p class="text-gray-700">{{ $phone }}</p>
+                            @endforeach
+                        @else
+                            <p class="text-gray-700">—</p>
+                        @endif
                     </div>
                 </div>
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
@@ -60,35 +67,39 @@
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">description</span>
                     <div>
-                        <p class="text-xs text-gray-500 uppercase tracking-wide">Documentos</p>
-                        <p class="text-gray-700">
-                            NRC: {{ $supplier->nrc ?? '—' }} / NIT: {{ $supplier->nit ?? '—' }}
-                        </p>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">NRC</p>
+                        <p class="text-gray-700">{{ $supplier->nrc ?? '—' }}</p>
                     </div>
                 </div>
-                <!-- Cuentas bancarias -->
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">numbers</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">NIT</p>
+                        <p class="text-gray-700">{{ $supplier->nit ?? '—' }}</p>
+                    </div>
+                </div>
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 md:col-span-2">
                     <span class="material-symbols-outlined text-gray-400">account_balance</span>
-                    <div>
+                    <div class="flex-1">
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Cuentas bancarias</p>
-                        @php
-                            $accounts = $supplier->bank_accounts;
-                            if (is_string($accounts)) {
-                                $accounts = array_filter(explode("\n", $accounts));
-                            }
-                        @endphp
-                        @if(!empty($accounts))
-                            <ul class="list-disc list-inside text-gray-700">
-                                @foreach($accounts as $account)
-                                    <li>{{ is_array($account) ? ($account['bank_name'] ?? $account['account_number'] ?? '') : trim($account) }}
-                                    </li>
+                        @php $accounts = $supplier->bank_accounts; @endphp
+                        @if(!empty($accounts) && is_array($accounts))
+                            <div class="space-y-1 mt-1">
+                                @foreach($accounts as $acc)
+                                    @if(is_array($acc))
+                                        <div class="flex items-center gap-2 text-sm text-gray-700">
+                                            <span class="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0"></span>
+                                            <span class="font-medium">{{ $acc['bank_name'] ?? '' }}</span>
+                                            <span class="text-gray-400">·</span>
+                                            <span class="font-mono">{{ $acc['account_number'] ?? '' }}</span>
+                                        </div>
+                                    @endif
                                 @endforeach
-                            </ul>
+                            </div>
                         @else
                             <p class="text-gray-700">—</p>
                         @endif
                     </div>
-                    
                 </div>
             </div>
 

@@ -10,65 +10,17 @@ class SuppliersSeeder extends Seeder
     public function run()
     {
         $suppliers = [
-            [
-                'name'          => 'Electrónica del Norte',
-                'contact_name'  => 'Carlos Méndez',
-                'phone'         => '2233-4455',
-                'nrc'           => 'NRC-123456-7',
-                'nit'           => '0614-010203-104-5',
-                'bank_accounts' => "Banco Agrícola: 001-23456-7\nBanco Cuscatlán: 002-78901-2",
-                'email'         => 'ventas@electronicadelnorte.com',
-                'address'       => 'Boulevard Los Próceres, San Salvador',
-            ],
-            [
-                'name'          => 'Distribuidora Técnica S.A.',
-                'contact_name'  => 'Ana Rodríguez',
-                'phone'         => '2266-7788',
-                'nrc'           => 'NRC-234567-8',
-                'nit'           => '0614-020304-105-6',
-                'bank_accounts' => "Banco Agrícola: 003-34567-8\nBanco Promérica: 004-56789-0",
-                'email'         => 'pedidos@distribuidoratecnica.com',
-                'address'       => 'Calle La Reforma, Santa Tecla',
-            ],
-            [
-                'name'          => 'Suministros Industriales',
-                'contact_name'  => 'Roberto Guevara',
-                'phone'         => '2299-0011',
-                'nrc'           => 'NRC-345678-9',
-                'nit'           => '0614-030405-106-7',
-                'bank_accounts' => "Banco Cuscatlán: 005-67890-1",
-                'email'         => 'ventas@suministrosindustrial.com',
-                'address'       => 'Carretera a Sonsonate, km 12',
-            ],
-            [
-                'name'          => 'Cables y Conexiones',
-                'contact_name'  => 'Marta López',
-                'phone'         => '2244-5566',
-                'nrc'           => 'NRC-456789-0',
-                'nit'           => '0614-040506-107-8',
-                'bank_accounts' => "Banco Agrícola: 006-78901-2\nBanco Hipotecario: 007-89012-3",
-                'email'         => 'info@cablesyconexiones.com',
-                'address'       => 'Colonia Escalón, San Salvador',
-            ],
-            [
-                'name'          => 'TecnoRedes S.A. de C.V.',
-                'contact_name'  => 'Luis Hernández',
-                'phone'         => '2277-8899',
-                'nrc'           => 'NRC-567890-1',
-                'nit'           => '0614-050607-108-9',
-                'bank_accounts' => "Banco Promérica: 008-90123-4",
-                'email'         => 'ventas@tecnoredes.com',
-                'address'       => 'Zona Franca, San Miguel',
-            ],
+            ['name' => 'Electrónica del Norte', 'contact_name' => 'Carlos Méndez', 'phones' => ['2233-4455'], 'nrc' => '12345678', 'nit' => '123456789', 'bank_accounts' => [['bank_name' => 'Banco Agrícola', 'account_number' => '001234567'], ['bank_name' => 'Banco Cuscatlán', 'account_number' => '002789012']], 'email' => 'ventas@electronicadelnorte.com', 'address' => 'Boulevard Los Próceres, San Salvador'],
+            ['name' => 'Distribuidora Técnica S.A.', 'contact_name' => 'Ana Rodríguez', 'phones' => ['2266-7788'], 'nrc' => '23456789', 'nit' => '234567890', 'bank_accounts' => [['bank_name' => 'Banco Agrícola', 'account_number' => '003345678'], ['bank_name' => 'Banco Promérica', 'account_number' => '004567890']], 'email' => 'pedidos@distribuidoratecnica.com', 'address' => 'Calle La Reforma, Santa Tecla'],
+            ['name' => 'Suministros Industriales', 'contact_name' => 'Roberto Guevara', 'phones' => ['2299-0011'], 'nrc' => '34567890', 'nit' => '345678901', 'bank_accounts' => [['bank_name' => 'Banco Cuscatlán', 'account_number' => '005678901']], 'email' => 'ventas@suministrosindustrial.com', 'address' => 'Carretera a Sonsonate, km 12'],
+            ['name' => 'Cables y Conexiones', 'contact_name' => 'Marta López', 'phones' => ['2244-5566'], 'nrc' => '45678901', 'nit' => '456789012', 'bank_accounts' => [['bank_name' => 'Banco Agrícola', 'account_number' => '006789012'], ['bank_name' => 'Banco Hipotecario', 'account_number' => '007890123']], 'email' => 'info@cablesyconexiones.com', 'address' => 'Colonia Escalón, San Salvador'],
+            ['name' => 'TecnoRedes S.A. de C.V.', 'contact_name' => 'Luis Hernández', 'phones' => ['2277-8899'], 'nrc' => '56789012', 'nit' => '567890123', 'bank_accounts' => [['bank_name' => 'Banco Promérica', 'account_number' => '008901234']], 'email' => 'ventas@tecnoredes.com', 'address' => 'Zona Franca, San Miguel'],
         ];
 
         foreach ($suppliers as $supplier) {
-            Supplier::updateOrCreate(
-                ['name' => $supplier['name']], // busca por nombre
-                $supplier                      // si no existe, lo crea con estos datos
-            );
+            Supplier::updateOrCreate(['name' => $supplier['name']], $supplier);
         }
 
-        $this->command->info('✅ Proveedores actualizados con NRC, NIT y cuentas bancarias sin duplicados.');
+        $this->command->info('Proveedores actualizados.');
     }
-}  
+}
