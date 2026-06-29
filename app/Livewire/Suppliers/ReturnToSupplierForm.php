@@ -83,6 +83,7 @@ class ReturnToSupplierForm extends Component
                         'returned_quantity' => $item->returned_quantity,
                         'available_quantity' => $item->availableToReturn(),
                         'unit_cost' => $item->unit_cost,
+                        'base_quantity' => $item->base_quantity,
                     ];
                 })
                 ->toArray();
@@ -143,23 +144,28 @@ class ReturnToSupplierForm extends Component
                 if ($quantityToReturn <= 0)
                     continue;
 
+                // Si el item tiene base_quantity, convertir a unidades base
+                $purchaseItem = PurchaseItem::find($item['id']);
+                $itemBaseQty = $purchaseItem->base_quantity ?? $purchaseItem->quantity;
+                $ratio = $purchaseItem->quantity > 0 ? $itemBaseQty / $purchaseItem->quantity : 1;
+                $stockImpact = round($quantityToReturn * $ratio, 4);
+
                 $product = Product::find($item['product_id']);
-                if ($product->current_stock < $quantityToReturn) {
+                if ($product->current_stock < $stockImpact) {
                     throw new \Exception("Stock insuficiente para {$product->name}. Stock actual: {$product->current_stock}");
                 }
 
                 Movement::create([
                     'product_id' => $item['product_id'],
                     'type' => 'return_to_supplier',
-                    'quantity' => $quantityToReturn,
+                    'quantity' => $stockImpact,
                     'description' => "Devolución a proveedor {$supplier->name} - Factura {$purchase->invoice_number}",
                     'user_id' => Auth::id(),
                     'reference_type' => 'purchase',
                     'reference_id' => $purchase->id,
                 ]);
 
-                $product->updateStock($quantityToReturn, 'return_to_supplier');
-                $product->save();
+                $product->updateStock($stockImpact, 'return_to_supplier');
 
                 $purchaseItem = PurchaseItem::find($item['id']);
                 $purchaseItem->returned_quantity += $quantityToReturn;

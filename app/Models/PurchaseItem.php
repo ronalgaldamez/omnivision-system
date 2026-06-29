@@ -10,11 +10,8 @@ class PurchaseItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'purchase_id',
-        'product_id',
-        'quantity',
-        'returned_quantity',
-        'unit_cost'
+        'purchase_id', 'product_id', 'quantity', 'returned_quantity',
+        'unit_cost', 'packaging_id', 'base_quantity',
     ];
 
     public function purchase()
@@ -27,7 +24,11 @@ class PurchaseItem extends Model
         return $this->belongsTo(Product::class);
     }
 
-    // Método que faltaba
+    public function packaging()
+    {
+        return $this->belongsTo(ProductPackaging::class);
+    }
+
     public function availableToReturn()
     {
         return $this->quantity - $this->returned_quantity;

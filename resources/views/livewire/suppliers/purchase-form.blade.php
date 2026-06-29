@@ -114,85 +114,123 @@
                             <span class="material-symbols-outlined text-gray-500">inventory_2</span>
                             Productos de la compra
                         </h2>
-                        <button type="button" wire:click="openProductModal"
+                        @if(!$createMode)
+                        <button type="button" wire:click="activateCreateMode"
                             class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
                             <span class="material-symbols-outlined text-base">add_box</span>
                             Nuevo Producto
                         </button>
+                        @endif
                     </div>
 
                     <!-- Campos para agregar un producto -->
                     <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <!-- Búsqueda de producto -->
-                            <div class="relative">
-                                <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-gray-400 text-sm">inventory_2</span>
-                                    Producto
-                                </label>
-                                <div class="relative">
-                                    <input type="text" wire:model.live.debounce.300ms="currentProductSearch"
-                                        placeholder="Buscar por nombre o SKU..."
-                                        class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                        {{-- Fila 1: Producto (buscar o crear) --}}
+                        @if($createMode)
+                        <div class="space-y-2 p-3 bg-green-50 rounded-lg border border-green-100 mb-3">
+                            <p class="text-xs font-medium text-green-700">Nuevo producto</p>
+                            <div class="flex gap-2">
+                                <input type="text" wire:model="newProductName" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm" placeholder="Nombre del producto">
+                                <button type="button" wire:click="createProduct" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition whitespace-nowrap">Crear</button>
+                                <button type="button" wire:click="cancelCreateMode" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cancelar</button>
+                            </div>
+                            @error('newProductName') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+                        @else
+                        <div class="relative mb-3">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Buscar producto</label>
+                            <input type="text" wire:model.live.debounce.300ms="currentProductSearch"
+                                placeholder="Buscar por nombre o SKU..."
+                                class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                            @if(count($productSearchResults) > 0)
+                                <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                    @foreach($productSearchResults as $result)
+                                        <li wire:click="selectProduct({{ $result->id }})"
+                                            class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between">
+                                            <span class="font-medium text-gray-800">{{ $result->name }}</span>
+                                            <span class="text-xs text-gray-500">({{ $result->sku }})</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                            @error('currentProductId') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+                        @endif
+
+                        {{-- Fila 2: Empaque --}}
+                        @if($currentProductId)
+                        <div class="mb-3">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Empaque</label>
+                            @if(count($currentPackagings) > 0)
+                            <select wire:model.live="currentPackagingId" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm">
+                                @foreach($currentPackagings as $pkg)
+                                    <option value="{{ $pkg->id }}">{{ $pkg->name }} → x{{ rtrim(rtrim(number_format($pkg->quantity_in_base_unit, 4), '0'), '.') }}</option>
+                                @endforeach
+                            </select>
+                            @else
+                            <div class="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-xs text-blue-700">Sin empaques. Definí uno:</p>
+                                    <button type="button" x-data @click="$dispatch('open-help-modal')" class="text-blue-500 hover:text-blue-700 transition inline-flex items-center gap-1 text-xs">
+                                        <span class="material-symbols-outlined text-sm">help</span> ¿Cómo empaquetar?
+                                    </button>
                                 </div>
-                                @if(count($productSearchResults) > 0)
-                                    <ul
-                                        class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
-                                        @foreach($productSearchResults as $result)
-                                            <li wire:click="selectProduct({{ $result->id }})"
-                                                class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between">
-                                                <span class="font-medium text-gray-800">{{ $result->name }}</span>
-                                                <span class="text-xs text-gray-500">({{ $result->sku }})</span>
-                                            </li>
-                                        @endforeach
-                                    </ul>
+                                <div class="flex items-end gap-2">
+                                    <div class="flex-1">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                                        <select wire:model="newPackagingTypeId" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm">
+                                            <option value="">Seleccioná...</option>
+                                            @foreach($packagingTypes as $pt)
+                                                <option value="{{ $pt->id }}">{{ $pt->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">¿Cuántas unidades trae?</label>
+                                        <input type="number" step="1" wire:model="newPackagingQuantity" class="w-44 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm" min="1">
+                                    </div>
+                                    <button type="button" wire:click="savePackaging" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap mb-0.5">Guardar</button>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+                        @endif
+
+                        {{-- Fila 3: Cantidad y Costo --}}
+                        @if($currentProductId)
+                        @php $pkg = $this->selectedPackaging; @endphp
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">
+                                    Cantidad {{ $pkg ? '(' . strtolower($pkg->packagingType?->name ?? 'paquetes') . 's)' : '' }}
+                                </label>
+                                <input type="number" step="1" wire:model="currentQuantity"
+                                    x-on:keydown="if(!/^[0-9]$/.test($event.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes($event.key)) $event.preventDefault()"
+                                    class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                @if($pkg)
+                                    <p class="text-xs text-gray-400 mt-1">
+                                        <span class="font-mono" x-data="{ qty: @entangle('currentQuantity') }" x-text="(qty || 0) + ' × ' + {{ $pkg->quantity_in_base_unit }} + ' = ' + ((qty || 0) * {{ $pkg->quantity_in_base_unit }})"></span> unidades totales
+                                    </p>
                                 @endif
-                                @error('currentProductId') <span
-                                class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                                @error('currentQuantity') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                             </div>
-
-                            <!-- Cantidad -->
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-gray-400 text-sm">numbers</span>
-                                    Cantidad
-                                </label>
-                                <div class="relative">
-                                    <input type="number" step="any" wire:model="currentQuantity"
-                                        class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">tag</span>
-                                </div>
-                                @error('currentQuantity') <span
-                                class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
-                            </div>
-
-                            <!-- Costo unitario -->
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-gray-400 text-sm">attach_money</span>
-                                    Costo unitario
-                                </label>
-                                <div class="relative">
-                                    <input type="number" step="0.01" wire:model="currentUnitCost"
-                                        class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">payments</span>
-                                </div>
-                                @error('currentUnitCost') <span
-                                class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Costo unitario</label>
+                                <input type="number" step="0.01" wire:model="currentUnitCost"
+                                    x-on:keydown="if(!/^[0-9.]$/.test($event.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes($event.key)) $event.preventDefault()"
+                                    class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                @error('currentUnitCost') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                             </div>
                         </div>
-                        <div class="mt-4 flex justify-end">
+                        <div class="mt-3 flex justify-end">
                             <button type="button" wire:click="addItem"
-                                class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition">
+                                wire:loading.attr="disabled" wire:target="addItem"
+                                class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition disabled:opacity-50">
                                 <span class="material-symbols-outlined text-base">add_circle</span>
-                                Agregar producto
+                                {{ $editingIndex !== null ? 'Actualizar producto' : 'Agregar producto' }}
                             </button>
                         </div>
-                    </div>
+                        @endif
 
                     <!-- Tabla de productos agregados -->
                     @if(count($items) > 0)
@@ -209,7 +247,8 @@
                                         <tr class="bg-gray-50 border-b border-gray-200">
                                             <th class="px-4 py-3 text-left text-gray-600 font-medium">Producto</th>
                                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Cantidad</th>
-                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Costo unitario</th>
+                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Empaque</th>
+                                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Costo unit.</th>
                                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Total</th>
                                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Acciones</th>
                                         </tr>
@@ -222,6 +261,12 @@
                                                     <span class="text-gray-500 text-xs ml-1">({{ $item['product_sku'] }})</span>
                                                 </td>
                                                 <td class="px-4 py-3 text-center text-gray-700">{{ $item['quantity'] }}</td>
+                                                <td class="px-4 py-3 text-center text-gray-700 text-xs">
+                                                    {{ $item['packaging_name'] ?? '—' }}
+                                                    @if(!empty($item['base_quantity']) && $item['base_quantity'] != $item['quantity'])
+                                                        <span class="block text-gray-400">→ {{ rtrim(rtrim(number_format($item['base_quantity'], 4), '0'), '.') }} un.</span>
+                                                    @endif
+                                                </td>
                                                 <td class="px-4 py-3 text-center text-gray-700">
                                                     ${{ number_format($item['unit_cost'], 2) }}
                                                 </td>
@@ -365,29 +410,6 @@
         </div>
     </div>
 
-    <!-- Modal para crear producto -->
-    @if($showProductModal)
-        <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
-            x-data="{ open: true }" x-show="open" x-cloak>
-            <div class="relative mx-auto p-5 w-full max-w-lg">
-                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                        <h3 class="text-lg font-semibold flex items-center gap-2">
-                            <span class="material-symbols-outlined text-gray-500">add_box</span>
-                            Nuevo Producto
-                        </h3>
-                        <button @click="$wire.closeProductModal()" class="text-gray-400 hover:text-gray-600 transition">
-                            <span class="material-symbols-outlined">close</span>
-                        </button>
-                    </div>
-                    <div class="p-5">
-                        <livewire:suppliers.quick-product-form />
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
-
     {{-- Modal asignación a estanterías --}}
     @if($showShelfModal)
     <div x-data="{ open: true }" x-show="open" x-cloak
@@ -474,9 +496,35 @@
         </div>
     </div>
 
+    {{-- Modal guía de empaques --}}
+    <div x-data="{ show: false }" x-on:open-help-modal.window="show = true" x-show="show" x-cloak
+        class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center" style="display:none">
+        <div class="bg-white rounded-xl shadow-xl border border-gray-200 p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto" @click.away="show = false">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Guía de empaques</h3>
+                <button @click="show = false" class="text-gray-400 hover:text-gray-600"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">Cada empaque define cuántas unidades base contiene. Al comprar, el sistema multiplica automáticamente.</p>
+            <table class="w-full text-sm">
+                <thead><tr class="bg-gray-50 text-left text-gray-600"><th class="px-3 py-2">Tipo</th><th class="px-3 py-2">Ejemplo</th><th class="px-3 py-2">Trae</th><th class="px-3 py-2">Resultado</th></tr></thead>
+                <tbody class="divide-y divide-gray-100 text-gray-700">
+                    <tr><td class="px-3 py-1.5 font-medium">Caja</td><td class="px-3 py-1.5">Router TP-Link</td><td class="px-3 py-1.5">20</td><td class="px-3 py-1.5 text-xs text-gray-500">Caja x20</td></tr>
+                    <tr><td class="px-3 py-1.5 font-medium">Bolsa</td><td class="px-3 py-1.5">Conectores RJ45</td><td class="px-3 py-1.5">100</td><td class="px-3 py-1.5 text-xs text-gray-500">Bolsa x100</td></tr>
+                    <tr><td class="px-3 py-1.5 font-medium">Rollo</td><td class="px-3 py-1.5">Cable UTP Cat6</td><td class="px-3 py-1.5">305</td><td class="px-3 py-1.5 text-xs text-gray-500">Rollo x305 (metros)</td></tr>
+                    <tr><td class="px-3 py-1.5 font-medium">Paquete</td><td class="px-3 py-1.5">Filtros de señal</td><td class="px-3 py-1.5">50</td><td class="px-3 py-1.5 text-xs text-gray-500">Paquete x50</td></tr>
+                    <tr><td class="px-3 py-1.5 font-medium">Pallet</td><td class="px-3 py-1.5">Antenas parabólicas</td><td class="px-3 py-1.5">12</td><td class="px-3 py-1.5 text-xs text-gray-500">Pallet x12</td></tr>
+                    <tr><td class="px-3 py-1.5 font-medium">Unidad</td><td class="px-3 py-1.5">Modem individual</td><td class="px-3 py-1.5">1</td><td class="px-3 py-1.5 text-xs text-gray-500">Unidad x1</td></tr>
+                    <tr><td class="px-3 py-1.5 font-medium">Saco</td><td class="px-3 py-1.5">Aislantes térmicos</td><td class="px-3 py-1.5">30</td><td class="px-3 py-1.5 text-xs text-gray-500">Saco x30</td></tr>
+                    <tr><td class="px-3 py-1.5 font-medium">Bobina</td><td class="px-3 py-1.5">Fibra óptica</td><td class="px-3 py-1.5">1000</td><td class="px-3 py-1.5 text-xs text-gray-500">Bobina x1000 (metros)</td></tr>
+                    <tr><td class="px-3 py-1.5 font-medium">Blister</td><td class="px-3 py-1.5">Adaptadores USB</td><td class="px-3 py-1.5">5</td><td class="px-3 py-1.5 text-xs text-gray-500">Blister x5</td></tr>
+                    <tr><td class="px-3 py-1.5 font-medium">Sobre</td><td class="px-3 py-1.5">Tornillería fina</td><td class="px-3 py-1.5">200</td><td class="px-3 py-1.5 text-xs text-gray-500">Sobre x200</td></tr>
+                </tbody>
+            </table>
+            <p class="text-xs text-gray-400 mt-3">Ejemplo: comprás 3 Cajas de Router, cada Caja trae 20 → entran 60 routers al inventario.</p>
+        </div>
+    </div>
+
     <style>
-        [x-cloak] {
-            display: none !important;
-        }
+        [x-cloak] { display: none !important; }
     </style>
 </div>

@@ -24,7 +24,8 @@ class Product extends Model
         'average_cost',
         'total_value',
         'is_obsolete',
-        'is_floating'
+        'is_floating',
+        'base_unit',
     ];
 
     protected static function booted()
@@ -73,7 +74,7 @@ class Product extends Model
     }
 
     // ========== CORRECCIÓN APLICADA AQUÍ ==========
-    public function updateStock(int $quantity, string $type): void
+    public function updateStock(float $quantity, string $type): void
     {
         if (in_array($type, ['entry', 'technician_return'])) {
             $this->increment('current_stock', $quantity);
@@ -102,5 +103,10 @@ class Product extends Model
         return $this->belongsToMany(Shelf::class, 'product_shelf')
             ->withPivot('quantity')
             ->withTimestamps();
+    }
+
+    public function packagings()
+    {
+        return $this->hasMany(ProductPackaging::class)->orderBy('is_default_for_purchase', 'desc')->orderBy('name');
     }
 }
