@@ -23,7 +23,7 @@
             <div class="relative w-full">
                 <span
                     class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
-                <input type="text" wire:model.live="search" placeholder="Buscar proveedor..."
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="Buscar proveedor..."
                     class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
             </div>
 
@@ -69,7 +69,7 @@
                             <tr class="hover:bg-gray-50/80 transition">
                                 <td class="px-4 py-3 text-gray-800">{{ $supplier->name }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ $supplier->contact_name ?? '-' }}</td>
-                                <td class="px-4 py-3 text-gray-700">{{ $supplier->phone ?? '-' }}</td>
+                                <td class="px-4 py-3 text-gray-700">{{ implode(', ', $supplier->phones ?? []) ?: '—' }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ $supplier->email ?? '-' }}</td>
                                 <td class="px-4 py-3 text-center">
                                     <div class="flex items-center justify-center gap-1">
@@ -141,13 +141,23 @@
                     </div>
                     <h3 class="text-lg font-semibold text-gray-900">Confirmar eliminación</h3>
                     <p class="text-sm text-gray-600 mt-2">
-                        ¿Estás seguro de eliminar este proveedor? Esta acción no se puede deshacer.
+                        ¿Estás seguro de eliminar a <strong>{{ $deleteName }}</strong>? Esta acción no se puede deshacer.
                     </p>
+                    @if($deleteHasPurchases)
+                    <p class="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mt-2">
+                        Este proveedor tiene compras asociadas. Elimínalas primero.
+                    </p>
+                    @endif
                 </div>
                 <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
                     <button wire:click="delete"
-                        class="w-full sm:w-auto px-5 py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-red-700 transition">
-                        Sí, eliminar
+                        wire:loading.attr="disabled"
+                        wire:target="delete"
+                        class="w-full sm:w-auto px-5 py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-red-700 transition disabled:opacity-50">
+                        <span wire:loading.remove wire:target="delete">Sí, eliminar</span>
+                        <span wire:loading wire:target="delete" class="inline-flex items-center gap-2">
+                            <span class="animate-spin material-symbols-outlined text-base">progress_activity</span>Eliminando...
+                        </span>
                     </button>
                     <button @click="show = false"
                         class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
