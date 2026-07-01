@@ -130,7 +130,7 @@
                         <div class="space-y-2 p-3 bg-green-50 rounded-lg border border-green-100 mb-3">
                             <p class="text-xs font-medium text-green-700">Nuevo producto</p>
                             <div class="flex gap-2">
-                                <input type="text" wire:model="newProductName" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm" placeholder="Nombre del producto">
+                                <input type="text" wire:model.live.debounce.500ms="newProductName" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm" placeholder="Nombre del producto">
                                 <button type="button" wire:click="createProduct" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition whitespace-nowrap">Crear</button>
                                 <button type="button" wire:click="cancelCreateMode" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cancelar</button>
                             </div>
@@ -139,9 +139,18 @@
                         @else
                         <div class="relative mb-3">
                             <label class="block text-xs font-medium text-gray-600 mb-1">Buscar producto</label>
-                            <input type="text" wire:model.live.debounce.300ms="currentProductSearch"
-                                placeholder="Buscar por nombre o SKU..."
-                                class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                            <div class="relative">
+                                <input type="text" wire:model.live.debounce.300ms="currentProductSearch"
+                                    placeholder="Buscar por nombre o SKU..."
+                                    class="w-full px-3 pr-9 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                @if($currentProductId)
+                                <button type="button" wire:click="clearProductSelection"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition"
+                                    title="Limpiar selección">
+                                    <span class="material-symbols-outlined text-lg">close</span>
+                                </button>
+                                @endif
+                            </div>
                             @if(count($productSearchResults) > 0)
                                 <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
                                     @foreach($productSearchResults as $result)
@@ -162,11 +171,53 @@
                         <div class="mb-3">
                             <label class="block text-xs font-medium text-gray-600 mb-1">Empaque</label>
                             @if(count($currentPackagings) > 0)
-                            <select wire:model.live="currentPackagingId" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm">
-                                @foreach($currentPackagings as $pkg)
-                                    <option value="{{ $pkg->id }}">{{ $pkg->name }} → x{{ rtrim(rtrim(number_format($pkg->quantity_in_base_unit, 4), '0'), '.') }}</option>
-                                @endforeach
-                            </select>
+                            <div class="space-y-2">
+                                <select wire:model.live="currentPackagingId" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm">
+                                    @foreach($currentPackagings as $pkg)
+                                        <option value="{{ $pkg->id }}">{{ $pkg->name }} → x{{ rtrim(rtrim(number_format($pkg->quantity_in_base_unit, 4), '0'), '.') }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" wire:click="editPackaging({{ $currentPackagingId }})"
+                                        class="text-xs text-blue-600 hover:text-blue-800 transition inline-flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-sm">edit</span> Editar
+                                    </button>
+                                    <span class="text-gray-300">|</span>
+                                    <button type="button" wire:click="deletePackaging({{ $currentPackagingId }})"
+                                        class="text-xs text-red-500 hover:text-red-700 transition inline-flex items-center gap-1"
+                                        onclick="return confirm('¿Eliminar este empaque?')">
+                                        <span class="material-symbols-outlined text-sm">delete</span> Eliminar
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if($showPackagingForm)
+                            <div class="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-100 mt-2">
+                                <p class="text-xs font-medium text-blue-700">{{ $editingPackagingId ? 'Editando empaque' : 'Nuevo empaque' }}</p>
+                                <div class="flex items-end gap-2">
+                                    <div class="flex-1">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                                        <select wire:model.live="newPackagingTypeId" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm">
+                                            <option value="">Seleccioná...</option>
+                                            @foreach($packagingTypes as $pt)
+                                                <option value="{{ $pt->id }}">{{ $pt->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">¿Cuántas unidades trae?</label>
+                                        <input type="number" step="1" wire:model.live.debounce.500ms="newPackagingQuantity" class="w-44 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm" min="1">
+                                    </div>
+                                    <button type="button" wire:click="savePackaging" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap mb-0.5">{{ $editingPackagingId ? 'Actualizar' : 'Guardar' }}</button>
+                                    <button type="button" wire:click="cancelEditPackaging" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition mb-0.5">Cancelar</button>
+                                </div>
+                            </div>
+                            @else
+                            <button type="button" wire:click="editPackaging(0)"
+                                class="mt-1 text-xs text-blue-600 hover:text-blue-800 transition">
+                                + Agregar empaque
+                            </button>
+                            @endif
                             @else
                             <div class="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                 <div class="flex items-center justify-between">
@@ -178,7 +229,7 @@
                                 <div class="flex items-end gap-2">
                                     <div class="flex-1">
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
-                                        <select wire:model="newPackagingTypeId" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm">
+                                        <select wire:model.live="newPackagingTypeId" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm">
                                             <option value="">Seleccioná...</option>
                                             @foreach($packagingTypes as $pt)
                                                 <option value="{{ $pt->id }}">{{ $pt->name }}</option>
@@ -187,7 +238,7 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-gray-600 mb-1">¿Cuántas unidades trae?</label>
-                                        <input type="number" step="1" wire:model="newPackagingQuantity" class="w-44 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm" min="1">
+                                        <input type="number" step="1" wire:model.live.debounce.500ms="newPackagingQuantity" class="w-44 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm" min="1">
                                     </div>
                                     <button type="button" wire:click="savePackaging" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap mb-0.5">Guardar</button>
                                 </div>
@@ -204,7 +255,7 @@
                                 <label class="block text-xs font-medium text-gray-600 mb-1">
                                     Cantidad {{ $pkg ? '(' . strtolower($pkg->packagingType?->name ?? 'paquetes') . 's)' : '' }}
                                 </label>
-                                <input type="number" step="1" wire:model="currentQuantity"
+                                <input type="number" step="1" wire:model.live.debounce.500ms="currentQuantity"
                                     x-on:keydown="if(!/^[0-9]$/.test($event.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes($event.key)) $event.preventDefault()"
                                     class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
                                 @if($pkg)
@@ -216,13 +267,56 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Costo unitario</label>
-                                <input type="number" step="0.01" wire:model="currentUnitCost"
+                                <input type="number" step="0.01" wire:model.live.debounce.500ms="currentUnitCost"
                                     x-on:keydown="if(!/^[0-9.]$/.test($event.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes($event.key)) $event.preventDefault()"
                                     class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
                                 @error('currentUnitCost') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                             </div>
                         </div>
-                        <div class="mt-3 flex justify-end">
+                        {{-- Empaque fraccionado --}}
+                        @if($pkg)
+                        <div class="bg-amber-50/60 rounded-lg border border-amber-200 p-3 space-y-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" wire:model.live="hasFractional"
+                                    class="rounded border-amber-300 text-amber-600 shadow-sm focus:ring-2 focus:ring-amber-500/20">
+                                <span class="text-sm font-medium text-amber-800">Empaque fraccionado</span>
+                                <span class="text-xs text-amber-600">(algunas {{ strtolower($pkg->packagingType?->name ?? 'cajas') }} vienen con menos unidades)</span>
+                            </label>
+                            @if($hasFractional)
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">
+                                        Cajas fraccionadas <span class="text-amber-600">(de {{ $currentQuantity }})</span>
+                                    </label>
+                                    <input type="number" step="1" min="1" wire:model.live.debounce.500ms="fractionalQuantity"
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm">
+                                    @error('fractionalQuantity') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">
+                                        ¿Cuántas unidades faltan en cada una?
+                                    </label>
+                                    <input type="number" step="1" min="1" wire:model.live.debounce.500ms="fractionalUnits"
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm">
+                                    <p class="text-xs text-amber-600 mt-1 font-mono" x-data="{ units: @entangle('fractionalUnits'), pkgUnits: {{ $pkg->quantity_in_base_unit }} }"
+                                        x-text="units > 0 ? 'Le faltan ' + units + ' unidades (trae ' + (pkgUnits - units) + ' en vez de ' + pkgUnits + ')' : ''"></p>
+                                    @error('fractionalUnits') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <p class="text-xs text-amber-700 font-mono" x-data="{ cqty: @entangle('currentQuantity'), fqty: @entangle('fractionalQuantity'), funits: @entangle('fractionalUnits'), pkgUnits: {{ $pkg->quantity_in_base_unit }} }"
+                                x-text="'Total: ' + cqty + ' × ' + pkgUnits + ' - ' + fqty + ' × ' + funits + ' = ' + (cqty * pkgUnits - fqty * funits) + ' unidades'"></p>
+                            @endif
+                        </div>
+                        @endif
+                        {{-- Fin empaque fraccionado --}}
+                        <div class="mt-3 flex justify-end gap-2">
+                            @if($editingIndex !== null)
+                            <button type="button" wire:click="cancelEdit"
+                                class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg bg-white hover:bg-gray-50 transition shadow-sm">
+                                <span class="material-symbols-outlined text-base">undo</span>
+                                Cancelar edición
+                            </button>
+                            @endif
                             <button type="button" wire:click="addItem"
                                 wire:loading.attr="disabled" wire:target="addItem"
                                 class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition disabled:opacity-50">
@@ -263,6 +357,12 @@
                                                 <td class="px-4 py-3 text-center text-gray-700">{{ $item['quantity'] }}</td>
                                                 <td class="px-4 py-3 text-center text-gray-700 text-xs">
                                                     {{ $item['packaging_name'] ?? '—' }}
+                                                    @if(!empty($item['fractional_quantity']))
+                                                        <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs font-medium ml-1">
+                                                            <span class="material-symbols-outlined" style="font-size:12px">broken_image</span>
+                                                            Fraccionado
+                                                        </span>
+                                                    @endif
                                                     @if(!empty($item['base_quantity']) && $item['base_quantity'] != $item['quantity'])
                                                         <span class="block text-gray-400">→ {{ rtrim(rtrim(number_format($item['base_quantity'], 4), '0'), '.') }} un.</span>
                                                     @endif
@@ -271,7 +371,7 @@
                                                     ${{ number_format($item['unit_cost'], 2) }}
                                                 </td>
                                                 <td class="px-4 py-3 text-center font-medium text-gray-800">
-                                                    ${{ number_format($item['quantity'] * $item['unit_cost'], 2) }}
+                                                    ${{ number_format(($item['base_quantity'] ?? $item['quantity']) * $item['unit_cost'], 2) }}
                                                 </td>
                                                 <td class="px-4 py-3 text-center">
                                                     <div class="flex items-center justify-center gap-1">
@@ -296,7 +396,7 @@
                                                 Total compra:
                                             </td>
                                             <td class="px-4 py-3 text-center font-bold text-gray-800">
-                                                ${{ number_format(array_sum(array_map(fn($i) => $i['quantity'] * $i['unit_cost'], $items)), 2) }}
+                                                ${{ number_format(array_sum(array_map(fn($i) => ($i['base_quantity'] ?? $i['quantity']) * $i['unit_cost'], $items)), 2) }}
                                             </td>
                                             <td></td>
                                         </tr>
@@ -338,6 +438,10 @@
 
                 <!-- Botones de acción -->
                 <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" wire:click="confirmAction('reset_form')"
+                        class="px-5 py-2.5 border border-red-200 rounded-lg text-sm font-medium text-red-600 bg-white hover:bg-red-50 transition shadow-sm">
+                        Limpiar todo
+                    </button>
                     <a href="{{ route('purchases.index') }}"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition shadow-sm">
                         Cancelar

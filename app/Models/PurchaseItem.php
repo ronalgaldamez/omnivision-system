@@ -12,6 +12,12 @@ class PurchaseItem extends Model
     protected $fillable = [
         'purchase_id', 'product_id', 'quantity', 'returned_quantity',
         'unit_cost', 'packaging_id', 'base_quantity',
+        'fractional_quantity', 'fractional_units',
+    ];
+
+    protected $casts = [
+        'fractional_quantity' => 'integer',
+        'fractional_units' => 'integer',
     ];
 
     public function purchase()

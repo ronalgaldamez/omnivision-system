@@ -15,6 +15,25 @@ class ProductPackaging extends Model
         'is_default_for_purchase' => 'boolean',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (self $packaging) {
+            if ($packaging->is_default_for_purchase) {
+                static::where('product_id', $packaging->product_id)
+                    ->where('id', '!=', $packaging->id)
+                    ->update(['is_default_for_purchase' => false]);
+            }
+        });
+
+        static::deleted(function (self $packaging) {
+            $remaining = static::where('product_id', $packaging->product_id)->first();
+            if ($remaining && ! $remaining->is_default_for_purchase) {
+                $remaining->is_default_for_purchase = true;
+                $remaining->save();
+            }
+        });
+    }
+
     public function product()
     {
         return $this->belongsTo(Product::class);

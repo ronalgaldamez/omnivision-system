@@ -1,4 +1,6 @@
-<div class="max-w-6xl mx-auto">
+<div class="max-w-6xl mx-auto"
+    x-data="{ hasChanges: @entangle('hasUnsavedChanges') }"
+    @beforeunload.window="if (hasChanges) { event.preventDefault(); event.returnValue = ''; }">
     <!-- Tarjeta principal -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
         <!-- Encabezado con fondo sutil -->
@@ -136,8 +138,97 @@
                                     class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
                             </div>
                         </div>
+                </div>
+                {{-- Empaques --}}
+                <div class="border-t border-gray-200 pt-5">
+                    <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
+                        <span class="material-symbols-outlined text-gray-500 text-base">package_2</span>
+                        Empaques del producto
+                    </h3>
+
+                    @if(count($currentPackagings) > 0)
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-3">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-gray-600 font-medium text-xs">Tipo</th>
+                                    <th class="px-3 py-2 text-left text-gray-600 font-medium text-xs">Nombre</th>
+                                    <th class="px-3 py-2 text-center text-gray-600 font-medium text-xs">Unid. base</th>
+                                    <th class="px-3 py-2 text-center text-gray-600 font-medium text-xs">Default</th>
+                                    <th class="px-3 py-2 text-center text-gray-600 font-medium text-xs"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @foreach($currentPackagings as $pkg)
+                                <tr class="hover:bg-gray-50/80 transition">
+                                    <td class="px-3 py-2 text-gray-700 text-xs">{{ $pkg->packagingType?->name ?? '—' }}</td>
+                                    <td class="px-3 py-2 text-gray-800 text-xs">{{ $pkg->name }}</td>
+                                    <td class="px-3 py-2 text-center text-gray-700 text-xs font-mono">{{ rtrim(rtrim(number_format($pkg->quantity_in_base_unit, 4), '0'), '.') }}</td>
+                                    <td class="px-3 py-2 text-center">
+                                        @if($pkg->is_default_for_purchase)
+                                        <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-50 text-green-700 rounded-full text-xs">
+                                            <span class="material-symbols-outlined text-xs">check</span>
+                                        </span>
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <div class="flex items-center justify-center gap-0.5">
+                                            <button type="button" wire:click="editPackaging({{ $pkg->id }})"
+                                                class="p-1 text-blue-600 hover:bg-blue-50 rounded transition" title="Editar">
+                                                <span class="material-symbols-outlined text-sm">edit</span>
+                                            </button>
+                                            <button type="button" wire:click="deletePackaging({{ $pkg->id }})"
+                                                class="p-1 text-red-500 hover:bg-red-50 rounded transition" title="Eliminar"
+                                                onclick="return confirm('¿Eliminar este empaque?')">
+                                                <span class="material-symbols-outlined text-sm">delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="flex justify-end gap-3 pt-2">
+                    @endif
+
+                    @if($showPackagingForm)
+                    <div class="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <p class="text-xs font-medium text-blue-700">{{ $editingPackagingId ? 'Editando empaque' : 'Nuevo empaque' }}</p>
+                        <div class="flex items-end gap-2 flex-wrap">
+                            <div class="flex-1 min-w-[120px]">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                                <select wire:model.live="newPackagingTypeId" class="w-full px-2 py-1.5 rounded border border-gray-300 bg-white text-xs">
+                                    <option value="">Seleccioná...</option>
+                                    @foreach($packagingTypes as $pt)
+                                        <option value="{{ $pt->id }}">{{ $pt->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Unidades</label>
+                                <input type="number" step="1" wire:model.live.debounce.500ms="newPackagingQuantity"
+                                    class="w-36 px-2 py-1.5 rounded border border-gray-300 bg-white text-xs" min="1">
+                            </div>
+                            <button type="button" wire:click="savePackaging"
+                                class="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition whitespace-nowrap">
+                                {{ $editingPackagingId ? 'Actualizar' : 'Guardar' }}
+                            </button>
+                            <button type="button" wire:click="cancelEditPackaging"
+                                class="px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 bg-white hover:bg-gray-50 transition">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                    @else
+                    <button type="button" wire:click="editPackaging(0)"
+                        class="text-xs text-blue-600 hover:text-blue-800 transition flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">add</span>
+                        Agregar empaque
+                    </button>
+                    @endif
+                </div>
+                {{-- Fin empaques --}}
+                <div class="flex justify-end gap-3 pt-2">
                         <a href="{{ route('products.index') }}"
                             class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm">
                             Cancelar
