@@ -58,12 +58,17 @@ class PurchaseForm extends Component
 
     public $productSearchResults = [];
 
+    // Stock thresholds (se guardan al registrar la compra)
+    public $stockMin = null;
+
+    public $stockMax = null;
+
     // Empaque fraccionado
-    public bool $hasFractional = false;
+    public $hasFractional = false;
 
-    public int $fractionalQuantity = 1;
+    public $fractionalQuantity = 1;
 
-    public int $fractionalUnits = 1;
+    public $fractionalUnits = 1;
 
     public $editingIndex = null;
 
@@ -123,6 +128,8 @@ class PurchaseForm extends Component
             $this->hasFractional = $draft['hasFractional'] ?? false;
             $this->fractionalQuantity = (int) ($draft['fractionalQuantity'] ?? 1);
             $this->fractionalUnits = (int) ($draft['fractionalUnits'] ?? 1);
+            $this->stockMin = $draft['stockMin'] ?? null;
+            $this->stockMax = $draft['stockMax'] ?? null;
             $this->draftRestored = true;
 
             // Si estaba editando, mantener el formulario; si no y hay items, limpiarlo
@@ -195,6 +202,8 @@ class PurchaseForm extends Component
             'hasFractional' => $this->hasFractional,
             'fractionalQuantity' => $this->fractionalQuantity,
             'fractionalUnits' => $this->fractionalUnits,
+            'stockMin' => $this->stockMin,
+            'stockMax' => $this->stockMax,
         ]);
     }
 
@@ -240,6 +249,8 @@ class PurchaseForm extends Component
             $this->currentProductId = $product->id;
             $this->currentProductSearch = $product->name.' ('.$product->sku.')';
             $this->loadPackagingsForProduct($product->id);
+            $this->stockMin = $product->stock_min;
+            $this->stockMax = $product->stock_max;
             $this->productSearchResults = [];
         }
     }
@@ -255,7 +266,7 @@ class PurchaseForm extends Component
         $packaging = $this->selectedPackaging;
 
         if ($this->hasFractional && $packaging) {
-            $rules['fractionalQuantity'] = 'required|integer|gt:0|lt:currentQuantity';
+            $rules['fractionalQuantity'] = 'required|integer|gt:0|lte:currentQuantity';
             $rules['fractionalUnits'] = 'required|integer|gt:0|lt:'.$packaging->quantity_in_base_unit;
         }
 
@@ -290,6 +301,8 @@ class PurchaseForm extends Component
             'base_quantity' => $baseQty,
             'fractional_quantity' => $fractionalQuantity,
             'fractional_units' => $fractionalUnits,
+            'stock_min' => $this->stockMin,
+            'stock_max' => $this->stockMax,
         ];
 
         if ($this->editingIndex !== null && array_key_exists($this->editingIndex, $this->items)) {
@@ -315,6 +328,8 @@ class PurchaseForm extends Component
         $this->hasFractional = false;
         $this->fractionalQuantity = 1;
         $this->fractionalUnits = 1;
+        $this->stockMin = null;
+        $this->stockMax = null;
     }
 
     public function clearProductSelection()
@@ -334,6 +349,8 @@ class PurchaseForm extends Component
         $this->hasFractional = ! empty($item['fractional_quantity']);
         $this->fractionalQuantity = (int) ($item['fractional_quantity'] ?? 1);
         $this->fractionalUnits = (int) ($item['fractional_units'] ?? 1);
+        $this->stockMin = $item['stock_min'] ?? null;
+        $this->stockMax = $item['stock_max'] ?? null;
         // Quitar de la tabla mientras se edita
         unset($this->items[$index]);
         $this->items = array_values($this->items);
@@ -376,6 +393,8 @@ class PurchaseForm extends Component
             'base_quantity' => $baseQty,
             'fractional_quantity' => $fractionalQuantity,
             'fractional_units' => $fractionalUnits,
+            'stock_min' => $this->stockMin,
+            'stock_max' => $this->stockMax,
         ];
         $this->editingIndex = null;
         $this->resetCurrentProduct();
@@ -584,6 +603,19 @@ class PurchaseForm extends Component
                 $totalItemValue = $item['quantity'] * $item['unit_cost'];
                 $baseUnitCost = $totalItemValue / max(1, $baseQty);
                 $inventoryService->processPurchaseEntry($product, $baseQty, $baseUnitCost, $movement);
+
+                $needsSave = false;
+                if (! is_null($item['stock_min'] ?? null) && $item['stock_min'] != $product->stock_min) {
+                    $product->stock_min = (int) $item['stock_min'];
+                    $needsSave = true;
+                }
+                if (! is_null($item['stock_max'] ?? null) && $item['stock_max'] != $product->stock_max) {
+                    $product->stock_max = (int) $item['stock_max'];
+                    $needsSave = true;
+                }
+                if ($needsSave) {
+                    $product->save();
+                }
             }
 
             DB::commit();

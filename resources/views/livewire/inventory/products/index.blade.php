@@ -114,14 +114,14 @@
                                     @if($product->current_stock <= $product->stock_min && $product->stock_min > 0)
                                         <span class="inline-flex items-center gap-1">
                                             <span class="material-symbols-outlined text-sm">warning</span>
-                                            {{ $product->current_stock }}
+                                            {{ intval($product->current_stock) }}
                                         </span>
                                     @else
-                                        {{ $product->current_stock }}
+                                        {{ intval($product->current_stock) }}
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right text-gray-700">{{ $product->stock_min }}</td>
-                                <td class="px-4 py-3 text-right text-gray-700">{{ $product->stock_max ?? '—' }}</td>
+                                <td class="px-4 py-3 text-right text-gray-700">{{ intval($product->stock_min) }}</td>
+                                <td class="px-4 py-3 text-right text-gray-700">{{ $product->stock_max ? intval($product->stock_max) : '—' }}</td>
                                 <td class="px-4 py-3 text-center">
                                     <div class="flex items-center justify-center gap-0.5">
                                         <a href="{{ route('products.show', $product->id) }}"

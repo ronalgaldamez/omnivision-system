@@ -73,15 +73,15 @@
                     <span class="material-symbols-outlined text-gray-400">arrow_downward</span>
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Stock mínimo</p>
-                        <p class="text-gray-700">{{ $product->stock_min }}</p>
-                    </div>
-                </div>
-                <!-- Stock máximo -->
-                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
-                    <span class="material-symbols-outlined text-gray-400">arrow_upward</span>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase tracking-wide">Stock máximo</p>
-                        <p class="text-gray-700">{{ $product->stock_max ?? '—' }}</p>
+                                <p class="text-gray-700">{{ intval($product->stock_min) }}</p>
+                            </div>
+                        </div>
+                        <!-- Stock máximo -->
+                        <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                            <span class="material-symbols-outlined text-gray-400">arrow_upward</span>
+                            <div>
+                                <p class="text-xs text-gray-500 uppercase tracking-wide">Stock máximo</p>
+                                <p class="text-gray-700">{{ $product->stock_max ? intval($product->stock_max) : '—' }}</p>
                     </div>
                 </div>
                 <!-- Descripción -->
