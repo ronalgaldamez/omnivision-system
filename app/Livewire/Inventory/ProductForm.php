@@ -2,38 +2,58 @@
 
 namespace App\Livewire\Inventory;
 
-use Livewire\Component;
 use App\Models\Product;
-use App\Models\Brand;
 use App\Models\ProductModel;
-use App\Models\Category;
+use App\Traits\HasFormPersistence;
+use App\Traits\ManagesProductPackaging;
+use Livewire\Component;
 
 class ProductForm extends Component
 {
+    use HasFormPersistence;
+    use ManagesProductPackaging;
+
     public $editingId = null;
+
     public $productList = [];
+
+    public bool $hasUnsavedChanges = false;
 
     // Campos del formulario actual
     public $currentName = '';
+
     public $currentUnit = 'unidad';
+
     public $currentMeasureValue = null;
+
     public $currentStockMin = 0;
+
     public $currentStockMax = null;
+
     public $currentDescription = '';
+
     public $currentBrandId = '';
+
     public $currentModelId = '';
+
     public $currentCategoryId = '';
 
     // Modal de búsqueda de modelo
     public $showModelModal = false;
+
     public $modelSearchTerm = '';
+
     public $modelSearchResults = [];
+
     public $selectedModelDisplay = '';
 
     // Modal de confirmación de acciones (editar/eliminar)
     public $showConfirmModal = false;
+
     public $modalAction = null;
+
     public $modalItemIndex = null;
+
     public $modalMessage = '';
 
     // Modal de confirmación de guardado (similar a compras)
@@ -50,6 +70,28 @@ class ProductForm extends Component
         'currentModelId' => 'nullable|exists:product_models,id',
         'currentCategoryId' => 'nullable|exists:categories,id',
     ];
+
+    protected function persistableProperties(): array
+    {
+        return [
+            'currentName', 'currentUnit', 'currentMeasureValue',
+            'currentStockMin', 'currentStockMax', 'currentDescription',
+            'currentBrandId', 'currentModelId', 'currentCategoryId',
+            'selectedModelDisplay', 'productList',
+        ];
+    }
+
+    protected function detectUnsavedChanges(): bool
+    {
+        return ! empty($this->productList) || $this->currentName !== '';
+    }
+
+    public function updated($name, $value): void
+    {
+        if (in_array($name, $this->persistableProperties(), true)) {
+            $this->persistState();
+        }
+    }
 
     public function mount($id = null)
     {
@@ -71,9 +113,15 @@ class ProductForm extends Component
                     $this->selectedModelDisplay = "{$model->brand->name} - {$model->name} - {$model->category->name}";
                 }
             }
+            $this->currentProductId = $product->id;
+            $this->loadPackagingsForProduct($product->id);
+            $this->initPackagingState();
         } else {
             $this->productList = [];
             $this->resetCurrent();
+            if (session()->has($this->persistenceKey())) {
+                $this->restorePersistedState();
+            }
         }
     }
 
@@ -105,9 +153,9 @@ class ProductForm extends Component
     {
         if (strlen($this->modelSearchTerm) >= 2) {
             $this->modelSearchResults = ProductModel::with('brand', 'category')
-                ->where('name', 'like', '%' . $this->modelSearchTerm . '%')
-                ->orWhereHas('brand', fn($q) => $q->where('name', 'like', '%' . $this->modelSearchTerm . '%'))
-                ->orWhereHas('category', fn($q) => $q->where('name', 'like', '%' . $this->modelSearchTerm . '%'))
+                ->where('name', 'like', '%'.$this->modelSearchTerm.'%')
+                ->orWhereHas('brand', fn ($q) => $q->where('name', 'like', '%'.$this->modelSearchTerm.'%'))
+                ->orWhereHas('category', fn ($q) => $q->where('name', 'like', '%'.$this->modelSearchTerm.'%'))
                 ->limit(10)
                 ->get();
         } else {
@@ -124,6 +172,7 @@ class ProductForm extends Component
             $this->currentCategoryId = $model->category_id;
             $this->selectedModelDisplay = "{$model->brand->name} - {$model->name} - {$model->category->name}";
             $this->showModelModal = false;
+            $this->persistState();
         }
     }
 
@@ -133,6 +182,7 @@ class ProductForm extends Component
         $this->currentBrandId = '';
         $this->currentCategoryId = '';
         $this->selectedModelDisplay = '';
+        $this->persistState();
     }
 
     public function addToList()
@@ -152,6 +202,7 @@ class ProductForm extends Component
         ];
 
         $this->resetCurrent();
+        $this->persistState();
         $this->dispatch('productAdded');
     }
 
@@ -210,6 +261,7 @@ class ProductForm extends Component
     {
         unset($this->productList[$index]);
         $this->productList = array_values($this->productList);
+        $this->persistState();
     }
 
     // Confirmación para guardar múltiples productos
@@ -217,6 +269,7 @@ class ProductForm extends Component
     {
         if (empty($this->productList)) {
             $this->dispatch('showToast', ['type' => 'error', 'message' => 'Agrega al menos un producto antes de guardar.']);
+
             return;
         }
         $this->showSaveConfirmModal = true;
@@ -227,7 +280,8 @@ class ProductForm extends Component
         foreach ($this->productList as $prod) {
             Product::create($prod);
         }
-        $this->dispatch('showToast', ['type' => 'success', 'message' => count($this->productList) . ' producto(s) creado(s) correctamente.']);
+        $this->clearPersistedState();
+        $this->dispatch('showToast', ['type' => 'success', 'message' => count($this->productList).' producto(s) creado(s) correctamente.']);
         $this->redirectRoute('products.index');
     }
 
@@ -252,6 +306,7 @@ class ProductForm extends Component
             'model_id' => $this->currentModelId,
             'category_id' => $this->currentCategoryId,
         ]);
+        $this->clearPersistedState();
         $this->dispatch('showToast', ['type' => 'success', 'message' => 'Producto actualizado correctamente.']);
         $this->redirectRoute('products.index');
     }

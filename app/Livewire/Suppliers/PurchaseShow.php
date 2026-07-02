@@ -11,7 +11,7 @@ class PurchaseShow extends Component
 
     public function mount($id)
     {
-        $this->purchase = Purchase::with('supplier', 'items.product', 'user')->findOrFail($id);
+        $this->purchase = Purchase::with('supplier', 'items.product', 'items.packaging.packagingType', 'user')->findOrFail($id);
     }
 
     public function render()

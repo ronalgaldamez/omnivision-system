@@ -89,6 +89,12 @@
                                 </th>
                                 <th class="px-4 py-3 text-center text-gray-600 font-medium">
                                     <div class="flex items-center justify-center gap-1.5">
+                                        <span class="material-symbols-outlined text-gray-400 text-base">package_2</span>
+                                        Empaque
+                                    </div>
+                                </th>
+                                <th class="px-4 py-3 text-center text-gray-600 font-medium">
+                                    <div class="flex items-center justify-center gap-1.5">
                                         <span class="material-symbols-outlined text-gray-400 text-base">numbers</span>
                                         Cantidad
                                     </div>
@@ -115,14 +121,44 @@
                                         {{ $item->product->name }}
                                         <span class="text-gray-500 text-xs ml-1">({{ $item->product->sku }})</span>
                                     </td>
-                                    <td class="px-4 py-3 text-center text-gray-700">{{ $item->quantity }}</td>
+                                    <td class="px-4 py-3 text-center text-gray-700 text-xs">
+                                        {{ $item->packaging?->name ?? '—' }}
+                                        @if($item->fractional_quantity)
+                                            <div class="mt-1">
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">
+                                                    <span class="material-symbols-outlined text-xs">broken_image</span>
+                                                    Fraccionado
+                                                </span>
+                                            </div>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-gray-700">
+                                        {{ $item->quantity }}
+                                        @if($item->fractional_quantity)
+                                            <div class="text-xs text-gray-400 mt-1">
+                                                {{ rtrim(rtrim(number_format($item->base_quantity, 4), '0'), '.') }} un.
+                                            </div>
+                                        @elseif($item->base_quantity != $item->quantity)
+                                            <div class="text-xs text-gray-400 mt-1">
+                                                {{ rtrim(rtrim(number_format($item->base_quantity, 4), '0'), '.') }} un.
+                                            </div>
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3 text-center text-gray-700">
                                         ${{ number_format($item->unit_cost, 2) }}
                                     </td>
                                     <td class="px-4 py-3 text-center font-medium text-gray-800">
-                                        ${{ number_format($item->quantity * $item->unit_cost, 2) }}
+                                        ${{ number_format(($item->base_quantity ?? $item->quantity) * $item->unit_cost, 2) }}
                                     </td>
                                 </tr>
+                                @if($item->fractional_quantity)
+                                <tr class="bg-amber-50/50">
+                                    <td colspan="5" class="px-4 py-2 text-xs text-amber-700">
+                                        <span class="material-symbols-outlined text-sm align-middle">info</span>
+                                        {{ $item->quantity }} × {{ rtrim(rtrim(number_format($item->packaging?->quantity_in_base_unit ?? 1, 4), '0'), '.') }} − {{ $item->fractional_quantity }} × {{ $item->fractional_units }} = {{ rtrim(rtrim(number_format($item->base_quantity, 4), '0'), '.') }} unidades totales
+                                    </td>
+                                </tr>
+                                @endif
                             @endforeach
                         </tbody>
                     </table>

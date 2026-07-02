@@ -94,6 +94,101 @@
                 </div>
             </div>
 
+            {{-- Empaques --}}
+            <div class="border-t border-gray-200 pt-6">
+                <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-4">
+                    <span class="material-symbols-outlined text-gray-500">package_2</span>
+                    Empaques
+                </h2>
+
+                @if(count($currentPackagings) > 0)
+                <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-4">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-4 py-2.5 text-left text-gray-600 font-medium">Tipo</th>
+                                <th class="px-4 py-2.5 text-left text-gray-600 font-medium">Nombre</th>
+                                <th class="px-4 py-2.5 text-center text-gray-600 font-medium">Unid. base</th>
+                                <th class="px-4 py-2.5 text-center text-gray-600 font-medium">Default</th>
+                                <th class="px-4 py-2.5 text-center text-gray-600 font-medium">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach($currentPackagings as $pkg)
+                            <tr class="hover:bg-gray-50/80 transition {{ $pkg->id == $currentPackagingId ? 'bg-blue-50/50' : '' }}">
+                                <td class="px-4 py-2.5 text-gray-700">{{ $pkg->packagingType?->name ?? '—' }}</td>
+                                <td class="px-4 py-2.5 text-gray-800">{{ $pkg->name }}</td>
+                                <td class="px-4 py-2.5 text-center text-gray-700 font-mono">{{ rtrim(rtrim(number_format($pkg->quantity_in_base_unit, 4), '0'), '.') }}</td>
+                                <td class="px-4 py-2.5 text-center">
+                                    @if($pkg->is_default_for_purchase)
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                                        <span class="material-symbols-outlined text-xs">check</span> Default
+                                    </span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-2.5 text-center">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button type="button" wire:click="editPackaging({{ $pkg->id }})"
+                                            class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
+                                            <span class="material-symbols-outlined text-lg">edit</span>
+                                        </button>
+                                        <button type="button" wire:click="deletePackaging({{ $pkg->id }})"
+                                            class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
+                                            title="Eliminar"
+                                            onclick="return confirm('¿Eliminar este empaque?')">
+                                            <span class="material-symbols-outlined text-lg">delete</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @else
+                <div class="bg-gray-50/50 rounded-xl border border-dashed border-gray-300 py-8 text-center mb-4">
+                    <span class="material-symbols-outlined text-gray-300 text-3xl mb-2">package_2</span>
+                    <p class="text-gray-500 text-sm">Sin empaques definidos.</p>
+                </div>
+                @endif
+
+                @if($showPackagingForm)
+                <div class="space-y-2 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <p class="text-xs font-medium text-blue-700">{{ $editingPackagingId ? 'Editando empaque' : 'Nuevo empaque' }}</p>
+                    <div class="flex items-end gap-2 flex-wrap">
+                        <div class="flex-1 min-w-[150px]">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                            <select wire:model.live="newPackagingTypeId" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm">
+                                <option value="">Seleccioná...</option>
+                                @foreach($packagingTypes as $pt)
+                                    <option value="{{ $pt->id }}">{{ $pt->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Unidades que trae</label>
+                            <input type="number" step="1" wire:model.live.debounce.500ms="newPackagingQuantity"
+                                class="w-44 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm" min="1">
+                        </div>
+                        <button type="button" wire:click="savePackaging"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap">
+                            {{ $editingPackagingId ? 'Actualizar' : 'Guardar' }}
+                        </button>
+                        <button type="button" wire:click="cancelEditPackaging"
+                            class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+                @else
+                <button type="button" wire:click="editPackaging(0)"
+                    class="text-sm text-blue-600 hover:text-blue-800 transition flex items-center gap-1">
+                    <span class="material-symbols-outlined text-base">add</span>
+                    Agregar empaque
+                </button>
+                @endif
+            </div>
+
             <!-- Código de barras -->
             <div class="border-t border-gray-200 pt-6">
                 <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-4">

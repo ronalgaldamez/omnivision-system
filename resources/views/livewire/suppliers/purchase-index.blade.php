@@ -158,6 +158,7 @@
     <!-- Toast (consistente con el resto del sistema) -->
     <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
         x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 3500)"
+        x-on:show-toasts.window="$event.detail.errors.forEach(msg => { toast = true; toastType = 'error'; toastMessage = msg; setTimeout(() => toast = false, 3500) })"
         x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"
         x-transition:enter="transform ease-out duration-300" x-transition:enter-start="translate-y-2 opacity-0"
         x-transition:enter-end="translate-y-0 opacity-100" x-transition:leave="transform ease-in duration-200"
