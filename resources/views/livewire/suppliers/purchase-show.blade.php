@@ -155,7 +155,7 @@
                                 <tr class="bg-amber-50/50">
                                     <td colspan="5" class="px-4 py-2 text-xs text-amber-700">
                                         <span class="material-symbols-outlined text-sm align-middle">info</span>
-                                        {{ $item->quantity }} × {{ rtrim(rtrim(number_format($item->packaging?->quantity_in_base_unit ?? 1, 4), '0'), '.') }} − {{ $item->fractional_quantity }} × {{ $item->fractional_units }} = {{ rtrim(rtrim(number_format($item->base_quantity, 4), '0'), '.') }} unidades totales
+                                        {{ $item->quantity }} × {{ rtrim(rtrim(number_format($item->packaging?->quantity_in_base_unit ?? 1, 4), '0'), '.') }} − {{ $item->fractional_quantity }} × {{ $item->fractional_units }} = {{ rtrim(rtrim(number_format($item->base_quantity, 4), '0'), '.') }} {{ $item->packaging?->packagingType?->unit_of_measure !== 'unidad' ? $item->packaging->packagingType->unit_of_measure : 'unidades' }} totales
                                     </td>
                                 </tr>
                                 @endif
