@@ -5,6 +5,7 @@ namespace App\Livewire\Inventory;
 use Livewire\Component;
 use App\Models\Product;
 use App\Models\Movement;
+use App\Models\Branch;
 
 class KardexIndex extends Component
 {
@@ -13,7 +14,6 @@ class KardexIndex extends Component
     public $date_from = '';
     public $date_to = '';
 
-    // Propiedades para el buscador de productos
     public $productSearch = '';
     public $productResults = [];
 
@@ -47,11 +47,15 @@ class KardexIndex extends Component
 
     public function render()
     {
-        $movements = Movement::with('product', 'user')
+        $activeBranchId = auth()->user()->activeBranchId();
+        $activeBranch = $activeBranchId ? Branch::find($activeBranchId) : null;
+
+        $movements = Movement::with('product', 'user', 'branch')
             ->when($this->product_id, fn($q) => $q->where('product_id', $this->product_id))
             ->when($this->type, fn($q) => $q->where('type', $this->type))
             ->when($this->date_from, fn($q) => $q->whereDate('created_at', '>=', $this->date_from))
             ->when($this->date_to, fn($q) => $q->whereDate('created_at', '<=', $this->date_to))
+            ->when($activeBranchId, fn($q) => $q->where('branch_id', $activeBranchId))
             ->orderBy('created_at', 'asc')
             ->get();
 
@@ -64,17 +68,18 @@ class KardexIndex extends Component
             $item = clone $mov;
             $item->line_number = $index + 1;
 
-            $isEntry = in_array($mov->type, ['entry', 'technician_return']);
+            $isEntry = in_array($mov->type, ['entry', 'technician_return', 'branch_allocation']);
             $isExit = in_array($mov->type, ['exit', 'technician_out', 'damage', 'return_to_supplier', 'requisition_out']);
 
             if ($isEntry) {
+                $entryCost = $mov->unit_cost ?: 0;
                 $newTotalQty = $balanceQty + $mov->quantity;
-                $newTotalValue = $balanceValue + ($mov->unit_cost * $mov->quantity);
+                $newTotalValue = $balanceValue + ($entryCost * $mov->quantity);
                 $newAvgCost = ($newTotalQty > 0) ? $newTotalValue / $newTotalQty : 0;
 
                 $item->entry_qty = $mov->quantity;
-                $item->entry_cost = $mov->unit_cost;
-                $item->entry_total = $mov->unit_cost * $mov->quantity;
+                $item->entry_cost = $entryCost;
+                $item->entry_total = $entryCost * $mov->quantity;
                 $item->exit_qty = null;
                 $item->exit_cost = null;
                 $item->exit_total = null;
@@ -112,7 +117,7 @@ class KardexIndex extends Component
             $items[] = $item;
         }
 
-        return view('livewire.inventory.kardex.index', compact('items'))
+        return view('livewire.inventory.kardex.index', compact('items', 'activeBranch'))
             ->layout('components.layouts.app');
     }
 }

@@ -70,38 +70,66 @@
                     {{-- Fila 1: Proveedor + Factura --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {{-- Proveedor --}}
-                        <div class="relative" x-data="{ focused: false }">
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-base">warehouse</span>
                                 Proveedor <span class="text-red-500">*</span>
                             </label>
-                            <div class="relative">
-                                <input type="text" wire:model.live.debounce.300ms="supplierSearch"
-                                    @focus="focused = true" @blur="setTimeout(() => focused = false, 200)"
-                                    placeholder="Buscar por nombre, NIT o NRC..."
-                                    class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
-                                @if ($supplier_id)
-                                    <span
-                                        class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-green-500 text-lg">check_circle</span>
-                                @endif
+                            @if ($supplier_id && $supplier = \App\Models\Supplier::find($supplier_id))
+                            <div class="flex items-start gap-3 p-3.5 bg-green-50 border border-green-200 rounded-lg">
+                                <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <span class="material-symbols-outlined text-green-600 text-xl">check_circle</span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold text-gray-900 truncate">{{ $supplier->name }}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">
+                                        NIT: {{ $supplier->nit ?? 'N/A' }}
+                                        @if($supplier->phones && count($supplier->phones) > 0)
+                                            · {{ $supplier->phones[0] }}
+                                        @endif
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <button type="button" wire:click="openSupplierModal"
+                                        class="px-2.5 py-1.5 text-xs font-medium text-green-700 hover:text-green-800 hover:bg-green-100 rounded-lg transition">
+                                        Cambiar
+                                    </button>
+                                    <button type="button" wire:click="clearSupplier"
+                                        class="p-1.5 text-green-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Quitar proveedor">
+                                        <span class="material-symbols-outlined text-lg">close</span>
+                                    </button>
+                                </div>
                             </div>
-                            @if (count($supplierResults) > 0)
-                                <ul x-show="focused" x-transition
-                                    class="absolute z-30 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-60 overflow-auto divide-y divide-gray-100 ring-1 ring-black/5">
-                                    @foreach ($supplierResults as $supplier)
-                                        <li wire:click="selectSupplier({{ $supplier->id }})"
-                                            class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
-                                            <div>
-                                                <span
-                                                    class="font-medium text-gray-800 group-hover:text-blue-700">{{ $supplier->name }}</span>
-                                            </div>
-                                            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">NIT:
-                                                {{ $supplier->nit ?? 'N/A' }}</span>
-                                        </li>
-                                    @endforeach
-                                </ul>
+                            @else
+                            <div class="flex gap-2" x-data="{ focused: false }">
+                                <div class="relative flex-1">
+                                    <input type="text" wire:model.live.debounce.300ms="supplierSearch"
+                                        @focus="focused = true" @blur="setTimeout(() => focused = false, 200)"
+                                        placeholder="Buscar por nombre, NIT o NRC..."
+                                        class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                    @if (count($supplierResults) > 0)
+                                        <ul x-show="focused" x-transition
+                                            class="absolute z-30 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-60 overflow-auto divide-y divide-gray-100 ring-1 ring-black/5">
+                                            @foreach ($supplierResults as $supplier)
+                                                <li wire:click="selectSupplier({{ $supplier->id }})"
+                                                    class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
+                                                    <div>
+                                                        <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ $supplier->name }}</span>
+                                                    </div>
+                                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">NIT: {{ $supplier->nit ?? 'N/A' }}</span>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+                                </div>
+                                <button type="button" wire:click="openSupplierModal"
+                                    class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm whitespace-nowrap"
+                                    title="Ver todos los proveedores">
+                                    <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                                    <span class="hidden sm:inline">Ver todos</span>
+                                </button>
+                            </div>
                             @endif
                             @error('supplier_id')
                                 <span class="text-xs text-red-500 mt-1 flex items-center gap-1"><span
@@ -562,7 +590,82 @@
         </form>
     </div>
 
-    {{-- ═══════════ MODALES (sin cambios de lógica) ═══════════ --}}
+    {{-- ═══════════ MODALES ═══════════ --}}
+    {{-- Modal de lista de proveedores --}}
+    <div x-data="{ show: @entangle('showSupplierModal') }" x-show="show" x-cloak
+        x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4"
+        style="display: none;">
+        <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+            class="relative w-full max-w-2xl">
+            <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-blue-600">warehouse</span>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-900">Seleccionar proveedor</h3>
+                            <p class="text-xs text-gray-500">Elegí un proveedor de la lista</p>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="closeSupplierModal"
+                        class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                        <span class="material-symbols-outlined text-xl">close</span>
+                    </button>
+                </div>
+                <div class="p-4 border-b border-gray-100">
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                        <input type="text" wire:model.live.debounce.300ms="supplierListSearch"
+                            placeholder="Filtrar por nombre, NIT o NRC..."
+                            class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                    </div>
+                </div>
+                <div class="p-2 max-h-96 overflow-y-auto">
+                    @forelse($supplierList as $supplier)
+                        <button type="button" wire:click="selectSupplier({{ $supplier->id }})"
+                            class="w-full text-left px-4 py-3 hover:bg-blue-50 rounded-xl transition flex items-center justify-between group border-b border-gray-50 last:border-0">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition">
+                                    <span class="material-symbols-outlined text-gray-500 text-lg group-hover:text-blue-600">business</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-gray-800 group-hover:text-blue-700 truncate">{{ $supplier->name }}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">
+                                        @if($supplier->nit)NIT: {{ $supplier->nit }}@endif
+                                        @if($supplier->email) · {{ $supplier->email }}@endif
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                                @if($supplier->phones && count($supplier->phones) > 0)
+                                    <span class="text-xs text-gray-400 hidden sm:inline">{{ $supplier->phones[0] }}</span>
+                                @endif
+                                <span class="material-symbols-outlined text-gray-300 group-hover:text-blue-500 text-lg">chevron_right</span>
+                            </div>
+                        </button>
+                    @empty
+                        <div class="py-12 text-center">
+                            <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">search_off</span>
+                            <p class="text-gray-500 text-sm">No se encontraron proveedores</p>
+                            <p class="text-xs text-gray-400 mt-1">Probá con otro término de búsqueda</p>
+                        </div>
+                    @endforelse
+                </div>
+                <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+                    <button type="button" wire:click="closeSupplierModal"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Modal de confirmación --}}
     <div x-data="{ show: @entangle('showConfirmModal') }" x-show="show" x-cloak
         x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"

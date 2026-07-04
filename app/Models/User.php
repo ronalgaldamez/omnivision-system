@@ -16,6 +16,7 @@ class User extends Authenticatable
         'email',
         'password',
         'is_active',
+        'branch_id',
     ];
 
     protected $hidden = [
@@ -45,6 +46,22 @@ class User extends Authenticatable
     public function supervisedZones()
     {
         return $this->belongsToMany(Zone::class, 'supervisor_zone');
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function activeBranchId(): ?int
+    {
+        if ($this->branch_id !== null) {
+            return (int) $this->branch_id;
+        }
+
+        $sessionId = session('active_branch_id');
+
+        return $sessionId ? (int) $sessionId : null;
     }
 
     public function getRolePrefixAttribute(): string

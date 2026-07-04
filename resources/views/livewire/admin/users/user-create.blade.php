@@ -98,6 +98,28 @@
                     @error('selectedRole') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
+                <!-- Sucursal -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-gray-400 text-base">store</span>
+                        Sucursal
+                    </label>
+                    <div class="relative">
+                        <select wire:model="branchId"
+                            class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
+                            <option value="">— Global (todas las sucursales) —</option>
+                            @foreach($branches as $branch)
+                                <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                            @endforeach
+                        </select>
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">store</span>
+                        <span
+                            class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                    </div>
+                    @error('branchId') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                </div>
+
                 <!-- Botones de acción -->
                 <div class="flex justify-end gap-3 pt-2">
                     <a href="{{ route('admin.users.index') }}"

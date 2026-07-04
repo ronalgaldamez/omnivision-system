@@ -25,6 +25,12 @@
 
         <!-- Contenido -->
         <div class="p-6 space-y-5">
+            @if($activeBranch)
+                <div class="flex items-center gap-2 text-sm bg-blue-50 text-blue-700 px-4 py-3 rounded-lg border border-blue-200">
+                    <span class="material-symbols-outlined text-blue-500">store</span>
+                    <span>Filtrando por sucursal: <strong>{{ $activeBranch->name }}</strong></span>
+                </div>
+            @endif
             <!-- Filtros -->
             <!-- Filtros -->
             <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
@@ -244,6 +250,11 @@
                                         <span
                                             class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">
                                             <span class="material-symbols-outlined text-xs">handyman</span> REQUISICIÓN
+                                        </span>
+                                    @elseif($item->type == 'branch_allocation')
+                                        <span
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full text-xs font-medium">
+                                            <span class="material-symbols-outlined text-xs">store</span> REPARTICIÓN
                                         </span>
                                     @else
                                         <span class="text-gray-600 text-xs">{{ strtoupper($item->type) }}</span>

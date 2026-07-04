@@ -5,6 +5,7 @@ namespace App\Livewire\Admin\Users;
 use Livewire\Component;
 use App\Models\User;
 use App\Models\Role;
+use App\Models\Branch;
 use App\Enums\PermissionEnum;
 use Illuminate\Support\Facades\Hash;
 
@@ -20,6 +21,7 @@ class UserForm extends Component
     public $permissionsPersonalized = false;
     public $selectedPermissions = [];
     public $activeTab = '';
+    public $branchId = '';
 
     public function mount($id = null)
     {
@@ -30,6 +32,7 @@ class UserForm extends Component
             $this->email = $user->email;
             $this->isActive = $user->is_active;
             $this->selectedRole = $user->roles->first()->name ?? '';
+            $this->branchId = $user->branch_id ?? '';
             $this->permissionsPersonalized = $user->hasPersonalizedPermissions();
 
             if ($this->permissionsPersonalized) {
@@ -58,6 +61,7 @@ class UserForm extends Component
             'permissionsPersonalized' => 'boolean',
             'selectedPermissions' => 'array',
             'selectedPermissions.*' => 'string',
+            'branchId' => 'nullable|exists:branches,id',
         ];
 
         if ($this->userId) {
@@ -68,10 +72,6 @@ class UserForm extends Component
         return $rules;
     }
 
-    /**
-     * Cuando se activa el toggle de personalización,
-     * precargar los permisos del rol seleccionado.
-     */
     public function updatedPermissionsPersonalized($value)
     {
         if ($value && $this->selectedRole) {
@@ -81,10 +81,6 @@ class UserForm extends Component
         $this->activeTab = '';
     }
 
-    /**
-     * Al cambiar de rol, si la personalización está activa,
-     * recargar los permisos base desde el nuevo rol.
-     */
     public function updatedSelectedRole($value)
     {
         if ($this->permissionsPersonalized && $value) {
@@ -101,6 +97,7 @@ class UserForm extends Component
             'name' => $this->name,
             'email' => $this->email,
             'is_active' => $this->isActive,
+            'branch_id' => $this->branchId ?: null,
         ];
 
         if ($this->password) {
@@ -119,11 +116,6 @@ class UserForm extends Component
         session()->flash('message', 'Usuario guardado correctamente.');
     }
 
-    /**
-     * Todos los permisos del sistema organizados jerárquicamente:
-     * Módulo → Acceso al módulo → Menú → Acciones
-     * Se muestran todos, no solo los del rol, para poder agregar extras.
-     */
     public function getRolePermissionsProperty(): array
     {
         $modules = [
@@ -173,9 +165,10 @@ class UserForm extends Component
         }
 
         $roles = Role::all();
+        $branches = Branch::orderBy('name')->get();
         $grouped = $this->rolePermissions;
         $tabModules = array_keys($grouped);
 
-        return view('livewire.admin.users.user-form', compact('roles', 'grouped', 'tabModules', 'rolePermNames'));
+        return view('livewire.admin.users.user-form', compact('roles', 'branches', 'grouped', 'tabModules', 'rolePermNames'));
     }
 }

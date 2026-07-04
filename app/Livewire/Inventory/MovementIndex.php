@@ -5,6 +5,7 @@ namespace App\Livewire\Inventory;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Movement;
+use App\Models\Branch;
 
 class MovementIndex extends Component
 {
@@ -17,7 +18,10 @@ class MovementIndex extends Component
 
     public function render()
     {
-        $movements = Movement::with('product', 'user')
+        $activeBranchId = auth()->user()->activeBranchId();
+        $activeBranch = $activeBranchId ? Branch::find($activeBranchId) : null;
+
+        $movements = Movement::with('product', 'user', 'branch')
             ->when($this->search, function ($q) {
                 $q->whereHas('product', function ($q2) {
                     $q2->where('name', 'like', '%' . $this->search . '%')
@@ -27,9 +31,10 @@ class MovementIndex extends Component
             ->when($this->typeFilter, fn($q) => $q->where('type', $this->typeFilter))
             ->when($this->dateFrom, fn($q) => $q->whereDate('created_at', '>=', $this->dateFrom))
             ->when($this->dateTo, fn($q) => $q->whereDate('created_at', '<=', $this->dateTo))
+            ->when($activeBranchId, fn($q) => $q->where('branch_id', $activeBranchId))
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return view('livewire.inventory.movements.index', compact('movements'))->layout('components.layouts.app');
+        return view('livewire.inventory.movements.index', compact('movements', 'activeBranch'))->layout('components.layouts.app');
     }
 }

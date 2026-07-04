@@ -4,6 +4,7 @@ namespace App\Livewire\Inventory;
 
 use Livewire\Component;
 use App\Models\Product;
+use App\Models\Branch;
 use Livewire\WithPagination;
 
 class ProductIndex extends Component
@@ -16,11 +17,26 @@ class ProductIndex extends Component
 
     public function render()
     {
-        $products = Product::where('name', 'like', '%' . $this->search . '%')
-            ->orWhere('sku', 'like', '%' . $this->search . '%')
+        $activeBranchId = auth()->user()->activeBranchId();
+        $activeBranch = $activeBranchId ? Branch::find($activeBranchId) : null;
+
+        $products = Product::with(['branchInventories' => function ($q) use ($activeBranchId) {
+            if ($activeBranchId) {
+                $q->where('branch_id', $activeBranchId);
+            }
+        }])
+            ->when($activeBranchId, function ($q) use ($activeBranchId) {
+                $q->whereHas('branchInventories', function ($q) use ($activeBranchId) {
+                    $q->where('branch_id', $activeBranchId)->where('allocated_quantity', '>', 0);
+                });
+            })
+            ->where(function ($q) {
+                $q->where('name', 'like', '%' . $this->search . '%')
+                  ->orWhere('sku', 'like', '%' . $this->search . '%');
+            })
             ->paginate(10);
 
-        return view('livewire.inventory.products.index', compact('products'));
+        return view('livewire.inventory.products.index', compact('products', 'activeBranch'));
     }
 
     public function confirmDelete($id)

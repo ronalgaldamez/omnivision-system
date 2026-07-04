@@ -102,38 +102,10 @@
                                     {{ $mov->created_at->format('d/m/Y H:i') }}</td>
                                 <td class="px-4 py-3 text-gray-800">{{ $mov->product->name }}</td>
                                 <td class="px-4 py-3 text-center">
-                                    @if($mov->type == 'entry')
-                                        <span
-                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium">
-                                            <span class="material-symbols-outlined text-sm">arrow_upward</span> Entrada
-                                        </span>
-                                    @elseif($mov->type == 'exit')
-                                        <span
-                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-red-50 text-red-700 rounded-full text-xs font-medium">
-                                            <span class="material-symbols-outlined text-sm">arrow_downward</span> Salida
-                                        </span>
-                                    @elseif($mov->type == 'technician_out')
-                                        <span
-                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-orange-50 text-orange-700 rounded-full text-xs font-medium">
-                                            <span class="material-symbols-outlined text-sm">engineering</span> Salida a técnico
-                                        </span>
-                                    @elseif($mov->type == 'technician_return')
-                                        <span
-                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
-                                            <span class="material-symbols-outlined text-sm">assignment_return</span> Devolución
-                                            técnico
-                                        </span>
-                                    @elseif($mov->type == 'damage')
-                                        <span
-                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-red-100 text-red-800 rounded-full text-xs font-medium">
-                                            <span class="material-symbols-outlined text-sm">broken_image</span> Dañado
-                                        </span>
-                                    @elseif($mov->type == 'return_to_supplier')
-                                        <span
-                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
-                                            <span class="material-symbols-outlined text-sm">local_shipping</span> Dev. proveedor
-                                        </span>
-                                    @endif
+                                    @php $td = $mov->type_display; @endphp
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium {{ $td['class'] }}">
+                                        <span class="material-symbols-outlined text-sm">{{ $td['icon'] }}</span> {{ $td['label'] }}
+                                    </span>
                                 </td>
                                 <td class="px-4 py-3 text-right font-mono text-gray-800">{{ $mov->quantity }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ $mov->user->name }}</td>

@@ -19,6 +19,13 @@
 
         <!-- Contenido -->
         <div class="p-6 space-y-5">
+            @if($activeBranch)
+                <div class="flex items-center gap-2 text-sm bg-blue-50 text-blue-700 px-4 py-3 rounded-lg border border-blue-200">
+                    <span class="material-symbols-outlined text-blue-500">store</span>
+                    <span>Viendo inventario de: <strong>{{ $activeBranch->name }}</strong></span>
+                </div>
+            @endif
+
             <!-- Filtro de búsqueda (ahora ancho completo, como en movements) -->
             <div class="relative w-full">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
@@ -49,12 +56,21 @@
                                     Medida
                                 </div>
                             </th>
+                            @if($activeBranch)
+                            <th class="px-4 py-3 text-right text-gray-600 font-medium">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <span class="material-symbols-outlined text-gray-400 text-base">store</span>
+                                    Stock {{ $activeBranch->name }}
+                                </div>
+                            </th>
+                            @else
                             <th class="px-4 py-3 text-right text-gray-600 font-medium">
                                 <div class="flex items-center justify-end gap-1.5">
                                     <span class="material-symbols-outlined text-gray-400 text-base">inventory</span>
                                     Stock
                                 </div>
                             </th>
+                            @endif
                             <th class="px-4 py-3 text-right text-gray-600 font-medium">
                                 <div class="flex items-center justify-end gap-1.5">
                                     <span class="material-symbols-outlined text-gray-400 text-base">arrow_downward</span>
@@ -109,6 +125,13 @@
                                         {{ $medida }}
                                     </span>
                                 </td>
+                                @if($activeBranch)
+                                @php $branchAlloc = $product->branchInventories->first()?->allocated_quantity ?? 0; @endphp
+                                <td class="px-4 py-3 text-right font-medium text-blue-700">
+                                    {{ rtrim(rtrim(number_format($branchAlloc, 2), '0'), '.') }}
+                                    <span class="text-blue-500 text-xs font-normal">{{ $product->unit_of_measure }}</span>
+                                </td>
+                                @else
                                 <td class="px-4 py-3 text-right font-medium 
                                     {{ $product->current_stock <= $product->stock_min && $product->stock_min > 0 ? 'text-red-600' : 'text-gray-800' }}">
                                     @if($product->current_stock <= $product->stock_min && $product->stock_min > 0)
@@ -122,6 +145,7 @@
                                         <span class="text-gray-400 text-xs font-normal">{{ $product->unit_of_measure }}</span>
                                     @endif
                                 </td>
+                                @endif
                                 <td class="px-4 py-3 text-right text-gray-700">{{ intval($product->stock_min) }}</td>
                                 <td class="px-4 py-3 text-right text-gray-700">{{ $product->stock_max ? intval($product->stock_max) : '—' }}</td>
                                 <td class="px-4 py-3 text-center">
