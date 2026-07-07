@@ -23,6 +23,13 @@
 
         <!-- Contenido -->
         <div class="p-6 space-y-6">
+            @if($activeBranch)
+                <div class="flex items-center gap-2 text-sm bg-blue-50 text-blue-700 px-4 py-3 rounded-lg border border-blue-200">
+                    <span class="material-symbols-outlined text-blue-500">store</span>
+                    <span>Viendo inventario de: <strong>{{ $activeBranch->name }}</strong></span>
+                </div>
+            @endif
+
             <!-- Detalles del producto -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <!-- SKU -->
@@ -57,7 +64,18 @@
                         </p>
                     </div>
                 </div>
-                <!-- Stock actual -->
+                @if($activeBranch)
+                <div class="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-200">
+                    <span class="material-symbols-outlined text-blue-500">store</span>
+                    <div>
+                        <p class="text-xs text-blue-600 uppercase tracking-wide">En {{ $activeBranch->name }}</p>
+                        <p class="text-blue-800 text-lg font-bold">
+                            {{ rtrim(rtrim(number_format($branchAllocation, 2), '0'), '.') }}
+                            <span class="text-blue-500 text-sm font-normal">{{ $product->unit_of_measure }}</span>
+                        </p>
+                    </div>
+                </div>
+                @else
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">inventory</span>
                     <div>
@@ -69,6 +87,7 @@
                         </p>
                     </div>
                 </div>
+                @endif
                 <!-- Stock mínimo -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">arrow_downward</span>
@@ -217,7 +236,7 @@
                     <span class="material-symbols-outlined text-gray-500">history</span>
                     Últimos movimientos
                 </h2>
-                @if($product->movements->count())
+                @if($movements->count())
                     <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                         <table class="min-w-full text-sm">
                             <thead class="bg-gray-50 border-b border-gray-200">
@@ -250,25 +269,16 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
-                                @foreach($product->movements->take(5) as $mov)
+                                @foreach($movements as $mov)
                                     <tr class="hover:bg-gray-50/80 transition">
                                         <td class="px-4 py-2.5 font-mono text-xs text-gray-700">
                                             {{ $mov->created_at->format('d/m/Y H:i') }}
                                         </td>
                                         <td class="px-4 py-2.5">
-                                            @if($mov->type == 'entry')
-                                                <span
-                                                    class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium">
-                                                    <span class="material-symbols-outlined text-xs">arrow_upward</span> Entrada
-                                                </span>
-                                            @elseif($mov->type == 'exit')
-                                                <span
-                                                    class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-700 rounded-full text-xs font-medium">
-                                                    <span class="material-symbols-outlined text-xs">arrow_downward</span> Salida
-                                                </span>
-                                            @else
-                                                <span class="text-gray-600 text-xs">{{ ucfirst($mov->type) }}</span>
-                                            @endif
+                                            @php $td = $mov->type_display; @endphp
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium {{ $td['class'] }}">
+                                                <span class="material-symbols-outlined text-xs">{{ $td['icon'] }}</span> {{ $td['label'] }}
+                                            </span>
                                         </td>
                                         <td class="px-4 py-2.5 text-right font-mono text-gray-800">{{ $mov->quantity }}</td>
                                         <td class="px-4 py-2.5 text-gray-700">{{ $mov->user->name }}</td>
@@ -277,10 +287,10 @@
                             </tbody>
                         </table>
                     </div>
-                    @if($product->movements->count() > 5)
+                    @if($movementsCount > 5)
                         <p class="text-xs text-gray-400 mt-2 flex items-center gap-1">
                             <span class="material-symbols-outlined text-sm">info</span>
-                            Mostrando 5 de {{ $product->movements->count() }} movimientos
+                            Mostrando 5 de {{ $movementsCount }} movimientos
                         </p>
                     @endif
                 @else

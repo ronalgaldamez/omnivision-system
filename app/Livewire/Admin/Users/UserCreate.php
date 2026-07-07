@@ -5,6 +5,7 @@ namespace App\Livewire\Admin\Users;
 use Livewire\Component;
 use App\Models\User;
 use App\Models\Role;
+use App\Models\Branch;
 use Illuminate\Support\Facades\Hash;
 
 class UserCreate extends Component
@@ -14,6 +15,7 @@ class UserCreate extends Component
     public $password = '';
     public $password_confirmation = '';
     public $selectedRole = '';
+    public $branchId = '';
 
     public function save()
     {
@@ -22,12 +24,14 @@ class UserCreate extends Component
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6|confirmed',
             'selectedRole' => 'required|exists:roles,name',
+            'branchId' => 'nullable|exists:branches,id',
         ]);
 
         $user = User::create([
             'name' => $this->name,
             'email' => $this->email,
             'password' => Hash::make($this->password),
+            'branch_id' => $this->branchId ?: null,
         ]);
 
         $user->syncRoles([$this->selectedRole]);
@@ -39,6 +43,7 @@ class UserCreate extends Component
     public function render()
     {
         $roles = Role::all();
-        return view('livewire.admin.users.user-create', compact('roles'))->layout('components.layouts.app');
+        $branches = Branch::orderBy('name')->get();
+        return view('livewire.admin.users.user-create', compact('roles', 'branches'))->layout('components.layouts.app');
     }
 }

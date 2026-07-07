@@ -113,4 +113,9 @@ class Product extends Model
     {
         return $this->hasMany(ProductPackaging::class)->orderBy('is_default_for_purchase', 'desc')->orderBy('name');
     }
+
+    public function branchInventories()
+    {
+        return $this->hasMany(BranchInventory::class);
+    }
 }

@@ -22,8 +22,8 @@ class Movement extends Model
         'user_id',
         'reference_type',
         'reference_id',
-        'unit_cost',
-        'total_value'
+        'total_value',
+        'branch_id',
     ];
 
     public function product()
@@ -40,5 +40,28 @@ class Movement extends Model
     {
         return $this->belongsTo(Purchase::class, 'reference_id', 'id')
             ->where('reference_type', 'purchase');
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function movementType()
+    {
+        return $this->belongsTo(MovementType::class, 'type', 'code');
+    }
+
+    public function getTypeDisplayAttribute(): array
+    {
+        $mt = $this->movementType;
+        if ($mt) {
+            return [
+                'label' => $mt->label,
+                'icon' => $mt->icon,
+                'class' => $mt->color_class,
+            ];
+        }
+        return ['label' => ucfirst($this->type), 'icon' => 'circle', 'class' => 'bg-gray-50 text-gray-700'];
     }
 }

@@ -44,6 +44,9 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('can:view kardex')->group(function () {
             Route::get('/kardex', \App\Livewire\Inventory\KardexIndex::class)->name('kardex.index');
         });
+        Route::middleware('can:access_inventory')->group(function () {
+            Route::get('/inventory/distribution', \App\Livewire\Inventory\DistributionForm::class)->name('inventory.distribution');
+        });
     }
 
     // ========== SUPPLIERS ==========
@@ -165,6 +168,11 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // ========== ADMIN ==========
+    Route::prefix('admin/branches')->middleware(['auth', 'can:access_admin'])->group(function () {
+        Route::get('/', \App\Livewire\Admin\Branches\BranchIndex::class)->name('admin.branches.index');
+        Route::get('/create', \App\Livewire\Admin\Branches\BranchForm::class)->name('admin.branches.create');
+        Route::get('/{id}/edit', \App\Livewire\Admin\Branches\BranchForm::class)->name('admin.branches.edit');
+    });
     Route::prefix('admin/users')->middleware(['auth', 'can:access_admin'])->group(function () {
         Route::get('/', \App\Livewire\Admin\Users\UserIndex::class)->name('admin.users.index');
         Route::get('/create', \App\Livewire\Admin\Users\UserCreate::class)->name('admin.users.create');

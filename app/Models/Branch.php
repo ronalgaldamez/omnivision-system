@@ -19,4 +19,9 @@ class Branch extends Model
     {
         return $this->hasMany(Client::class);
     }
+
+    public function inventories()
+    {
+        return $this->hasMany(BranchInventory::class);
+    }
 }

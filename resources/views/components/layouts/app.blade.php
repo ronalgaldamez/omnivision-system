@@ -113,6 +113,9 @@
                                 @can('view_kardex_menu')<a href="{{ route('kardex.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">receipt</span> Kardex</a>@endcan
+                                @can('access_inventory')<a href="{{ route('inventory.distribution') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">fork_right</span> Repartición</a>@endcan
                             </div>
                         </div>
                     @endif
@@ -298,6 +301,9 @@
                                 @can('access_admin')<a href="{{ route('admin.shelves') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">shelves</span> Estanterías</a>@endcan
+                                @can('access_admin')<a href="{{ route('admin.branches.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">store</span> Sucursales</a>@endcan
                                 @can('view_settings_menu')<a href="{{ route('admin.settings') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                         class="material-symbols-outlined text-base">settings</span> Configuración</a>@endcan
@@ -330,6 +336,10 @@
                     </div>
 
                     <div class="flex items-center gap-3">
+                        @if(is_null(auth()->user()->branch_id))
+                            <livewire:admin.branch-switcher />
+                        @endif
+
                         @if(Auth::user()->can('access noc panel'))
                             <livewire:notifications-badge />
                         @endif

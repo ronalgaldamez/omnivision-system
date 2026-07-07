@@ -29,6 +29,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // ═══════════════════════════════════════════
 
         $admin             = Role::firstOrCreate(['name' => 'admin']);
+        $branchAdmin       = Role::firstOrCreate(['name' => 'branch_admin']);
         $warehouse         = Role::firstOrCreate(['name' => 'warehouse']);
         $technician        = Role::firstOrCreate(['name' => 'technician']);
         $accountant        = Role::firstOrCreate(['name' => 'accountant']);
@@ -44,6 +45,81 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── Admin: todos los permisos ──
         $admin->syncPermissions(Permission::all());
+
+        // ── Branch Admin: administrador de sucursal ──
+        // Igual que warehouse + clientes + SLA + soporte extendido + reportes
+        // Sin access_admin → no puede gestionar usuarios, roles, catálogo ni config.
+        $branchAdmin->syncPermissions([
+            // Inventario
+            PermissionEnum::AccessInventory,
+            PermissionEnum::ViewProducts,
+            PermissionEnum::CreateProducts,
+            PermissionEnum::EditProducts,
+            PermissionEnum::ViewMovements,
+            PermissionEnum::CreateMovements,
+            PermissionEnum::ViewKardex,
+            PermissionEnum::ViewProductsMenu,
+            PermissionEnum::ViewMovementsMenu,
+            PermissionEnum::ViewNewMovementMenu,
+            PermissionEnum::ViewKardexMenu,
+
+            // Proveedores (solo consulta, sin compras)
+            PermissionEnum::AccessSuppliers,
+            PermissionEnum::ViewSuppliers,
+            PermissionEnum::CreateSuppliers,
+            PermissionEnum::EditSuppliers,
+            PermissionEnum::ViewSuppliersMenu,
+
+            // Técnicos
+            PermissionEnum::AccessTechnicians,
+            PermissionEnum::ViewTechnicianReturns,
+            PermissionEnum::CreateTechnicianReturns,
+            PermissionEnum::ViewReturnsMenu,
+            PermissionEnum::ViewRegisterReturnMenu,
+
+            // Órdenes de trabajo
+            PermissionEnum::ViewWorkOrders,
+            PermissionEnum::CreateWorkOrders,
+            PermissionEnum::EditWorkOrders,
+            PermissionEnum::DeleteWorkOrders,
+            PermissionEnum::CompleteWorkOrders,
+            PermissionEnum::AssignTechnicians,
+            PermissionEnum::CancelWorkOrders,
+            PermissionEnum::ViewAllWorkOrders,
+            PermissionEnum::ViewWorkOrdersMenu,
+            PermissionEnum::ViewMapOtMenu,
+            PermissionEnum::ViewRequisitionsMenu,
+
+            // Reportes
+            PermissionEnum::AccessReports,
+            PermissionEnum::ViewReports,
+            PermissionEnum::ViewLowStock,
+            PermissionEnum::ViewLowStockMenu,
+            PermissionEnum::ViewMovementsReportMenu,
+            PermissionEnum::ViewTechnicianPerformanceMenu,
+
+            // Soporte / Tickets
+            PermissionEnum::AccessSupport,
+            PermissionEnum::ViewAnyTickets,
+            PermissionEnum::CreateTickets,
+            PermissionEnum::UpdateTickets,
+            PermissionEnum::ViewNewTicketMenu,
+            PermissionEnum::ViewAllTicketsMenu,
+
+            // Clientes
+            PermissionEnum::ViewClients,
+            PermissionEnum::CreateClients,
+            PermissionEnum::EditClients,
+            PermissionEnum::DeleteClients,
+
+            // SLA
+            PermissionEnum::ViewSlaGoals,
+            PermissionEnum::ViewSlaDashboard,
+
+            // Dashboard
+            PermissionEnum::ViewDashboard,
+            PermissionEnum::CaptureCoordinates,
+        ]);
 
         // ── Warehouse / Bodeguero ──
         $warehouse->syncPermissions([

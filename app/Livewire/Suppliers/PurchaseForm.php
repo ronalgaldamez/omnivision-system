@@ -88,6 +88,12 @@ class PurchaseForm extends Component
 
     public bool $skipDraftSave = false;
 
+    public $showSupplierModal = false;
+
+    public $supplierListSearch = '';
+
+    public $supplierList = [];
+
     protected $rules = [
         'supplier_id' => 'required|exists:suppliers,id',
         'invoice_number' => 'required|string|unique:purchases,invoice_number',
@@ -204,6 +210,42 @@ class PurchaseForm extends Component
             $this->supplier_id = $supplier->id;
             $this->supplierSearch = $supplier->name.' (NIT: '.($supplier->nit ?? 'N/A').')';
             $this->supplierResults = [];
+            $this->showSupplierModal = false;
+        }
+    }
+
+    public function openSupplierModal()
+    {
+        $this->supplierListSearch = '';
+        $this->supplierList = Supplier::orderBy('name')->take(50)->get();
+        $this->showSupplierModal = true;
+    }
+
+    public function closeSupplierModal()
+    {
+        $this->showSupplierModal = false;
+        $this->supplierListSearch = '';
+        $this->supplierList = [];
+    }
+
+    public function clearSupplier()
+    {
+        $this->supplier_id = '';
+        $this->supplierSearch = '';
+        $this->supplierResults = [];
+    }
+
+    public function updatedSupplierListSearch()
+    {
+        if (strlen($this->supplierListSearch) >= 2) {
+            $this->supplierList = Supplier::where('name', 'like', '%'.$this->supplierListSearch.'%')
+                ->orWhere('nit', 'like', '%'.$this->supplierListSearch.'%')
+                ->orWhere('nrc', 'like', '%'.$this->supplierListSearch.'%')
+                ->orderBy('name')
+                ->take(50)
+                ->get();
+        } else {
+            $this->supplierList = Supplier::orderBy('name')->take(50)->get();
         }
     }
 
