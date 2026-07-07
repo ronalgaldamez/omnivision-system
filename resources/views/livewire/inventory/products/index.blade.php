@@ -115,9 +115,11 @@
                                         <span class="inline-flex items-center gap-1">
                                             <span class="material-symbols-outlined text-sm">warning</span>
                                             {{ intval($product->current_stock) }}
+                                            <span class="text-gray-400 text-xs font-normal">{{ $product->unit_of_measure }}</span>
                                         </span>
                                     @else
                                         {{ intval($product->current_stock) }}
+                                        <span class="text-gray-400 text-xs font-normal">{{ $product->unit_of_measure }}</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right text-gray-700">{{ intval($product->stock_min) }}</td>

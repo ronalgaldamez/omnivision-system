@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class PackagingType extends Model
 {
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'unit_of_measure'];
 
     public function packagings()
     {

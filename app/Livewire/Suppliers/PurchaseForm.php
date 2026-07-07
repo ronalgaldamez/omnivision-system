@@ -9,8 +9,8 @@ use App\Models\Purchase;
 use App\Models\PurchaseItem;
 use App\Models\Shelf;
 use App\Models\Supplier;
+use App\Models\PackagingType;
 use App\Services\InventoryService;
-use App\Traits\ManagesProductPackaging;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +21,6 @@ use Livewire\Component;
 class PurchaseForm extends Component
 {
     use AuthorizesRequests;
-    use ManagesProductPackaging;
 
     public $supplier_id;
 
@@ -47,6 +46,10 @@ class PurchaseForm extends Component
 
     public $currentProductSearch = '';
 
+    public $currentProductId = '';
+
+    public $packagingTypes = [];
+
     // Crear producto inline
     public $createMode = false;
 
@@ -62,13 +65,6 @@ class PurchaseForm extends Component
     public $stockMin = null;
 
     public $stockMax = null;
-
-    // Empaque fraccionado
-    public $hasFractional = false;
-
-    public $fractionalQuantity = 1;
-
-    public $fractionalUnits = 1;
 
     public $editingIndex = null;
 
@@ -105,7 +101,7 @@ class PurchaseForm extends Component
 
     public function mount()
     {
-        $this->initPackagingState();
+        $this->packagingTypes = PackagingType::orderBy('name')->get();
 
         if ($draft = session()->get('purchase_form_draft')) {
             $this->supplier_id = $draft['supplier_id'] ?? '';
@@ -117,35 +113,22 @@ class PurchaseForm extends Component
             $this->supplierSearch = $draft['supplierSearch'] ?? '';
             $this->currentProductId = $draft['currentProductId'] ?? '';
             $this->currentProductSearch = $draft['currentProductSearch'] ?? '';
-            $this->currentPackagingId = $draft['currentPackagingId'] ?? '';
             $this->currentQuantity = $draft['currentQuantity'] ?? 1;
             $this->currentUnitCost = $draft['currentUnitCost'] ?? 0;
             $this->editingIndex = $draft['editingIndex'] ?? null;
-            $this->newPackagingTypeId = (string) ($draft['newPackagingTypeId'] ?? '');
-            $this->newPackagingQuantity = (int) ($draft['newPackagingQuantity'] ?? 1);
             $this->createMode = $draft['createMode'] ?? false;
             $this->newProductName = $draft['newProductName'] ?? '';
-            $this->hasFractional = $draft['hasFractional'] ?? false;
-            $this->fractionalQuantity = (int) ($draft['fractionalQuantity'] ?? 1);
-            $this->fractionalUnits = (int) ($draft['fractionalUnits'] ?? 1);
             $this->stockMin = $draft['stockMin'] ?? null;
             $this->stockMax = $draft['stockMax'] ?? null;
             $this->draftRestored = true;
 
-            // Si estaba editando, mantener el formulario; si no y hay items, limpiarlo
             if ($this->editingIndex === null && ! empty($this->items)) {
                 $this->currentProductId = '';
                 $this->currentProductSearch = '';
-                $this->currentPackagingId = '';
                 $this->currentQuantity = 1;
                 $this->currentUnitCost = 0;
             }
 
-            if ($this->currentProductId) {
-                $this->loadPackagingsForProduct($this->currentProductId);
-            }
-
-            // Si hay supplier_id pero no supplierSearch, recuperar nombre
             if ($this->supplier_id && empty($this->supplierSearch)) {
                 $supplier = Supplier::find($this->supplier_id);
                 if ($supplier) {
@@ -191,17 +174,11 @@ class PurchaseForm extends Component
             'supplierSearch' => $this->supplierSearch,
             'currentProductId' => $this->currentProductId,
             'currentProductSearch' => $this->currentProductSearch,
-            'currentPackagingId' => $this->currentPackagingId,
             'currentQuantity' => $this->currentQuantity,
             'currentUnitCost' => $this->currentUnitCost,
             'editingIndex' => $this->editingIndex,
-            'newPackagingTypeId' => $this->newPackagingTypeId,
-            'newPackagingQuantity' => $this->newPackagingQuantity,
             'createMode' => $this->createMode,
             'newProductName' => $this->newProductName,
-            'hasFractional' => $this->hasFractional,
-            'fractionalQuantity' => $this->fractionalQuantity,
-            'fractionalUnits' => $this->fractionalUnits,
             'stockMin' => $this->stockMin,
             'stockMax' => $this->stockMax,
         ]);
@@ -248,7 +225,6 @@ class PurchaseForm extends Component
         if ($product) {
             $this->currentProductId = $product->id;
             $this->currentProductSearch = $product->name.' ('.$product->sku.')';
-            $this->loadPackagingsForProduct($product->id);
             $this->stockMin = $product->stock_min;
             $this->stockMax = $product->stock_max;
             $this->productSearchResults = [];
@@ -263,13 +239,6 @@ class PurchaseForm extends Component
             'currentUnitCost' => 'required|numeric|gt:0',
         ];
 
-        $packaging = $this->selectedPackaging;
-
-        if ($this->hasFractional && $packaging) {
-            $rules['fractionalQuantity'] = 'required|integer|gt:0|lte:currentQuantity';
-            $rules['fractionalUnits'] = 'required|integer|gt:0|lt:'.$packaging->quantity_in_base_unit;
-        }
-
         try {
             $this->validate($rules);
         } catch (ValidationException $e) {
@@ -278,16 +247,6 @@ class PurchaseForm extends Component
         }
 
         $product = Product::find($this->currentProductId);
-        $baseQty = $packaging ? $this->currentQuantity * $packaging->quantity_in_base_unit : $this->currentQuantity;
-
-        $fractionalQuantity = null;
-        $fractionalUnits = null;
-
-        if ($this->hasFractional && $packaging) {
-            $baseQty = ($this->currentQuantity * $packaging->quantity_in_base_unit) - ($this->fractionalQuantity * $this->fractionalUnits);
-            $fractionalQuantity = $this->fractionalQuantity;
-            $fractionalUnits = $this->fractionalUnits;
-        }
 
         $item = [
             'product_id' => $this->currentProductId,
@@ -295,12 +254,6 @@ class PurchaseForm extends Component
             'product_sku' => $product->sku,
             'quantity' => $this->currentQuantity,
             'unit_cost' => $this->currentUnitCost,
-            'packaging_id' => $packaging?->id,
-            'packaging_name' => $packaging?->name,
-            'packaging_units' => $packaging?->quantity_in_base_unit,
-            'base_quantity' => $baseQty,
-            'fractional_quantity' => $fractionalQuantity,
-            'fractional_units' => $fractionalUnits,
             'stock_min' => $this->stockMin,
             'stock_max' => $this->stockMax,
         ];
@@ -320,14 +273,9 @@ class PurchaseForm extends Component
     {
         $this->currentProductSearch = '';
         $this->currentProductId = '';
-        $this->currentPackagingId = '';
-        $this->currentPackagings = [];
         $this->currentQuantity = 1;
         $this->currentUnitCost = 0;
         $this->productSearchResults = [];
-        $this->hasFractional = false;
-        $this->fractionalQuantity = 1;
-        $this->fractionalUnits = 1;
         $this->stockMin = null;
         $this->stockMax = null;
     }
@@ -346,18 +294,10 @@ class PurchaseForm extends Component
         $this->currentQuantity = $item['quantity'];
         $this->currentUnitCost = $item['unit_cost'];
         $this->editingIndex = $index;
-        $this->hasFractional = ! empty($item['fractional_quantity']);
-        $this->fractionalQuantity = (int) ($item['fractional_quantity'] ?? 1);
-        $this->fractionalUnits = (int) ($item['fractional_units'] ?? 1);
         $this->stockMin = $item['stock_min'] ?? null;
         $this->stockMax = $item['stock_max'] ?? null;
-        // Quitar de la tabla mientras se edita
         unset($this->items[$index]);
         $this->items = array_values($this->items);
-
-        // Cargar empaques del producto y restaurar el empaque seleccionado
-        $this->loadPackagingsForProduct($item['product_id']);
-        $this->currentPackagingId = $item['packaging_id'] ?? ($this->currentPackagings->first()?->id ?? '');
 
         $this->calculateTotals();
     }
@@ -369,30 +309,13 @@ class PurchaseForm extends Component
         }
 
         $product = Product::find($this->currentProductId);
-        $packaging = $this->selectedPackaging;
-        $baseQty = $packaging ? $this->currentQuantity * $packaging->quantity_in_base_unit : $this->currentQuantity;
 
-        $fractionalQuantity = null;
-        $fractionalUnits = null;
-        if ($this->hasFractional && $packaging) {
-            $baseQty = ($this->currentQuantity * $packaging->quantity_in_base_unit) - ($this->fractionalQuantity * $this->fractionalUnits);
-            $fractionalQuantity = $this->fractionalQuantity;
-            $fractionalUnits = $this->fractionalUnits;
-        }
-
-        // Restaurar el item a la tabla
         $this->items[] = [
             'product_id' => $this->currentProductId,
             'product_name' => $product->name ?? '',
             'product_sku' => $product->sku ?? '',
             'quantity' => $this->currentQuantity,
             'unit_cost' => $this->currentUnitCost,
-            'packaging_id' => $this->currentPackagingId ?: null,
-            'packaging_name' => $this->selectedPackaging?->name,
-            'packaging_units' => $packaging?->quantity_in_base_unit,
-            'base_quantity' => $baseQty,
-            'fractional_quantity' => $fractionalQuantity,
-            'fractional_units' => $fractionalUnits,
             'stock_min' => $this->stockMin,
             'stock_max' => $this->stockMax,
         ];
@@ -486,8 +409,6 @@ class PurchaseForm extends Component
         $this->newProductName = '';
         $this->resetCurrentProduct();
         $this->editingIndex = null;
-        $this->newPackagingTypeId = '';
-        $this->newPackagingQuantity = 1;
         session()->forget('purchase_form_draft');
         $this->calculateTotals();
         $this->dispatch('show-toast', type: 'info', message: 'Formulario limpiado.');
@@ -506,13 +427,11 @@ class PurchaseForm extends Component
 
         $this->currentProductId = $product->id;
         $this->currentProductSearch = $product->name.' ('.$product->sku.')';
-        $this->currentPackagings = collect();
-        $this->currentPackagingId = '';
         $this->productSearchResults = [];
         $this->createMode = false;
         $this->newProductName = '';
         $this->saveDraft();
-        $this->dispatch('show-toast', type: 'success', message: 'Producto creado. Ahora definí su empaque.');
+        $this->dispatch('show-toast', type: 'success', message: 'Producto creado exitosamente.');
     }
 
     // Totales e IVA
@@ -523,7 +442,7 @@ class PurchaseForm extends Component
 
     public function calculateTotals()
     {
-        $this->subtotal = array_sum(array_map(fn ($i) => ($i['base_quantity'] ?? $i['quantity']) * $i['unit_cost'], $this->items));
+        $this->subtotal = array_sum(array_map(fn ($i) => $i['quantity'] * $i['unit_cost'], $this->items));
         $this->ivaAmount = $this->includeIva ? round($this->subtotal * 0.13, 2) : 0;
         $this->total = $this->subtotal + $this->ivaAmount;
     }
@@ -550,12 +469,10 @@ class PurchaseForm extends Component
     {
         $this->validate();
 
-        // Recalcular totales server-side para evitar manipulación
-        $subtotal = array_sum(array_map(fn ($i) => ($i['base_quantity'] ?? $i['quantity']) * $i['unit_cost'], $this->items));
+        $subtotal = array_sum(array_map(fn ($i) => $i['quantity'] * $i['unit_cost'], $this->items));
         $ivaAmount = $this->includeIva ? round($subtotal * 0.13, 2) : 0;
         $total = $subtotal + $ivaAmount;
 
-        // Buscar productos en una sola query (anti N+1)
         $productIds = collect($this->items)->pluck('product_id')->unique();
         $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
 
@@ -581,16 +498,13 @@ class PurchaseForm extends Component
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                     'unit_cost' => $item['unit_cost'],
-                    'packaging_id' => $item['packaging_id'] ?? null,
-                    'base_quantity' => $item['base_quantity'] ?? $item['quantity'],
-                    'fractional_quantity' => $item['fractional_quantity'] ?? null,
-                    'fractional_units' => $item['fractional_units'] ?? null,
+                    'base_quantity' => $item['quantity'],
                 ]);
 
                 $movement = Movement::create([
                     'product_id' => $item['product_id'],
                     'type' => 'entry',
-                    'quantity' => $item['base_quantity'] ?? $item['quantity'],
+                    'quantity' => $item['quantity'],
                     'unit_cost' => $item['unit_cost'],
                     'description' => 'Compra No. '.$this->invoice_number,
                     'user_id' => Auth::id(),
@@ -599,10 +513,7 @@ class PurchaseForm extends Component
                 ]);
 
                 $product = $products[$item['product_id']] ?? Product::find($item['product_id']);
-                $baseQty = $item['base_quantity'] ?? $item['quantity'];
-                $totalItemValue = $item['quantity'] * $item['unit_cost'];
-                $baseUnitCost = $totalItemValue / max(1, $baseQty);
-                $inventoryService->processPurchaseEntry($product, $baseQty, $baseUnitCost, $movement);
+                $inventoryService->processPurchaseEntry($product, $item['quantity'], $item['unit_cost'], $movement);
 
                 $needsSave = false;
                 if (! is_null($item['stock_min'] ?? null) && $item['stock_min'] != $product->stock_min) {

@@ -38,7 +38,7 @@
                     <span class="material-symbols-outlined text-gray-400">inventory_2</span>
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Nombre</p>
-                        <p class="font-semibold text-gray-800">{{ $product->name }}</p>
+                        <p class="font-semibold text-gray-800">{{ $product->name }} <span class="text-gray-400 text-xs font-normal">{{ $product->unit_of_measure }}</span></p>
                     </div>
                 </div>
                 <!-- Medida -->
@@ -64,7 +64,8 @@
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Stock actual</p>
                         <p
                             class="{{ $product->current_stock <= $product->stock_min ? 'text-red-600 font-bold' : 'text-gray-700' }} text-lg">
-                            {{ $product->current_stock }}
+                            {{ intval($product->current_stock) }}
+                            <span class="text-gray-400 text-sm font-normal">{{ $product->unit_of_measure }}</span>
                         </p>
                     </div>
                 </div>

@@ -19,7 +19,7 @@ trait ManagesProductPackaging
 
     protected function initPackagingState(): void
     {
-        $this->packagingTypes = PackagingType::orderBy('name')->get();
+        $this->packagingTypes = PackagingType::with('packagings')->orderBy('name')->get();
     }
 
     public function updatedCurrentPackagingId(): void {}
@@ -50,7 +50,8 @@ trait ManagesProductPackaging
         ]);
 
         $type = PackagingType::find($this->newPackagingTypeId);
-        $name = $type->name.' x'.rtrim(rtrim(number_format($this->newPackagingQuantity, 4), '0'), '.');
+        $unit = $type->unit_of_measure !== 'unidad' ? ' ('.$type->unit_of_measure.')' : '';
+        $name = $type->name.' x'.rtrim(rtrim(number_format($this->newPackagingQuantity, 4), '0'), '.').$unit;
 
         if ($this->editingPackagingId) {
             $pkg = ProductPackaging::find($this->editingPackagingId);
@@ -81,6 +82,12 @@ trait ManagesProductPackaging
         $this->newPackagingTypeId = '';
         $this->newPackagingQuantity = 1;
         $this->dispatch('show-toast', type: 'success', message: 'Empaque guardado.');
+
+        $product = Product::find($this->currentProductId);
+        if ($product && $product->unit_of_measure === 'unidad' && $type->unit_of_measure !== 'unidad') {
+            $product->unit_of_measure = $type->unit_of_measure;
+            $product->save();
+        }
     }
 
     public function editPackaging($id): void
