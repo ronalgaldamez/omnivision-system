@@ -126,7 +126,7 @@
                                     </span>
                                 </td>
                                 @if($activeBranch)
-                                @php $branchAlloc = $product->branchInventories->first()?->allocated_quantity ?? 0; @endphp
+                                @php $branchAlloc = (int) ($product->branchInventories->first()?->allocated_quantity ?? 0); @endphp
                                 <td class="px-4 py-3 text-right font-medium text-blue-700">
                                     {{ rtrim(rtrim(number_format($branchAlloc, 2), '0'), '.') }}
                                     <span class="text-blue-500 text-xs font-normal">{{ $product->unit_of_measure }}</span>

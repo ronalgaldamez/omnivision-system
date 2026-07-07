@@ -186,7 +186,7 @@ class RequisitionDetail extends Component
         $this->unlinkedWorkOrders = WorkOrder::where('technician_id', $this->requisition->technician_id)
             ->whereIn('status', ['pending', 'in_progress'])
             ->whereDoesntHave('requisitions', function ($q) {
-                $q->where('status', 'open');
+                $q->whereIn('status', ['open', 'pending', 'approved']);
             })
             ->with('client')
             ->get();

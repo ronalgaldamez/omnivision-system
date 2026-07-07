@@ -61,19 +61,89 @@
                                     class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">add</span>
                             </div>
                         </div>
-                        <!-- Modelo -->
+                        <!-- Categoría -->
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-base">category</span>
-                                Modelo (Marca / Modelo / Categoría)
+                                Categoría
+                            </label>
+                            @if($currentCategoryId && $selCat = \App\Models\Category::find($currentCategoryId))
+                            <div class="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                                <span class="material-symbols-outlined text-blue-600 text-sm">check_circle</span>
+                                <span class="text-sm text-blue-800 flex-1">{{ $selCat->name }}</span>
+                                <button type="button" wire:click="clearCategory" class="p-1 text-blue-600 hover:text-red-600 rounded"><span class="material-symbols-outlined text-lg">close</span></button>
+                            </div>
+                            @else
+                            <div class="flex gap-2">
+                                <div class="relative flex-1">
+                                    <input type="text" wire:model.live.debounce.300ms="categorySearch" placeholder="Buscar categoría..."
+                                        class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
+                                    @if(count($categoryResults) > 0)
+                                    <ul class="absolute z-30 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-48 overflow-auto">
+                                        @foreach($categoryResults as $cat)
+                                        <li wire:click="selectCategory({{ $cat->id }})" class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex items-center justify-between">
+                                            <span>{{ $cat->name }}</span>
+                                            @if($cat->requires_device_registration)
+                                                <span class="text-xs text-blue-600 font-medium">Requiere MAC</span>
+                                            @endif
+                                        </li>
+                                        @endforeach
+                                    </ul>
+                                    @endif
+                                </div>
+                                <button type="button" wire:click="openCategoryModal"
+                                    class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 transition whitespace-nowrap">
+                                    <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                                </button>
+                            </div>
+                            @endif
+                        </div>
+                        <!-- Marca -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-base">brand_awareness</span>
+                                Marca
+                            </label>
+                            @if($currentBrandId && $selBrand = \App\Models\Brand::find($currentBrandId))
+                            <div class="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                                <span class="material-symbols-outlined text-blue-600 text-sm">check_circle</span>
+                                <span class="text-sm text-blue-800 flex-1">{{ $selBrand->name }}</span>
+                                <button type="button" wire:click="clearBrand" class="p-1 text-blue-600 hover:text-red-600 rounded"><span class="material-symbols-outlined text-lg">close</span></button>
+                            </div>
+                            @else
+                            <div class="flex gap-2">
+                                <div class="relative flex-1">
+                                    <input type="text" wire:model.live.debounce.300ms="brandSearch" placeholder="Buscar marca..."
+                                        class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
+                                    @if(count($brandResults) > 0)
+                                    <ul class="absolute z-30 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-48 overflow-auto">
+                                        @foreach($brandResults as $b)
+                                        <li wire:click="selectBrand({{ $b->id }})" class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm">{{ $b->name }}</li>
+                                        @endforeach
+                                    </ul>
+                                    @endif
+                                </div>
+                                <button type="button" wire:click="openBrandModal"
+                                    class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 transition whitespace-nowrap">
+                                    <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                                </button>
+                            </div>
+                            @endif
+                        </div>
+                        <!-- Modelo -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-base">badge</span>
+                                Modelo
                             </label>
                             <div class="flex gap-2">
                                 <div class="relative flex-1">
                                     <input type="text" readonly wire:model="selectedModelDisplay"
                                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-gray-100 text-gray-700 text-sm"
                                         placeholder="Ninguno seleccionado">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                                 </div>
                                 <button type="button" wire:click="openModelModal"
                                     class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm flex items-center gap-1.5">
@@ -417,6 +487,96 @@
                     </div>
                 @endif
             @endif
+        </div>
+    </div>
+
+    {{-- Modal de categorías --}}
+    <div x-data="{ show: @entangle('showCategoryModal') }" x-show="show" x-cloak
+        x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+        <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+            class="relative w-full max-w-lg">
+            <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-gray-900">Seleccionar categoría</h3>
+                    <button type="button" wire:click="closeCategoryModal" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                        <span class="material-symbols-outlined text-xl">close</span>
+                    </button>
+                </div>
+                <div class="p-4 border-b border-gray-100">
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                        <input type="text" wire:model.live.debounce.300ms="categoryListSearch"
+                            placeholder="Filtrar categorías..."
+                            class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm text-sm">
+                    </div>
+                </div>
+                <div class="p-2 max-h-72 overflow-y-auto">
+                    @forelse($categoryList as $cat)
+                        <button type="button" wire:click="selectCategory({{ $cat->id }})"
+                            class="w-full text-left px-4 py-2.5 hover:bg-blue-50 rounded-lg transition text-sm flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="material-symbols-outlined text-gray-400 text-lg flex-shrink-0">category</span>
+                                <span class="text-gray-800 truncate">{{ $cat->name }}</span>
+                            </div>
+                            @if($cat->requires_device_registration)
+                                <span class="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                                    <span class="material-symbols-outlined text-xs">settings_ethernet</span>
+                                    Requiere MAC
+                                </span>
+                            @endif
+                        </button>
+                    @empty
+                        <div class="py-8 text-center text-gray-500 text-sm">No se encontraron categorías</div>
+                    @endforelse
+                </div>
+                <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+                    <button type="button" wire:click="closeCategoryModal" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal de marcas --}}
+    <div x-data="{ show: @entangle('showBrandModal') }" x-show="show" x-cloak
+        x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+        <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+            class="relative w-full max-w-lg">
+            <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-gray-900">Seleccionar marca</h3>
+                    <button type="button" wire:click="closeBrandModal" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                        <span class="material-symbols-outlined text-xl">close</span>
+                    </button>
+                </div>
+                <div class="p-4 border-b border-gray-100">
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                        <input type="text" wire:model.live.debounce.300ms="brandListSearch"
+                            placeholder="Filtrar marcas..."
+                            class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm text-sm">
+                    </div>
+                </div>
+                <div class="p-2 max-h-72 overflow-y-auto">
+                    @forelse($brandList as $b)
+                        <button type="button" wire:click="selectBrand({{ $b->id }})"
+                            class="w-full text-left px-4 py-2.5 hover:bg-blue-50 rounded-lg transition text-sm flex items-center gap-3">
+                            <span class="material-symbols-outlined text-gray-400 text-lg">brand_awareness</span>
+                            <span class="text-gray-800">{{ $b->name }}</span>
+                        </button>
+                    @empty
+                        <div class="py-8 text-center text-gray-500 text-sm">No se encontraron marcas</div>
+                    @endforelse
+                </div>
+                <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+                    <button type="button" wire:click="closeBrandModal" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cerrar</button>
+                </div>
+            </div>
         </div>
     </div>
 

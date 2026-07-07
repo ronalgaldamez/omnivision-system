@@ -14,7 +14,7 @@ class RequisitionIndex extends Component
     {
         $user = Auth::user();
         $openRequisitions = Requisition::where('technician_id', $user->id)
-            ->where('status', 'open')
+            ->whereIn('status', ['open', 'approved'])
             ->get();
 
         if ($openRequisitions->isEmpty()) {
@@ -76,8 +76,10 @@ class RequisitionIndex extends Component
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $hasPending = $requisitions->contains(fn($r) => $r->status === 'pending');
         return view('livewire.technicians.requisition-index', [
             'requisitions' => $requisitions,
+            'hasPending' => $hasPending,
         ])->layout('components.layouts.app');
     }
 }

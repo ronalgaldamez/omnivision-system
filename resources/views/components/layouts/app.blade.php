@@ -116,6 +116,12 @@
                                 @can('access_inventory')<a href="{{ route('inventory.distribution') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">fork_right</span> Repartición</a>@endcan
+                                @can('access_inventory')<a href="{{ route('devices.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">settings_ethernet</span> Dispositivos</a>@endcan
+                                @can('access_inventory')<a href="{{ route('bodega.requisitions.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">inventory</span> Bodega</a>@endcan
                             </div>
                         </div>
                     @endif

@@ -118,4 +118,9 @@ class Product extends Model
     {
         return $this->hasMany(BranchInventory::class);
     }
+
+    public function devices()
+    {
+        return $this->hasMany(Device::class);
+    }
 }

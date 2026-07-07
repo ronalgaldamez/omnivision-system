@@ -15,7 +15,7 @@ class ProductShow extends Component
 
     public function mount($id)
     {
-        $this->product = Product::with('branchInventories')->findOrFail($id);
+        $this->product = Product::with('branchInventories', 'brand', 'productModel', 'category', 'productModel.brand', 'productModel.category')->findOrFail($id);
         $this->currentProductId = $this->product->id;
         $this->loadPackagingsForProduct($this->product->id);
         $this->initPackagingState();

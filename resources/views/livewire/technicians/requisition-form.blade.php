@@ -69,30 +69,36 @@
 
                     <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="relative">
+                            <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Producto</label>
-                                <input type="text" wire:model.live.debounce.300ms="currentProductSearch"
-                                    placeholder="Buscar por nombre o SKU..."
-                                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span class="material-symbols-outlined absolute left-3 top-7 text-gray-400 text-lg">search</span>
-                                @if(count($productResults))
-                                    <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
-                                        @foreach($productResults as $product)
-                                            @php
-                                                $stockQty = $technicianStock[$product->id]['quantity'] ?? 0;
-                                            @endphp
-                                            <li wire:click="selectProduct({{ $product->id }})"
-                                                class="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm flex items-center justify-between gap-2">
-                                                <span>{{ $product->name }} ({{ $product->sku }})</span>
-                                                @if($stockQty > 0)
-                                                    <span class="text-xs text-amber-600 font-medium whitespace-nowrap">
-                                                        En inventario: {{ $stockQty }}
-                                                    </span>
-                                                @endif
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                @endif
+                                <div class="flex gap-2">
+                                    <div class="relative flex-1">
+                                        <input type="text" wire:model.live.debounce.300ms="currentProductSearch"
+                                            placeholder="Buscar por nombre o SKU..."
+                                            class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                        @if(count($productResults))
+                                            <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                                @foreach($productResults as $product)
+                                                    @php $stockQty = $technicianStock[$product->id]['quantity'] ?? 0; @endphp
+                                                    <li wire:click="selectProduct({{ $product->id }})"
+                                                        class="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm flex items-center justify-between gap-2">
+                                                        <span>{{ $product->name }} ({{ $product->sku }})</span>
+                                                        @if($stockQty > 0)
+                                                            <span class="text-xs text-amber-600 font-medium whitespace-nowrap">En inventario: {{ $stockQty }}</span>
+                                                        @endif
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        @endif
+                                    </div>
+                                    <button type="button" wire:click="openProductModal"
+                                        class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm whitespace-nowrap"
+                                        title="Ver todos los productos">
+                                        <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                                        <span class="hidden sm:inline">Ver todos</span>
+                                    </button>
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Cantidad</label>
@@ -505,6 +511,67 @@
             class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
             <span class="material-symbols-outlined">error</span>
             <span x-text="toastMessage" class="text-sm font-medium"></span>
+        </div>
+    </div>
+
+    {{-- Modal de productos --}}
+    <div x-data="{ show: @entangle('showProductModal') }" x-show="show" x-cloak
+        x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+        <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+            class="relative w-full max-w-2xl">
+            <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-blue-600">inventory_2</span>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-900">Seleccionar producto</h3>
+                            <p class="text-xs text-gray-500">Elegí un producto de la lista</p>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="closeProductModal" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                        <span class="material-symbols-outlined text-xl">close</span>
+                    </button>
+                </div>
+                <div class="p-4 border-b border-gray-100">
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                        <input type="text" wire:model.live.debounce.300ms="productListSearch"
+                            placeholder="Filtrar por nombre o SKU..."
+                            class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                    </div>
+                </div>
+                <div class="p-2 max-h-96 overflow-y-auto">
+                    @forelse($productList as $p)
+                        <button type="button" wire:click="selectProduct({{ $p->id }})"
+                            class="w-full text-left px-4 py-3 hover:bg-blue-50 rounded-xl transition flex items-center justify-between group border-b border-gray-50 last:border-0">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition">
+                                    <span class="material-symbols-outlined text-gray-500 text-lg group-hover:text-blue-600">inventory_2</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-gray-800 group-hover:text-blue-700 truncate">{{ $p->name }}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5 font-mono">{{ $p->sku }}</p>
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-gray-300 group-hover:text-blue-500 text-lg flex-shrink-0">chevron_right</span>
+                        </button>
+                    @empty
+                        <div class="py-12 text-center">
+                            <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">search_off</span>
+                            <p class="text-gray-500 text-sm">No se encontraron productos</p>
+                        </div>
+                    @endforelse
+                </div>
+                <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+                    <button type="button" wire:click="closeProductModal" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cerrar</button>
+                </div>
+            </div>
         </div>
     </div>
 

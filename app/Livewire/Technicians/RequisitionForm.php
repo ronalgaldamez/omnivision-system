@@ -19,6 +19,9 @@ class RequisitionForm extends Component
     public $currentProductId;
     public $currentProductSearch = '';
     public $currentQuantity = 1;
+    public $showProductModal = false;
+    public $productList = [];
+    public $productListSearch = '';
     public $items = [];
     public $notes = '';
     public $confirmingSave = false;
@@ -101,8 +104,15 @@ class RequisitionForm extends Component
     public function updatedCurrentProductSearch()
     {
         if (strlen($this->currentProductSearch) >= 2) {
-            $this->productResults = Product::where('name', 'like', '%' . $this->currentProductSearch . '%')
-                ->orWhere('sku', 'like', '%' . $this->currentProductSearch . '%')
+            $this->productResults = Product::with('category')
+                ->where(function ($q) {
+                    $q->where('name', 'like', '%' . $this->currentProductSearch . '%')
+                        ->orWhere('sku', 'like', '%' . $this->currentProductSearch . '%');
+                })
+                ->where(function ($q) {
+                    $q->whereDoesntHave('category', fn($q2) => $q2->where('requires_device_registration', true))
+                        ->orWhereHas('devices');
+                })
                 ->limit(10)
                 ->get();
         } else {
@@ -117,7 +127,44 @@ class RequisitionForm extends Component
             $this->currentProductId = $product->id;
             $this->currentProductSearch = $product->name . ' (' . $product->sku . ')';
             $this->productResults = [];
+            $this->showProductModal = false;
         }
+    }
+
+    public function openProductModal()
+    {
+        $this->productListSearch = '';
+        $this->productList = $this->availableProducts()->take(50)->get();
+        $this->showProductModal = true;
+    }
+
+    public function closeProductModal()
+    {
+        $this->showProductModal = false;
+        $this->productListSearch = '';
+        $this->productList = [];
+    }
+
+    public function updatedProductListSearch()
+    {
+        if (strlen($this->productListSearch) >= 2) {
+            $this->productList = $this->availableProducts()
+                ->where(function ($q) {
+                    $q->where('name', 'like', '%' . $this->productListSearch . '%')
+                        ->orWhere('sku', 'like', '%' . $this->productListSearch . '%');
+                })
+                ->orderBy('name')->take(50)->get();
+        } else {
+            $this->productList = $this->availableProducts()->take(50)->get();
+        }
+    }
+
+    private function availableProducts()
+    {
+        return Product::where(function ($q) {
+            $q->whereDoesntHave('category', fn($q2) => $q2->where('requires_device_registration', true))
+                ->orWhereHas('devices');
+        });
     }
 
     public function addItem()
@@ -213,7 +260,7 @@ class RequisitionForm extends Component
 
         $requisition = Requisition::create([
             'technician_id' => Auth::id(),
-            'status' => 'open',
+            'status' => 'pending',
             'week_start_date' => now()->startOfWeek(),
             'notes' => $this->notes,
         ]);
@@ -231,21 +278,7 @@ class RequisitionForm extends Component
                 'quantity_used' => 0,
             ]);
 
-            if (!$isInherited) {
-                if ($product->current_stock >= $item['quantity']) {
-                    $movement = \App\Models\Movement::create([
-                        'product_id' => $product->id,
-                        'type' => 'requisition_out',
-                        'quantity' => $item['quantity'],
-                        'description' => 'Requisición #' . $requisition->id,
-                        'user_id' => Auth::id(),
-                        'reference_type' => 'requisition',
-                        'reference_id' => $requisition->id,
-                    ]);
-
-                    app(InventoryService::class)->processExit($product, $item['quantity'], $movement);
-                }
-
+            if ($isInherited) {
                 $inv = TechnicianInventory::firstOrNew([
                     'technician_id' => Auth::id(),
                     'product_id' => $product->id,
@@ -255,7 +288,7 @@ class RequisitionForm extends Component
             }
         }
 
-        $this->dispatch('show-toast', type: 'success', message: 'Requisición creada correctamente.');
+        $this->dispatch('show-toast', type: 'success', message: 'Requisición enviada a bodega para aprobación.');
         return redirect()->route('technician.requisitions.index');
     }
 
@@ -263,7 +296,8 @@ class RequisitionForm extends Component
     {
         $workOrders = WorkOrder::where('technician_id', Auth::id())
             ->whereIn('status', ['pending', 'in_progress'])
-            ->whereDoesntHave('requisitions', fn($q) => $q->where('status', 'open'))
+            ->whereDoesntHave('requisitions', fn($q) => $q->whereIn('status', ['open', 'pending']))
+            ->whereDoesntHave('requisitions', fn($q) => $q->where('status', 'approved')->where('technician_id', Auth::id()))
             ->with('client')
             ->get();
 

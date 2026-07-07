@@ -389,6 +389,15 @@
                                     <span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
                                 </div>
                             </div>
+                            <div class="space-y-1 px-1">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" wire:model="categoryRequiresDevice" id="catRequiresDevice" class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-2 focus:ring-blue-500/20">
+                                    <label for="catRequiresDevice" class="text-sm text-gray-700 cursor-pointer select-none">Requiere registro de MAC para distribución</label>
+                                </div>
+                                <p class="text-xs text-gray-400 ml-6 leading-relaxed">
+                                    Marcá esta opción si los productos de esta categoría necesitan registrar direcciones MAC (routers, access points, ONT, etc.) antes de poder distribuirse a sucursales. Si no estás seguro, dejalo desmarcado.
+                                </p>
+                            </div>
                         @endif
                         <div class="flex justify-end gap-3 pt-2">
                             <button wire:click="$set('showModal', false)"

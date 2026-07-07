@@ -11,20 +11,35 @@ class Requisition extends Model
 {
     protected $fillable = [
         'technician_id',
+        'branch_id',
         'status',
         'week_start_date',
         'closed_at',
         'notes',
+        'approved_by',
+        'approved_at',
+        'rejection_reason',
     ];
 
     protected $casts = [
         'closed_at' => 'datetime',
+        'approved_at' => 'datetime',
         'week_start_date' => 'date',
     ];
 
     public function technician(): BelongsTo
     {
         return $this->belongsTo(User::class, 'technician_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function workOrders(): BelongsToMany

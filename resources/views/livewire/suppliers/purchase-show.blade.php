@@ -16,6 +16,11 @@
                     <span class="material-symbols-outlined text-base">arrow_back</span>
                     Volver al listado
                 </a>
+                <a href="{{ route('devices.register', ['purchase_id' => $purchase->id]) }}"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
+                    <span class="material-symbols-outlined text-base">settings_ethernet</span>
+                    Registrar dispositivos
+                </a>
                 <button onclick="window.print()"
                     class="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-gray-700 transition">
                     <span class="material-symbols-outlined text-base">print</span>
