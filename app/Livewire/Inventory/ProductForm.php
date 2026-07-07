@@ -61,8 +61,6 @@ class ProductForm extends Component
 
     protected $rules = [
         'currentName' => 'required|string|max:255',
-        'currentUnit' => 'required|string|max:50',
-        'currentMeasureValue' => 'nullable|numeric|min:0',
         'currentStockMin' => 'required|integer|min:0',
         'currentStockMax' => 'nullable|integer|min:0',
         'currentDescription' => 'nullable|string',
@@ -74,7 +72,7 @@ class ProductForm extends Component
     protected function persistableProperties(): array
     {
         return [
-            'currentName', 'currentUnit', 'currentMeasureValue',
+            'currentName',
             'currentStockMin', 'currentStockMax', 'currentDescription',
             'currentBrandId', 'currentModelId', 'currentCategoryId',
             'selectedModelDisplay', 'productList',
@@ -83,6 +81,9 @@ class ProductForm extends Component
 
     protected function detectUnsavedChanges(): bool
     {
+        if ($this->editingId) {
+            return false;
+        }
         return ! empty($this->productList) || $this->currentName !== '';
     }
 
@@ -99,10 +100,8 @@ class ProductForm extends Component
             $this->editingId = $id;
             $product = Product::findOrFail($id);
             $this->currentName = $product->name;
-            $this->currentUnit = $product->unit_of_measure;
-            $this->currentMeasureValue = $product->measure_value;
-            $this->currentStockMin = $product->stock_min;
-            $this->currentStockMax = $product->stock_max;
+            $this->currentStockMin = intval($product->stock_min ?? 0);
+            $this->currentStockMax = intval($product->stock_max ?? 0);
             $this->currentDescription = $product->description;
             $this->currentBrandId = $product->brand_id;
             $this->currentModelId = $product->model_id;
@@ -128,8 +127,6 @@ class ProductForm extends Component
     public function resetCurrent()
     {
         $this->currentName = '';
-        $this->currentUnit = 'unidad';
-        $this->currentMeasureValue = null;
         $this->currentStockMin = 0;
         $this->currentStockMax = null;
         $this->currentDescription = '';

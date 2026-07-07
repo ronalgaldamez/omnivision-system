@@ -1,0 +1,29 @@
+{
+  "plugins": [
+    "@shufo/prettier-plugin-blade"
+  ],
+  "overrides": [
+    {
+      "files": ["*.blade.php"],
+      "options": {
+        "parser": "blade",
+        "tabWidth": 4,
+        "useTabs": false,
+        "printWidth": 120,
+        "singleQuote": true,
+        "trailingComma": "es5",
+        "bladeBracketPosition": "sameLine",
+        "indentInnerHtml": true,
+        "sortHtmlAttributes": "none",
+        "wrapAttributes": "auto"
+      }
+    },
+    {
+      "files": ["*.js", "*.css"],
+      "options": {
+        "tabWidth": 2,
+        "singleQuote": true
+      }
+    }
+  ]
+}

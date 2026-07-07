@@ -91,7 +91,7 @@ trait ManagesProductPackaging
             if ($pkg && $pkg->product_id == $this->currentProductId) {
                 $this->editingPackagingId = $pkg->id;
                 $this->newPackagingTypeId = $pkg->packaging_type_id;
-                $this->newPackagingQuantity = $pkg->quantity_in_base_unit;
+                $this->newPackagingQuantity = (float) $pkg->quantity_in_base_unit;
             }
         } else {
             $this->editingPackagingId = null;

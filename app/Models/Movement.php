@@ -9,6 +9,10 @@ class Movement extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'quantity' => 'integer',
+    ];
+
     protected $fillable = [
         'product_id',
         'type',
