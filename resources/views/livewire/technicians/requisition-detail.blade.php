@@ -9,9 +9,11 @@
                 </h1>
                 <p class="text-sm text-gray-500">
                     {{ $requisition->created_at->format('d/m/Y') }} — Estado:
-                    <span class="font-medium @switch($requisition->status) @case('open') text-green-600 @break @case('heredada') text-yellow-600 @break @default text-gray-600 @endswitch">
-                        @switch($requisition->status) @case('open') Abierta @break @case('heredada') Heredada @break @default Cerrada @endswitch
-                    </span>
+                    @php
+                        $statusMap = ['open' => ['Abierta', 'text-green-600'], 'heredada' => ['Heredada', 'text-yellow-600'], 'closed' => ['Cerrada', 'text-gray-600'], 'pending' => ['Pendiente', 'text-amber-600'], 'approved' => ['Aprobada', 'text-blue-600'], 'rejected' => ['Rechazada', 'text-red-600']];
+                        $s = $statusMap[$requisition->status] ?? [$requisition->status, 'text-gray-600'];
+                    @endphp
+                    <span class="font-medium {{ $s[1] }}">{{ $s[0] }}</span>
                     @if($requisition->technician)
                         — Técnico: {{ $requisition->technician->name }}
                     @endif

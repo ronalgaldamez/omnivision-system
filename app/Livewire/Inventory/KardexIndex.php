@@ -16,6 +16,9 @@ class KardexIndex extends Component
 
     public $productSearch = '';
     public $productResults = [];
+    public $showProductModal = false;
+    public $productList = [];
+    public $productListSearch = '';
 
     protected $queryString = ['product_id', 'type', 'date_from', 'date_to'];
 
@@ -45,6 +48,40 @@ class KardexIndex extends Component
         $this->productResults = [];
     }
 
+    public function openProductModal()
+    {
+        $this->productListSearch = '';
+        $this->productList = Product::orderBy('name')->take(50)->get();
+        $this->showProductModal = true;
+    }
+
+    public function closeProductModal()
+    {
+        $this->showProductModal = false;
+        $this->productListSearch = '';
+        $this->productList = [];
+    }
+
+    public function updatedProductListSearch()
+    {
+        if (strlen($this->productListSearch) >= 2) {
+            $this->productList = Product::where('name', 'like', '%' . $this->productListSearch . '%')
+                ->orWhere('sku', 'like', '%' . $this->productListSearch . '%')
+                ->orderBy('name')->take(50)->get();
+        } else {
+            $this->productList = Product::orderBy('name')->take(50)->get();
+        }
+    }
+
+    public function selectProductFromList($id)
+    {
+        $product = Product::find($id);
+        if ($product) {
+            $this->selectProduct($product->id, $product->name . ' (' . $product->sku . ')');
+            $this->closeProductModal();
+        }
+    }
+
     public function render()
     {
         $activeBranchId = auth()->user()->activeBranchId();
@@ -68,8 +105,9 @@ class KardexIndex extends Component
             $item = clone $mov;
             $item->line_number = $index + 1;
 
-            $isEntry = in_array($mov->type, ['entry', 'technician_return', 'branch_allocation']);
+            $isEntry = in_array($mov->type, ['entry', 'technician_return']);
             $isExit = in_array($mov->type, ['exit', 'technician_out', 'damage', 'return_to_supplier', 'requisition_out']);
+            $isAllocation = $mov->type === 'branch_allocation';
 
             if ($isEntry) {
                 $entryCost = $mov->unit_cost ?: 0;
@@ -87,6 +125,38 @@ class KardexIndex extends Component
                 $balanceQty = $newTotalQty;
                 $balanceValue = $newTotalValue;
                 $balanceAvgCost = $newAvgCost;
+            } elseif ($isAllocation) {
+                if ($activeBranchId) {
+                    $entryCost = $mov->unit_cost ?: 0;
+                    $newTotalQty = $balanceQty + $mov->quantity;
+                    $newTotalValue = $balanceValue + ($entryCost * $mov->quantity);
+                    $newAvgCost = ($newTotalQty > 0) ? $newTotalValue / $newTotalQty : 0;
+
+                    $item->entry_qty = $mov->quantity;
+                    $item->entry_cost = $entryCost;
+                    $item->entry_total = $entryCost * $mov->quantity;
+                    $item->exit_qty = null;
+                    $item->exit_cost = null;
+                    $item->exit_total = null;
+
+                    $balanceQty = $newTotalQty;
+                    $balanceValue = $newTotalValue;
+                    $balanceAvgCost = $newAvgCost;
+                } else {
+                    $exitCost = $balanceAvgCost;
+                    $exitTotal = $exitCost * $mov->quantity;
+
+                    $item->entry_qty = null;
+                    $item->entry_cost = null;
+                    $item->entry_total = null;
+                    $item->exit_qty = $mov->quantity;
+                    $item->exit_cost = $exitCost;
+                    $item->exit_total = $exitTotal;
+
+                    $balanceQty -= $mov->quantity;
+                    $balanceValue -= $exitTotal;
+                    $balanceAvgCost = ($balanceQty > 0) ? $balanceValue / $balanceQty : 0;
+                }
             } elseif ($isExit) {
                 $exitCost = $balanceAvgCost;
                 $exitTotal = $exitCost * $mov->quantity;

@@ -9,10 +9,10 @@
                 <p class="text-sm text-gray-500 mt-1">Material solicitado para tus órdenes de trabajo</p>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{{ route('technician.requisitions.create') }}"
-                   class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
+                <a href="{{ $hasPending ? '#' : route('technician.requisitions.create') }}"
+                   class="inline-flex items-center gap-2 px-4 py-2 {{ $hasPending ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700' }} text-white text-sm font-medium rounded-lg shadow-sm transition">
                     <span class="material-symbols-outlined text-base">add_circle</span>
-                    Nueva Requisición
+                    {{ $hasPending ? 'Pendiente de aprobación' : 'Nueva Requisición' }}
                 </a>
                 <button wire:click="closeWeek"
                         class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
@@ -36,13 +36,11 @@
                                 <div>
                                     <span class="font-mono text-sm font-semibold text-gray-700">#{{ $req->id }}</span>
                                     <span class="text-xs text-gray-500 ml-2">{{ $req->created_at->format('d/m/Y') }}</span>
-                                    @if($req->status === 'closed')
-                                        <span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">Cerrada</span>
-                                    @elseif($req->status === 'heredada')
-                                        <span class="ml-2 px-2 py-0.5 bg-yellow-50 text-yellow-700 rounded-full text-xs">Heredada</span>
-                                    @else
-                                        <span class="ml-2 px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs">Abierta</span>
-                                    @endif
+                                    @php
+                                        $statusMap = ['closed' => ['Cerrada', 'bg-gray-100 text-gray-600'], 'heredada' => ['Heredada', 'bg-yellow-50 text-yellow-700'], 'open' => ['Abierta', 'bg-green-50 text-green-700'], 'pending' => ['Pendiente', 'bg-amber-50 text-amber-700'], 'approved' => ['Aprobada', 'bg-blue-50 text-blue-700'], 'rejected' => ['Rechazada', 'bg-red-50 text-red-700']];
+                                        $s = $statusMap[$req->status] ?? [$req->status, 'bg-gray-50 text-gray-600'];
+                                    @endphp
+                                    <span class="ml-2 px-2 py-0.5 rounded-full text-xs {{ $s[1] }}">{{ $s[0] }}</span>
                                 </div>
                                 <a href="{{ route('technician.requisitions.show', $req->id) }}"
                                    class="text-blue-600 hover:text-blue-800 text-sm font-medium">

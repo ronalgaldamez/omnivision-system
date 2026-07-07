@@ -9,7 +9,11 @@ class Category extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description'];
+    protected $fillable = ['name', 'description', 'requires_device_registration'];
+
+    protected $casts = [
+        'requires_device_registration' => 'boolean',
+    ];
 
     public function products()
     {

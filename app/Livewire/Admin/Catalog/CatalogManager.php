@@ -30,6 +30,7 @@ class CatalogManager extends Component
     // Campos para categoría
     public $categoryName = '';
     public $categoryDescription = '';
+    public $categoryRequiresDevice = false;
 
     // Búsquedas
     public $searchModels = '';
@@ -195,9 +196,11 @@ class CatalogManager extends Component
             $cat = Category::findOrFail($id);
             $this->categoryName = $cat->name;
             $this->categoryDescription = $cat->description;
+            $this->categoryRequiresDevice = $cat->requires_device_registration;
         } else {
             $this->categoryName = '';
             $this->categoryDescription = '';
+            $this->categoryRequiresDevice = false;
         }
         $this->showModal = true;
     }
@@ -221,10 +224,11 @@ class CatalogManager extends Component
         Category::updateOrCreate(['id' => $this->editingId], [
             'name' => $this->categoryName,
             'description' => $this->categoryDescription,
+            'requires_device_registration' => $this->categoryRequiresDevice,
         ]);
         $this->showModal = false;
         $this->dispatch('showToast', ['type' => 'success', 'message' => 'Categoría guardada correctamente.']);
-        $this->reset(['categoryName', 'categoryDescription', 'editingId']);
+        $this->reset(['categoryName', 'categoryDescription', 'categoryRequiresDevice', 'editingId']);
         $this->showConfirmModal = false;
     }
 

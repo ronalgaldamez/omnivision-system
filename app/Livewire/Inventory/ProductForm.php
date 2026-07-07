@@ -47,6 +47,28 @@ class ProductForm extends Component
 
     public $selectedModelDisplay = '';
 
+    // Búsqueda de categoría
+    public $categorySearch = '';
+
+    public $categoryResults = [];
+
+    public $showCategoryModal = false;
+
+    public $categoryList = [];
+
+    public $categoryListSearch = '';
+
+    // Búsqueda de marca
+    public $brandSearch = '';
+
+    public $brandResults = [];
+
+    public $showBrandModal = false;
+
+    public $brandList = [];
+
+    public $brandListSearch = '';
+
     // Modal de confirmación de acciones (editar/eliminar)
     public $showConfirmModal = false;
 
@@ -76,6 +98,7 @@ class ProductForm extends Component
             'currentStockMin', 'currentStockMax', 'currentDescription',
             'currentBrandId', 'currentModelId', 'currentCategoryId',
             'selectedModelDisplay', 'productList',
+            'categorySearch', 'brandSearch',
         ];
     }
 
@@ -180,6 +203,114 @@ class ProductForm extends Component
         $this->currentCategoryId = '';
         $this->selectedModelDisplay = '';
         $this->persistState();
+    }
+
+    // ==================== CATEGORÍA ====================
+    public function updatedCategorySearch()
+    {
+        if (strlen($this->categorySearch) >= 2) {
+            $this->categoryResults = \App\Models\Category::where('name', 'like', '%'.$this->categorySearch.'%')
+                ->orderBy('name')->limit(10)->get();
+        } else {
+            $this->categoryResults = [];
+        }
+    }
+
+    public function selectCategory($id)
+    {
+        $cat = \App\Models\Category::find($id);
+        if ($cat) {
+            $this->currentCategoryId = $cat->id;
+            $this->categorySearch = $cat->name;
+            $this->categoryResults = [];
+            $this->showCategoryModal = false;
+            $this->persistState();
+        }
+    }
+
+    public function clearCategory()
+    {
+        $this->currentCategoryId = '';
+        $this->categorySearch = '';
+        $this->categoryResults = [];
+    }
+
+    public function openCategoryModal()
+    {
+        $this->categoryListSearch = '';
+        $this->categoryList = \App\Models\Category::orderBy('name')->take(50)->get();
+        $this->showCategoryModal = true;
+    }
+
+    public function closeCategoryModal()
+    {
+        $this->showCategoryModal = false;
+        $this->categoryListSearch = '';
+        $this->categoryList = [];
+    }
+
+    public function updatedCategoryListSearch()
+    {
+        if (strlen($this->categoryListSearch) >= 2) {
+            $this->categoryList = \App\Models\Category::where('name', 'like', '%'.$this->categoryListSearch.'%')
+                ->orderBy('name')->take(50)->get();
+        } else {
+            $this->categoryList = \App\Models\Category::orderBy('name')->take(50)->get();
+        }
+    }
+
+    // ==================== MARCA ====================
+    public function updatedBrandSearch()
+    {
+        if (strlen($this->brandSearch) >= 2) {
+            $this->brandResults = \App\Models\Brand::where('name', 'like', '%'.$this->brandSearch.'%')
+                ->orderBy('name')->limit(10)->get();
+        } else {
+            $this->brandResults = [];
+        }
+    }
+
+    public function selectBrand($id)
+    {
+        $brand = \App\Models\Brand::find($id);
+        if ($brand) {
+            $this->currentBrandId = $brand->id;
+            $this->brandSearch = $brand->name;
+            $this->brandResults = [];
+            $this->showBrandModal = false;
+            $this->persistState();
+        }
+    }
+
+    public function clearBrand()
+    {
+        $this->currentBrandId = '';
+        $this->brandSearch = '';
+        $this->brandResults = [];
+    }
+
+    public function openBrandModal()
+    {
+        $this->brandListSearch = '';
+        $this->brandList = \App\Models\Brand::orderBy('name')->take(50)->get();
+        $this->showBrandModal = true;
+    }
+
+    public function closeBrandModal()
+    {
+        $this->showBrandModal = false;
+        $this->brandListSearch = '';
+        $this->brandList = [];
+    }
+
+    public function updatedBrandListSearch()
+    {
+        if (strlen($this->brandListSearch) >= 2) {
+            $this->brandList = \App\Models\Brand::where('name', 'like', '%'.$this->brandListSearch.'%')
+                ->orderBy('name')->take(50)->get();
+        } else {
+            $this->brandList = \App\Models\Brand::orderBy('name')->take(50)->get();
+        }
     }
 
     public function addToList()

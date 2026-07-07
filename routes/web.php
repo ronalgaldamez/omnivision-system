@@ -125,6 +125,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/noc', \App\Livewire\Noc\NocInbox::class)->name('noc.panel');
     });
 
+    // ========== BODEGA ==========
+    Route::prefix('bodega')->middleware(['auth'])->group(function () {
+        Route::get('/requisitions', \App\Livewire\Bodega\RequisitionBodegaIndex::class)->name('bodega.requisitions.index');
+    });
+
     // ========== TECHNICIAN RETURNS ==========
     if (module_active('technician_returns') && module_active('technicians')) {
         Route::prefix('technician-returns')->middleware('can:view technician_returns')->group(function () {
@@ -165,6 +170,13 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('can:view clients')->group(function () {
             Route::get('/{id}', \App\Livewire\Admin\Clients\ClientShow::class)->name('admin.clients.show');
         });
+    });
+
+    // ========== DEVICES ==========
+    Route::prefix('devices')->middleware('can:access_inventory')->group(function () {
+        Route::get('/', \App\Livewire\Inventory\Devices\DeviceIndex::class)->name('devices.index');
+        Route::get('/register', \App\Livewire\Inventory\Devices\DeviceRegister::class)->name('devices.register');
+        Route::get('/{id}/show', \App\Livewire\Inventory\Devices\DeviceShow::class)->name('devices.show');
     });
 
     // ========== ADMIN ==========

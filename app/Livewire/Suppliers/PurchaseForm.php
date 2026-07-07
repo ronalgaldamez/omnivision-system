@@ -48,12 +48,30 @@ class PurchaseForm extends Component
 
     public $currentProductId = '';
 
+    public $showProductListModal = false;
+
+    public $productList = [];
+
+    public $productListSearch = '';
+
     public $packagingTypes = [];
 
     // Crear producto inline
     public $createMode = false;
 
     public $newProductName = '';
+
+    public $newProductCategoryId = '';
+
+    public $newProductCategorySearch = '';
+
+    public $newProductCategoryResults = [];
+
+    public $newProductShowCategoryModal = false;
+
+    public $newProductCategoryList = [];
+
+    public $newProductCategoryListSearch = '';
 
     public $currentQuantity = 1;
 
@@ -124,6 +142,7 @@ class PurchaseForm extends Component
             $this->editingIndex = $draft['editingIndex'] ?? null;
             $this->createMode = $draft['createMode'] ?? false;
             $this->newProductName = $draft['newProductName'] ?? '';
+            $this->newProductCategoryId = $draft['newProductCategoryId'] ?? '';
             $this->stockMin = $draft['stockMin'] ?? null;
             $this->stockMax = $draft['stockMax'] ?? null;
             $this->draftRestored = true;
@@ -154,7 +173,7 @@ class PurchaseForm extends Component
 
     public function updated($property)
     {
-        if (in_array($property, ['showConfirmModal', 'showShelfModal', 'showProductModal', 'draftRestored'])) {
+        if (in_array($property, ['showConfirmModal', 'showShelfModal', 'showProductModal', 'draftRestored', 'newProductShowCategoryModal', 'newProductCategoryResults', 'newProductCategoryList', 'showProductListModal', 'productList', 'productListSearch'])) {
             return;
         }
 
@@ -185,6 +204,7 @@ class PurchaseForm extends Component
             'editingIndex' => $this->editingIndex,
             'createMode' => $this->createMode,
             'newProductName' => $this->newProductName,
+            'newProductCategoryId' => $this->newProductCategoryId,
             'stockMin' => $this->stockMin,
             'stockMax' => $this->stockMax,
         ]);
@@ -328,6 +348,37 @@ class PurchaseForm extends Component
         $this->editingIndex = null;
     }
 
+    public function openProductListModal()
+    {
+        $this->productListSearch = '';
+        $this->productList = \App\Models\Product::orderBy('name')->take(50)->get();
+        $this->showProductListModal = true;
+    }
+
+    public function closeProductListModal()
+    {
+        $this->showProductListModal = false;
+        $this->productListSearch = '';
+        $this->productList = [];
+    }
+
+    public function updatedProductListSearch()
+    {
+        if (strlen($this->productListSearch) >= 2) {
+            $this->productList = \App\Models\Product::where('name', 'like', '%' . $this->productListSearch . '%')
+                ->orWhere('sku', 'like', '%' . $this->productListSearch . '%')
+                ->orderBy('name')->take(50)->get();
+        } else {
+            $this->productList = \App\Models\Product::orderBy('name')->take(50)->get();
+        }
+    }
+
+    public function selectProductFromList($id)
+    {
+        $this->selectProduct($id);
+        $this->closeProductListModal();
+    }
+
     public function editItem($index)
     {
         $item = $this->items[$index];
@@ -434,6 +485,7 @@ class PurchaseForm extends Component
     {
         $this->createMode = false;
         $this->newProductName = '';
+        $this->newProductCategoryId = '';
         $this->productSearchResults = [];
     }
 
@@ -449,6 +501,7 @@ class PurchaseForm extends Component
         $this->supplierResults = [];
         $this->createMode = false;
         $this->newProductName = '';
+        $this->newProductCategoryId = '';
         $this->resetCurrentProduct();
         $this->editingIndex = null;
         session()->forget('purchase_form_draft');
@@ -458,10 +511,14 @@ class PurchaseForm extends Component
 
     public function createProduct()
     {
-        $this->validate(['newProductName' => 'required|string|max:255']);
+        $this->validate([
+            'newProductName' => 'required|string|max:255',
+            'newProductCategoryId' => 'required|exists:categories,id',
+        ]);
 
         $product = Product::create([
             'name' => $this->newProductName,
+            'category_id' => $this->newProductCategoryId,
             'sku' => 'PROD-'.str_pad(Product::max('id') + 1, 5, '0', STR_PAD_LEFT),
             'current_stock' => 0,
             'stock_min' => 0,
@@ -472,8 +529,61 @@ class PurchaseForm extends Component
         $this->productSearchResults = [];
         $this->createMode = false;
         $this->newProductName = '';
+        $this->newProductCategoryId = '';
         $this->saveDraft();
         $this->dispatch('show-toast', type: 'success', message: 'Producto creado exitosamente.');
+    }
+
+    public function updatedNewProductCategorySearch()
+    {
+        if (strlen($this->newProductCategorySearch) >= 2) {
+            $this->newProductCategoryResults = \App\Models\Category::where('name', 'like', '%' . $this->newProductCategorySearch . '%')
+                ->orderBy('name')->limit(10)->get();
+        } else {
+            $this->newProductCategoryResults = [];
+        }
+    }
+
+    public function selectNewProductCategory($id)
+    {
+        $cat = \App\Models\Category::find($id);
+        if ($cat) {
+            $this->newProductCategoryId = $cat->id;
+            $this->newProductCategorySearch = $cat->name;
+            $this->newProductCategoryResults = [];
+            $this->newProductShowCategoryModal = false;
+        }
+    }
+
+    public function clearNewProductCategory()
+    {
+        $this->newProductCategoryId = '';
+        $this->newProductCategorySearch = '';
+        $this->newProductCategoryResults = [];
+    }
+
+    public function openNewProductCategoryModal()
+    {
+        $this->newProductCategoryListSearch = '';
+        $this->newProductCategoryList = \App\Models\Category::orderBy('name')->take(50)->get();
+        $this->newProductShowCategoryModal = true;
+    }
+
+    public function closeNewProductCategoryModal()
+    {
+        $this->newProductShowCategoryModal = false;
+        $this->newProductCategoryListSearch = '';
+        $this->newProductCategoryList = [];
+    }
+
+    public function updatedNewProductCategoryListSearch()
+    {
+        if (strlen($this->newProductCategoryListSearch) >= 2) {
+            $this->newProductCategoryList = \App\Models\Category::where('name', 'like', '%' . $this->newProductCategoryListSearch . '%')
+                ->orderBy('name')->take(50)->get();
+        } else {
+            $this->newProductCategoryList = \App\Models\Category::orderBy('name')->take(50)->get();
+        }
     }
 
     // Totales e IVA

@@ -14,11 +14,18 @@
                 </h1>
                 <p class="text-sm text-gray-500 mt-1">Información completa del artículo</p>
             </div>
-            <a href="{{ route('products.index') }}"
-                class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition">
-                <span class="material-symbols-outlined text-base">arrow_back</span>
-                Volver al listado
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('products.edit', $product->id) }}"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
+                    <span class="material-symbols-outlined text-base">edit</span>
+                    Editar
+                </a>
+                <a href="{{ route('products.index') }}"
+                    class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition">
+                    <span class="material-symbols-outlined text-base">arrow_back</span>
+                    Volver
+                </a>
+            </div>
         </div>
 
         <!-- Contenido -->
@@ -32,6 +39,7 @@
 
             <!-- Detalles del producto -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <!-- SKU -->
                 <!-- SKU -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">qr_code</span>
@@ -64,6 +72,29 @@
                         </p>
                     </div>
                 </div>
+                <!-- Categoría / Marca / Modelo -->
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">category</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Categoría</p>
+                        <p class="text-gray-700">{{ $product->category?->name ?? $product->productModel?->category?->name ?? '—' }}</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">brand_awareness</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Marca</p>
+                        <p class="text-gray-700">{{ $product->brand?->name ?? $product->productModel?->brand?->name ?? '—' }}</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">badge</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Modelo</p>
+                        <p class="text-gray-700">{{ $product->productModel?->name ?? '—' }}</p>
+                    </div>
+                </div>
+                <!-- Stock -->
                 @if($activeBranch)
                 <div class="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-200">
                     <span class="material-symbols-outlined text-blue-500">store</span>
@@ -80,28 +111,33 @@
                     <span class="material-symbols-outlined text-gray-400">inventory</span>
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Stock actual</p>
-                        <p
-                            class="{{ $product->current_stock <= $product->stock_min ? 'text-red-600 font-bold' : 'text-gray-700' }} text-lg">
+                        <p class="{{ $product->current_stock <= $product->stock_min ? 'text-red-600 font-bold' : 'text-gray-700' }} text-lg">
                             {{ intval($product->current_stock) }}
                             <span class="text-gray-400 text-sm font-normal">{{ $product->unit_of_measure }}</span>
                         </p>
                     </div>
                 </div>
                 @endif
-                <!-- Stock mínimo -->
+                <!-- Stock mínimo / máximo / costo -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">arrow_downward</span>
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Stock mínimo</p>
-                                <p class="text-gray-700">{{ intval($product->stock_min) }}</p>
-                            </div>
-                        </div>
-                        <!-- Stock máximo -->
-                        <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
-                            <span class="material-symbols-outlined text-gray-400">arrow_upward</span>
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase tracking-wide">Stock máximo</p>
-                                <p class="text-gray-700">{{ $product->stock_max ? intval($product->stock_max) : '—' }}</p>
+                        <p class="text-gray-700">{{ intval($product->stock_min) }}</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">arrow_upward</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Stock máximo</p>
+                        <p class="text-gray-700">{{ $product->stock_max ? intval($product->stock_max) : '—' }}</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">attach_money</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Costo promedio</p>
+                        <p class="text-gray-700 font-mono">${{ number_format($product->average_cost ?? 0, 2) }}</p>
                     </div>
                 </div>
                 <!-- Descripción -->
@@ -113,6 +149,23 @@
                     </div>
                 </div>
             </div>
+            
+            {{-- Dispositivos vinculados --}}
+            @php $deviceCount = \App\Models\Device::where('product_id', $product->id)->count(); @endphp
+            @if($deviceCount > 0)
+            <div class="border-t border-gray-200 pt-6">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-4">
+                        <span class="material-symbols-outlined text-gray-500">settings_ethernet</span>
+                        Dispositivos
+                    </h2>
+                    <a href="{{ route('devices.index', ['productFilter' => $product->id]) }}" class="text-sm text-blue-600 hover:text-blue-800 transition flex items-center gap-1">
+                        Ver todos ({{ $deviceCount }})
+                        <span class="material-symbols-outlined text-base">chevron_right</span>
+                    </a>
+                </div>
+            </div>
+            @endif
 
             {{-- Empaques --}}
             <div class="border-t border-gray-200 pt-6">
