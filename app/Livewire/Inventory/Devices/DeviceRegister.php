@@ -63,11 +63,17 @@ class DeviceRegister extends Component
 
     protected function rules()
     {
-        return [
+        $rules = [
             'product_id' => 'required|exists:products,id',
             'rows.*.mac_address' => 'required|string|max:50',
             'rows.*.pon_sn' => 'nullable|string|max:50',
         ];
+
+        if (\App\Models\Setting::get('invoice_required_for_devices', 'false') === 'true') {
+            $rules['purchase_id'] = 'required|exists:purchases,id';
+        }
+
+        return $rules;
     }
 
     public function updatedProductSearch()
@@ -158,8 +164,7 @@ class DeviceRegister extends Component
             ->get();
 
         if ($existing->isNotEmpty()) {
-            $total = $existing->sum('count');
-            $this->purchaseDeviceWarning = "{$total} dispositivo(s) ya registrado(s) con esta factura.";
+            $this->purchaseDeviceWarning = 'Esta factura ya tiene dispositivos registrados de otros productos. Podés seguir registrando para productos distintos.';
         } else {
             $this->purchaseDeviceWarning = '';
         }
@@ -312,10 +317,12 @@ class DeviceRegister extends Component
             return;
         }
 
-        if ($this->purchase_id) {
-            $existingInPurchase = Device::where('purchase_id', $this->purchase_id)->count();
-            if ($existingInPurchase > 0) {
-                $this->dispatch('show-toast', type: 'error', message: "La factura seleccionada ya tiene {$existingInPurchase} dispositivo(s) registrado(s). Usá otra factura o limpia la selección.");
+        if ($this->purchase_id && $this->product_id) {
+            $existingForProduct = Device::where('purchase_id', $this->purchase_id)
+                ->where('product_id', $this->product_id)
+                ->count();
+            if ($existingForProduct > 0) {
+                $this->dispatch('show-toast', type: 'error', message: "La factura seleccionada ya tiene {$existingForProduct} dispositivo(s) registrado(s) para este producto. Usá otra factura o limpia la selección.");
                 return;
             }
         }

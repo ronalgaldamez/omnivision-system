@@ -42,30 +42,60 @@
         <div class="p-6 space-y-6">
             {{-- Pestaña 1: Ajustes Generales --}}
             <div x-show="activeTab === 'general'" x-cloak>
-                <!-- Switch para OT obligatoria -->
-                <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4 mb-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Órdenes de Trabajo obligatorias</label>
-                        <p class="text-xs text-gray-500 mt-0.5">Si está activo, los técnicos no podrán crear requisiciones sin una OT asignada.</p>
+                {{-- Módulo: Técnicos / Requisiciones --}}
+                <div class="mb-6">
+                    <div class="flex items-center gap-2 px-1 mb-3">
+                        <span class="material-symbols-outlined text-gray-500 text-lg">handyman</span>
+                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Técnicos / Requisiciones</h3>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                        <input type="checkbox" wire:model.live="otRequired" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
+                    <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Órdenes de Trabajo obligatorias</label>
+                            <p class="text-xs text-gray-500 mt-0.5">Si está activo, los técnicos no podrán crear requisiciones sin una OT asignada.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                            <input type="checkbox" wire:model.live="otRequired" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
                 </div>
 
-                <!-- Intervalo de polling NOC -->
-                <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-gray-400 text-base">timer</span>
-                        Intervalo de polling NOC (segundos)
-                    </label>
-                    <p class="text-xs text-gray-500 mb-3">Cada cuántos segundos se actualiza el contador de notificaciones del panel NOC (mín. 5, máx. 300).</p>
-                    <div class="relative w-32">
-                        <input type="number" wire:model.live="nocPollingInterval"
-                            class="w-full pl-3 pr-8 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                            min="5" max="300" step="5">
-                        <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-base">schedule</span>
+                {{-- Módulo: Dispositivos / MAC --}}
+                <div class="mb-6">
+                    <div class="flex items-center gap-2 px-1 mb-3">
+                        <span class="material-symbols-outlined text-gray-500 text-lg">settings_ethernet</span>
+                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Dispositivos / MAC</h3>
+                    </div>
+                    <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Factura obligatoria para registro de dispositivos</label>
+                            <p class="text-xs text-gray-500 mt-0.5">Si está activo, al registrar dispositivos en /devices/register será obligatorio seleccionar una factura de compra asociada.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                            <input type="checkbox" wire:model.live="invoiceRequiredForDevices" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                {{-- Módulo: NOC --}}
+                <div class="mb-6">
+                    <div class="flex items-center gap-2 px-1 mb-3">
+                        <span class="material-symbols-outlined text-gray-500 text-lg">settings_overscan</span>
+                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">NOC</h3>
+                    </div>
+                    <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-gray-400 text-base">timer</span>
+                            Intervalo de polling (segundos)
+                        </label>
+                        <p class="text-xs text-gray-500 mb-3">Cada cuántos segundos se actualiza el contador de notificaciones del panel NOC (mín. 5, máx. 300).</p>
+                        <div class="relative w-32">
+                            <input type="number" wire:model.live="nocPollingInterval"
+                                class="w-full pl-3 pr-8 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                                min="5" max="300" step="5">
+                            <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-base">schedule</span>
+                        </div>
                     </div>
                 </div>
             </div>

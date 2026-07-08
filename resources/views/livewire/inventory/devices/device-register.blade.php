@@ -59,7 +59,8 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Compra asociada <span class="text-gray-400 text-xs">(opcional)</span></label>
+                    @php $invoiceRequired = \App\Models\Setting::get('invoice_required_for_devices', 'false') === 'true'; @endphp
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Compra asociada @if(!$invoiceRequired)<span class="text-gray-400 text-xs">(opcional)</span>@else<span class="text-red-500">*</span>@endif</label>
                     @if($purchase_id && $selPurchase = \App\Models\Purchase::with('supplier')->find($purchase_id))
                     <div class="flex items-start gap-3 p-3.5 bg-green-50 border border-green-200 rounded-lg">
                         <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">

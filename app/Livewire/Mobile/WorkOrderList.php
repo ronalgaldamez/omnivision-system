@@ -110,7 +110,7 @@ class WorkOrderList extends Component
 
         // Vincular automáticamente a la requisición abierta del técnico (si existe)
         $openRequisition = \App\Models\Requisition::where('technician_id', Auth::id())
-            ->where('status', 'open')
+            ->whereIn('status', ['open', 'pending', 'approved'])
             ->first();
         if ($openRequisition) {
             $openRequisition->workOrders()->attach($workOrder->id);

@@ -18,9 +18,17 @@ class RequisitionBodegaIndex extends Component
 {
     public $selectedRequisition = null;
     public $branchAssignments = [];
+    public $removedItems = [];
     public $showApproveModal = false;
     public $showRejectModal = false;
     public $rejectionReason = '';
+
+    public $changingItemId = null;
+    public $showSubstituteModal = false;
+    public $substituteSearch = '';
+    public $substituteResults = [];
+    public $substituteList = [];
+    public $substituteListSearch = '';
 
     public function selectRequisition($id)
     {
@@ -28,6 +36,7 @@ class RequisitionBodegaIndex extends Component
             ->findOrFail($id);
 
         $this->branchAssignments = [];
+        $this->removedItems = [];
         foreach ($this->selectedRequisition->items as $item) {
             $this->branchAssignments[$item->id] = [
                 'product_id' => $item->product_id,
@@ -37,10 +46,81 @@ class RequisitionBodegaIndex extends Component
         }
     }
 
+    public function removeItem($itemId)
+    {
+        $this->removedItems[] = $itemId;
+        $this->branchAssignments[$itemId]['quantity'] = 0;
+        $this->dispatch('show-toast', type: 'info', message: 'Producto quitado de la requisición.');
+    }
+
+    public function restoreItem($itemId)
+    {
+        $this->removedItems = array_filter($this->removedItems, fn($id) => $id != $itemId);
+        $item = $this->selectedRequisition->items->firstWhere('id', $itemId);
+        if ($item) {
+            $this->branchAssignments[$itemId]['quantity'] = $item->quantity_requested;
+        }
+        $this->dispatch('show-toast', type: 'info', message: 'Producto restaurado.');
+    }
+
+    // ==================== SUSTITUCIÓN DE PRODUCTO ====================
+    public function openSubstituteModal($itemId)
+    {
+        $this->changingItemId = $itemId;
+        $this->substituteSearch = '';
+        $this->substituteResults = [];
+        $this->substituteList = Product::orderBy('name')->take(50)->get();
+        $this->substituteListSearch = '';
+        $this->showSubstituteModal = true;
+    }
+
+    public function closeSubstituteModal()
+    {
+        $this->showSubstituteModal = false;
+        $this->changingItemId = null;
+        $this->substituteSearch = '';
+        $this->substituteResults = [];
+        $this->substituteList = [];
+        $this->substituteListSearch = '';
+    }
+
+    public function updatedSubstituteSearch()
+    {
+        if (strlen($this->substituteSearch) >= 2) {
+            $this->substituteResults = Product::where('name', 'like', '%'.$this->substituteSearch.'%')
+                ->orWhere('sku', 'like', '%'.$this->substituteSearch.'%')
+                ->limit(10)->get();
+        } else {
+            $this->substituteResults = [];
+        }
+    }
+
+    public function updatedSubstituteListSearch()
+    {
+        if (strlen($this->substituteListSearch) >= 2) {
+            $this->substituteList = Product::where('name', 'like', '%'.$this->substituteListSearch.'%')
+                ->orWhere('sku', 'like', '%'.$this->substituteListSearch.'%')
+                ->orderBy('name')->take(50)->get();
+        } else {
+            $this->substituteList = Product::orderBy('name')->take(50)->get();
+        }
+    }
+
+    public function selectSubstitute($productId)
+    {
+        $product = Product::find($productId);
+        if (!$product || !$this->changingItemId) return;
+
+        $this->branchAssignments[$this->changingItemId]['product_id'] = $product->id;
+        $this->dispatch('show-toast', type: 'info', message: "Producto cambiado a: {$product->name}");
+        $this->closeSubstituteModal();
+    }
+
     public function back()
     {
         $this->selectedRequisition = null;
         $this->branchAssignments = [];
+        $this->removedItems = [];
         $this->showApproveModal = false;
         $this->showRejectModal = false;
     }
@@ -75,6 +155,11 @@ class RequisitionBodegaIndex extends Component
                     }
 
                     $branchInv->decrement('allocated_quantity', $qty);
+                } else {
+                    if ($product->current_stock < $qty) {
+                        throw new \Exception("Stock general insuficiente para {$product->name}. Disponible: {$product->current_stock}");
+                    }
+                    $product->decrement('current_stock', $qty);
                 }
 
                 Movement::create([
@@ -96,7 +181,8 @@ class RequisitionBodegaIndex extends Component
                 );
 
                 $deviceQuery = Device::where('product_id', $assign['product_id'])
-                    ->whereNull('technician_id');
+                    ->whereNull('technician_id')
+                    ->where('status', 'in_stock');
 
                 if ($assign['source_branch_id']) {
                     $deviceQuery->where('branch_id', $assign['source_branch_id']);

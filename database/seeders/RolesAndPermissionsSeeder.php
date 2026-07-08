@@ -240,6 +240,8 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::EditWorkOrders,
             PermissionEnum::ViewNewTicketMenu,
             PermissionEnum::ViewAllTicketsMenu,
+            PermissionEnum::ViewSlaDashboard,
+            PermissionEnum::ViewDashboard,
         ]);
 
         // ── NOC ──
@@ -314,6 +316,7 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::AccessMyDailyJobs,
             PermissionEnum::CaptureCoordinates,
             PermissionEnum::AssignSupervisorsToZones,
+            PermissionEnum::ViewSlaDashboard,
         ]);
 
         // ── Sales Rep / Vendedor ──

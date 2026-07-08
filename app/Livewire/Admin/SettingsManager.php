@@ -11,6 +11,7 @@ class SettingsManager extends Component
 {
     // ========== PROPIEDADES EXISTENTES ==========
     public $otRequired = false;
+    public $invoiceRequiredForDevices = false;
     public $modules = [];
     public $nocPollingInterval = 30;
 
@@ -52,6 +53,7 @@ class SettingsManager extends Component
     {
         // Configuración existente
         $this->otRequired = Setting::get('ot_required', 'false') === 'true';
+        $this->invoiceRequiredForDevices = Setting::get('invoice_required_for_devices', 'false') === 'true';
 
         $configModules = config('modules.modules', []);
         foreach ($configModules as $key => $default) {
@@ -74,6 +76,12 @@ class SettingsManager extends Component
     public function updatedOtRequired()
     {
         Setting::set('ot_required', $this->otRequired ? 'true' : 'false');
+        $this->dispatch('show-toast', type: 'success', message: 'Configuración guardada.');
+    }
+
+    public function updatedInvoiceRequiredForDevices()
+    {
+        Setting::set('invoice_required_for_devices', $this->invoiceRequiredForDevices ? 'true' : 'false');
         $this->dispatch('show-toast', type: 'success', message: 'Configuración guardada.');
     }
 
