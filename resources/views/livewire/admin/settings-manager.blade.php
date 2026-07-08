@@ -78,6 +78,63 @@
                     </div>
                 </div>
 
+                {{-- Módulo: Tickets --}}
+                <div class="mb-6">
+                    <div class="flex items-center gap-2 px-1 mb-3">
+                        <span class="material-symbols-outlined text-gray-500 text-lg">confirmation_number</span>
+                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Tickets</h3>
+                    </div>
+                    <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Documentos de identidad del cliente</label>
+                            <p class="text-xs text-gray-500 mt-0.5">Si está activo, al crear un ticket se mostrará el campo de tipo y número de documento de identidad (DUI, NIT, etc.).</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                            <input type="checkbox" wire:model.live="documentTypesEnabled" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                {{-- Tipos de Documento --}}
+                <div class="mb-6">
+                    <div class="flex items-center justify-between gap-2 px-1 mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-gray-500 text-lg">badge</span>
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Tipos de Documento</h3>
+                        </div>
+                        <button wire:click="openDocTypeModal"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
+                            <span class="material-symbols-outlined text-base">add_circle</span>
+                            Nuevo tipo
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">Se mostrarán como opciones en el formulario de cliente.</p>
+
+                    <div class="space-y-2">
+                        @forelse($documentTypeList as $index => $dt)
+                            <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-3 flex items-center justify-between gap-4">
+                                <span class="text-sm font-medium text-gray-700">{{ $dt }}</span>
+                                <div class="flex items-center gap-1">
+                                    <button wire:click="editDocType({{ $index }})"
+                                        class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
+                                        <span class="material-symbols-outlined text-lg">edit</span>
+                                    </button>
+                                    <button wire:click="deleteDocType({{ $index }})"
+                                        onclick="return confirm('¿Eliminar este tipo de documento?')"
+                                        class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
+                                        <span class="material-symbols-outlined text-lg">delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="text-center py-6 bg-gray-50/50 rounded-xl border border-dashed border-gray-300">
+                                <p class="text-gray-500 text-sm">No hay tipos de documento definidos.</p>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+
                 {{-- Módulo: NOC --}}
                 <div class="mb-6">
                     <div class="flex items-center gap-2 px-1 mb-3">
@@ -271,8 +328,8 @@
                                 <input type="checkbox" wire:model="serviceRequiresNocModal" class="sr-only peer">
                                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                 <span class="ml-2 text-sm text-gray-700">Requiere NOC</span>
-                            </label>
-                        </div>
+                        </label>
+                    </div>
                     </div>
                     <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
                         <button wire:click="saveService"
@@ -280,6 +337,45 @@
                             {{ $editingServiceId ? 'Actualizar' : 'Guardar' }}
                         </button>
                         <button wire:click="closeServiceModal"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Modal Crear/Editar Tipo de Documento -->
+    @if($showDocTypeModal)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                        <h3 class="text-lg font-semibold">
+                            {{ $editingDocTypeIndex !== null ? 'Editar' : 'Nuevo' }} Tipo de Documento
+                        </h3>
+                        <button wire:click="closeDocTypeModal" class="text-gray-400 hover:text-gray-600 transition">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                            <input type="text" wire:model="docTypeName"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                                placeholder="Ej: DUI, NIT, Pasaporte">
+                            @error('docTypeName') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
+                        <button wire:click="saveDocType"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
+                            {{ $editingDocTypeIndex !== null ? 'Actualizar' : 'Guardar' }}
+                        </button>
+                        <button wire:click="closeDocTypeModal"
                             class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
                             Cancelar
                         </button>

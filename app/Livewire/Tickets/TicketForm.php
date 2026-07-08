@@ -37,6 +37,9 @@ class TicketForm extends Component
 
     public $knowledgeArticles = [];
 
+    // --- QUICK SERVICE TYPE ---
+    public $quickServiceTypeId = '';
+
     // --- ZONAS Y PLANES ---
     public $zone_id = '';
     public $plan_id = '';
@@ -67,6 +70,8 @@ class TicketForm extends Component
     public function mount($id = null)
     {
         $user = Auth::user();
+
+        $this->loadAvailableZones();
 
         if ($id) {
             // Modo edición de ticket existente (no cambia)
@@ -170,6 +175,7 @@ class TicketForm extends Component
             $this->zone_id = $draft['zone_id'] ?? '';
             $this->plan_id = $draft['plan_id'] ?? '';
             $this->clientSearch = $draft['clientSearch'] ?? '';
+            $this->quickServiceTypeId = $draft['quickServiceTypeId'] ?? '';
 
             if (!empty($draft['client_id'])) {
                 $client = Client::with('branch', 'zone')->find($draft['client_id']);
@@ -218,6 +224,7 @@ class TicketForm extends Component
             'zone_id' => $this->zone_id,
             'plan_id' => $this->plan_id,
             'clientSearch' => $this->clientSearch,
+            'quickServiceTypeId' => $this->quickServiceTypeId,
         ]);
     }
 
@@ -228,17 +235,19 @@ class TicketForm extends Component
             $this->create_ot = false;
             $this->knowledgeArticles = collect();
             $this->priority = 'P3';
+            $this->quickServiceTypeId = '';
             return;
         }
 
         $serviceType = ServiceType::find($value);
         if ($serviceType) {
             $this->requires_noc = $serviceType->requires_noc;
-            $this->create_ot = false; // si el servicio requiere NOC, anula crear OT
+            $this->create_ot = false;
         } else {
             $this->requires_noc = false;
         }
 
+        $this->quickServiceTypeId = $value;
         $this->loadKnowledgeArticles($value);
         $this->calculatePriorityFromArticles();
 
@@ -264,6 +273,13 @@ class TicketForm extends Component
     {
         if ($value) {
             $this->create_ot = false;
+        }
+    }
+
+    public function updatedQuickServiceTypeId($value)
+    {
+        if ($value) {
+            $this->service_type_id = $value;
         }
     }
 
@@ -341,14 +357,16 @@ class TicketForm extends Component
 
     public function loadAvailableZones()
     {
-        if (!$this->selectedClient || !$this->selectedClient->branch_id) {
-            $this->availableZones = [];
-            return;
+        if ($this->selectedClient && $this->selectedClient->branch_id) {
+            $this->availableZones = Zone::where('branch_id', $this->selectedClient->branch_id)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get();
+        } else {
+            $this->availableZones = Zone::where('is_active', true)
+                ->orderBy('name')
+                ->get();
         }
-        $this->availableZones = Zone::where('branch_id', $this->selectedClient->branch_id)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
     }
 
     public function updatedZoneId($value)
@@ -439,9 +457,17 @@ class TicketForm extends Component
     }
 
     #[On('clientCreated')]
-    public function handleClientCreated($id, $name, $phone = null)
+    public function handleClientCreated($id, $name, $phone = null, $service_type_id = null)
     {
         $this->selectClient($id, $name, $phone);
+
+        // Si el cliente se creó desde el modal con un tipo de servicio,
+        // transferirlo automáticamente al ticket
+        if ($service_type_id) {
+            $this->service_type_id = $service_type_id;
+            $this->updatedServiceTypeId($service_type_id);
+        }
+
         $this->closeClientModal();
     }
 
@@ -519,7 +545,6 @@ class TicketForm extends Component
      */
     public function confirmSolve()
     {
-        // Validar los campos requeridos para poder cerrar
         $this->validate([
             'client_id' => 'required|exists:clients,id',
             'description' => 'required|string|min:5',
