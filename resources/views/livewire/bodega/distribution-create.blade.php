@@ -1,20 +1,9 @@
 <div class="max-w-6xl mx-auto">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-visible">
-        <div class="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-blue-50/50 to-white">
-            <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-blue-600 text-2xl">add_circle</span>
-                </div>
-                <div>
-                    <h1 class="text-lg font-semibold text-gray-800">Nuevo envío a sucursal</h1>
-                    <p class="text-sm text-gray-500">Creá un envío para repartir material</p>
-                </div>
-            </div>
-        </div>
-        <div class="p-6 space-y-6">
+    <x-ui.card title="Nuevo envío a sucursal" icon="add_circle" subtitle="Creá un envío para repartir material" overflow="visible">
+        <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Producto</label>
+                    <x-forms.label icon="inventory_2">Producto</x-forms.label>
                     @if($selectedProductId && $selectedProduct)
                     <div class="flex items-start gap-3 p-3.5 bg-blue-50 border border-blue-200 rounded-lg">
                         <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0"><span class="material-symbols-outlined text-blue-600 text-xl">check_circle</span></div>
@@ -39,15 +28,11 @@
                     </div>
                     @endif
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Sucursal destino <span class="text-red-500">*</span></label>
-                    <select wire:model="targetBranchId" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm">
-                        <option value="">Seleccioná...</option>
-                        @foreach($branches as $b)
-                        <option value="{{ $b->id }}">{{ $b->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                <x-ui.select wire:model="targetBranchId" label="Sucursal destino" placeholder="Seleccioná..." required>
+                    @foreach($branches as $b)
+                    <option value="{{ $b->id }}">{{ $b->name }}</option>
+                    @endforeach
+                </x-ui.select>
             </div>
 
             @if($selectedProductId)
@@ -75,27 +60,18 @@
                 </div>
             </div>
             @elseif(!$requiresDevice)
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">Cantidad a enviar</label>
-                <input type="number" wire:model="quantity" min="0" max="{{ (int) $available }}" class="w-48 px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm font-mono" placeholder="0">
-            </div>
+            <x-ui.input type="number" icon="inventory_2" wire:model="quantity" min="0" max="{{ (int) $available }}" label="Cantidad a enviar" placeholder="0" />
             @endif
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas <span class="text-gray-400 text-xs">(opcional)</span></label>
-                <textarea wire:model="notes" rows="2" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm" placeholder="Instrucciones o comentarios..."></textarea>
-            </div>
+            <x-ui.textarea icon="sticky_note_2" wire:model="notes" label="Notas" placeholder="Instrucciones o comentarios..." />
 
             <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <a href="{{ route('bodega.shipments.index') }}" class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cancelar</a>
-                <button type="button" wire:click="save" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-blue-700 transition">
-                    <span class="material-symbols-outlined text-base">local_shipping</span>
-                    Crear envío
-                </button>
+                <x-ui.button variant="secondary" href="{{ route('bodega.shipments.index') }}">Cancelar</x-ui.button>
+                <x-ui.button variant="primary" icon="local_shipping" wire:click="save">Crear envío</x-ui.button>
             </div>
             @endif
         </div>
-    </div>
+    </x-ui.card>
 
     {{-- Modal productos --}}
     <div x-data="{ show: @entangle('showProductModal') }" x-show="show" x-cloak x-transition:enter="ease-out duration-200"

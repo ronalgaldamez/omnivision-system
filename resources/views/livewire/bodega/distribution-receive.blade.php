@@ -1,17 +1,6 @@
 <div class="max-w-2xl mx-auto">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-green-50/50 to-white">
-            <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-xl bg-green-100 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-green-600 text-2xl">qr_code_scanner</span>
-                </div>
-                <div>
-                    <h1 class="text-lg font-semibold text-gray-800">Recibir envío</h1>
-                    <p class="text-sm text-gray-500">Ingresá el código del envío para confirmar su recepción</p>
-                </div>
-            </div>
-        </div>
-        <div class="p-6 space-y-6">
+    <x-ui.card title="Recibir envío" icon="qr_code_scanner" subtitle="Ingresá el código del envío para confirmar su recepción">
+        <div class="space-y-6">
             @if(!$found)
             <div class="flex gap-2">
                 <div class="relative flex-1">
@@ -19,9 +8,7 @@
                         x-data x-init="$watch('$wire.code', val => { if(val.length >= 9) $wire.search(); })">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">qr_code</span>
                 </div>
-                <button type="button" wire:click="search" class="px-5 py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-blue-700 transition">
-                    Buscar
-                </button>
+                <x-ui.button variant="primary" wire:click="search">Buscar</x-ui.button>
             </div>
             @endif
 
@@ -47,10 +34,9 @@
 
                 @if($shipment->status === 'delivered')
                 <div class="flex justify-center pt-2">
-                    <button type="button" wire:click="confirm" class="px-8 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-green-700 transition text-lg">
-                        <span class="material-symbols-outlined text-base">check_circle</span>
+                    <x-ui.button variant="primary" icon="check_circle" wire:click="confirm" class="!bg-green-600 hover:!bg-green-700 !text-lg !px-8 !py-3">
                         Confirmar recepción
-                    </button>
+                    </x-ui.button>
                 </div>
                 @elseif($shipment->status === 'confirmed')
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center text-sm text-blue-700">
@@ -70,5 +56,5 @@
             </div>
             @endif
         </div>
-    </div>
+    </x-ui.card>
 </div>

@@ -441,6 +441,6 @@ class ProductForm extends Component
 
     public function render()
     {
-        return view('livewire.inventory.products.form');
+        return view('livewire.inventory.products.form')->layout('components.layouts.app');
     }
 }

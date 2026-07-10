@@ -1,21 +1,9 @@
 <div class="max-w-7xl mx-auto">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-visible">
-        <div class="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-blue-50/50 to-white">
-            <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-blue-600 text-2xl">settings_ethernet</span>
-                </div>
-                <div>
-                    <h1 class="text-lg font-semibold text-gray-800">Registro de Dispositivos</h1>
-                    <p class="text-sm text-gray-500">Cargá dispositivos manualmente o desde un archivo JSON</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="p-6 space-y-6">
+    <x-ui.card title="Registro de Dispositivos" icon="settings_ethernet" subtitle="Cargá dispositivos manualmente o desde un archivo JSON" overflow="visible">
+        <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Producto <span class="text-red-500">*</span></label>
+                    <x-forms.label icon="inventory_2" required>Producto</x-forms.label>
                     @if($product_id && $selProduct = \App\Models\Product::find($product_id))
                     <div class="flex items-start gap-3 p-3.5 bg-blue-50 border border-blue-200 rounded-lg">
                         <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -60,7 +48,7 @@
 
                 <div>
                     @php $invoiceRequired = \App\Models\Setting::get('invoice_required_for_devices', 'false') === 'true'; @endphp
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Compra asociada @if(!$invoiceRequired)<span class="text-gray-400 text-xs">(opcional)</span>@else<span class="text-red-500">*</span>@endif</label>
+                    <x-forms.label icon="receipt" :required="$invoiceRequired">Compra asociada</x-forms.label>
                     @if($purchase_id && $selPurchase = \App\Models\Purchase::with('supplier')->find($purchase_id))
                     <div class="flex items-start gap-3 p-3.5 bg-green-50 border border-green-200 rounded-lg">
                         <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -187,9 +175,7 @@
                     @endif
                 </div>
                 <div class="flex gap-3">
-                    <a href="{{ route('devices.index') }}" class="inline-flex items-center px-5 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">
-                        Cancelar
-                    </a>
+                    <x-ui.button variant="secondary" href="{{ route('devices.index') }}">Cancelar</x-ui.button>
                     @if(count($rows) > 0)
                     <button type="button" wire:click="requestSave" wire:loading.attr="disabled" wire:target="confirmSave,requestSave"
                         class="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
@@ -203,7 +189,7 @@
             </div>
             @endif
         </div>
-    </div>
+    </x-ui.card>
 
     {{-- Modal de productos --}}
     <div x-data="{ show: @entangle('showProductModal') }" x-show="show" x-cloak
@@ -262,8 +248,7 @@
                     @endforelse
                 </div>
                 <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
-                    <button type="button" wire:click="closeProductModal"
-                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cerrar</button>
+                    <x-ui.button variant="secondary" wire:click="closeProductModal">Cerrar</x-ui.button>
                 </div>
             </div>
         </div>
@@ -326,8 +311,7 @@
                     @endforelse
                 </div>
                 <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
-                    <button type="button" wire:click="closePurchaseModal"
-                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cerrar</button>
+                    <x-ui.button variant="secondary" wire:click="closePurchaseModal">Cerrar</x-ui.button>
                 </div>
             </div>
         </div>

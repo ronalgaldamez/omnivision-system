@@ -1,40 +1,26 @@
 <div class="max-w-7xl mx-auto">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-4">
-            <div>
-                <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-gray-500">settings_ethernet</span>
-                    Dispositivos
-                </h1>
-                <p class="text-sm text-gray-500 mt-1">Control de routers y equipos por MAC</p>
-            </div>
-            <div class="flex gap-2">
-                <a href="{{ route('devices.register') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                    <span class="material-symbols-outlined text-base">add_circle</span>
-                    Registrar
-                </a>
-            </div>
-        </div>
+    <x-ui.card title="Dispositivos" icon="settings_ethernet" subtitle="Control de routers y equipos por MAC">
+        <x-slot:headerActions>
+            <x-ui.button variant="primary" icon="add_circle" href="{{ route('devices.register') }}">Registrar</x-ui.button>
+        </x-slot:headerActions>
 
-        <div class="p-6 space-y-5">
+        <div class="space-y-5">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="relative">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                     <input type="text" wire:model.live.debounce.300ms="search" placeholder="Buscar por MAC o PON SN..."
                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
                 </div>
-                <select wire:model.live="statusFilter" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm">
-                    <option value="">Todos los estados</option>
+                <x-ui.select wire:model.live="statusFilter" placeholder="Todos los estados">
                     @foreach($statuses as $st)
                         <option value="{{ $st->code }}">{{ $st->name }}</option>
                     @endforeach
-                </select>
-                <select wire:model.live="productFilter" class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm">
-                    <option value="">Todos los productos</option>
+                </x-ui.select>
+                <x-ui.select wire:model.live="productFilter" placeholder="Todos los productos">
                     @foreach(\App\Models\Product::whereHas('devices')->get() as $p)
                         <option value="{{ $p->id }}">{{ $p->name }}</option>
                     @endforeach
-                </select>
+                </x-ui.select>
             </div>
 
             <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
@@ -79,5 +65,5 @@
                 <div class="mt-5">{{ $devices->links() }}</div>
             @endif
         </div>
-    </div>
+    </x-ui.card>
 </div>

@@ -92,6 +92,6 @@ class RoleForm extends Component
         $grouped = $this->permissionsGrouped;
         $tabModules = array_keys($grouped);
 
-        return view('livewire.admin.roles.role-form', compact('grouped', 'tabModules'));
+        return view('livewire.admin.roles.role-form', compact('grouped', 'tabModules'))->layout('components.layouts.app');
     }
 }

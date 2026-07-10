@@ -21,7 +21,7 @@ class TicketTimeline extends Component
             'workOrder.technician', 'workOrder.createdBy', 'workOrder.pauses',
         ])->findOrFail($id);
 
-        if (Auth::user()->cannot('view any tickets')) {
+        if (Auth::user()->cannot('view sla dashboard')) {
             abort(403);
         }
 

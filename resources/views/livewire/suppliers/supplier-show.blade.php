@@ -1,27 +1,11 @@
 <div class="max-w-7xl mx-auto">
-    <!-- Tarjeta principal -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <!-- Encabezado con fondo sutil -->
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-4">
-            <div>
-                <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-gray-500">warehouse</span>
-                    Proveedor: {{ $supplier->name }}
-                </h1>
-                <p class="text-sm text-gray-500 mt-1">Información del proveedor y su actividad</p>
-            </div>
-            <a href="{{ route('suppliers.index') }}"
-                class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition">
-                <span class="material-symbols-outlined text-base">arrow_back</span>
-                Volver al listado
-            </a>
-        </div>
+    <x-ui.card title="Proveedor: {{ $supplier->name }}" icon="warehouse" subtitle="Información del proveedor y su actividad">
+        <x-slot:headerActions>
+            <x-ui.button variant="ghost" icon="arrow_back" href="{{ route('suppliers.index') }}">Volver al listado</x-ui.button>
+        </x-slot:headerActions>
 
-        <!-- Contenido -->
-        <div class="p-6 space-y-6">
-            <!-- Información del proveedor -->
+        <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <!-- Detalles en tarjetas -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">business</span>
                     <div>
@@ -103,7 +87,7 @@
                 </div>
             </div>
 
-            <!-- Compras del proveedor -->
+            {{-- Compras del proveedor --}}
             <div class="border-t border-gray-200 pt-6">
                 <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-3">
                     <span class="material-symbols-outlined text-gray-500">receipt_long</span>
@@ -114,36 +98,19 @@
                         <thead>
                             <tr class="bg-gray-50 border-b border-gray-200">
                                 <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="material-symbols-outlined text-gray-400 text-base">receipt</span>
-                                        Factura
-                                    </div>
+                                    <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">receipt</span>Factura</div>
                                 </th>
                                 <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                    <div class="flex items-center gap-1.5">
-                                        <span
-                                            class="material-symbols-outlined text-gray-400 text-base">calendar_month</span>
-                                        Fecha
-                                    </div>
+                                    <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">calendar_month</span>Fecha</div>
                                 </th>
                                 <th class="px-4 py-3 text-right text-gray-600 font-medium">
-                                    <div class="flex items-center justify-end gap-1.5">
-                                        <span
-                                            class="material-symbols-outlined text-gray-400 text-base">attach_money</span>
-                                        Subtotal
-                                    </div>
+                                    <div class="flex items-center justify-end gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">attach_money</span>Subtotal</div>
                                 </th>
                                 <th class="px-4 py-3 text-right text-gray-600 font-medium">
-                                    <div class="flex items-center justify-end gap-1.5">
-                                        <span class="material-symbols-outlined text-gray-400 text-base">percent</span>
-                                        IVA
-                                    </div>
+                                    <div class="flex items-center justify-end gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">percent</span>IVA</div>
                                 </th>
                                 <th class="px-4 py-3 text-right text-gray-600 font-medium">
-                                    <div class="flex items-center justify-end gap-1.5">
-                                        <span class="material-symbols-outlined text-gray-400 text-base">payments</span>
-                                        Total
-                                    </div>
+                                    <div class="flex items-center justify-end gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">payments</span>Total</div>
                                 </th>
                                 <th class="px-4 py-3 text-center text-gray-600 font-medium">Acciones</th>
                             </tr>
@@ -151,27 +118,19 @@
                         <tbody class="divide-y divide-gray-100">
                             @forelse($purchases as $purchase)
                                 <tr class="hover:bg-gray-50/80 transition">
-                                    <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $purchase->invoice_number }}
-                                    </td>
+                                    <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $purchase->invoice_number }}</td>
                                     <td class="px-4 py-3 text-gray-700">{{ $purchase->purchase_date->format('d/m/Y') }}</td>
-                                    <td class="px-4 py-3 text-right text-gray-700">
-                                        ${{ number_format($purchase->subtotal ?? 0, 2) }}</td>
-                                    <td class="px-4 py-3 text-right text-gray-700">
-                                        ${{ number_format($purchase->iva_amount ?? 0, 2) }}</td>
-                                    <td class="px-4 py-3 text-right text-gray-800 font-semibold">
-                                        ${{ number_format($purchase->total ?? 0, 2) }}</td>
+                                    <td class="px-4 py-3 text-right text-gray-700">${{ number_format($purchase->subtotal ?? 0, 2) }}</td>
+                                    <td class="px-4 py-3 text-right text-gray-700">${{ number_format($purchase->iva_amount ?? 0, 2) }}</td>
+                                    <td class="px-4 py-3 text-right text-gray-800 font-semibold">${{ number_format($purchase->total ?? 0, 2) }}</td>
                                     <td class="px-4 py-3 text-center">
-                                        <button wire:click="showPurchaseDetail({{ $purchase->id }})"
-                                            class="text-blue-600 hover:text-blue-800 font-medium text-sm">
-                                            Ver detalle
-                                        </button>
+                                        <button wire:click="showPurchaseDetail({{ $purchase->id }})" class="text-blue-600 hover:text-blue-800 font-medium text-sm">Ver detalle</button>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
                                     <td colspan="6" class="px-4 py-12 text-center bg-gray-50/50">
-                                        <span
-                                            class="material-symbols-outlined text-gray-300 text-3xl mb-2">receipt_long</span>
+                                        <span class="material-symbols-outlined text-gray-300 text-3xl mb-2">receipt_long</span>
                                         <p class="text-gray-500">No hay compras registradas</p>
                                     </td>
                                 </tr>
@@ -182,7 +141,7 @@
                 <div class="mt-4">{{ $purchases->links() }}</div>
             </div>
 
-            <!-- Movimientos vinculados -->
+            {{-- Movimientos vinculados --}}
             <div class="border-t border-gray-200 pt-6">
                 <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-3">
                     <span class="material-symbols-outlined text-gray-500">inventory</span>
@@ -193,45 +152,26 @@
                         <thead>
                             <tr class="bg-gray-50 border-b border-gray-200">
                                 <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                    <div class="flex items-center gap-1.5">
-                                        <span
-                                            class="material-symbols-outlined text-gray-400 text-base">calendar_month</span>
-                                        Fecha
-                                    </div>
+                                    <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">calendar_month</span>Fecha</div>
                                 </th>
                                 <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                    <div class="flex items-center gap-1.5">
-                                        <span
-                                            class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>
-                                        Producto
-                                    </div>
+                                    <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>Producto</div>
                                 </th>
                                 <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <span class="material-symbols-outlined text-gray-400 text-base">swap_vert</span>
-                                        Tipo
-                                    </div>
+                                    <div class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">swap_vert</span>Tipo</div>
                                 </th>
                                 <th class="px-4 py-3 text-right text-gray-600 font-medium">
-                                    <div class="flex items-center justify-end gap-1.5">
-                                        <span class="material-symbols-outlined text-gray-400 text-base">numbers</span>
-                                        Cantidad
-                                    </div>
+                                    <div class="flex items-center justify-end gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">numbers</span>Cantidad</div>
                                 </th>
                                 <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="material-symbols-outlined text-gray-400 text-base">person</span>
-                                        Usuario
-                                    </div>
+                                    <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">person</span>Usuario</div>
                                 </th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             @forelse($movements as $mov)
                                 <tr class="hover:bg-gray-50/80 transition">
-                                    <td class="px-4 py-3 font-mono text-xs text-gray-700">
-                                        {{ $mov->created_at->format('d/m/Y H:i') }}
-                                    </td>
+                                    <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $mov->created_at->format('d/m/Y H:i') }}</td>
                                     <td class="px-4 py-3 text-gray-800">{{ $mov->product->name }}</td>
                                     <td class="px-4 py-3 text-center text-gray-700">{{ $mov->type }}</td>
                                     <td class="px-4 py-3 text-right text-gray-800">{{ $mov->quantity }}</td>
@@ -251,9 +191,9 @@
                 <div class="mt-4">{{ $movements->links() }}</div>
             </div>
         </div>
-    </div>
+    </x-ui.card>
 
-    <!-- Modal de detalle de compra (estilo unificado) -->
+    {{-- Modal de detalle de compra --}}
     @if($purchaseModalOpen && $selectedPurchase)
         <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
             x-data="{ open: true }" x-show="open" x-cloak>
@@ -296,12 +236,10 @@
                                 <tbody class="divide-y divide-gray-100">
                                     @foreach($selectedPurchase->items as $item)
                                         <tr>
-                                            <td class="px-4 py-2">{{ $item->product->name }} <span
-                                                    class="text-gray-500 text-xs">({{ $item->product->sku }})</span></td>
+                                            <td class="px-4 py-2">{{ $item->product->name }} <span class="text-gray-500 text-xs">({{ $item->product->sku }})</span></td>
                                             <td class="px-4 py-2 text-center">{{ $item->quantity }}</td>
                                             <td class="px-4 py-2 text-center">${{ number_format($item->unit_cost, 4) }}</td>
-                                            <td class="px-4 py-2 text-center">
-                                                ${{ number_format($item->quantity * $item->unit_cost, 2) }}</td>
+                                            <td class="px-4 py-2 text-center">${{ number_format($item->quantity * $item->unit_cost, 2) }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -309,18 +247,14 @@
                         </div>
                         <div class="flex justify-end">
                             <div class="w-64 space-y-1 text-sm">
-                                <div class="flex justify-between"><strong>Subtotal:</strong>
-                                    ${{ number_format($selectedPurchase->subtotal, 2) }}</div>
-                                <div class="flex justify-between"><strong>IVA (13%):</strong>
-                                    ${{ number_format($selectedPurchase->iva_amount, 2) }}</div>
-                                <div class="flex justify-between border-t pt-1 text-base font-bold"><strong>Total:</strong>
-                                    ${{ number_format($selectedPurchase->total, 2) }}</div>
+                                <div class="flex justify-between"><strong>Subtotal:</strong> ${{ number_format($selectedPurchase->subtotal, 2) }}</div>
+                                <div class="flex justify-between"><strong>IVA (13%):</strong> ${{ number_format($selectedPurchase->iva_amount, 2) }}</div>
+                                <div class="flex justify-between border-t pt-1 text-base font-bold"><strong>Total:</strong> ${{ number_format($selectedPurchase->total, 2) }}</div>
                             </div>
                         </div>
                     </div>
                     <div class="px-6 py-4 bg-gray-50 text-right">
-                        <button @click="$wire.closeModal()"
-                            class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition">Cerrar</button>
+                        <button @click="$wire.closeModal()" class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition">Cerrar</button>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,7 @@
 <div>
-    <h1 class="text-lg font-semibold mb-4">Mapa de Órdenes de Trabajo</h1>
-    <div id="map" style="height: 500px; width: 100%;" class="border rounded"></div>
+    <x-ui.card icon="map" title="Mapa de Órdenes de Trabajo">
+        <div id="map" style="height: 500px; width: 100%;" class="border rounded"></div>
+    </x-ui.card>
 
     <script>
         document.addEventListener('livewire:load', function () {

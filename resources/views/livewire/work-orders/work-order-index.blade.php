@@ -1,32 +1,19 @@
 <div class="max-w-7xl mx-auto" wire:poll.15s="$refresh">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-4">
-            <div>
-                <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-gray-500">engineering</span>
-                    Órdenes de Trabajo
-                </h1>
-                <p class="text-sm text-gray-500 mt-1">Listado de órdenes asignadas a técnicos</p>
-            </div>
-            <a href="{{ route('work-orders.create') }}"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                <span class="material-symbols-outlined text-base">add_circle</span>
-                Nueva Orden
-            </a>
-        </div>
+    <x-ui.card icon="engineering" title="Órdenes de Trabajo" subtitle="Listado de órdenes asignadas a técnicos">
+        <x-slot:headerActions>
+            <x-ui.button variant="primary" icon="add_circle" href="{{ route('work-orders.create') }}">Nueva Orden</x-ui.button>
+        </x-slot:headerActions>
 
         <div class="p-6 space-y-5">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div class="relative">
-                    <span
-                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                     <input type="text" wire:model.live="search"
                         placeholder="Buscar por cliente, técnico o código de OT..."
                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
                 </div>
                 <div class="relative">
-                    <span
-                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">filter_alt</span>
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">filter_alt</span>
                     <select wire:model.live="statusFilter"
                         class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
                         <option value="">Todos los estados</option>
@@ -35,8 +22,7 @@
                         <option value="completed">Completada</option>
                         <option value="cancelled">Cancelada</option>
                     </select>
-                    <span
-                        class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                 </div>
             </div>
 
@@ -44,7 +30,6 @@
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200">
-                            {{-- NUEVA COLUMNA: Código OT --}}
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">
                                 <div class="flex items-center gap-1.5">
                                     <span class="material-symbols-outlined text-gray-400 text-base">tag</span>
@@ -53,8 +38,7 @@
                             </th>
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">
                                 <div class="flex items-center gap-1.5">
-                                    <span
-                                        class="material-symbols-outlined text-gray-400 text-base">confirmation_number</span>
+                                    <span class="material-symbols-outlined text-gray-400 text-base">confirmation_number</span>
                                     Código Ticket
                                 </div>
                             </th>
@@ -84,8 +68,7 @@
                             </th>
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">
                                 <div class="flex items-center justify-center gap-1.5">
-                                    <span
-                                        class="material-symbols-outlined text-gray-400 text-base">calendar_month</span>
+                                    <span class="material-symbols-outlined text-gray-400 text-base">calendar_month</span>
                                     Fecha programada
                                 </div>
                             </th>
@@ -100,7 +83,6 @@
                     <tbody class="divide-y divide-gray-100">
                         @forelse($orders as $order)
                             <tr class="hover:bg-gray-50/80 transition">
-                                {{-- Código OT --}}
                                 <td class="px-4 py-3 font-mono text-xs text-blue-700 font-medium">
                                     {{ $order->code ?? '—' }}
                                 </td>
@@ -112,18 +94,13 @@
                                 <td class="px-4 py-3 text-gray-700">{{ $order->technician?->name ?? 'No asignado' }}</td>
                                 <td class="px-4 py-3 text-center">
                                     @if($order->status == 'pending')
-                                        <span
-                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-yellow-50 text-yellow-700 rounded-full text-xs font-medium">Pendiente</span>
+                                        <x-ui.badge variant="warning">Pendiente</x-ui.badge>
                                     @elseif($order->status == 'in_progress')
-                                        <span
-                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">En
-                                            progreso</span>
+                                        <x-ui.badge variant="info">En progreso</x-ui.badge>
                                     @elseif($order->status == 'completed')
-                                        <span
-                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium">Completada</span>
+                                        <x-ui.badge variant="success">Completada</x-ui.badge>
                                     @else
-                                        <span
-                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-red-50 text-red-700 rounded-full text-xs font-medium">Cancelada</span>
+                                        <x-ui.badge variant="danger">Cancelada</x-ui.badge>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-center text-gray-700">
@@ -179,14 +156,14 @@
                 <div class="mt-5">{{ $orders->links() }}</div>
             @endif
         </div>
-    </div>
+    </x-ui.card>
 
     @if($confirmingAction)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
             style="display: none;">
             <div class="relative mx-auto p-5 w-full max-w-md">
-                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                <x-ui.card>
                     <div class="p-6 text-center">
                         <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 mb-4">
                             <span class="material-symbols-outlined text-blue-600 text-2xl">help</span>
@@ -195,17 +172,11 @@
                         <p class="text-sm text-gray-600 mt-2">¿Estás seguro de que deseas eliminar la orden
                             #{{ $confirmingOrderId }}?</p>
                     </div>
-                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                        <button wire:click="executeConfirmedAction"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-red-700 transition">
-                            Sí, eliminar
-                        </button>
-                        <button @click="open = false" wire:click="cancelConfirmation"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
+                    <x-slot:footer>
+                        <x-ui.button variant="danger" wire:click="executeConfirmedAction">Sí, eliminar</x-ui.button>
+                        <x-ui.button variant="secondary" @click="open = false" wire:click="cancelConfirmation">Cancelar</x-ui.button>
+                    </x-slot:footer>
+                </x-ui.card>
             </div>
         </div>
     @endif
@@ -229,9 +200,5 @@
         </div>
     </div>
 
-    <style>
-        [x-cloak] {
-            display: none !important;
-        }
-    </style>
+    <style>[x-cloak] { display: none !important; }</style>
 </div>

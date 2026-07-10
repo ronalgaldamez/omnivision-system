@@ -1,21 +1,8 @@
 <div class="max-w-2xl mx-auto pb-6">
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible">
-        {{-- Encabezado --}}
-        <div
-            class="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h1 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-blue-600 bg-blue-50 p-1.5 rounded-lg">work</span>
-                    {{ $workOrder->code ?? 'OT-' . $workOrder->id }}
-                </h1>
-                <p class="text-xs text-gray-500 mt-0.5 ml-11">Detalle de la orden de trabajo</p>
-            </div>
-            <a href="{{ route('mobile.work-orders.list') }}"
-                class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-medium">
-                <span class="material-symbols-outlined text-base">arrow_back</span>
-                Volver
-            </a>
-        </div>
+    <x-ui.card icon="work" title="{{ $workOrder->code ?? 'OT-' . $workOrder->id }}" subtitle="Detalle de la orden de trabajo">
+        <x-slot:headerActions>
+            <x-ui.button variant="ghost" icon="arrow_back" href="{{ route('mobile.work-orders.list') }}">Volver</x-ui.button>
+        </x-slot:headerActions>
 
         <div class="p-5 space-y-6">
             {{-- ========== DATOS DEL CLIENTE ========== --}}
@@ -153,11 +140,7 @@
                             </span>
                         @endif
                         @if ($canEditTech && !$isEditing)
-                            <button type="button" wire:click="enableEditing"
-                                class="px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-amber-600 transition inline-flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-sm">edit</span>
-                                Editar
-                            </button>
+                            <x-ui.button type="button" variant="warning" icon="edit" wire:click="enableEditing">Editar</x-ui.button>
                         @endif
                     </div>
                 </div>
@@ -376,10 +359,7 @@
 
                     @if ($canEditTech && $isEditing)
                         <div class="flex justify-end pt-2">
-                            <button type="submit"
-                                class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl shadow-sm hover:bg-blue-700 transition inline-flex items-center gap-2">
-                                <span class="material-symbols-outlined text-base">save</span>Guardar datos técnicos
-                            </button>
+                            <x-ui.button type="submit" variant="primary" icon="save">Guardar datos técnicos</x-ui.button>
                         </div>
                     @endif
                 </form>
@@ -419,25 +399,10 @@
                                 <div>
                                     <p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Prioridad
                                     </p>
-                                    <span
-                                        class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium
-                                        @switch($workOrder->ticket->priority)
-                                            @case('P1')
-                                                bg-red-100 text-red-700
-                                            @break
-                                            @case('P2')
-                                                bg-orange-100 text-orange-700
-                                            @break
-                                            @case('P3')
-                                                bg-blue-100 text-blue-700
-                                            @break
-                                            @case('P4')
-                                                bg-gray-100 text-gray-600
-                                            @break
-                                        @endswitch">
+                                    <x-ui.badge variant="{{ match($workOrder->ticket->priority) { 'P1' => 'danger', 'P2' => 'warning', 'P3' => 'info', default => 'secondary' } }}">
                                         {{ $workOrder->ticket->priority }} -
                                         {{ ['P1' => 'Crítico', 'P2' => 'Alta', 'P3' => 'Media', 'P4' => 'Baja'][$workOrder->ticket->priority] ?? $workOrder->ticket->priority }}
-                                    </span>
+                                    </x-ui.badge>
                                 </div>
                             </div>
                         @endif
@@ -516,12 +481,10 @@
                                     'completed' => 'Completada',
                                 ];
                             @endphp
-                            <span
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium {{ $statusColors[$workOrder->status] ?? 'bg-red-50 text-red-700' }}">
-                                <span
-                                    class="material-symbols-outlined text-sm">{{ $statusIcons[$workOrder->status] ?? 'cancel' }}</span>
+                            <x-ui.badge variant="{{ match($workOrder->status) { 'pending' => 'warning', 'in_progress' => 'info', 'paused' => 'secondary', 'completed' => 'success', default => 'danger' } }}">
+                                <span class="material-symbols-outlined text-sm">{{ $statusIcons[$workOrder->status] ?? 'cancel' }}</span>
                                 {{ $statusLabels[$workOrder->status] ?? 'Cancelada' }}
-                            </span>
+                            </x-ui.badge>
                         </div>
                     </div>
                     @if ($workOrder->started_at || $workOrder->accumulated_seconds > 0 || $workOrder->completed_date)
@@ -639,22 +602,14 @@
 
             {{-- Enlace Google Maps --}}
             @if ($workOrder->latitude && $workOrder->longitude)
-                <a href="https://www.google.com/maps?q={{ $workOrder->latitude }},{{ $workOrder->longitude }}"
-                    target="_blank"
-                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white text-sm font-medium rounded-xl shadow-sm hover:bg-green-700 transition w-full justify-center sm:w-auto">
-                    <span class="material-symbols-outlined text-base">map</span>
-                    Ver en Google Maps
-                </a>
+                <x-ui.button variant="success" icon="map" href="https://www.google.com/maps?q={{ $workOrder->latitude }},{{ $workOrder->longitude }}" target="_blank">Ver en Google Maps</x-ui.button>
             @endif
 
             {{-- Botones de acción --}}
             @if (!in_array($workOrder->status, ['completed', 'cancelled']))
                 <div class="space-y-2.5 pt-2">
                     @if ($workOrder->status === 'pending' && $hasApprovedRequisition && !$hasAnotherInProgress)
-                        <button wire:click="promptStartWorkOrder"
-                            class="w-full px-5 py-3 bg-amber-500 text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-amber-600 transition inline-flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined">play_arrow</span>Iniciar OT
-                        </button>
+                        <x-ui.button wire:click="promptStartWorkOrder" variant="warning" class="w-full">Iniciar OT</x-ui.button>
                     @elseif($workOrder->status === 'pending' && $hasOpenRequisition && !$hasApprovedRequisition)
                         <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
                             <span class="material-symbols-outlined text-blue-600">hourglass_top</span>
@@ -673,10 +628,7 @@
                                         activa.</p>
                                 </div>
                             </div>
-                            <button wire:click="openWorkOrderSelectionModal"
-                                class="w-full px-5 py-3 bg-purple-600 text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-purple-700 transition">
-                                Vincular OTs a requisición activa
-                            </button>
+                            <x-ui.button wire:click="openWorkOrderSelectionModal" variant="primary" class="w-full">Vincular OTs a requisición activa</x-ui.button>
                         @else
                             <div class="flex items-start gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
                                 <span class="material-symbols-outlined text-amber-600">warning</span>
@@ -686,10 +638,7 @@
                                         OT.</p>
                                 </div>
                             </div>
-                            <a href="{{ route('technician.requisitions.create') }}"
-                                class="w-full px-5 py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-blue-700 transition inline-flex items-center justify-center gap-2">
-                                Crear requisición de material
-                            </a>
+                            <x-ui.button href="{{ route('technician.requisitions.create') }}" variant="primary" class="w-full">Crear requisición de material</x-ui.button>
                         @endif
                     @elseif($workOrder->status === 'pending' && $hasAnotherInProgress)
                         <div class="flex items-start gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
@@ -702,15 +651,9 @@
                     @endif
 
                     @if ($workOrder->status === 'in_progress')
-                        <button wire:click="promptPauseWorkOrder"
-                            class="w-full px-5 py-3 bg-gray-500 text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-gray-600 transition inline-flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined">pause</span>Pausar OT
-                        </button>
+                        <x-ui.button wire:click="promptPauseWorkOrder" variant="secondary" class="w-full">Pausar OT</x-ui.button>
                         @if (auth()->user()->can('complete work_orders') && $canEditTech && !$isEditing && $technicalDataComplete)
-                            <button wire:click="promptCompleteWorkOrder"
-                                class="w-full px-5 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-emerald-700 transition inline-flex items-center justify-center gap-2">
-                                <span class="material-symbols-outlined">check_circle</span>Completar trabajo
-                            </button>
+                            <x-ui.button wire:click="promptCompleteWorkOrder" variant="success" class="w-full">Completar trabajo</x-ui.button>
                         @elseif(auth()->user()->can('complete work_orders') && $canEditTech && !$isEditing && !$technicalDataComplete)
                             <div class="flex items-start gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
                                 <span class="material-symbols-outlined text-amber-600">info</span>
@@ -723,10 +666,7 @@
                         @endif
                     @endif
                     @if ($workOrder->status === 'paused')
-                        <button wire:click="promptResumeWorkOrder"
-                            class="w-full px-5 py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-blue-700 transition inline-flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined">replay</span>Reanudar OT
-                        </button>
+                        <x-ui.button wire:click="promptResumeWorkOrder" variant="primary" class="w-full">Reanudar OT</x-ui.button>
                     @endif
                 </div>
             @endif
@@ -739,7 +679,7 @@
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
             style="display: none;">
             <div class="relative mx-auto p-5 w-full max-w-md">
-                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                <x-ui.card>
                     <div class="p-6 text-center">
                         <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 mb-4">
                             <span class="material-symbols-outlined text-blue-600 text-2xl">help</span>
@@ -747,17 +687,11 @@
                         <h3 class="text-lg font-semibold text-gray-900">Confirmar acción</h3>
                         <p class="text-sm text-gray-600 mt-2">{{ $confirmingMessage }}</p>
                     </div>
-                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                        <button wire:click="executeConfirmedAction"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                            Sí, continuar
-                        </button>
-                        <button @click="open = false" wire:click="cancelConfirmation"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
+                    <x-slot:footer>
+                        <x-ui.button variant="primary" wire:click="executeConfirmedAction">Sí, continuar</x-ui.button>
+                        <x-ui.button variant="secondary" @click="open = false" wire:click="cancelConfirmation">Cancelar</x-ui.button>
+                    </x-slot:footer>
+                </x-ui.card>
             </div>
         </div>
     @endif
@@ -768,54 +702,37 @@
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
             style="display: none;">
             <div class="relative mx-auto p-5 w-full max-w-lg">
-                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                        <h3 class="text-lg font-semibold flex items-center gap-2">
-                            <span class="material-symbols-outlined text-gray-500">inventory_2</span>
-                            Material Utilizado en {{ $workOrder->code ?? 'OT-' . $workOrder->id }}
-                        </h3>
-                        <button wire:click="closeConsumptionModal"
-                            class="text-gray-400 hover:text-gray-600 transition">
+                <x-ui.card icon="inventory_2" title="Material Utilizado en {{ $workOrder->code ?? 'OT-' . $workOrder->id }}">
+                    <x-slot:headerActions>
+                        <button wire:click="closeConsumptionModal" class="text-gray-400 hover:text-gray-600 transition">
                             <span class="material-symbols-outlined">close</span>
                         </button>
-                    </div>
+                    </x-slot:headerActions>
                     <div class="p-5 space-y-4">
                         @if (count($availableProducts) > 0)
-                            <p class="text-sm text-gray-600">Indica cuánto material usaste de tu requisición para esta
-                                OT.</p>
+                            <p class="text-sm text-gray-600">Indica cuánto material usaste de tu requisición para esta OT.</p>
                             <div class="space-y-3">
                                 @foreach ($availableProducts as $index => $product)
                                     <div class="flex items-center justify-between gap-4 p-3 bg-gray-50 rounded-lg">
                                         <div class="flex-1">
-                                            <p class="text-sm font-medium text-gray-800">
-                                                {{ $product['product_name'] }}
-                                            </p>
-                                            <p class="text-xs text-gray-500">Disponible: {{ $product['available'] }}
-                                            </p>
+                                            <p class="text-sm font-medium text-gray-800">{{ $product['product_name'] }}</p>
+                                            <p class="text-xs text-gray-500">Disponible: {{ $product['available'] }}</p>
                                         </div>
-                                        <input type="number" min="0" max="{{ $product['available'] }}"
-                                            step="any"
+                                        <input type="number" min="0" max="{{ $product['available'] }}" step="any"
                                             wire:model.defer="consumptionQuantities.{{ $index }}"
                                             class="w-20 text-center rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm py-1.5">
                                     </div>
                                 @endforeach
                             </div>
                         @else
-                            <p class="text-sm text-gray-500">No tienes productos disponibles en tu requisición activa.
-                            </p>
+                            <p class="text-sm text-gray-500">No tienes productos disponibles en tu requisición activa.</p>
                         @endif
                     </div>
-                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                        <button wire:click="saveConsumption"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                            Guardar consumo
-                        </button>
-                        <button wire:click="closeConsumptionModal"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                            Omitir
-                        </button>
-                    </div>
-                </div>
+                    <x-slot:footer>
+                        <x-ui.button variant="primary" wire:click="saveConsumption">Guardar consumo</x-ui.button>
+                        <x-ui.button variant="secondary" wire:click="closeConsumptionModal">Omitir</x-ui.button>
+                    </x-slot:footer>
+                </x-ui.card>
             </div>
         </div>
     @endif
@@ -826,27 +743,18 @@
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
             style="display: none;">
             <div class="relative mx-auto p-5 w-full max-w-lg">
-                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                        <h3 class="text-lg font-semibold flex items-center gap-2">
-                            <span class="material-symbols-outlined text-gray-500">playlist_add_check</span>
-                            Selecciona OTs para Vincular
-                        </h3>
-                        <button wire:click="closeWorkOrderSelectionModal"
-                            class="text-gray-400 hover:text-gray-600 transition">
+                <x-ui.card icon="playlist_add_check" title="Selecciona OTs para Vincular">
+                    <x-slot:headerActions>
+                        <button wire:click="closeWorkOrderSelectionModal" class="text-gray-400 hover:text-gray-600 transition">
                             <span class="material-symbols-outlined">close</span>
                         </button>
-                    </div>
+                    </x-slot:headerActions>
                     <div class="p-5 space-y-4">
-                        <p class="text-sm text-gray-600">Marca las Órdenes de Trabajo que deseas agregar a tu
-                            requisición activa.</p>
+                        <p class="text-sm text-gray-600">Marca las Órdenes de Trabajo que deseas agregar a tu requisición activa.</p>
                         <div class="space-y-2 max-h-60 overflow-y-auto">
                             @forelse($eligibleWorkOrders as $wo)
-                                <label
-                                    class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition">
-                                    <input type="checkbox" value="{{ $wo['id'] }}"
-                                        wire:model="selectedWorkOrdersForLink"
-                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-2 focus:ring-blue-500/20">
+                                <label class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition">
+                                    <x-ui.checkbox value="{{ $wo['id'] }}" wire:model="selectedWorkOrdersForLink" />
                                     <span class="text-sm text-gray-700">{{ $wo['name'] }}</span>
                                 </label>
                             @empty
@@ -854,17 +762,11 @@
                             @endforelse
                         </div>
                     </div>
-                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                        <button wire:click="linkSelectedWorkOrders"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                            Vincular seleccionadas
-                        </button>
-                        <button wire:click="closeWorkOrderSelectionModal"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
+                    <x-slot:footer>
+                        <x-ui.button variant="primary" wire:click="linkSelectedWorkOrders">Vincular seleccionadas</x-ui.button>
+                        <x-ui.button variant="secondary" wire:click="closeWorkOrderSelectionModal">Cancelar</x-ui.button>
+                    </x-slot:footer>
+                </x-ui.card>
             </div>
         </div>
     @endif
@@ -907,24 +809,15 @@
     x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
     x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
     class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" style="display: none;">
-    <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+<div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
         x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
         class="relative w-full max-w-lg">
-        <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <span class="material-symbols-outlined text-blue-600">settings_ethernet</span>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-900">Mis routers</h3>
-                        <p class="text-[11px] text-gray-500">Dispositivos asignados a tu requisición</p>
-                    </div>
-                </div>
+        <x-ui.card icon="settings_ethernet" title="Mis routers" subtitle="Dispositivos asignados a tu requisición">
+            <x-slot:headerActions>
                 <button type="button" wire:click="closeDeviceModal" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
                     <span class="material-symbols-outlined text-xl">close</span>
                 </button>
-            </div>
+            </x-slot:headerActions>
             <div class="p-4 border-b border-gray-100">
                 <div class="relative">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
@@ -956,12 +849,12 @@
                     </div>
                 @endforelse
             </div>
-            <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
-                <button type="button" wire:click="closeDeviceModal" class="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cerrar</button>
-            </div>
-        </div>
+            <x-slot:footer>
+                <x-ui.button variant="secondary" wire:click="closeDeviceModal">Cerrar</x-ui.button>
+            </x-slot:footer>
+        </x-ui.card>
     </div>
-</div>
+    </x-ui.card>
 
 @push('scripts')
     <script>

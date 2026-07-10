@@ -1,106 +1,83 @@
 <div class="max-w-7xl mx-auto">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-            <div>
-                <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-gray-500">dns</span>
-                    Panel NOC - Tickets pendientes
-                </h1>
-                <p class="text-sm text-gray-500 mt-1">Gestión de tickets que requieren intervención del NOC</p>
-            </div>
-        </div>
-
-        <div class="p-6 space-y-5">
-            <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-                <table class="min-w-full text-sm">
-                    <thead>
-                        <tr class="bg-gray-50 border-b border-gray-200">
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Código</th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">ID</th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Cliente</th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Servicio</th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Prioridad</th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Origen</th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Descripción</th>
-                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Acciones</th>
+    <x-ui.card icon="dns" title="Panel NOC - Tickets pendientes" subtitle="Gestión de tickets que requieren intervención del NOC">
+        <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200">
+                        <th class="px-4 py-3 text-left text-gray-600 font-medium">Código</th>
+                        <th class="px-4 py-3 text-left text-gray-600 font-medium">ID</th>
+                        <th class="px-4 py-3 text-left text-gray-600 font-medium">Cliente</th>
+                        <th class="px-4 py-3 text-left text-gray-600 font-medium">Servicio</th>
+                        <th class="px-4 py-3 text-left text-gray-600 font-medium">Prioridad</th>
+                        <th class="px-4 py-3 text-left text-gray-600 font-medium">Origen</th>
+                        <th class="px-4 py-3 text-left text-gray-600 font-medium">Descripción</th>
+                        <th class="px-4 py-3 text-center text-gray-600 font-medium">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse($tickets as $ticket)
+                        <tr class="hover:bg-gray-50/80 transition">
+                            <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $ticket->ticket_code ?? '—' }}</td>
+                            <td class="px-4 py-3 font-mono text-xs text-gray-700">#{{ $ticket->id }}</td>
+                            <td class="px-4 py-3 text-gray-800">{{ $ticket->client->name ?? 'N/A' }}</td>
+                            <td class="px-4 py-3">
+                                <x-ui.badge variant="neutral">{{ $ticket->service_type }}</x-ui.badge>
+                            </td>
+                            <td class="px-4 py-3">
+                                @if($ticket->priority)
+                                    <x-ui.badge :variant="match($ticket->priority) { 'P1' => 'danger', 'P2' => 'warning', 'P3' => 'info', default => 'neutral' }">
+                                        {{ $ticket->priority }}
+                                    </x-ui.badge>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-gray-700">{{ $ticket->origin ?? '—' }}</td>
+                            <td class="px-4 py-3 text-gray-600 max-w-xs truncate" title="{{ $ticket->description }}">
+                                {{ Str::limit($ticket->description, 100) }}
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <x-ui.button variant="secondary" icon="visibility" size="sm" wire:click="viewDetail({{ $ticket->id }})">
+                                        Detalle
+                                    </x-ui.button>
+                                    <x-ui.button variant="success" icon="check_circle" size="sm" wire:click="promptResolveRemote({{ $ticket->id }})">
+                                        Resolver
+                                    </x-ui.button>
+                                    <x-ui.button variant="primary" icon="engineering" size="sm" wire:click="promptCreateWorkOrder({{ $ticket->id }})">
+                                        Crear OT
+                                    </x-ui.button>
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        @forelse($tickets as $ticket)
-                            <tr class="hover:bg-gray-50/80 transition">
-                                <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $ticket->ticket_code ?? '—' }}</td>
-                                <td class="px-4 py-3 font-mono text-xs text-gray-700">#{{ $ticket->id }}</td>
-                                <td class="px-4 py-3 text-gray-800">{{ $ticket->client->name ?? 'N/A' }}</td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                                        {{ $ticket->service_type }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    @if($ticket->priority)
-                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
-                                            {{ $ticket->priority }}
-                                        </span>
-                                    @else
-                                        <span class="text-gray-400">—</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-gray-700">{{ $ticket->origin ?? '—' }}</td>
-                                <td class="px-4 py-3 text-gray-600 max-w-xs truncate" title="{{ $ticket->description }}">
-                                    {{ Str::limit($ticket->description, 100) }}
-                                </td>
-                                <td class="px-4 py-3 text-center">
-                                    <div class="flex items-center justify-center gap-2">
-                                        <button wire:click="viewDetail({{ $ticket->id }})"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-gray-700 transition"
-                                            title="Ver detalle completo">
-                                            <span class="material-symbols-outlined text-base">visibility</span>
-                                            Detalle
-                                        </button>
-                                        <button wire:click="promptResolveRemote({{ $ticket->id }})"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
-                                            <span class="material-symbols-outlined text-base">check_circle</span>
-                                            Resolver
-                                        </button>
-                                        <button wire:click="promptCreateWorkOrder({{ $ticket->id }})"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                                            <span class="material-symbols-outlined text-base">engineering</span>
-                                            Crear OT
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="px-4 py-12 text-center bg-gray-50/50">
-                                    <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">checklist</span>
-                                    <p class="text-gray-500">No hay tickets pendientes</p>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="px-4 py-12 text-center bg-gray-50/50">
+                                <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">checklist</span>
+                                <p class="text-gray-500">No hay tickets pendientes</p>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
-    </div>
+    </x-ui.card>
 
-    <!-- Modal de detalle del ticket (unificado) -->
     @if($showDetailModal && $selectedTicket)
         @include('components.ticket-detail-modal', [
             'ticket' => $selectedTicket,
-            'showNocButton' => false,  // Ya estamos en NOC, no mostramos "Ir al panel NOC"
+            'showNocButton' => false,
             'showCreateOtButton' => auth()->user()->can('create work_orders'),
         ])
     @endif
 
-    <!-- Modal de confirmación -->
     @if($confirmingAction)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
             style="display: none;">
             <div class="relative mx-auto p-5 w-full max-w-md">
-                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
-                    <div class="p-6 text-center">
+                <x-ui.card overflow="visible">
+                    <div class="text-center">
                         <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 mb-4">
                             <span class="material-symbols-outlined text-blue-600 text-2xl">help</span>
                         </div>
@@ -113,42 +90,12 @@
                             @endif
                         </p>
                     </div>
-                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                        <button wire:click="executeConfirmedAction"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                            Sí, continuar
-                        </button>
-                        <button @click="open = false" wire:click="cancelConfirmation"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
+                    <x-slot:footer>
+                        <x-ui.button variant="primary" wire:click="executeConfirmedAction">Sí, continuar</x-ui.button>
+                        <x-ui.button variant="secondary" @click="open = false" wire:click="cancelConfirmation">Cancelar</x-ui.button>
+                    </x-slot:footer>
+                </x-ui.card>
             </div>
         </div>
     @endif
-
-    <!-- Toast -->
-    <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
-        x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 5000)"
-        x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"
-        x-transition:enter="transform ease-out duration-300" x-transition:enter-start="translate-y-2 opacity-0"
-        x-transition:enter-end="translate-y-0 opacity-100" x-transition:leave="transform ease-in duration-200"
-        x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-2 opacity-0"
-        style="display: none;">
-        <div x-show="toastType === 'success'"
-            class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span class="material-symbols-outlined">check_circle</span>
-            <span x-text="toastMessage" class="text-sm font-medium"></span>
-        </div>
-        <div x-show="toastType === 'error'"
-            class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span class="material-symbols-outlined">error</span>
-            <span x-text="toastMessage" class="text-sm font-medium"></span>
-        </div>
-    </div>
-
-    <style>
-        [x-cloak] { display: none !important; }
-    </style>
 </div>

@@ -16,10 +16,10 @@ class UsersSeeder extends Seeder
 
         // ── Core (3 perfiles) ──
         $users = [
-            ['name' => 'Administrador', 'email' => 'admin@omnivision.com',       'role' => 'admin',             'branch_code' => null],
-            ['name' => 'Ronal Galdamez','email' => 'ronal@omnivision.com',       'role' => 'admin',             'branch_code' => null],
-            ['name' => 'Walter Marín',  'email' => 'supervisor@omnivision.com',  'role' => 'field_supervisor',  'branch_code' => null],
-            ['name' => 'Deyvi Alas',    'email' => 'noc@omnivision.com',         'role' => 'noc',               'branch_code' => null],
+            ['name' => 'Administrador', 'email' => 'admin@omnivision.com', 'role' => 'admin', 'branch_code' => null],
+            ['name' => 'Ronal Galdamez', 'email' => 'ronal@omnivision.com', 'role' => 'admin', 'branch_code' => null],
+            ['name' => 'Walter Marín', 'email' => 'supervisor@omnivision.com', 'role' => 'field_supervisor', 'branch_code' => null],
+            ['name' => 'Deyvi Alas', 'email' => 'noc@omnivision.com', 'role' => 'noc', 'branch_code' => null],
         ];
 
         // ── Técnicos — globales (branch_code = null) ──
@@ -106,7 +106,7 @@ class UsersSeeder extends Seeder
     {
         $parts = explode(' ', strtolower($name));
         $first = $parts[0] ?? 'usuario';
-        $last  = $parts[count($parts) - 1] ?? $first;
+        $last = $parts[count($parts) - 1] ?? $first;
         $prefix = $prefix ? $prefix . '.' : '';
         return $prefix . $first . '.' . $last . '@omnivision.com';
     }

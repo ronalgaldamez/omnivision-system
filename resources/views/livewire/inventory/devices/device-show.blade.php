@@ -1,21 +1,10 @@
 <div class="max-w-4xl mx-auto">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-blue-50/50 to-white flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-blue-600 text-2xl">settings_ethernet</span>
-                </div>
-                <div>
-                    <h1 class="text-lg font-semibold text-gray-800">Detalle del Dispositivo</h1>
-                    <p class="text-sm text-gray-500 font-mono">{{ $device->mac_address }}</p>
-                </div>
-            </div>
-            <a href="{{ route('devices.index') }}" class="text-sm text-blue-600 hover:text-blue-800 transition flex items-center gap-1">
-                <span class="material-symbols-outlined text-base">arrow_back</span> Volver
-            </a>
-        </div>
+    <x-ui.card title="Detalle del Dispositivo" icon="settings_ethernet" subtitle="{{ $device->mac_address }}">
+        <x-slot:headerActions>
+            <x-ui.button variant="ghost" icon="arrow_back" href="{{ route('devices.index') }}">Volver</x-ui.button>
+        </x-slot:headerActions>
 
-        <div class="p-6 space-y-6">
+        <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="p-4 bg-gray-50 rounded-lg border border-gray-100">
                     <p class="text-xs text-gray-500 uppercase tracking-wide">MAC Address</p>
@@ -98,5 +87,5 @@
                 </div>
             </div>
         </div>
-    </div>
+    </x-ui.card>
 </div>

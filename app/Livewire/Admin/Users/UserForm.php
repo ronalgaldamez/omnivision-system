@@ -169,6 +169,6 @@ class UserForm extends Component
         $grouped = $this->rolePermissions;
         $tabModules = array_keys($grouped);
 
-        return view('livewire.admin.users.user-form', compact('roles', 'branches', 'grouped', 'tabModules', 'rolePermNames'));
+        return view('livewire.admin.users.user-form', compact('roles', 'branches', 'grouped', 'tabModules', 'rolePermNames'))->layout('components.layouts.app');
     }
 }

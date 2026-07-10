@@ -3,44 +3,20 @@
 @endphp
 
 <div class="max-w-4xl mx-auto">
-    <!-- Tarjeta principal -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <!-- Encabezado con fondo sutil -->
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-4">
-            <div>
-                <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-gray-500">info</span>
-                    Detalle del Producto
-                </h1>
-                <p class="text-sm text-gray-500 mt-1">Información completa del artículo</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <a href="{{ route('products.edit', $product->id) }}"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                    <span class="material-symbols-outlined text-base">edit</span>
-                    Editar
-                </a>
-                <a href="{{ route('products.index') }}"
-                    class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition">
-                    <span class="material-symbols-outlined text-base">arrow_back</span>
-                    Volver
-                </a>
-            </div>
-        </div>
+    <x-ui.card title="Detalle del Producto" subtitle="Información completa del artículo" icon="info">
+        <x-slot:headerActions>
+            <x-ui.button variant="primary" size="sm" icon="edit" href="{{ route('products.edit', $product->id) }}">Editar</x-ui.button>
+            <x-ui.button variant="ghost" size="sm" icon="arrow_back" href="{{ route('products.index') }}">Volver</x-ui.button>
+        </x-slot:headerActions>
 
-        <!-- Contenido -->
-        <div class="p-6 space-y-6">
+        <div class="space-y-6">
             @if($activeBranch)
-                <div class="flex items-center gap-2 text-sm bg-blue-50 text-blue-700 px-4 py-3 rounded-lg border border-blue-200">
-                    <span class="material-symbols-outlined text-blue-500">store</span>
-                    <span>Viendo inventario de: <strong>{{ $activeBranch->name }}</strong></span>
-                </div>
+                <x-ui.alert variant="info">
+                    Viendo inventario de: <strong>{{ $activeBranch->name }}</strong>
+                </x-ui.alert>
             @endif
 
-            <!-- Detalles del producto -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <!-- SKU -->
-                <!-- SKU -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">qr_code</span>
                     <div>
@@ -48,7 +24,6 @@
                         <p class="font-mono font-semibold text-gray-800 text-lg">{{ $product->sku }}</p>
                     </div>
                 </div>
-                <!-- Nombre -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">inventory_2</span>
                     <div>
@@ -56,7 +31,6 @@
                         <p class="font-semibold text-gray-800">{{ $product->name }} <span class="text-gray-400 text-xs font-normal">{{ $product->unit_of_measure }}</span></p>
                     </div>
                 </div>
-                <!-- Medida -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">straighten</span>
                     <div>
@@ -72,7 +46,6 @@
                         </p>
                     </div>
                 </div>
-                <!-- Categoría / Marca / Modelo -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">category</span>
                     <div>
@@ -94,7 +67,6 @@
                         <p class="text-gray-700">{{ $product->productModel?->name ?? '—' }}</p>
                     </div>
                 </div>
-                <!-- Stock -->
                 @if($activeBranch)
                 <div class="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-200">
                     <span class="material-symbols-outlined text-blue-500">store</span>
@@ -118,7 +90,6 @@
                     </div>
                 </div>
                 @endif
-                <!-- Stock mínimo / máximo / costo -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">arrow_downward</span>
                     <div>
@@ -140,7 +111,6 @@
                         <p class="text-gray-700 font-mono">${{ number_format($product->average_cost ?? 0, 2) }}</p>
                     </div>
                 </div>
-                <!-- Descripción -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 md:col-span-2">
                     <span class="material-symbols-outlined text-gray-400">description</span>
                     <div>
@@ -149,8 +119,7 @@
                     </div>
                 </div>
             </div>
-            
-            {{-- Dispositivos vinculados --}}
+
             @php $deviceCount = \App\Models\Device::where('product_id', $product->id)->count(); @endphp
             @if($deviceCount > 0)
             <div class="border-t border-gray-200 pt-6">
@@ -167,7 +136,6 @@
             </div>
             @endif
 
-            {{-- Empaques --}}
             <div class="border-t border-gray-200 pt-6">
                 <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-gray-500">package_2</span>
@@ -201,16 +169,12 @@
                                 </td>
                                 <td class="px-4 py-2.5 text-center">
                                     <div class="flex items-center justify-center gap-1">
-                                        <button type="button" wire:click="editPackaging({{ $pkg->id }})"
-                                            class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
+                                        <span wire:click="editPackaging({{ $pkg->id }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer" title="Editar">
                                             <span class="material-symbols-outlined text-lg">edit</span>
-                                        </button>
-                                        <button type="button" wire:click="deletePackaging({{ $pkg->id }})"
-                                            class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
-                                            title="Eliminar"
-                                            onclick="return confirm('¿Eliminar este empaque?')">
+                                        </span>
+                                        <span wire:click="deletePackaging({{ $pkg->id }})" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition cursor-pointer" title="Eliminar" onclick="return confirm('¿Eliminar este empaque?')">
                                             <span class="material-symbols-outlined text-lg">delete</span>
-                                        </button>
+                                        </span>
                                     </div>
                                 </td>
                             </tr>
@@ -240,29 +204,20 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Unidades que trae</label>
-                            <input type="number" step="1" wire:model.live.debounce.500ms="newPackagingQuantity"
-                                class="w-44 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm" min="1">
+                            <input type="number" step="1" wire:model.live.debounce.500ms="newPackagingQuantity" class="w-44 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm" min="1">
                         </div>
-                        <button type="button" wire:click="savePackaging"
-                            class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap">
-                            {{ $editingPackagingId ? 'Actualizar' : 'Guardar' }}
-                        </button>
-                        <button type="button" wire:click="cancelEditPackaging"
-                            class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">
-                            Cancelar
-                        </button>
+                        <x-ui.button variant="primary" size="sm" wire:click="savePackaging">{{ $editingPackagingId ? 'Actualizar' : 'Guardar' }}</x-ui.button>
+                        <x-ui.button variant="secondary" size="sm" wire:click="cancelEditPackaging">Cancelar</x-ui.button>
                     </div>
                 </div>
                 @else
-                <button type="button" wire:click="editPackaging(0)"
-                    class="text-sm text-blue-600 hover:text-blue-800 transition flex items-center gap-1">
+                <span wire:click="editPackaging(0)" class="text-sm text-blue-600 hover:text-blue-800 transition flex items-center gap-1 cursor-pointer">
                     <span class="material-symbols-outlined text-base">add</span>
                     Agregar empaque
-                </button>
+                </span>
                 @endif
             </div>
 
-            <!-- Código de barras -->
             <div class="border-t border-gray-200 pt-6">
                 <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-gray-500">barcode</span>
@@ -283,7 +238,6 @@
                 </div>
             </div>
 
-            <!-- Últimos movimientos -->
             <div class="border-t border-gray-200 pt-6">
                 <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-3">
                     <span class="material-symbols-outlined text-gray-500">history</span>
@@ -296,27 +250,22 @@
                                 <tr>
                                     <th class="px-4 py-2.5 text-left text-gray-600 font-medium">
                                         <div class="flex items-center gap-1.5">
-                                            <span
-                                                class="material-symbols-outlined text-gray-400 text-base">calendar_month</span>
-                                            Fecha
+                                            <span class="material-symbols-outlined text-gray-400 text-base">calendar_month</span> Fecha
                                         </div>
                                     </th>
                                     <th class="px-4 py-2.5 text-left text-gray-600 font-medium">
                                         <div class="flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined text-gray-400 text-base">swap_vert</span>
-                                            Tipo
+                                            <span class="material-symbols-outlined text-gray-400 text-base">swap_vert</span> Tipo
                                         </div>
                                     </th>
                                     <th class="px-4 py-2.5 text-right text-gray-600 font-medium">
                                         <div class="flex items-center justify-end gap-1.5">
-                                            <span class="material-symbols-outlined text-gray-400 text-base">numbers</span>
-                                            Cantidad
+                                            <span class="material-symbols-outlined text-gray-400 text-base">numbers</span> Cantidad
                                         </div>
                                     </th>
                                     <th class="px-4 py-2.5 text-left text-gray-600 font-medium">
                                         <div class="flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined text-gray-400 text-base">person</span>
-                                            Usuario
+                                            <span class="material-symbols-outlined text-gray-400 text-base">person</span> Usuario
                                         </div>
                                     </th>
                                 </tr>
@@ -324,9 +273,7 @@
                             <tbody class="divide-y divide-gray-100">
                                 @foreach($movements as $mov)
                                     <tr class="hover:bg-gray-50/80 transition">
-                                        <td class="px-4 py-2.5 font-mono text-xs text-gray-700">
-                                            {{ $mov->created_at->format('d/m/Y H:i') }}
-                                        </td>
+                                        <td class="px-4 py-2.5 font-mono text-xs text-gray-700">{{ $mov->created_at->format('d/m/Y H:i') }}</td>
                                         <td class="px-4 py-2.5">
                                             @php $td = $mov->type_display; @endphp
                                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium {{ $td['class'] }}">
@@ -355,5 +302,5 @@
                 @endif
             </div>
         </div>
-    </div>
+    </x-ui.card>
 </div>
