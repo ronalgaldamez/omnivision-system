@@ -36,7 +36,7 @@ class ProductIndex extends Component
             })
             ->paginate(10);
 
-        return view('livewire.inventory.products.index', compact('products', 'activeBranch'));
+        return view('livewire.inventory.products.index', compact('products', 'activeBranch'))->layout('components.layouts.app');
     }
 
     public function confirmDelete($id)

@@ -1,39 +1,15 @@
 <div class="max-w-4xl mx-auto">
-    <!-- Tarjeta principal -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <!-- Encabezado con fondo sutil -->
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-4">
-            <div>
-                <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-gray-500">receipt_long</span>
-                    Detalle de Compra
-                </h1>
-                <p class="text-sm text-gray-500 mt-1">Factura {{ $purchase->invoice_number }}</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <a href="{{ route('purchases.index') }}"
-                    class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition">
-                    <span class="material-symbols-outlined text-base">arrow_back</span>
-                    Volver al listado
-                </a>
-                <a href="{{ route('devices.register', ['purchase_id' => $purchase->id]) }}"
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                    <span class="material-symbols-outlined text-base">settings_ethernet</span>
-                    Registrar dispositivos
-                </a>
-                <button onclick="window.print()"
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-gray-700 transition">
-                    <span class="material-symbols-outlined text-base">print</span>
-                    Imprimir
-                </button>
-            </div>
-        </div>
+    <x-ui.card title="Detalle de Compra" icon="receipt_long" subtitle="Factura {{ $purchase->invoice_number }}">
+        <x-slot:headerActions>
+            <x-ui.button variant="ghost" icon="arrow_back" href="{{ route('purchases.index') }}">Volver al listado</x-ui.button>
+            <x-ui.button variant="primary" icon="settings_ethernet" href="{{ route('devices.register', ['purchase_id' => $purchase->id]) }}">Registrar dispositivos</x-ui.button>
+            <button type="button" onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-gray-700 transition">
+                <span class="material-symbols-outlined text-base">print</span> Imprimir
+            </button>
+        </x-slot:headerActions>
 
-        <!-- Contenido -->
-        <div class="p-6 space-y-6">
-            <!-- Datos de la compra -->
+        <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Factura -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">receipt</span>
                     <div>
@@ -41,7 +17,6 @@
                         <p class="font-mono font-semibold text-gray-800">{{ $purchase->invoice_number }}</p>
                     </div>
                 </div>
-                <!-- Fecha de compra -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">calendar_month</span>
                     <div>
@@ -49,7 +24,6 @@
                         <p class="text-gray-700">{{ $purchase->purchase_date->format('d/m/Y') }}</p>
                     </div>
                 </div>
-                <!-- Proveedor -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">warehouse</span>
                     <div>
@@ -57,7 +31,6 @@
                         <p class="text-gray-700">{{ $purchase->supplier->name }}</p>
                     </div>
                 </div>
-                <!-- Registrado por -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">person</span>
                     <div>
@@ -65,7 +38,6 @@
                         <p class="text-gray-700">{{ $purchase->user->name }}</p>
                     </div>
                 </div>
-                <!-- Notas (ocupa ancho completo) -->
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 md:col-span-2">
                     <span class="material-symbols-outlined text-gray-400">sticky_note_2</span>
                     <div>
@@ -75,7 +47,6 @@
                 </div>
             </div>
 
-            <!-- Productos comprados -->
             <div class="border-t border-gray-200 pt-5">
                 <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-3">
                     <span class="material-symbols-outlined text-gray-500">inventory_2</span>
@@ -86,36 +57,19 @@
                         <thead>
                             <tr class="bg-gray-50 border-b border-gray-200">
                                 <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                    <div class="flex items-center gap-1.5">
-                                        <span
-                                            class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>
-                                        Producto (SKU)
-                                    </div>
+                                    <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>Producto (SKU)</div>
                                 </th>
                                 <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <span class="material-symbols-outlined text-gray-400 text-base">package_2</span>
-                                        Empaque
-                                    </div>
+                                    <div class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">package_2</span>Empaque</div>
                                 </th>
                                 <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <span class="material-symbols-outlined text-gray-400 text-base">numbers</span>
-                                        Cantidad
-                                    </div>
+                                    <div class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">numbers</span>Cantidad</div>
                                 </th>
                                 <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <span
-                                            class="material-symbols-outlined text-gray-400 text-base">attach_money</span>
-                                        Costo unitario
-                                    </div>
+                                    <div class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">attach_money</span>Costo unitario</div>
                                 </th>
                                 <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <span class="material-symbols-outlined text-gray-400 text-base">payments</span>
-                                        Total
-                                    </div>
+                                    <div class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">payments</span>Total</div>
                                 </th>
                             </tr>
                         </thead>
@@ -131,8 +85,7 @@
                                         @if($item->fractional_quantity)
                                             <div class="mt-1">
                                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">
-                                                    <span class="material-symbols-outlined text-xs">broken_image</span>
-                                                    Fraccionado
+                                                    <span class="material-symbols-outlined text-xs">broken_image</span>Fraccionado
                                                 </span>
                                             </div>
                                         @endif
@@ -140,21 +93,13 @@
                                     <td class="px-4 py-3 text-center text-gray-700">
                                         {{ $item->quantity }}
                                         @if($item->fractional_quantity)
-                                            <div class="text-xs text-gray-400 mt-1">
-                                                {{ rtrim(rtrim(number_format($item->base_quantity, 4), '0'), '.') }} un.
-                                            </div>
+                                            <div class="text-xs text-gray-400 mt-1">{{ rtrim(rtrim(number_format($item->base_quantity, 4), '0'), '.') }} un.</div>
                                         @elseif($item->base_quantity != $item->quantity)
-                                            <div class="text-xs text-gray-400 mt-1">
-                                                {{ rtrim(rtrim(number_format($item->base_quantity, 4), '0'), '.') }} un.
-                                            </div>
+                                            <div class="text-xs text-gray-400 mt-1">{{ rtrim(rtrim(number_format($item->base_quantity, 4), '0'), '.') }} un.</div>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-3 text-center text-gray-700">
-                                        ${{ number_format($item->unit_cost, 2) }}
-                                    </td>
-                                    <td class="px-4 py-3 text-center font-medium text-gray-800">
-                                        ${{ number_format(($item->base_quantity ?? $item->quantity) * $item->unit_cost, 2) }}
-                                    </td>
+                                    <td class="px-4 py-3 text-center text-gray-700">${{ number_format($item->unit_cost, 2) }}</td>
+                                    <td class="px-4 py-3 text-center font-medium text-gray-800">${{ number_format(($item->base_quantity ?? $item->quantity) * $item->unit_cost, 2) }}</td>
                                 </tr>
                                 @if($item->fractional_quantity)
                                 <tr class="bg-amber-50/50">
@@ -170,7 +115,6 @@
                 </div>
             </div>
 
-            <!-- Resumen de pago -->
             <div class="border-t border-gray-200 pt-5">
                 <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-3">
                     <span class="material-symbols-outlined text-gray-500">payment</span>
@@ -194,5 +138,5 @@
                 </div>
             </div>
         </div>
-    </div>
+    </x-ui.card>
 </div>

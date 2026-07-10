@@ -212,6 +212,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', \App\Livewire\Admin\SupervisorZones\SupervisorZoneManager::class)->name('admin.supervisor-zones');
     });
 
+    // ========== UI COMPONENTS PREVIEW ==========
+    Route::middleware(['auth', 'can:access_admin'])->get('/admin/ui-preview', function () {
+        return view('components.ui-preview');
+    })->name('admin.ui-preview');
+
     // ========== SLA ==========
     Route::prefix('sla')->middleware(['auth'])->group(function () {
         Route::middleware('can:view sla goals')->group(function () {

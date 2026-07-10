@@ -1,21 +1,10 @@
 <div class="max-w-2xl mx-auto">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-            <div>
-                <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-gray-500">{{ $branchId ? 'edit' : 'add_circle' }}</span>
-                    {{ $branchId ? 'Editar Sucursal' : 'Nueva Sucursal' }}
-                </h1>
-                <p class="text-sm text-gray-500 mt-1">{{ $branchId ? 'Modifica los datos de la sucursal' : 'Registra una nueva sucursal en el sistema' }}</p>
-            </div>
-            <a href="{{ route('admin.branches.index') }}"
-                class="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-blue-600 transition group">
-                <span class="material-symbols-outlined text-base group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
-                Volver
-            </a>
-        </div>
+    <x-ui.card icon="{{ $branchId ? 'edit' : 'add_circle' }}" title="{{ $branchId ? 'Editar Sucursal' : 'Nueva Sucursal' }}" subtitle="{{ $branchId ? 'Modifica los datos de la sucursal' : 'Registra una nueva sucursal en el sistema' }}">
+        <x-slot:headerActions>
+            <x-ui.button variant="ghost" icon="arrow_back" href="{{ route('admin.branches.index') }}">Volver</x-ui.button>
+        </x-slot:headerActions>
 
-        <form wire:submit.prevent="save" class="p-6 space-y-5">
+        <form wire:submit.prevent="save" class="space-y-5">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="sm:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">
@@ -75,23 +64,15 @@
             </div>
 
             <div class="flex justify-end gap-3 pt-2 border-t border-gray-200">
-                <a href="{{ route('admin.branches.index') }}"
-                    class="inline-flex items-center gap-1.5 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition shadow-sm">
-                    Cancelar
-                </a>
-                <button type="submit"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition">
-                    <span class="material-symbols-outlined text-base">save</span>
-                    {{ $branchId ? 'Actualizar' : 'Guardar' }}
-                </button>
+                <x-ui.button variant="ghost" href="{{ route('admin.branches.index') }}">Cancelar</x-ui.button>
+                <x-ui.button type="submit" variant="primary" icon="save">{{ $branchId ? 'Actualizar' : 'Guardar' }}</x-ui.button>
             </div>
         </form>
 
         @if(session('message'))
-            <div class="mx-6 mb-6 flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg border border-green-200">
-                <span class="material-symbols-outlined text-green-600">check_circle</span>
-                {{ session('message') }}
+            <div class="mx-6 mb-6">
+                <x-ui.alert variant="success">{{ session('message') }}</x-ui.alert>
             </div>
         @endif
-    </div>
+    </x-ui.card>
 </div>

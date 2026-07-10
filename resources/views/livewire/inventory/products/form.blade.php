@@ -1,72 +1,19 @@
 <div class="max-w-6xl mx-auto" x-data="{ hasChanges: @entangle('hasUnsavedChanges') }"
     @beforeunload.window="if (hasChanges) { event.preventDefault(); event.returnValue = ''; }">
-    <!-- Tarjeta principal -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <!-- Encabezado con fondo sutil -->
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-            <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <span class="material-symbols-outlined text-gray-500">
-                    {{ $editingId ? 'edit' : 'add_box' }}
-                </span>
-                {{ $editingId ? 'Editar Producto' : 'Nuevos Productos' }}
-            </h1>
-            <p class="text-sm text-gray-500 mt-1">
-                {{ $editingId ? 'Modifica los datos del producto seleccionado' : 'Agrega uno o varios productos y guárdalos juntos' }}
-            </p>
-        </div>
+    <x-ui.card :title="$editingId ? 'Editar Producto' : 'Nuevos Productos'"
+        :subtitle="$editingId ? 'Modifica los datos del producto seleccionado' : 'Agrega uno o varios productos y guárdalos juntos'"
+        :icon="$editingId ? 'edit' : 'add_box'">
 
-        <div class="p-6 space-y-6">
+        <div class="space-y-6">
             @if($editingId)
-                <!-- Formulario de edición -->
                 <form wire:submit.prevent="confirmUpdate" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <!-- Nombre -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>
-                                Nombre *
-                            </label>
-                            <div class="relative">
-                                <input type="text" wire:model="currentName"
-                                    class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">edit_note</span>
-                            </div>
-                            @error('currentName') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
-                            @enderror
-                        </div>
-                        <!-- Stock mínimo -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">arrow_downward</span>
-                                Stock mínimo
-                            </label>
-                            <div class="relative">
-                                <input type="number" wire:model="currentStockMin"
-                                    class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">remove</span>
-                            </div>
-                        </div>
-                        <!-- Stock máximo -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">arrow_upward</span>
-                                Stock máximo
-                            </label>
-                            <div class="relative">
-                                <input type="number" wire:model="currentStockMax"
-                                    class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">add</span>
-                            </div>
-                        </div>
-                        <!-- Categoría -->
+                        <x-ui.input icon="edit_note" wire:model="currentName" label="Nombre *" required />
+                        <x-ui.input type="number" icon="remove" wire:model="currentStockMin" label="Stock mínimo" />
+                        <x-ui.input type="number" icon="add" wire:model="currentStockMax" label="Stock máximo" />
+
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">category</span>
-                                Categoría
-                            </label>
+                            <x-forms.label icon="category">Categoría</x-forms.label>
                             @if($currentCategoryId && $selCat = \App\Models\Category::find($currentCategoryId))
                             <div class="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
                                 <span class="material-symbols-outlined text-blue-600 text-sm">check_circle</span>
@@ -99,12 +46,9 @@
                             </div>
                             @endif
                         </div>
-                        <!-- Marca -->
+
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">brand_awareness</span>
-                                Marca
-                            </label>
+                            <x-forms.label icon="brand_awareness">Marca</x-forms.label>
                             @if($currentBrandId && $selBrand = \App\Models\Brand::find($currentBrandId))
                             <div class="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
                                 <span class="material-symbols-outlined text-blue-600 text-sm">check_circle</span>
@@ -132,12 +76,9 @@
                             </div>
                             @endif
                         </div>
-                        <!-- Modelo -->
+
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">badge</span>
-                                Modelo
-                            </label>
+                            <x-forms.label icon="badge">Modelo</x-forms.label>
                             <div class="flex gap-2">
                                 <div class="relative flex-1">
                                     <input type="text" readonly wire:model="selectedModelDisplay"
@@ -145,31 +86,16 @@
                                         placeholder="Ninguno seleccionado">
                                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                                 </div>
-                                <button type="button" wire:click="openModelModal"
-                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-base">travel_explore</span> Buscar
-                                </button>
-                                <button type="button" wire:click="clearModelSelection"
-                                    class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition shadow-sm flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-base">close</span> Limpiar
-                                </button>
+                                <x-ui.button variant="primary" size="sm" icon="travel_explore" wire:click="openModelModal">Buscar</x-ui.button>
+                                <x-ui.button variant="secondary" size="sm" icon="close" wire:click="clearModelSelection">Limpiar</x-ui.button>
                             </div>
                         </div>
-                        <!-- Descripción -->
+
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">description</span>
-                                Descripción
-                            </label>
-                            <div class="relative">
-                                <textarea wire:model="currentDescription" rows="3"
-                                    class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"></textarea>
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
-                            </div>
+                            <x-ui.textarea icon="edit_note" wire:model="currentDescription" label="Descripción" rows="3" />
                         </div>
                     </div>
-                    {{-- Empaques --}}
+
                     <div class="border-t border-gray-200 pt-5">
                         <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
                             <span class="material-symbols-outlined text-gray-500 text-base">package_2</span>
@@ -191,32 +117,24 @@
                                     <tbody class="divide-y divide-gray-100">
                                         @foreach($currentPackagings as $pkg)
                                             <tr class="hover:bg-gray-50/80 transition">
-                                                <td class="px-3 py-2 text-gray-700 text-xs">{{ $pkg->packagingType?->name ?? '—' }}
-                                                </td>
+                                                <td class="px-3 py-2 text-gray-700 text-xs">{{ $pkg->packagingType?->name ?? '—' }}</td>
                                                 <td class="px-3 py-2 text-gray-800 text-xs">{{ $pkg->name }}</td>
-                                                <td class="px-3 py-2 text-center text-gray-700 text-xs font-mono">
-                                                    {{ rtrim(rtrim(number_format($pkg->quantity_in_base_unit, 4), '0'), '.') }}
-                                                </td>
+                                                <td class="px-3 py-2 text-center text-gray-700 text-xs font-mono">{{ rtrim(rtrim(number_format($pkg->quantity_in_base_unit, 4), '0'), '.') }}</td>
                                                 <td class="px-3 py-2 text-center">
                                                     @if($pkg->is_default_for_purchase)
-                                                        <span
-                                                            class="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-50 text-green-700 rounded-full text-xs">
+                                                        <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-50 text-green-700 rounded-full text-xs">
                                                             <span class="material-symbols-outlined text-xs">check</span>
                                                         </span>
                                                     @endif
                                                 </td>
                                                 <td class="px-3 py-2 text-center">
                                                     <div class="flex items-center justify-center gap-0.5">
-                                                        <button type="button" wire:click="editPackaging({{ $pkg->id }})"
-                                                            class="p-1 text-blue-600 hover:bg-blue-50 rounded transition"
-                                                            title="Editar">
+                                                        <span wire:click="editPackaging({{ $pkg->id }})" class="p-1 text-blue-600 hover:bg-blue-50 rounded transition cursor-pointer" title="Editar">
                                                             <span class="material-symbols-outlined text-sm">edit</span>
-                                                        </button>
-                                                        <button type="button" wire:click="deletePackaging({{ $pkg->id }})"
-                                                            class="p-1 text-red-500 hover:bg-red-50 rounded transition"
-                                                            title="Eliminar" onclick="return confirm('¿Eliminar este empaque?')">
+                                                        </span>
+                                                        <span wire:click="deletePackaging({{ $pkg->id }})" class="p-1 text-red-500 hover:bg-red-50 rounded transition cursor-pointer" title="Eliminar" onclick="return confirm('¿Eliminar este empaque?')">
                                                             <span class="material-symbols-outlined text-sm">delete</span>
-                                                        </button>
+                                                        </span>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -228,14 +146,11 @@
 
                         @if($showPackagingForm)
                             <div class="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                <p class="text-xs font-medium text-blue-700">
-                                    {{ $editingPackagingId ? 'Editando empaque' : 'Nuevo empaque' }}
-                                </p>
+                                <p class="text-xs font-medium text-blue-700">{{ $editingPackagingId ? 'Editando empaque' : 'Nuevo empaque' }}</p>
                                 <div class="flex items-end gap-2 flex-wrap">
                                     <div class="flex-1 min-w-[120px]">
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
-                                        <select wire:model.live="newPackagingTypeId"
-                                            class="w-full px-2 py-1.5 rounded border border-gray-300 bg-white text-xs">
+                                        <select wire:model.live="newPackagingTypeId" class="w-full px-2 py-1.5 rounded border border-gray-300 bg-white text-xs">
                                             <option value="">Seleccioná...</option>
                                             @foreach($packagingTypes as $pt)
                                                 <option value="{{ $pt->id }}">{{ $pt->name }}</option>
@@ -244,136 +159,59 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Unidades</label>
-                                        <input type="number" step="1" wire:model.live.debounce.500ms="newPackagingQuantity"
-                                            class="w-36 px-2 py-1.5 rounded border border-gray-300 bg-white text-xs" min="1">
+                                        <input type="number" step="1" wire:model.live.debounce.500ms="newPackagingQuantity" class="w-36 px-2 py-1.5 rounded border border-gray-300 bg-white text-xs" min="1">
                                     </div>
-                                    <button type="button" wire:click="savePackaging"
-                                        class="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition whitespace-nowrap">
-                                        {{ $editingPackagingId ? 'Actualizar' : 'Guardar' }}
-                                    </button>
-                                    <button type="button" wire:click="cancelEditPackaging"
-                                        class="px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 bg-white hover:bg-gray-50 transition">
-                                        Cancelar
-                                    </button>
+                                    <x-ui.button variant="primary" size="sm" wire:click="savePackaging">{{ $editingPackagingId ? 'Actualizar' : 'Guardar' }}</x-ui.button>
+                                    <x-ui.button variant="secondary" size="sm" wire:click="cancelEditPackaging">Cancelar</x-ui.button>
                                 </div>
                             </div>
                         @else
-                            <button type="button" wire:click="editPackaging(0)"
-                                class="text-xs text-blue-600 hover:text-blue-800 transition flex items-center gap-1">
+                            <span wire:click="editPackaging(0)" class="text-xs text-blue-600 hover:text-blue-800 transition flex items-center gap-1 cursor-pointer">
                                 <span class="material-symbols-outlined text-sm">add</span>
                                 Agregar empaque
-                            </button>
+                            </span>
                         @endif
                     </div>
-                    {{-- Fin empaques --}}
+
                     <div class="flex justify-end gap-3 pt-2">
-                        <a href="{{ route('products.index') }}"
-                            class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm">
-                            Cancelar
-                        </a>
-                        <button type="submit"
-                            class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 transition flex items-center gap-2">
-                            <span class="material-symbols-outlined text-base">save</span> Actualizar
-                        </button>
+                        <x-ui.button variant="secondary" icon="arrow_back" href="{{ route('products.index') }}">Cancelar</x-ui.button>
+                        <x-ui.button variant="primary" icon="save" type="submit">Actualizar</x-ui.button>
                     </div>
                 </form>
             @else
-                <!-- Formulario para agregar producto a la lista -->
                 <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-5">
                     <div class="flex items-center gap-2 mb-4">
                         <span class="material-symbols-outlined text-gray-500 text-lg">add_box</span>
                         <h2 class="font-medium text-gray-700">Agregar nuevo producto</h2>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Nombre -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>
-                                Nombre *
-                            </label>
-                            <div class="relative">
-                                <input type="text" wire:model="currentName"
-                                    class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">edit_note</span>
-                            </div>
-                            @error('currentName') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
-                            @enderror
-                        </div>
-                        <!-- Stock mínimo -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">arrow_downward</span>
-                                Stock mínimo
-                            </label>
-                            <div class="relative">
-                                <input type="number" wire:model="currentStockMin"
-                                    class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">inventory</span>
-                            </div>
-                        </div>
-                        <!-- Stock máximo -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">arrow_upward</span>
-                                Stock máximo
-                            </label>
-                            <div class="relative">
-                                <input type="number" wire:model="currentStockMax"
-                                    class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">exposure_plus_1</span>
-                            </div>
-                        </div>
-                        <!-- Modelo -->
+                        <x-ui.input icon="edit_note" wire:model="currentName" label="Nombre *" required />
+                        <x-ui.input type="number" icon="inventory" wire:model="currentStockMin" label="Stock mínimo" />
+                        <x-ui.input type="number" icon="exposure_plus_1" wire:model="currentStockMax" label="Stock máximo" />
+
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">category</span>
-                                Modelo (Marca / Modelo / Categoría)
-                            </label>
+                            <x-forms.label icon="category">Modelo (Marca / Modelo / Categoría)</x-forms.label>
                             <div class="flex gap-2">
                                 <div class="relative flex-1">
                                     <input type="text" readonly wire:model="selectedModelDisplay"
                                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-gray-100 text-gray-700 text-sm"
                                         placeholder="Ninguno seleccionado">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                                 </div>
-                                <button type="button" wire:click="openModelModal"
-                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-base">travel_explore</span> Buscar
-                                </button>
-                                <button type="button" wire:click="clearModelSelection"
-                                    class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition shadow-sm flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-base">close</span> Limpiar
-                                </button>
+                                <x-ui.button variant="primary" size="sm" icon="travel_explore" wire:click="openModelModal">Buscar</x-ui.button>
+                                <x-ui.button variant="secondary" size="sm" icon="close" wire:click="clearModelSelection">Limpiar</x-ui.button>
                             </div>
                         </div>
-                        <!-- Descripción -->
+
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-gray-400 text-base">description</span>
-                                Descripción
-                            </label>
-                            <div class="relative">
-                                <textarea wire:model="currentDescription" rows="2"
-                                    class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"></textarea>
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
-                            </div>
+                            <x-ui.textarea icon="edit_note" wire:model="currentDescription" label="Descripción" rows="2" />
                         </div>
                     </div>
                     <div class="mt-5 flex justify-end">
-                        <button type="button" wire:click="addToList"
-                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-green-700 transition">
-                            <span class="material-symbols-outlined text-base">add_circle</span>
-                            Agregar producto
-                        </button>
+                        <x-ui.button variant="success" icon="add_circle" wire:click="addToList">Agregar producto</x-ui.button>
                     </div>
                 </div>
 
-                <!-- Tabla de productos agregados -->
                 @if(count($productList) > 0)
                     <div class="space-y-4">
                         <div class="flex items-center justify-between">
@@ -387,44 +225,22 @@
                                 <thead>
                                     <tr class="bg-gray-50 border-b border-gray-200">
                                         <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                            <div class="flex items-center gap-1.5">
-                                                <span
-                                                    class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>
-                                                Nombre
-                                            </div>
+                                            <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">inventory_2</span> Nombre</div>
                                         </th>
                                         <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                            <div class="flex items-center justify-center gap-1.5">
-                                                <span
-                                                    class="material-symbols-outlined text-gray-400 text-base">arrow_downward</span>
-                                                Stock min
-                                            </div>
+                                            <div class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">arrow_downward</span> Stock min</div>
                                         </th>
                                         <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                            <div class="flex items-center justify-center gap-1.5">
-                                                <span
-                                                    class="material-symbols-outlined text-gray-400 text-base">arrow_upward</span>
-                                                Stock max
-                                            </div>
+                                            <div class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">arrow_upward</span> Stock max</div>
                                         </th>
                                         <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                            <div class="flex items-center gap-1.5">
-                                                <span class="material-symbols-outlined text-gray-400 text-base">category</span>
-                                                Modelo
-                                            </div>
+                                            <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">category</span> Modelo</div>
                                         </th>
                                         <th class="px-4 py-3 text-left text-gray-600 font-medium">
-                                            <div class="flex items-center gap-1.5">
-                                                <span
-                                                    class="material-symbols-outlined text-gray-400 text-base">description</span>
-                                                Descripción
-                                            </div>
+                                            <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">description</span> Descripción</div>
                                         </th>
                                         <th class="px-4 py-3 text-center text-gray-600 font-medium">
-                                            <div class="flex items-center justify-center gap-1.5">
-                                                <span class="material-symbols-outlined text-gray-400 text-base">settings</span>
-                                                Acciones
-                                            </div>
+                                            <div class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-base">settings</span> Acciones</div>
                                         </th>
                                     </tr>
                                 </thead>
@@ -437,29 +253,20 @@
                                             <td class="px-4 py-3 text-gray-700">
                                                 @if($prod['model_id'])
                                                     @php $model = \App\Models\ProductModel::with('brand', 'category')->find($prod['model_id']); @endphp
-                                                    <span
-                                                        class="text-xs bg-gray-100 px-2 py-1 rounded-full">{{ $model->brand->name ?? '' }}
-                                                        - {{ $model->name ?? '' }} - {{ $model->category->name ?? '' }}</span>
+                                                    <span class="text-xs bg-gray-100 px-2 py-1 rounded-full">{{ $model->brand->name ?? '' }} - {{ $model->name ?? '' }} - {{ $model->category->name ?? '' }}</span>
                                                 @else
                                                     <span class="text-gray-400">—</span>
                                                 @endif
                                             </td>
-                                            <td class="px-4 py-3 text-gray-600 max-w-[200px] truncate"
-                                                title="{{ $prod['description'] }}">
-                                                {{ $prod['description'] ?? '—' }}
-                                            </td>
+                                            <td class="px-4 py-3 text-gray-600 max-w-[200px] truncate" title="{{ $prod['description'] }}">{{ $prod['description'] ?? '—' }}</td>
                                             <td class="px-4 py-3 text-center">
                                                 <div class="flex items-center justify-center gap-1">
-                                                    <button type="button" wire:click="confirmAction('edit', {{ $index }})"
-                                                        class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                                        title="Editar">
+                                                    <span wire:click="confirmAction('edit', {{ $index }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer" title="Editar">
                                                         <span class="material-symbols-outlined text-lg">edit</span>
-                                                    </button>
-                                                    <button type="button" wire:click="confirmAction('delete', {{ $index }})"
-                                                        class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
-                                                        title="Eliminar">
+                                                    </span>
+                                                    <span wire:click="confirmAction('delete', {{ $index }})" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition cursor-pointer" title="Eliminar">
                                                         <span class="material-symbols-outlined text-lg">delete</span>
-                                                    </button>
+                                                    </span>
                                                 </div>
                                             </td>
                                         </tr>
@@ -468,15 +275,8 @@
                             </table>
                         </div>
                         <div class="flex justify-end gap-3 pt-2">
-                            <a href="{{ route('products.index') }}"
-                                class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm">
-                                Cancelar
-                            </a>
-                            <button type="button" wire:click="confirmSaveAll"
-                                class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 transition inline-flex items-center gap-2">
-                                <span class="material-symbols-outlined text-base">save</span>
-                                Guardar todos ({{ count($productList) }})
-                            </button>
+                            <x-ui.button variant="secondary" icon="arrow_back" href="{{ route('products.index') }}">Cancelar</x-ui.button>
+                            <x-ui.button variant="primary" icon="save" wire:click="confirmSaveAll">Guardar todos ({{ count($productList) }})</x-ui.button>
                         </div>
                     </div>
                 @else
@@ -488,13 +288,13 @@
                 @endif
             @endif
         </div>
-    </div>
+    </x-ui.card>
 
     {{-- Modal de categorías --}}
     <div x-data="{ show: @entangle('showCategoryModal') }" x-show="show" x-cloak
         x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
-        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
             x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
             class="relative w-full max-w-lg">
@@ -533,7 +333,7 @@
                     @endforelse
                 </div>
                 <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
-                    <button type="button" wire:click="closeCategoryModal" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cerrar</button>
+                    <x-ui.button variant="secondary" wire:click="closeCategoryModal">Cerrar</x-ui.button>
                 </div>
             </div>
         </div>
@@ -543,7 +343,7 @@
     <div x-data="{ show: @entangle('showBrandModal') }" x-show="show" x-cloak
         x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
-        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
             x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
             class="relative w-full max-w-lg">
@@ -574,16 +374,15 @@
                     @endforelse
                 </div>
                 <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
-                    <button type="button" wire:click="closeBrandModal" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cerrar</button>
+                    <x-ui.button variant="secondary" wire:click="closeBrandModal">Cerrar</x-ui.button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal de búsqueda de modelos -->
+    {{-- Modal de búsqueda de modelos --}}
     @if($showModelModal)
-        <div
-            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+        <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div class="relative mx-auto p-5 w-full max-w-3xl">
                 <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
@@ -591,17 +390,16 @@
                             <span class="material-symbols-outlined text-gray-500">search</span>
                             Seleccionar Modelo
                         </h3>
-                        <button wire:click="$set('showModelModal', false)" class="text-gray-400 hover:text-gray-600">
+                        <span wire:click="$set('showModelModal', false)" class="text-gray-400 hover:text-gray-600 cursor-pointer">
                             <span class="material-symbols-outlined">close</span>
-                        </button>
+                        </span>
                     </div>
                     <div class="p-5">
                         <div class="relative mb-4">
                             <input type="text" wire:model.live="modelSearchTerm"
                                 placeholder="Buscar por marca, modelo o categoría..."
                                 class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                            <span
-                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                         </div>
                         <div class="overflow-x-auto rounded-lg border border-gray-200">
                             <table class="min-w-full text-sm">
@@ -620,10 +418,7 @@
                                             <td class="px-4 py-2">{{ $res->name }}</td>
                                             <td class="px-4 py-2">{{ $res->category->name ?? '-' }}</td>
                                             <td class="px-4 py-2 text-center">
-                                                <button wire:click="selectModel({{ $res->id }})"
-                                                    class="text-blue-600 hover:text-blue-800 font-medium text-sm">
-                                                    Seleccionar
-                                                </button>
+                                                <span wire:click="selectModel({{ $res->id }})" class="text-blue-600 hover:text-blue-800 font-medium text-sm cursor-pointer">Seleccionar</span>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -631,10 +426,7 @@
                             </table>
                         </div>
                         <div class="mt-4 flex justify-end">
-                            <button wire:click="$set('showModelModal', false)"
-                                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition">
-                                Cerrar
-                            </button>
+                            <x-ui.button variant="secondary" wire:click="$set('showModelModal', false)">Cerrar</x-ui.button>
                         </div>
                     </div>
                 </div>
@@ -642,11 +434,16 @@
         </div>
     @endif
 
-    <!-- Modal de confirmación de acción (editar/eliminar) -->
+    {{-- Modal de confirmación de acción (editar/eliminar) --}}
     <div x-data="{ show: @entangle('showConfirmModal') }" x-show="show" x-cloak
-        class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
-        style="display: none;">
-        <div class="relative mx-auto p-5 w-full max-w-md">
+        class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+        <div class="relative mx-auto p-5 w-full max-w-md"
+            x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
             <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                 <div class="p-6 text-center">
                     <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 mb-4">
@@ -655,25 +452,26 @@
                     <h3 class="text-lg font-semibold text-gray-900">Confirmar acción</h3>
                     <p class="text-sm text-gray-600 mt-2">{{ $modalMessage }}</p>
                 </div>
-                <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                    <button wire:click="executeAction"
-                        class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                        Sí, continuar
-                    </button>
-                    <button @click="show = false" wire:click="closeModal"
-                        class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                        Cancelar
-                    </button>
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row-reverse gap-3">
+                    <x-ui.button variant="primary" icon="check" wire:click="executeAction">Sí, continuar</x-ui.button>
+                    <span @click="show = false">
+                        <x-ui.button variant="secondary" wire:click="closeModal">Cancelar</x-ui.button>
+                    </span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal de confirmación de guardado (creación múltiple o actualización) -->
+    {{-- Modal de confirmación de guardado --}}
     <div x-data="{ showSaveModal: @entangle('showSaveConfirmModal') }" x-show="showSaveModal" x-cloak
-        class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
-        style="display: none;">
-        <div class="relative mx-auto p-5 w-full max-w-md">
+        class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+        <div class="relative mx-auto p-5 w-full max-w-md"
+            x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
             <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                 <div class="p-6 text-center">
                     <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 mb-4">
@@ -684,53 +482,21 @@
                         @if($editingId)
                             ¿Estás seguro de actualizar este producto? Los datos se modificarán permanentemente.
                         @else
-                            ¿Estás seguro de guardar estos productos? Los movimientos de stock se actualizarán
-                            automáticamente.
+                            ¿Estás seguro de guardar estos productos? Los movimientos de stock se actualizarán automáticamente.
                         @endif
                     </p>
                 </div>
-                <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                    <button @if($editingId) wire:click="update" @else wire:click="saveAll" @endif
-                        class="w-full sm:w-auto px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
-                        Sí, guardar
-                    </button>
-                    <button @click="showSaveModal = false"
-                        class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                        Cancelar
-                    </button>
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row-reverse gap-3">
+                    @if($editingId)
+                        <x-ui.button variant="success" icon="check" wire:click="update">Sí, guardar</x-ui.button>
+                    @else
+                        <x-ui.button variant="success" icon="check" wire:click="saveAll">Sí, guardar</x-ui.button>
+                    @endif
+                    <span @click="showSaveModal = false">
+                        <x-ui.button variant="secondary">Cancelar</x-ui.button>
+                    </span>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Toast -->
-    <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
-        x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 3500)"
-        x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"
-        x-transition:enter="transform ease-out duration-300" x-transition:enter-start="translate-y-2 opacity-0"
-        x-transition:enter-end="translate-y-0 opacity-100" x-transition:leave="transform ease-in duration-200"
-        x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-2 opacity-0"
-        style="display: none;">
-        <div x-show="toastType === 'success'"
-            class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span class="material-symbols-outlined">check_circle</span>
-            <span x-text="toastMessage" class="text-sm font-medium"></span>
-        </div>
-        <div x-show="toastType === 'error'"
-            class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span class="material-symbols-outlined">error</span>
-            <span x-text="toastMessage" class="text-sm font-medium"></span>
-        </div>
-        <div x-show="toastType === 'info'"
-            class="bg-blue-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span class="material-symbols-outlined">info</span>
-            <span x-text="toastMessage" class="text-sm font-medium"></span>
-        </div>
-    </div>
-
-    <style>
-        [x-cloak] {
-            display: none !important;
-        }
-    </style>
 </div>

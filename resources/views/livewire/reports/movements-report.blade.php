@@ -1,65 +1,30 @@
 <div class="max-w-7xl mx-auto">
-    <!-- Tarjeta principal -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <!-- Encabezado con fondo sutil -->
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-4">
-            <div>
-                <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-gray-500">assessment</span>
-                    Reporte de Movimientos
-                </h1>
-                <p class="text-sm text-gray-500 mt-1">Consulta y exporta el historial de movimientos de inventario</p>
-            </div>
-            <button wire:click="exportExcel"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 transition">
-                <span class="material-symbols-outlined text-base">download</span>
-                Exportar a Excel
-            </button>
-        </div>
+    <x-ui.card title="Reporte de Movimientos" subtitle="Consulta y exporta el historial de movimientos de inventario" icon="assessment">
+        <x-slot:headerActions>
+            <x-ui.button variant="success" size="sm" icon="download" wire:click="exportExcel">Exportar a Excel</x-ui.button>
+        </x-slot:headerActions>
 
-        <!-- Contenido -->
-        <div class="p-6 space-y-5">
-            <!-- Filtros -->
+        <div class="space-y-5">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <div class="relative">
-                    <span
-                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">filter_alt</span>
-                    <select wire:model.live="typeFilter"
-                        class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
-                        <option value="">Todos los tipos</option>
-                        <option value="entry">Entrada</option>
-                        <option value="exit">Salida</option>
-                        <option value="technician_out">Salida a técnico</option>
-                        <option value="technician_return">Devolución técnico</option>
-                        <option value="damage">Dañado</option>
-                        <option value="return_to_supplier">Dev. proveedor</option>
-                    </select>
-                    <span
-                        class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
-                </div>
-                <div class="relative">
-                    <span
-                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">calendar_today</span>
-                    <input type="date" wire:model.live="dateFrom"
-                        class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                </div>
-                <div class="relative">
-                    <span
-                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">event</span>
-                    <input type="date" wire:model.live="dateTo"
-                        class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                </div>
+                <x-ui.select icon="filter_alt" wire:model.live="typeFilter" placeholder="Todos los tipos">
+                    <option value="entry">Entrada</option>
+                    <option value="exit">Salida</option>
+                    <option value="technician_out">Salida a técnico</option>
+                    <option value="technician_return">Devolución técnico</option>
+                    <option value="damage">Dañado</option>
+                    <option value="return_to_supplier">Dev. proveedor</option>
+                </x-ui.select>
+                <x-ui.input type="date" icon="calendar_today" wire:model.live="dateFrom" />
+                <x-ui.input type="date" icon="event" wire:model.live="dateTo" />
             </div>
 
-            <!-- Tabla de movimientos -->
             <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200">
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">
                                 <div class="flex items-center gap-1.5">
-                                    <span
-                                        class="material-symbols-outlined text-gray-400 text-base">calendar_month</span>
+                                    <span class="material-symbols-outlined text-gray-400 text-base">calendar_month</span>
                                     Fecha
                                 </div>
                             </th>
@@ -98,8 +63,7 @@
                     <tbody class="divide-y divide-gray-100">
                         @forelse($movements as $mov)
                             <tr class="hover:bg-gray-50/80 transition">
-                                <td class="px-4 py-3 font-mono text-xs text-gray-700">
-                                    {{ $mov->created_at->format('d/m/Y H:i') }}</td>
+                                <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $mov->created_at->format('d/m/Y H:i') }}</td>
                                 <td class="px-4 py-3 text-gray-800">{{ $mov->product->name }}</td>
                                 <td class="px-4 py-3 text-center">
                                     @php $td = $mov->type_display; @endphp
@@ -124,21 +88,12 @@
                 </table>
             </div>
 
-            <!-- Mensajes de sesión -->
             @if(session('message'))
-                <div
-                    class="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg border border-green-200">
-                    <span class="material-symbols-outlined text-green-600">check_circle</span>
-                    {{ session('message') }}
-                </div>
+                <x-ui.alert variant="success">{{ session('message') }}</x-ui.alert>
             @endif
             @if(session('error'))
-                <div
-                    class="flex items-center gap-2 text-sm text-red-700 bg-red-50 px-4 py-3 rounded-lg border border-red-200">
-                    <span class="material-symbols-outlined text-red-600">error</span>
-                    {{ session('error') }}
-                </div>
+                <x-ui.alert variant="danger">{{ session('error') }}</x-ui.alert>
             @endif
         </div>
-    </div>
+    </x-ui.card>
 </div>

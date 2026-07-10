@@ -459,16 +459,40 @@ class TicketForm extends Component
     #[On('clientCreated')]
     public function handleClientCreated($id, $name, $phone = null, $service_type_id = null)
     {
-        $this->selectClient($id, $name, $phone);
+        $id = (int) $id;
+        $client = Client::with('branch', 'zone')->find($id);
 
-        // Si el cliente se creó desde el modal con un tipo de servicio,
-        // transferirlo automáticamente al ticket
+        if (!$client) {
+            $this->dispatch('show-toast', type: 'error', message: 'Error al crear el cliente.');
+            return;
+        }
+
+        $this->client_id = $id;
+        $this->selectedClient = $client;
+        $this->clientSearch = $name . ($phone ? ' (' . $phone . ')' : '');
+        $this->clientSearchResults = [];
+
+        $this->loadAvailableZones();
+        if ($client->zone_id) {
+            $this->zone_id = $client->zone_id;
+            $this->updatedZoneId($client->zone_id);
+        }
+        if ($client->plan_id) {
+            $this->plan_id = $client->plan_id;
+            $this->updatedPlanId($client->plan_id);
+        }
+        if ($client->branch_id) {
+            $this->branch_id = $client->branch_id;
+        }
+
         if ($service_type_id) {
             $this->service_type_id = $service_type_id;
             $this->updatedServiceTypeId($service_type_id);
         }
 
         $this->closeClientModal();
+
+        $this->dispatch('show-toast', type: 'success', message: 'Cliente creado y seleccionado correctamente.');
     }
 
     private function resetTicketFields()

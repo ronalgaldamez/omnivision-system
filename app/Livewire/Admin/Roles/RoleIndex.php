@@ -19,7 +19,7 @@ class RoleIndex extends Component
             ->orderBy('name')
             ->paginate(10);
 
-        return view('livewire.admin.roles.role-index', compact('roles'));
+        return view('livewire.admin.roles.role-index', compact('roles'))->layout('components.layouts.app');
     }
 
     public function delete($id)

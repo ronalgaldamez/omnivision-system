@@ -86,7 +86,9 @@ class User extends Authenticatable
     public function hasPermissionTo($permission, $guardName = null): bool
     {
         if ($this->hasPersonalizedPermissions()) {
-            return $this->hasDirectPermission($permission);
+            if ($this->hasDirectPermission($permission)) {
+                return true;
+            }
         }
 
         $permission = $this->filterPermission($permission, $guardName);

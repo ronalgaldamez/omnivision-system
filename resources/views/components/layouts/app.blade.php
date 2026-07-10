@@ -22,7 +22,7 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=JetBrains+Mono:wght@400;500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,100..1000&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
     <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0,1"
@@ -32,7 +32,7 @@
 
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'DM Sans', sans-serif;
         }
 
         .font-mono {
@@ -245,10 +245,29 @@
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                         class="material-symbols-outlined text-base">settings_overscan</span> Bandeja
                                 NOC</a>@endcan
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- SLA --}}
+                    @if(auth()->user()->can('view sla dashboard'))
+                        <div x-data="{ open: false }">
+                            <button @click="open = !open"
+                                class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50/80 transition text-sm font-medium">
+                                <span class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-base">monitoring</span>
+                                    <span x-show="sidebarOpen">SLA</span>
+                                </span>
+                                <span x-show="sidebarOpen" class="material-symbols-outlined text-sm transition-transform"
+                                    :class="open ? 'rotate-180' : ''">expand_more</span>
+                            </button>
+                            <div x-show="open" x-collapse class="ml-4 space-y-1 mt-1">
                                 @can('view sla dashboard')<a href="{{ route('sla.dashboard') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
-                                        class="material-symbols-outlined text-base">monitoring</span> Dashboard SLA</a>@endcan
-
+                                        class="material-symbols-outlined text-base">dashboard</span> Dashboard SLA</a>@endcan
+                                @can('view sla goals')<a href="{{ route('admin.sla.goals.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                        class="material-symbols-outlined text-base">timer</span> Metas SLA</a>@endcan
                             </div>
                         </div>
                     @endif
@@ -289,12 +308,21 @@
                                     :class="open ? 'rotate-180' : ''">expand_more</span>
                             </button>
                             <div x-show="open" x-collapse class="ml-4 space-y-1 mt-1">
+                                <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">Personas</div>
                                 @can('view_users_menu')<a href="{{ route('admin.users.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">people</span> Usuarios</a>@endcan
                                 @can('view_roles_menu')<a href="{{ route('admin.roles.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">security</span> Roles y Permisos</a>@endcan
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">Estructura</div>
+                                @can('access_admin')<a href="{{ route('admin.branches.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">store</span> Sucursales</a>@endcan
+                                @can('access_admin')<a href="{{ route('admin.shelves') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">shelves</span> Estanterías</a>@endcan
                                 @can('view_catalog_menu')<a href="{{ route('admin.catalog') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">inventory_2</span> Catálogo</a>@endcan
@@ -304,18 +332,15 @@
                                 @can('assign supervisors to zones')<a href="{{ route('admin.supervisor-zones') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">supervisor_account</span> Supervisores x Zona</a>@endcan
-                                @can('access_admin')<a href="{{ route('admin.shelves') }}"
-                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
-                                class="material-symbols-outlined text-base">shelves</span> Estanterías</a>@endcan
-                                @can('access_admin')<a href="{{ route('admin.branches.index') }}"
-                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
-                                class="material-symbols-outlined text-base">store</span> Sucursales</a>@endcan
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">Operación</div>
                                 @can('view_settings_menu')<a href="{{ route('admin.settings') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                         class="material-symbols-outlined text-base">settings</span> Configuración</a>@endcan
-                                @can('view sla goals')<a href="{{ route('admin.sla.goals.index') }}"
+                                <div class="border-t border-gray-100 my-1"></div>
+                                @can('access_admin')<a href="{{ route('admin.ui-preview') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
-                                        class="material-symbols-outlined text-base">timer</span> Metas SLA</a>@endcan
+                                        class="material-symbols-outlined text-base">palette</span> UI Preview</a>@endcan
                             </div>
                         </div>
                     @endif
@@ -385,7 +410,7 @@
                 </nav>
 
                 <main class="flex-1 overflow-y-auto p-6">
-                    {{ $slot }}
+                    @isset($slot) {{ $slot }} @else @yield('content') @endisset
                 </main>
             </div>
         </div>
@@ -410,6 +435,7 @@
             <div :class="{
                 'bg-green-600': t.type === 'success',
                 'bg-red-600': t.type === 'error',
+                'bg-amber-600': t.type === 'warning',
                 'bg-blue-600': t.type === 'info'
             }" class="text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 transition-all duration-300"
                 x-transition:enter="transform ease-out duration-300" x-transition:enter-start="translate-y-2 opacity-0"
@@ -417,6 +443,7 @@
                 x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-2 opacity-0">
                 <span x-show="t.type === 'success'" class="material-symbols-outlined">check_circle</span>
                 <span x-show="t.type === 'error'" class="material-symbols-outlined">error</span>
+                <span x-show="t.type === 'warning'" class="material-symbols-outlined">warning</span>
                 <span x-show="t.type === 'info'" class="material-symbols-outlined">info</span>
                 <span x-text="t.message" class="text-sm font-medium"></span>
             </div>

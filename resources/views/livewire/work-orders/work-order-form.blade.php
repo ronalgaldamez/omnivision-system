@@ -1,26 +1,8 @@
-{{-- resources/views/livewire/work-orders/work-order-form.blade.php --}}
 <div class="max-w-5xl mx-auto">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                    <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-gray-500">
-                            {{ $orderId ? 'edit' : 'engineering' }}
-                        </span>
-                        {{ $orderId ? 'Editar' : 'Nueva' }} Orden de Trabajo
-                    </h1>
-                    <p class="text-sm text-gray-500 mt-1">
-                        {{ $orderId ? 'Modifica los datos de la orden' : 'Asigna un técnico y registra una nueva orden' }}
-                    </p>
-                </div>
-                <a href="{{ route('work-orders.index') }}"
-                    class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition">
-                    <span class="material-symbols-outlined text-base">arrow_back</span>
-                    Volver al listado
-                </a>
-            </div>
-        </div>
+    <x-ui.card icon="{{ $orderId ? 'edit' : 'engineering' }}" title="{{ $orderId ? 'Editar' : 'Nueva' }} Orden de Trabajo" subtitle="{{ $orderId ? 'Modifica los datos de la orden' : 'Asigna un técnico y registra una nueva orden' }}">
+        <x-slot:headerActions>
+            <x-ui.button variant="ghost" icon="arrow_back" href="{{ route('work-orders.index') }}">Volver al listado</x-ui.button>
+        </x-slot:headerActions>
 
         <div class="p-6">
             <form wire:submit.prevent="save" class="space-y-6">
@@ -79,7 +61,6 @@
                         Asignación
                     </h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {{-- Técnico --}}
                         @if($canAssign)
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
@@ -90,11 +71,9 @@
                                     <input type="text" wire:model.live.debounce.300ms="technicianSearch"
                                         placeholder="Buscar técnico por nombre..."
                                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                                     @if(!empty($technicianResults) && !$technician_id)
-                                        <ul
-                                            class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                        <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
                                             @foreach($technicianResults as $tech)
                                                 <li wire:click="selectTechnician({{ $tech->id }})"
                                                     class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between">
@@ -105,12 +84,10 @@
                                         </ul>
                                     @endif
                                 </div>
-                                @error('technician_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
-                                @enderror
+                                @error('technician_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                             </div>
                         @endif
 
-                        {{-- Cliente --}}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-base">person</span>
@@ -121,108 +98,74 @@
                                     <input type="text" wire:model.live.debounce.300ms="clientSearch"
                                         placeholder="Buscar por nombre o teléfono..."
                                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                                     @if(!empty($clientSearchResults))
-                                        <ul
-                                            class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                        <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
                                             @foreach($clientSearchResults as $client)
                                                 <li wire:click="selectClient({{ $client->id }}, '{{ $client->name }}', '{{ $client->phone }}')"
                                                     class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between">
                                                     <span class="font-medium text-gray-800">{{ $client->name }}</span>
-                                                    <span
-                                                        class="text-xs text-gray-500">{{ $client->phone ?? 'Sin teléfono' }}</span>
+                                                    <span class="text-xs text-gray-500">{{ $client->phone ?? 'Sin teléfono' }}</span>
                                                 </li>
                                             @endforeach
                                         </ul>
                                     @endif
                                 </div>
-                                <button type="button" wire:click="openClientModal"
-                                    class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-base">person_add</span>
-                                    Nuevo
-                                </button>
+                                <x-ui.button variant="success" icon="person_add" wire:click="openClientModal">Nuevo</x-ui.button>
                             </div>
-                            @error('client_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
-                            @enderror
+                            @error('client_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                         </div>
                     </div>
 
-                    {{-- Datos del cliente seleccionado (ANCHO COMPLETO) --}}
                     @if($selectedClient)
                         <div class="bg-white rounded-lg border border-gray-200 p-4">
                             <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
-                                <span class="material-symbols-outlined text-gray-400">info</span>
+                            <span class="material-symbols-outlined text-gray-400">info</span>
                                 Datos del cliente seleccionado
                             </h3>
                             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
                                 <div class="flex items-start gap-2">
                                     <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">person</span>
-                                    <div>
-                                        <p class="text-xs text-gray-500">Nombre</p>
-                                        <p class="text-gray-800 font-medium">{{ $selectedClient->name }}</p>
-                                    </div>
+                                    <div><p class="text-xs text-gray-500">Nombre</p><p class="text-gray-800 font-medium">{{ $selectedClient->name }}</p></div>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">call</span>
-                                    <div>
-                                        <p class="text-xs text-gray-500">Teléfono</p>
-                                        <p class="text-gray-800">{{ $selectedClient->phone ?? '—' }}</p>
-                                    </div>
+                                    <div><p class="text-xs text-gray-500">Teléfono</p><p class="text-gray-800">{{ $selectedClient->phone ?? '—' }}</p></div>
                                 </div>
                                 @if($selectedClient->document_type && $selectedClient->document_number)
                                     <div class="flex items-start gap-2">
                                         <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">fingerprint</span>
-                                        <div>
-                                            <p class="text-xs text-gray-500">{{ strtoupper($selectedClient->document_type) }}
-                                            </p>
-                                            <p class="text-gray-800">{{ $selectedClient->document_number }}</p>
-                                        </div>
+                                        <div><p class="text-xs text-gray-500">{{ strtoupper($selectedClient->document_type) }}</p><p class="text-gray-800">{{ $selectedClient->document_number }}</p></div>
                                     </div>
                                 @endif
                                 @if($selectedClient->email)
                                     <div class="flex items-start gap-2">
                                         <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">mail</span>
-                                        <div>
-                                            <p class="text-xs text-gray-500">Correo</p>
-                                            <p class="text-gray-800">{{ $selectedClient->email }}</p>
-                                        </div>
+                                        <div><p class="text-xs text-gray-500">Correo</p><p class="text-gray-800">{{ $selectedClient->email }}</p></div>
                                     </div>
                                 @endif
                                 @if($selectedClient->address)
                                     <div class="flex items-start gap-2 col-span-2">
                                         <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">location_on</span>
-                                        <div>
-                                            <p class="text-xs text-gray-500">Dirección</p>
-                                            <p class="text-gray-800">{{ $selectedClient->address }}</p>
-                                        </div>
+                                        <div><p class="text-xs text-gray-500">Dirección</p><p class="text-gray-800">{{ $selectedClient->address }}</p></div>
                                     </div>
                                 @endif
                                 @if($selectedClient->installation_address)
                                     <div class="flex items-start gap-2 col-span-2">
                                         <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">home_pin</span>
-                                        <div>
-                                            <p class="text-xs text-gray-500">Instalación</p>
-                                            <p class="text-gray-800">{{ $selectedClient->installation_address }}</p>
-                                        </div>
+                                        <div><p class="text-xs text-gray-500">Instalación</p><p class="text-gray-800">{{ $selectedClient->installation_address }}</p></div>
                                     </div>
                                 @endif
                                 @if($selectedClient->service)
                                     <div class="flex items-start gap-2">
                                         <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">tv</span>
-                                        <div>
-                                            <p class="text-xs text-gray-500">Servicio</p>
-                                            <p class="text-gray-800">{{ $selectedClient->service }}</p>
-                                        </div>
+                                        <div><p class="text-xs text-gray-500">Servicio</p><p class="text-gray-800">{{ $selectedClient->service }}</p></div>
                                     </div>
                                 @endif
                                 @if($selectedClient->nro_luz)
                                     <div class="flex items-start gap-2">
                                         <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">bolt</span>
-                                        <div>
-                                            <p class="text-xs text-gray-500">N.° de luz</p>
-                                            <p class="text-gray-800">{{ $selectedClient->nro_luz }}</p>
-                                        </div>
+                                        <div><p class="text-xs text-gray-500">N.° de luz</p><p class="text-gray-800">{{ $selectedClient->nro_luz }}</p></div>
                                     </div>
                                 @endif
                             </div>
@@ -248,11 +191,9 @@
                             <div class="relative">
                                 <input type="date" wire:model="scheduled_date"
                                     class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">event</span>
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">event</span>
                             </div>
-                            @error('scheduled_date') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
-                            @enderror
+                            @error('scheduled_date') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                             <p class="text-xs text-gray-400 mt-1">Si no se programa, quedará como pendiente de programación.</p>
                         </div>
                         <div>
@@ -268,13 +209,10 @@
                                     <option value="completed">Completada</option>
                                     <option value="cancelled">Cancelada</option>
                                 </select>
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">info</span>
-                                <span
-                                    class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">info</span>
+                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                             </div>
-                            @error('status') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
-                            @enderror
+                            @error('status') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                         </div>
                     </div>
                 </div>
@@ -294,11 +232,9 @@
                             <div class="relative">
                                 <input type="text" wire:model="latitude" readonly
                                     class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-700 shadow-sm text-sm">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">location_on</span>
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">location_on</span>
                             </div>
-                            @error('latitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
-                            @enderror
+                            @error('latitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
@@ -308,11 +244,9 @@
                             <div class="relative">
                                 <input type="text" wire:model="longitude" readonly
                                     class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-700 shadow-sm text-sm">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">location_on</span>
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">location_on</span>
                             </div>
-                            @error('longitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
-                            @enderror
+                            @error('longitude') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                         </div>
                     </div>
                     <div>
@@ -323,16 +257,8 @@
                         <div id="map" style="height: 300px; width: 100%;"
                             class="rounded-lg border border-gray-300 shadow-sm"></div>
                         <div class="flex gap-2 mt-3">
-                            <button type="button" id="getLocationBtn"
-                                class="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition">
-                                <span class="material-symbols-outlined text-base">my_location</span>
-                                Mi ubicación
-                            </button>
-                            <button type="button" id="clearLocationBtn"
-                                class="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition shadow-sm">
-                                <span class="material-symbols-outlined text-base">delete</span>
-                                Limpiar
-                            </button>
+                            <x-ui.button variant="success" icon="my_location" id="getLocationBtn">Mi ubicación</x-ui.button>
+                            <x-ui.button variant="secondary" icon="delete" id="clearLocationBtn">Limpiar</x-ui.button>
                         </div>
                     </div>
                 </div>
@@ -343,13 +269,10 @@
                         <span class="material-symbols-outlined text-gray-500">settings</span>
                         Datos Técnicos
                         @if($technicalDataLoaded)
-                            <span
-                                class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Precargados
-                                del cliente</span>
+                            <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Precargados del cliente</span>
                         @endif
                     </h2>
-                    <p class="text-xs text-gray-500">Estos campos serán llenados por el técnico durante la instalación.
-                    </p>
+                    <p class="text-xs text-gray-500">Estos campos serán llenados por el técnico durante la instalación.</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
@@ -357,8 +280,7 @@
                                 Nombre de perfil
                             </label>
                             <input type="text" wire:model="profile_name" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
-                                placeholder="Ej: Usuario1">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100" placeholder="Ej: Usuario1">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
@@ -366,8 +288,7 @@
                                 Contraseña de perfil
                             </label>
                             <input type="text" wire:model="profile_password" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
-                                placeholder="Contraseña">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100" placeholder="Contraseña">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
@@ -375,8 +296,7 @@
                                 Nombre wifi
                             </label>
                             <input type="text" wire:model="wifi_name" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
-                                placeholder="SSID">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100" placeholder="SSID">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
@@ -384,8 +304,7 @@
                                 Contraseña wifi
                             </label>
                             <input type="text" wire:model="wifi_password" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
-                                placeholder="Contraseña">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100" placeholder="Contraseña">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
@@ -393,18 +312,15 @@
                                 MAC
                             </label>
                             <input type="text" wire:model="mac" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
-                                placeholder="00:00:00:00:00:00">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100" placeholder="00:00:00:00:00:00">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
-                                <span
-                                    class="material-symbols-outlined text-gray-400 text-sm">settings_input_antenna</span>
+                                <span class="material-symbols-outlined text-gray-400 text-sm">settings_input_antenna</span>
                                 PON
                             </label>
                             <input type="text" wire:model="pon" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
-                                placeholder="PON">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100" placeholder="PON">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
@@ -412,8 +328,7 @@
                                 Mufa
                             </label>
                             <input type="text" wire:model="mufa" {{ !$canEditTech || $technicalDataLoaded ? 'disabled' : '' }}
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100"
-                                placeholder="Número de mufa">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm disabled:bg-gray-100" placeholder="Número de mufa">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
@@ -436,52 +351,38 @@
                         <textarea wire:model="notes" rows="3"
                             class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"
                             placeholder="Notas o indicaciones adicionales"></textarea>
-                        <span
-                            class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
+                        <span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-lg">edit_note</span>
                     </div>
                     @error('notes') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
-                {{-- Botones de acción --}}
                 <div class="flex justify-end gap-3 pt-2">
-                    <a href="{{ route('work-orders.index') }}"
-                        class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition shadow-sm">
-                        Cancelar
-                    </a>
-                    <button type="submit"
-                        class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition inline-flex items-center gap-2">
-                        <span class="material-symbols-outlined text-base">save</span>
-                        Guardar
-                    </button>
+                    <x-ui.button variant="ghost" href="{{ route('work-orders.index') }}">Cancelar</x-ui.button>
+                    <x-ui.button type="submit" variant="primary" icon="save">Guardar</x-ui.button>
                 </div>
             </form>
         </div>
-    </div>
+    </x-ui.card>
 
     {{-- Modal para crear cliente --}}
     @if($showClientModal)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
             <div class="relative mx-auto p-5 w-full max-w-3xl max-h-[85vh] overflow-y-auto">
-                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                        <h3 class="text-lg font-semibold flex items-center gap-2">
-                            <span class="material-symbols-outlined text-gray-500">person_add</span>
-                            Nuevo Cliente
-                        </h3>
+                <x-ui.card>
+                    <x-slot:headerActions>
                         <button type="button" wire:click="closeClientModal"
                             class="text-gray-400 hover:text-gray-600 transition">
                             <span class="material-symbols-outlined">close</span>
                         </button>
-                    </div>
+                    </x-slot:headerActions>
                     <div class="p-5">
                         <livewire:clients.client-form :key="$modalKey" />
                     </div>
-                </div>
+                </x-ui.card>
             </div>
         </div>
     @endif
-
 
     <div x-data="{ toasts: [] }"
         x-on:show-toast.window="toasts.push({ id: Date.now() + Math.random(), type: $event.detail.type, message: $event.detail.message }); setTimeout(() => toasts.shift(), 3500)"
@@ -509,37 +410,23 @@
 @push('scripts')
     <script>
         document.addEventListener('livewire:initialized', function () {
-            if (typeof L === 'undefined') {
-                console.warn('Leaflet no está cargado. El mapa no funcionará.');
-                return;
-            }
-
+            if (typeof L === 'undefined') { console.warn('Leaflet no está cargado. El mapa no funcionará.'); return; }
             var mapContainer = document.getElementById('map');
             if (!mapContainer) return;
-
             var map = L.map('map').setView([13.6929, -89.2182], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-            }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>' }).addTo(map);
             var marker = null;
-
             var lat = @json($latitude ?? null);
             var lng = @json($longitude ?? null);
-            if (lat && lng) {
-                map.setView([lat, lng], 15);
-                marker = L.marker([lat, lng]).addTo(map);
-            }
-
+            if (lat && lng) { map.setView([lat, lng], 15); marker = L.marker([lat, lng]).addTo(map); }
             map.on('click', function (e) {
                 if (marker) map.removeLayer(marker);
                 marker = L.marker(e.latlng).addTo(map);
                 @this.set('latitude', e.latlng.lat);
                 @this.set('longitude', e.latlng.lng);
             });
-
             var getLocationBtn = document.getElementById('getLocationBtn');
             var clearLocationBtn = document.getElementById('clearLocationBtn');
-
             if (getLocationBtn) {
                 getLocationBtn.addEventListener('click', function () {
                     if (navigator.geolocation) {
@@ -551,12 +438,9 @@
                             @this.set('latitude', pos[0]);
                             @this.set('longitude', pos[1]);
                         });
-                    } else {
-                        alert('Geolocalización no soportada');
-                    }
+                    } else { alert('Geolocalización no soportada'); }
                 });
             }
-
             if (clearLocationBtn) {
                 clearLocationBtn.addEventListener('click', function () {
                     if (marker) map.removeLayer(marker);
@@ -566,7 +450,6 @@
                 });
             }
         });
-
         document.addEventListener('livewire:init', () => {
             Livewire.on('clientCreated', ({ id, name, phone }) => {
                 @this.call('selectClient', id, name, phone);

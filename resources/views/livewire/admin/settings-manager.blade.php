@@ -1,14 +1,6 @@
 <div x-data="{ activeTab: 'general' }" class="max-w-3xl mx-auto">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-            <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <span class="material-symbols-outlined text-gray-500">settings</span>
-                Configuraciones del Sistema
-            </h1>
-            <p class="text-sm text-gray-500 mt-1">Ajustes generales, tipos de servicio, base de conocimiento y control de módulos</p>
-        </div>
-
-        <!-- Pestañas -->
+    <x-ui.card icon="settings" title="Configuraciones del Sistema" subtitle="Ajustes generales, tipos de servicio, base de conocimiento y control de módulos">
+        {{-- Pestañas Alpine --}}
         <div class="border-b border-gray-200">
             <nav class="flex gap-0 -mb-px px-6">
                 <button @click="activeTab = 'general'"
@@ -38,11 +30,9 @@
             </nav>
         </div>
 
-        <!-- Contenido por pestañas -->
         <div class="p-6 space-y-6">
-            {{-- Pestaña 1: Ajustes Generales --}}
+            {{-- General --}}
             <div x-show="activeTab === 'general'" x-cloak>
-                {{-- Módulo: Técnicos / Requisiciones --}}
                 <div class="mb-6">
                     <div class="flex items-center gap-2 px-1 mb-3">
                         <span class="material-symbols-outlined text-gray-500 text-lg">handyman</span>
@@ -60,7 +50,6 @@
                     </div>
                 </div>
 
-                {{-- Módulo: Dispositivos / MAC --}}
                 <div class="mb-6">
                     <div class="flex items-center gap-2 px-1 mb-3">
                         <span class="material-symbols-outlined text-gray-500 text-lg">settings_ethernet</span>
@@ -69,7 +58,7 @@
                     <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Factura obligatoria para registro de dispositivos</label>
-                            <p class="text-xs text-gray-500 mt-0.5">Si está activo, al registrar dispositivos en /devices/register será obligatorio seleccionar una factura de compra asociada.</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Si está activo, al registrar dispositivos será obligatorio seleccionar una factura de compra asociada.</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
                             <input type="checkbox" wire:model.live="invoiceRequiredForDevices" class="sr-only peer">
@@ -78,7 +67,6 @@
                     </div>
                 </div>
 
-                {{-- Módulo: Tickets --}}
                 <div class="mb-6">
                     <div class="flex items-center gap-2 px-1 mb-3">
                         <span class="material-symbols-outlined text-gray-500 text-lg">confirmation_number</span>
@@ -87,7 +75,7 @@
                     <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Documentos de identidad del cliente</label>
-                            <p class="text-xs text-gray-500 mt-0.5">Si está activo, al crear un ticket se mostrará el campo de tipo y número de documento de identidad (DUI, NIT, etc.).</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Si está activo, al crear un ticket se mostrará el campo de tipo y número de documento de identidad.</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
                             <input type="checkbox" wire:model.live="documentTypesEnabled" class="sr-only peer">
@@ -96,37 +84,29 @@
                     </div>
                 </div>
 
-                {{-- Tipos de Documento --}}
                 <div class="mb-6">
                     <div class="flex items-center justify-between gap-2 px-1 mb-3">
                         <div class="flex items-center gap-2">
                             <span class="material-symbols-outlined text-gray-500 text-lg">badge</span>
                             <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Tipos de Documento</h3>
                         </div>
-                        <button wire:click="openDocTypeModal"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                            <span class="material-symbols-outlined text-base">add_circle</span>
-                            Nuevo tipo
-                        </button>
+                        <x-ui.button variant="primary" icon="add_circle" wire:click="openDocTypeModal" class="text-xs px-3 py-1.5">Nuevo tipo</x-ui.button>
                     </div>
                     <p class="text-xs text-gray-500 mb-3">Se mostrarán como opciones en el formulario de cliente.</p>
 
                     <div class="space-y-2">
                         @forelse($documentTypeList as $index => $dt)
                             <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-3 flex items-center justify-between gap-4">
-                                <span class="text-sm font-medium text-gray-700">{{ $dt }}</span>
-                                <div class="flex items-center gap-1">
-                                    <button wire:click="editDocType({{ $index }})"
-                                        class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
-                                        <span class="material-symbols-outlined text-lg">edit</span>
-                                    </button>
-                                    <button wire:click="deleteDocType({{ $index }})"
-                                        onclick="return confirm('¿Eliminar este tipo de documento?')"
-                                        class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
-                                        <span class="material-symbols-outlined text-lg">delete</span>
-                                    </button>
-                                </div>
+                            <span class="text-sm font-medium text-gray-700">{{ $dt }}</span>
+                            <div class="flex items-center gap-1">
+                                <button wire:click="editDocType({{ $index }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
+                                    <span class="material-symbols-outlined text-lg">edit</span>
+                                </button>
+                                <button wire:click="deleteDocType({{ $index }})" onclick="return confirm('¿Eliminar este tipo de documento?')" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
+                                    <span class="material-symbols-outlined text-lg">delete</span>
+                                </button>
                             </div>
+                        </div>
                         @empty
                             <div class="text-center py-6 bg-gray-50/50 rounded-xl border border-dashed border-gray-300">
                                 <p class="text-gray-500 text-sm">No hay tipos de documento definidos.</p>
@@ -135,7 +115,6 @@
                     </div>
                 </div>
 
-                {{-- Módulo: NOC --}}
                 <div class="mb-6">
                     <div class="flex items-center gap-2 px-1 mb-3">
                         <span class="material-symbols-outlined text-gray-500 text-lg">settings_overscan</span>
@@ -157,27 +136,21 @@
                 </div>
             </div>
 
-            {{-- Pestaña 2: Tipos de Servicio --}}
+            {{-- Servicios --}}
             <div x-show="activeTab === 'services'" x-cloak>
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
                         <span class="material-symbols-outlined text-gray-500">design_services</span>
                         Tipos de Servicio
                     </h2>
-                    <button wire:click="openServiceModal"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                        <span class="material-symbols-outlined text-base">add_circle</span>
-                        Nuevo tipo
-                    </button>
+                    <x-ui.button variant="primary" icon="add_circle" wire:click="openServiceModal" class="text-xs px-3 py-1.5">Nuevo tipo</x-ui.button>
                 </div>
-                <p class="text-xs text-gray-500 mb-4">Administra los tipos de servicio y define cuáles requieren intervención del NOC.</p>
+                <p class="text-xs text-gray-500 mb-4">Administrá los tipos de servicio y definí cuáles requieren intervención del NOC.</p>
 
                 <div class="space-y-3">
                     @forelse($serviceTypes as $type)
                         <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4">
-                            <span class="text-sm font-medium text-gray-700 capitalize">
-                                {{ str_replace('_', ' ', $type->name) }}
-                            </span>
+                            <span class="text-sm font-medium text-gray-700 capitalize">{{ str_replace('_', ' ', $type->name) }}</span>
                             <div class="flex items-center gap-4">
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" wire:model.live="serviceRequiresNoc.{{ $type->id }}" class="sr-only peer">
@@ -185,13 +158,10 @@
                                     <span class="ml-2 text-xs text-gray-500">Requiere NOC</span>
                                 </label>
                                 <div class="flex items-center gap-1">
-                                    <button wire:click="editService({{ $type->id }})"
-                                        class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
+                                    <button wire:click="editService({{ $type->id }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
                                         <span class="material-symbols-outlined text-lg">edit</span>
                                     </button>
-                                    <button wire:click="deleteService({{ $type->id }})"
-                                        onclick="return confirm('¿Eliminar este tipo de servicio?')"
-                                        class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
+                                    <button wire:click="deleteService({{ $type->id }})" onclick="return confirm('¿Eliminar este tipo de servicio?')" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
                                         <span class="material-symbols-outlined text-lg">delete</span>
                                     </button>
                                 </div>
@@ -205,18 +175,14 @@
                 </div>
             </div>
 
-            {{-- Pestaña 3: Base de Conocimiento --}}
+            {{-- Base de Conocimiento --}}
             <div x-show="activeTab === 'knowledge'" x-cloak>
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
                         <span class="material-symbols-outlined text-gray-500">menu_book</span>
                         Base de Conocimiento
                     </h2>
-                    <button wire:click="openKbModal"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                        <span class="material-symbols-outlined text-base">add_circle</span>
-                        Nuevo Artículo
-                    </button>
+                    <x-ui.button variant="primary" icon="add_circle" wire:click="openKbModal" class="text-xs px-3 py-1.5">Nuevo Artículo</x-ui.button>
                 </div>
                 <p class="text-xs text-gray-500 mb-4">Artículos técnicos vinculados a tipos de servicio.</p>
 
@@ -231,13 +197,10 @@
                                     @endif
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button wire:click="editArticle({{ $article->id }})"
-                                        class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
+                                    <button wire:click="editArticle({{ $article->id }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
                                         <span class="material-symbols-outlined text-lg">edit</span>
                                     </button>
-                                    <button wire:click="deleteArticle({{ $article->id }})"
-                                        onclick="return confirm('¿Eliminar este artículo?')"
-                                        class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
+                                    <button wire:click="deleteArticle({{ $article->id }})" onclick="return confirm('¿Eliminar este artículo?')" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
                                         <span class="material-symbols-outlined text-lg">delete</span>
                                     </button>
                                 </div>
@@ -246,9 +209,7 @@
                             @if($article->serviceTypes->isNotEmpty())
                                 <div class="flex flex-wrap gap-1 mt-2">
                                     @foreach($article->serviceTypes as $st)
-                                        <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                                            {{ str_replace('_', ' ', $st->name) }}
-                                        </span>
+                                        <x-ui.badge variant="info">{{ str_replace('_', ' ', $st->name) }}</x-ui.badge>
                                     @endforeach
                                 </div>
                             @endif
@@ -261,7 +222,7 @@
                 </div>
             </div>
 
-            {{-- Pestaña 4: Módulos --}}
+            {{-- Módulos --}}
             <div x-show="activeTab === 'modules'" x-cloak>
                 <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2 mb-1">
                     <span class="material-symbols-outlined text-gray-500">extension</span>
@@ -273,9 +234,7 @@
                     @foreach($modules as $module => $active)
                     <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-start justify-between gap-4">
                         <div>
-                            <h3 class="text-sm font-medium capitalize text-gray-700">
-                                {{ str_replace('_', ' ', $module) }}
-                            </h3>
+                            <h3 class="text-sm font-medium capitalize text-gray-700">{{ str_replace('_', ' ', $module) }}</h3>
                             <p class="text-xs text-gray-500 mt-0.5">
                                 @switch($module)
                                     @case('inventory') Módulo obligatorio de productos, movimientos y kardex. @break
@@ -298,9 +257,9 @@
                 </div>
             </div>
         </div>
-    </div>
+    </x-ui.card>
 
-    <!-- Modal Crear/Editar Tipo de Servicio -->
+    {{-- Modal Servicio --}}
     @if($showServiceModal)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
@@ -308,45 +267,30 @@
             <div class="relative mx-auto p-5 w-full max-w-md">
                 <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                        <h3 class="text-lg font-semibold">
-                            {{ $editingServiceId ? 'Editar' : 'Nuevo' }} Tipo de Servicio
-                        </h3>
+                        <h3 class="text-lg font-semibold">{{ $editingServiceId ? 'Editar' : 'Nuevo' }} Tipo de Servicio</h3>
                         <button wire:click="closeServiceModal" class="text-gray-400 hover:text-gray-600 transition">
                             <span class="material-symbols-outlined">close</span>
                         </button>
                     </div>
                     <div class="p-5 space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                            <input type="text" wire:model="serviceName"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                placeholder="Ej: instalacion, traslado">
-                            @error('serviceName') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" wire:model="serviceRequiresNocModal" class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                <span class="ml-2 text-sm text-gray-700">Requiere NOC</span>
+                        <x-forms.group name="serviceName" label="Nombre">
+                            <x-ui.input type="text" wire:model="serviceName" placeholder="Ej: instalacion, traslado" />
+                        </x-forms.group>
+                        <label class="flex items-center gap-3">
+                            <input type="checkbox" wire:model="serviceRequiresNocModal" class="rounded border-gray-300 text-blue-600">
+                            <span class="text-sm text-gray-700">Requiere NOC</span>
                         </label>
                     </div>
-                    </div>
-                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                        <button wire:click="saveService"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                            {{ $editingServiceId ? 'Actualizar' : 'Guardar' }}
-                        </button>
-                        <button wire:click="closeServiceModal"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                            Cancelar
-                        </button>
+                    <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
+                        <x-ui.button variant="ghost" wire:click="closeServiceModal">Cancelar</x-ui.button>
+                        <x-ui.button variant="primary" wire:click="saveService">{{ $editingServiceId ? 'Actualizar' : 'Guardar' }}</x-ui.button>
                     </div>
                 </div>
             </div>
         </div>
     @endif
 
-    <!-- Modal Crear/Editar Tipo de Documento -->
+    {{-- Modal Tipo Documento --}}
     @if($showDocTypeModal)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
@@ -354,38 +298,26 @@
             <div class="relative mx-auto p-5 w-full max-w-md">
                 <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                        <h3 class="text-lg font-semibold">
-                            {{ $editingDocTypeIndex !== null ? 'Editar' : 'Nuevo' }} Tipo de Documento
-                        </h3>
+                        <h3 class="text-lg font-semibold">{{ $editingDocTypeIndex !== null ? 'Editar' : 'Nuevo' }} Tipo de Documento</h3>
                         <button wire:click="closeDocTypeModal" class="text-gray-400 hover:text-gray-600 transition">
                             <span class="material-symbols-outlined">close</span>
                         </button>
                     </div>
                     <div class="p-5 space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                            <input type="text" wire:model="docTypeName"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                placeholder="Ej: DUI, NIT, Pasaporte">
-                            @error('docTypeName') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
-                        </div>
+                        <x-forms.group name="docTypeName" label="Nombre *">
+                            <x-ui.input type="text" wire:model="docTypeName" placeholder="Ej: DUI, NIT, Pasaporte" />
+                        </x-forms.group>
                     </div>
-                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                        <button wire:click="saveDocType"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                            {{ $editingDocTypeIndex !== null ? 'Actualizar' : 'Guardar' }}
-                        </button>
-                        <button wire:click="closeDocTypeModal"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                            Cancelar
-                        </button>
+                    <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
+                        <x-ui.button variant="ghost" wire:click="closeDocTypeModal">Cancelar</x-ui.button>
+                        <x-ui.button variant="primary" wire:click="saveDocType">{{ $editingDocTypeIndex !== null ? 'Actualizar' : 'Guardar' }}</x-ui.button>
                     </div>
                 </div>
             </div>
         </div>
     @endif
 
-    <!-- Modal Crear/Editar Artículo (KB) -->
+    {{-- Modal KB --}}
     @if($showKbModal)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
@@ -393,67 +325,45 @@
             <div class="relative mx-auto p-5 w-full max-w-2xl">
                 <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                        <h3 class="text-lg font-semibold">
-                            {{ $editingArticleId ? 'Editar' : 'Nuevo' }} Artículo
-                        </h3>
+                        <h3 class="text-lg font-semibold">{{ $editingArticleId ? 'Editar' : 'Nuevo' }} Artículo</h3>
                         <button wire:click="closeKbModal" class="text-gray-400 hover:text-gray-600 transition">
                             <span class="material-symbols-outlined">close</span>
                         </button>
                     </div>
                     <div class="p-5 space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Título *</label>
-                            <input type="text" wire:model="kbTitle"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                placeholder="Título del artículo">
-                            @error('kbTitle') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Contenido *</label>
-                            <textarea wire:model="kbContent" rows="6"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                placeholder="Contenido técnico..."></textarea>
-                            @error('kbContent') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                            <input type="text" wire:model="kbCategory"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
-                                placeholder="Ej: Procedimiento, Instalación, Diagnóstico">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
-                            <select wire:model="kbPriority"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                        <x-forms.group name="kbTitle" label="Título *">
+                            <x-ui.input type="text" wire:model="kbTitle" placeholder="Título del artículo" />
+                        </x-forms.group>
+                        <x-forms.group name="kbContent" label="Contenido *">
+                            <x-ui.textarea wire:model="kbContent" rows="6" placeholder="Contenido técnico..." />
+                        </x-forms.group>
+                        <x-forms.group name="kbCategory" label="Categoría">
+                            <x-ui.input type="text" wire:model="kbCategory" placeholder="Ej: Procedimiento, Instalación, Diagnóstico" />
+                        </x-forms.group>
+                        <x-forms.group name="kbPriority" label="Prioridad">
+                            <x-ui.select wire:model="kbPriority">
                                 <option value="">Sin prioridad</option>
                                 <option value="P1">P1 - Crítico</option>
                                 <option value="P2">P2 - Alta</option>
                                 <option value="P3">P3 - Media</option>
                                 <option value="P4">P4 - Baja</option>
-                            </select>
-                        </div>
+                            </x-ui.select>
+                        </x-forms.group>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Vincular a Tipos de Servicio</label>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
                                 @foreach($serviceTypes as $type)
                                     <label class="flex items-center gap-2 text-sm">
-                                        <input type="checkbox" value="{{ $type->id }}" wire:model="selectedKbServiceTypes"
-                                            class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-2 focus:ring-blue-500/20">
+                                        <x-ui.checkbox value="{{ $type->id }}" wire:model="selectedKbServiceTypes" />
                                         {{ str_replace('_', ' ', $type->name) }}
                                     </label>
                                 @endforeach
                             </div>
                         </div>
                     </div>
-                    <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                        <button wire:click="saveArticle"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
-                            {{ $editingArticleId ? 'Actualizar' : 'Guardar' }}
-                        </button>
-                        <button wire:click="closeKbModal"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                            Cancelar
-                        </button>
+                    <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
+                        <x-ui.button variant="ghost" wire:click="closeKbModal">Cancelar</x-ui.button>
+                        <x-ui.button variant="primary" wire:click="saveArticle">{{ $editingArticleId ? 'Actualizar' : 'Guardar' }}</x-ui.button>
                     </div>
                 </div>
             </div>
@@ -482,7 +392,5 @@
         </div>
     </div>
 
-    <style>
-        [x-cloak] { display: none !important; }
-    </style>
+    <style>[x-cloak] { display: none !important; }</style>
 </div>

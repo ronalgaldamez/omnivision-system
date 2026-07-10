@@ -1,14 +1,6 @@
 <div class="max-w-7xl mx-auto">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-            <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <span class="material-symbols-outlined text-gray-500">dashboard</span>
-                Dashboard
-            </h1>
-            <p class="text-sm text-gray-500 mt-1">Resumen general de la actividad del sistema</p>
-        </div>
-
-        <div class="p-6 space-y-6">
+    <x-ui.card title="Dashboard" icon="dashboard" subtitle="Resumen general de la actividad del sistema">
+        <div class="space-y-6">
             {{-- Tarjetas superiores (se muestran según permisos) --}}
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {{-- Stock bajo --}}
@@ -94,8 +86,6 @@
                     </a>
                 </div>
                 @endif
-
-                {{-- Tarjetas adicionales para otros roles (mis tickets, NOC, etc.) se pueden agregar aquí si quieres, pero mantengo tu diseño original --}}
             </div>
 
             {{-- SECCIÓN: Panel del Técnico (solo si tiene permiso) --}}
@@ -251,5 +241,5 @@
                 </div>
             </div>
         </div>
-    </div>
+    </x-ui.card>
 </div>

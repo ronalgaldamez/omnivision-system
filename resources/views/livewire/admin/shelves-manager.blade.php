@@ -1,23 +1,12 @@
 <div>
     <div class="max-w-7xl mx-auto">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-            <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                <div>
-                    <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-gray-500">shelves</span>
-                        Gestión de Estanterías
-                    </h1>
-                    <p class="text-sm text-gray-500 mt-1">Organizá los espacios físicos donde se almacenan los productos.</p>
-                </div>
-                <button type="button" wire:click="openCreate"
-                    class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 transition inline-flex items-center gap-2">
-                    <span class="material-symbols-outlined text-base">add</span>
-                    Nueva estantería
-                </button>
-            </div>
+        <x-ui.card icon="shelves" title="Gestión de Estanterías" subtitle="Organizá los espacios físicos donde se almacenan los productos.">
+            <x-slot:headerActions>
+                <x-ui.button variant="primary" icon="add" wire:click="openCreate">Nueva estantería</x-ui.button>
+            </x-slot:headerActions>
 
             {{-- Tabs: Árbol / Visual --}}
-            <div class="border-b border-gray-200 px-6">
+            <div class="border-b border-gray-200">
                 <div class="flex gap-6 -mb-px">
                     <button type="button" wire:click="setViewMode('tree')"
                         class="pb-3 pt-4 text-sm font-medium border-b-2 transition {{ $viewMode === 'tree' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700' }}">
@@ -33,7 +22,7 @@
             </div>
 
             <div class="p-6">
-                {{-- ========== MODO ÁRBOL ========== --}}
+                {{-- MODO ÁRBOL --}}
                 @if($viewMode === 'tree')
                     @forelse($shelves as $shelf)
                     <div class="mb-4">
@@ -46,14 +35,13 @@
                     </div>
                     @endforelse
 
-                {{-- ========== MODO VISUAL (PARED/COLUMNAS) ========== --}}
+                {{-- MODO VISUAL (PARED/COLUMNAS) --}}
                 @else
                     @if($racks->isNotEmpty())
                     <div class="flex gap-4 overflow-x-auto pb-4" style="scroll-snap-type: x mandatory;">
                         @foreach($racks as $rack)
                         <div class="flex-shrink-0 bg-gray-50 rounded-xl border border-gray-200 overflow-hidden"
                             style="width: 240px; scroll-snap-align: start;">
-                            {{-- Rack header --}}
                             <div class="bg-white border-b border-gray-200 px-3 py-2.5 flex items-center gap-2">
                                 <span class="material-symbols-outlined text-gray-500 text-lg">shelves</span>
                                 <div class="min-w-0 flex-1">
@@ -63,7 +51,6 @@
                                 <span class="text-xs text-gray-400 flex-shrink-0">{{ $rack->children->count() }}</span>
                             </div>
 
-                            {{-- Containers list (Sortable) --}}
                             <div class="p-2 space-y-2 min-h-[120px]" data-sortable-rack="{{ $rack->id }}">
                                 @forelse($rack->children as $container)
                                 @php
@@ -72,17 +59,13 @@
                                     $isEmpty = $totalProducts === 0;
                                     $isFull = $container->is_full;
                                     if ($isFull) {
-                                        $borderColor = 'border-red-300';
-                                        $bgColor = 'bg-red-50';
+                                        $borderColor = 'border-red-300'; $bgColor = 'bg-red-50';
                                     } elseif ($isEmpty) {
-                                        $borderColor = 'border-gray-200';
-                                        $bgColor = 'bg-white';
+                                        $borderColor = 'border-gray-200'; $bgColor = 'bg-white';
                                     } elseif ($totalProducts < 10) {
-                                        $borderColor = 'border-amber-200';
-                                        $bgColor = 'bg-amber-50';
+                                        $borderColor = 'border-amber-200'; $bgColor = 'bg-amber-50';
                                     } else {
-                                        $borderColor = 'border-emerald-200';
-                                        $bgColor = 'bg-emerald-50';
+                                        $borderColor = 'border-emerald-200'; $bgColor = 'bg-emerald-50';
                                     }
                                 @endphp
                                 <div class="rounded-lg border-2 {{ $borderColor }} {{ $bgColor }} p-2.5 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing {{ $isFull ? 'opacity-80' : '' }}"
@@ -95,9 +78,7 @@
                                             <p class="text-xs text-gray-500 truncate">{{ $container->label }}</p>
                                         </div>
                                         @if($isFull)
-                                        <span class="text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ml-1 bg-red-100 text-red-600">
-                                            Lleno
-                                        </span>
+                                        <x-ui.badge variant="danger">Lleno</x-ui.badge>
                                         @else
                                         <span class="text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ml-1 {{ $isEmpty ? 'bg-gray-100 text-gray-500' : ($totalProducts < 10 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700') }}">
                                             {{ $totalProducts }}
@@ -128,8 +109,7 @@
                                             <span class="material-symbols-outlined text-sm">inventory_2</span>
                                         </button>
                                         <button type="button" wire:click="openEdit({{ $container->id }})"
-                                            class="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"
-                                            title="Editar">
+                                            class="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition" title="Editar">
                                             <span class="material-symbols-outlined text-sm">edit</span>
                                         </button>
                                         <span class="text-xs text-gray-400 ml-auto">
@@ -145,31 +125,21 @@
                                 @endforelse
                             </div>
 
-                            {{-- Inline form en modo visual --}}
                             @if($showInlineForm === $rack->id)
                             <div class="border-t border-blue-100 bg-blue-50/50 px-3 py-2">
                                 <form wire:submit="quickCreate" class="space-y-2">
-                                    <input type="text" wire:model="quickCode"
-                                        class="w-full py-1.5 px-2.5 rounded-lg border border-gray-300 bg-white text-sm font-mono"
-                                        placeholder="Código">
-                                    <input type="text" wire:model="quickLabel"
-                                        class="w-full py-1.5 px-2.5 rounded-lg border border-gray-300 bg-white text-sm"
-                                        placeholder="Nombre del contenedor">
+                                    <input type="text" wire:model="quickCode" class="w-full py-1.5 px-2.5 rounded-lg border border-gray-300 bg-white text-sm font-mono" placeholder="Código">
+                                    <input type="text" wire:model="quickLabel" class="w-full py-1.5 px-2.5 rounded-lg border border-gray-300 bg-white text-sm" placeholder="Nombre del contenedor">
                                     @error('quickLabel') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                     <div class="flex gap-2">
-                                        <select wire:model="quickType"
-                                            class="flex-1 py-1.5 px-2.5 rounded-lg border border-gray-300 bg-white text-sm">
+                                        <select wire:model="quickType" class="flex-1 py-1.5 px-2.5 rounded-lg border border-gray-300 bg-white text-sm">
                                             <option value="shelf">Bandeja</option>
                                             <option value="bin">Caja / Bin</option>
                                             <option value="container">Contenedor</option>
                                             <option value="drawer">Gaveta</option>
                                         </select>
-                                        <button type="submit"
-                                            class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition">
-                                            Crear
-                                        </button>
-                                        <button type="button" wire:click="$set('showInlineForm', null)"
-                                            class="px-2 py-1.5 text-gray-400 hover:text-gray-600 transition">
+                                        <button type="submit" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition">Crear</button>
+                                        <button type="button" wire:click="$set('showInlineForm', null)" class="px-2 py-1.5 text-gray-400 hover:text-gray-600 transition">
                                             <span class="material-symbols-outlined text-lg">close</span>
                                         </button>
                                     </div>
@@ -177,7 +147,6 @@
                             </div>
                             @endif
 
-                            {{-- Rack footer --}}
                             <div class="bg-white border-t border-gray-200 px-3 py-1.5">
                                 <button type="button" wire:click="toggleInlineForm({{ $rack->id }})"
                                     class="w-full text-xs text-blue-600 hover:text-blue-800 inline-flex items-center justify-center gap-1 py-1">
@@ -192,19 +161,15 @@
                     <div class="text-center py-12 text-gray-400">
                         <span class="material-symbols-outlined text-4xl">shelves</span>
                         <p class="mt-2 text-sm">No hay racks activos. Creá ubicaciones raíz para visualizarlas.</p>
-                        <button type="button" wire:click="openCreate"
-                            class="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 transition inline-flex items-center gap-2">
-                            <span class="material-symbols-outlined text-base">add</span>
-                            Crear primera estantería
-                        </button>
+                        <x-ui.button variant="primary" icon="add" wire:click="openCreate" class="mt-3">Crear primera estantería</x-ui.button>
                     </div>
                     @endif
                 @endif
             </div>
-        </div>
+        </x-ui.card>
     </div>
 
-    {{-- Modal crear/editar estantería --}}
+    {{-- Modal crear/editar --}}
     @if($showModal)
     <div x-data="{ open: true }" x-show="open" x-cloak
         class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
@@ -214,113 +179,66 @@
                 <form wire:submit="save">
                     <div class="p-6 space-y-4">
                         <h3 class="text-lg font-semibold text-gray-900">
-                            @if($editingId)
-                                Editar: {{ $code }}
-                            @else
-                                Nueva estantería
-                            @endif
+                            @if($editingId) Editar: {{ $code }} @else Nueva estantería @endif
                         </h3>
 
                         @if(!$editingId)
                             <p class="text-sm text-gray-500">Creá una estantería principal. El código <strong>{{ $code }}</strong> se generará automáticamente. Después podés agregarle contenedores con el botón <strong>+</strong>.</p>
-                        @endif
-
-                        {{-- Al crear: solo nombre + descripción --}}
-                        @if(!$editingId)
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de la estantería *</label>
-                            <input type="text" wire:model="label" autofocus
-                                class="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-sm"
-                                placeholder="Ej: Estantería Principal">
-                            @error('label') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                            <textarea wire:model="description" rows="3"
-                                class="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-sm resize-none"
-                                placeholder="¿Qué se guarda aquí? Ej: Repuestos de cámaras y equipos de red"></textarea>
-                        </div>
-
-                        {{-- Al editar: todos los campos --}}
+                            <x-forms.group name="label" label="Nombre de la estantería *">
+                                <x-ui.input type="text" wire:model="label" autofocus placeholder="Ej: Estantería Principal" />
+                            </x-forms.group>
+                            <x-forms.group name="description" label="Descripción">
+                                <x-ui.textarea wire:model="description" rows="3" placeholder="¿Qué se guarda aquí? Ej: Repuestos de cámaras y equipos de red" />
+                            </x-forms.group>
                         @else
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Código</label>
-                                <input type="text" wire:model="code"
-                                    class="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-sm">
-                                @error('code') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                            <div class="grid grid-cols-2 gap-4">
+                                <x-forms.group name="code" label="Código">
+                                    <x-ui.input type="text" wire:model="code" />
+                                </x-forms.group>
+                                <x-forms.group name="type" label="Tipo">
+                                    <x-ui.select wire:model="type">
+                                        @foreach($typeOptions as $val => $txt)
+                                        <option value="{{ $val }}">{{ $txt }}</option>
+                                        @endforeach
+                                    </x-ui.select>
+                                </x-forms.group>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                                <select wire:model="type"
-                                    class="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-sm">
-                                    @foreach($typeOptions as $val => $txt)
-                                    <option value="{{ $val }}">{{ $txt }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre / Etiqueta</label>
-                            <input type="text" wire:model="label"
-                                class="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-sm">
-                            @error('label') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                            <textarea wire:model="description" rows="2"
-                                class="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-sm resize-none"></textarea>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Bodega / Área</label>
-                            <input type="text" wire:model="warehouse"
-                                class="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-sm"
-                                placeholder="Ej: Bodega Principal">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación padre</label>
-                            @if(!$parent_id)
-                            <input type="text" value="Raíz — no aplica" disabled
-                                class="w-full py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-400">
-                            @else
-                            <select wire:model="parent_id"
-                                class="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-sm">
-                                <option value="">Ninguna (raíz)</option>
-                                @foreach($availableParents->whereNull('parent_id') as $p)
-                                @if($p->id !== $editingId)
-                                <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->label }}</option>
+                            <x-forms.group name="label" label="Nombre / Etiqueta">
+                                <x-ui.input type="text" wire:model="label" />
+                            </x-forms.group>
+                            <x-forms.group name="description" label="Descripción">
+                                <x-ui.textarea wire:model="description" rows="2" />
+                            </x-forms.group>
+                            <x-forms.group name="warehouse" label="Bodega / Área">
+                                <x-ui.input type="text" wire:model="warehouse" placeholder="Ej: Bodega Principal" />
+                            </x-forms.group>
+                            <x-forms.group name="parent_id" label="Ubicación padre">
+                                @if(!$parent_id)
+                                    <x-ui.input type="text" value="Raíz — no aplica" disabled />
+                                @else
+                                    <x-ui.select wire:model="parent_id">
+                                        <option value="">Ninguna (raíz)</option>
+                                        @foreach($availableParents->whereNull('parent_id') as $p)
+                                        @if($p->id !== $editingId)
+                                        <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->label }}</option>
+                                        @endif
+                                        @endforeach
+                                    </x-ui.select>
                                 @endif
-                                @endforeach
-                            </select>
-                            <p class="text-xs text-gray-400 mt-1">Solo se muestran estanterías raíz. Los hijos siempre dependen de una raíz.</p>
-                            @endif
-                        </div>
-
-                        <label class="flex items-center gap-2 text-sm">
-                            <input type="checkbox" wire:model="is_active" class="rounded border-gray-300">
-                            Activo
-                        </label>
-                        <label class="flex items-center gap-2 text-sm">
-                            <input type="checkbox" wire:model="is_full" class="rounded border-gray-300">
-                            <span class="text-red-600">Lleno — no permitir más productos</span>
-                        </label>
+                            </x-forms.group>
+                            <div class="space-y-2">
+                                <label class="flex items-center gap-2 text-sm">
+                                    <x-ui.checkbox wire:model="is_active" /> Activo
+                                </label>
+                                <label class="flex items-center gap-2 text-sm">
+                                    <x-ui.checkbox wire:model="is_full" /> <span class="text-red-600">Lleno — no permitir más productos</span>
+                                </label>
+                            </div>
                         @endif
                     </div>
-
                     <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
-                        <button type="button" wire:click="$set('showModal', false)"
-                            class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition">
-                            Cancelar
-                        </button>
-                        <button type="submit"
-                            x-on:click="{{ $editingId ? 'if($wire.parent_id && !confirm(\'¿Estás seguro de mover esta ubicación?\')) return false;' : '' }}"
-                            class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-blue-700 transition">
-                            {{ $editingId ? 'Guardar cambios' : 'Crear estantería' }}
-                        </button>
+                        <x-ui.button variant="ghost" wire:click="$set('showModal', false)">Cancelar</x-ui.button>
+                        <x-ui.button type="submit" variant="primary" x-on:click="{{ $editingId ? 'if($wire.parent_id && !confirm(\'¿Estás seguro de mover esta ubicación?\')) return false;' : '' }}">{{ $editingId ? 'Guardar cambios' : 'Crear estantería' }}</x-ui.button>
                     </div>
                 </form>
             </div>
@@ -343,14 +261,8 @@
                     <p class="text-sm text-gray-600 mt-2">¿Estás seguro? No se puede eliminar si tiene sub-ubicaciones.</p>
                 </div>
                 <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
-                    <button type="button" wire:click="cancelDelete"
-                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition">
-                        Cancelar
-                    </button>
-                    <button type="button" wire:click="executeDelete"
-                        class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-red-700 transition">
-                        Eliminar
-                    </button>
+                    <x-ui.button variant="ghost" wire:click="cancelDelete">Cancelar</x-ui.button>
+                    <x-ui.button variant="danger" wire:click="executeDelete">Eliminar</x-ui.button>
                 </div>
             </div>
         </div>
@@ -362,18 +274,14 @@
     <script>
         document.addEventListener('livewire:init', () => {
             Livewire.hook('commit', ({ component, succeed }) => {
-                succeed(() => {
-                    initSortableShelves();
-                });
+                succeed(() => { initSortableShelves(); });
             });
             initSortableShelves();
         });
 
         function initSortableShelves() {
             document.querySelectorAll('[data-sortable-rack]').forEach(el => {
-                if (el.sortableInstance) {
-                    el.sortableInstance.destroy();
-                }
+                if (el.sortableInstance) { el.sortableInstance.destroy(); }
                 el.sortableInstance = new Sortable(el, {
                     group: 'shelves-containers',
                     animation: 200,

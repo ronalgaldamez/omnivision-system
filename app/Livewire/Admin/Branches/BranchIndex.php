@@ -19,7 +19,7 @@ class BranchIndex extends Component
             ->orderBy('name')
             ->paginate(10);
 
-        return view('livewire.admin.branches.branch-index', compact('branches'));
+        return view('livewire.admin.branches.branch-index', compact('branches'))->layout('components.layouts.app');
     }
 
     public function toggleActive($id)

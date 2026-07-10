@@ -1,17 +1,6 @@
 <div class="max-w-7xl mx-auto">
-    <!-- Tarjeta principal -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-        <!-- Encabezado con fondo sutil -->
-        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-            <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <span class="material-symbols-outlined text-gray-500">inventory</span>
-                Productos con stock bajo
-            </h1>
-            <p class="text-sm text-gray-500 mt-1">Artículos que están por debajo del mínimo configurado</p>
-        </div>
-
-        <!-- Contenido -->
-        <div class="p-6 space-y-5">
+    <x-ui.card title="Productos con stock bajo" icon="inventory" subtitle="Artículos que están por debajo del mínimo configurado">
+        <div class="space-y-5">
             <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                 <table class="min-w-full text-sm">
                     <thead>
@@ -68,19 +57,12 @@
                 </table>
             </div>
 
-            <!-- Mensajes de sesión -->
             @if(session('message'))
-                <div class="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg border border-green-200">
-                    <span class="material-symbols-outlined text-green-600">check_circle</span>
-                    {{ session('message') }}
-                </div>
+                <x-ui.alert variant="success">{{ session('message') }}</x-ui.alert>
             @endif
             @if(session('error'))
-                <div class="flex items-center gap-2 text-sm text-red-700 bg-red-50 px-4 py-3 rounded-lg border border-red-200">
-                    <span class="material-symbols-outlined text-red-600">error</span>
-                    {{ session('error') }}
-                </div>
+                <x-ui.alert variant="danger">{{ session('error') }}</x-ui.alert>
             @endif
         </div>
-    </div>
+    </x-ui.card>
 </div>

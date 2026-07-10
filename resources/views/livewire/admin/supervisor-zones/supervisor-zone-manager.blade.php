@@ -1,30 +1,18 @@
 <div>
     <div class="max-w-7xl mx-auto">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-            <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                <div>
-                    <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-gray-500">supervisor_account</span>
-                        Supervisores por Zona
-                    </h1>
-                    <p class="text-sm text-gray-500 mt-1">Asigná los supervisores de campo responsables de cada zona. Los supervisores se heredan automáticamente a las sub-zonas.</p>
+        <x-ui.card icon="supervisor_account" title="Supervisores por Zona" subtitle="Asigná los supervisores de campo responsables de cada zona. Los supervisores se heredan automáticamente a las sub-zonas.">
+            @forelse($rootZones as $zone)
+                @include('livewire.admin.supervisor-zones._zone-tree-node', [
+                    'zone' => $zone,
+                    'level' => 0,
+                ])
+            @empty
+                <div class="text-center py-12 text-gray-400">
+                    <span class="material-symbols-outlined text-4xl">location_off</span>
+                    <p class="mt-2 text-sm">No hay zonas registradas. Creálas en Admin → Planes y Zonas.</p>
                 </div>
-            </div>
-
-            <div class="p-6">
-                @forelse($rootZones as $zone)
-                    @include('livewire.admin.supervisor-zones._zone-tree-node', [
-                        'zone' => $zone,
-                        'level' => 0,
-                    ])
-                @empty
-                    <div class="text-center py-12 text-gray-400">
-                        <span class="material-symbols-outlined text-4xl">location_off</span>
-                        <p class="mt-2 text-sm">No hay zonas registradas. Creálas en Admin → Planes y Zonas.</p>
-                    </div>
-                @endforelse
-            </div>
-        </div>
+            @endforelse
+        </x-ui.card>
     </div>
 
     {{-- Modal de asignación --}}

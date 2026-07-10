@@ -1,13 +1,12 @@
 <div>
-    <h1 class="text-lg font-semibold mb-4">Mapa de mis órdenes de trabajo</h1>
-    <div id="map" style="height: 500px; width: 100%;" class="border rounded"></div>
+    <x-ui.card icon="map" title="Mapa de mis órdenes de trabajo">
+        <div id="map" style="height: 500px; width: 100%;" class="border rounded"></div>
+    </x-ui.card>
 
     <script>
         document.addEventListener('livewire:load', function () {
             var map = L.map('map').setView([13.6929, -89.2182], 12);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OSM'
-            }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }).addTo(map);
 
             var workOrders = @json($workOrders);
             workOrders.forEach(function (order) {
