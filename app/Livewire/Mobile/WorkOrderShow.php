@@ -19,8 +19,10 @@ class WorkOrderShow extends Component
     public $confirmingAction = null;
     public $confirmingMessage = '';
     public $hasOpenRequisition = false;
-    public $hasAnotherInProgress = false;
 
+    public $hasApprovedRequisition = false;
+
+    public $hasAnotherInProgress = false;
     public $showConsumptionModal = false;
     public $availableProducts = [];
     public $consumptionQuantities = [];
@@ -47,6 +49,13 @@ class WorkOrderShow extends Component
     public $latitude = null;
     public $longitude = null;
 
+    // Búsqueda de dispositivo
+    public $deviceSearch = '';
+    public $deviceResults = [];
+    public $showDeviceModal = false;
+    public $deviceList = [];
+    public $deviceListSearch = '';
+
     // Indicador de borrador
     public $isDraft = false;
 
@@ -69,7 +78,7 @@ class WorkOrderShow extends Component
         $this->loadAvailableProducts();
 
         $this->technicianHasOpenRequisition = Requisition::where('technician_id', Auth::id())
-            ->where('status', 'open')
+            ->whereIn('status', ['open', 'pending', 'approved'])
             ->exists();
 
         // Recuperar borrador de la sesión si existe
@@ -246,10 +255,82 @@ class WorkOrderShow extends Component
         $this->dispatch('$refresh');
     }
 
+    // ==================== BÚSQUEDA DE DISPOSITIVO ====================
+    public function updatedDeviceSearch()
+    {
+        if (strlen($this->deviceSearch) >= 2) {
+            $this->deviceResults = \App\Models\Device::with('product')
+                ->where('technician_id', auth()->id())
+                ->whereIn('status', ['assigned'])
+                ->where(function ($q) {
+                    $q->where('mac_address', 'like', '%'.$this->deviceSearch.'%')
+                        ->orWhere('pon_sn', 'like', '%'.$this->deviceSearch.'%');
+                })
+                ->limit(10)->get();
+        } else {
+            $this->deviceResults = [];
+        }
+    }
+
+    public function openDeviceModal()
+    {
+        $this->deviceListSearch = '';
+        $this->deviceList = \App\Models\Device::with('product')
+            ->where('technician_id', auth()->id())
+            ->whereIn('status', ['assigned'])
+            ->orderBy('mac_address')
+            ->take(50)->get();
+        $this->showDeviceModal = true;
+    }
+
+    public function closeDeviceModal()
+    {
+        $this->showDeviceModal = false;
+        $this->deviceListSearch = '';
+        $this->deviceList = [];
+    }
+
+    public function updatedDeviceListSearch()
+    {
+        if (strlen($this->deviceListSearch) >= 2) {
+            $this->deviceList = \App\Models\Device::with('product')
+                ->where('technician_id', auth()->id())
+                ->whereIn('status', ['assigned'])
+                ->where(function ($q) {
+                    $q->where('mac_address', 'like', '%'.$this->deviceListSearch.'%')
+                        ->orWhere('pon_sn', 'like', '%'.$this->deviceListSearch.'%');
+                })
+                ->orderBy('mac_address')->take(50)->get();
+        } else {
+            $this->deviceList = \App\Models\Device::with('product')
+                ->where('technician_id', auth()->id())
+                ->whereIn('status', ['assigned'])
+                ->orderBy('mac_address')->take(50)->get();
+        }
+    }
+
+    public function selectDevice($id)
+    {
+        $device = \App\Models\Device::find($id);
+        if ($device) {
+            $this->mac = $device->mac_address;
+            $this->pon = $device->pon_sn ?? '';
+            $this->profile_name = $device->default_username ?: ($this->profile_name ?? '');
+            $this->profile_password = $device->default_password ?: ($this->profile_password ?? '');
+            $this->wifi_name = $device->default_ssid1 ?: ($this->wifi_name ?? '');
+            $this->wifi_password = $device->default_lan_key ?: ($this->wifi_password ?? '');
+            $this->dispatch('show-toast', type: 'success', message: 'Datos del dispositivo cargados: ' . $device->mac_address);
+        }
+        $this->closeDeviceModal();
+    }
+
     protected function checkOpenRequisition()
     {
         $this->hasOpenRequisition = $this->workOrder->requisitions()
-            ->where('status', 'open')
+            ->whereIn('status', ['open', 'pending', 'approved'])
+            ->exists();
+        $this->hasApprovedRequisition = $this->workOrder->requisitions()
+            ->whereIn('status', ['approved'])
             ->exists();
     }
 
@@ -269,7 +350,7 @@ class WorkOrderShow extends Component
         }
 
         $this->availableProducts = RequisitionItem::whereHas('requisition', function ($q) {
-            $q->where('status', 'open')
+            $q->whereIn('status', ['open', 'approved'])
               ->whereHas('workOrders', fn($w) => $w->where('work_order_id', $this->workOrder->id));
         })
             ->with('product')
@@ -277,12 +358,14 @@ class WorkOrderShow extends Component
             ->groupBy('product_id')
             ->map(function ($items) {
                 $first = $items->first();
-                $available = $items->sum(fn($i) => $i->quantity_requested - $i->quantity_used);
+                $inventoryQty = \App\Models\TechnicianInventory::where('technician_id', auth()->id())
+                    ->where('product_id', $first->product_id)
+                    ->value('quantity_in_hand') ?? 0;
                 return [
                     'product_id' => $first->product_id,
                     'product_name' => $first->product->name,
                     'product_sku' => $first->product->sku,
-                    'available' => max(0, $available),
+                    'available' => max(0, $inventoryQty),
                     'requisition_item_ids' => $items->pluck('id')->toArray(),
                     'quantity' => 0,
                 ];
@@ -584,6 +667,20 @@ class WorkOrderShow extends Component
                 ->first();
             if ($inventory) {
                 $inventory->decrement('quantity_in_hand', $quantity);
+            }
+
+            $devices = \App\Models\Device::where('product_id', $product['product_id'])
+                ->where('technician_id', Auth::id())
+                ->where('status', 'assigned')
+                ->take((int) $quantity)
+                ->get();
+
+            foreach ($devices as $device) {
+                $device->update([
+                    'status' => 'installed',
+                    'work_order_id' => $this->workOrder->id,
+                    'installed_at' => now(),
+                ]);
             }
         }
 

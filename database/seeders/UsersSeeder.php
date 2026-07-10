@@ -12,58 +12,72 @@ class UsersSeeder extends Seeder
     public function run(): void
     {
         $password = Hash::make('password');
-
         $branches = Branch::pluck('id', 'code');
 
+        // ── Core (3 perfiles) ──
         $users = [
-            // ── Superadmins (globales) ──
-            ['name' => 'Administrador', 'email' => 'admin@omnivision.com', 'role' => 'admin', 'branch_code' => null],
-            ['name' => 'Admin Respaldo', 'email' => 'admin@test.com', 'role' => 'admin', 'branch_code' => null],
-            ['name' => 'Contador', 'email' => 'contabilidad@omnivision.com', 'role' => 'accountant', 'branch_code' => null],
-            ['name' => 'Supervisor', 'email' => 'supervisor@omnivision.com', 'role' => 'field_supervisor', 'branch_code' => null],
-
-            // ── Casa Matriz Chalatenango ──
-            ['name' => 'Bodeguero Matriz', 'email' => 'bodega@omnivision.com', 'role' => 'warehouse', 'branch_code' => 'MATRIZ'],
-            ['name' => 'Comprador Matriz', 'email' => 'compras@omnivision.com', 'role' => 'buyer', 'branch_code' => 'MATRIZ'],
-            ['name' => 'SAC Matriz', 'email' => 'sac@omnivision.com', 'role' => 'atencion_al_cliente', 'branch_code' => 'MATRIZ'],
-            ['name' => 'NOC Matriz', 'email' => 'noc@omnivision.com', 'role' => 'noc', 'branch_code' => 'MATRIZ'],
-            ['name' => 'Técnico Matriz', 'email' => 'tecnico1@omnivision.com', 'role' => 'technician', 'branch_code' => 'MATRIZ'],
-            ['name' => 'Vendedor Matriz', 'email' => 'vendedor1@omnivision.com', 'role' => 'sales_rep', 'branch_code' => 'MATRIZ'],
-
-            // ── Sucursal Concepción Quezaltepeque ──
-            ['name' => 'SAC CQ', 'email' => 'sac_cq@omnivision.com', 'role' => 'atencion_al_cliente', 'branch_code' => 'CQ'],
-            ['name' => 'Técnico CQ', 'email' => 'tecnico_cq@omnivision.com', 'role' => 'technician', 'branch_code' => 'CQ'],
-            ['name' => 'Vendedor CQ', 'email' => 'vendedor_cq@omnivision.com', 'role' => 'sales_rep', 'branch_code' => 'CQ'],
-
-            // ── Sucursal Amayo ──
-            ['name' => 'SAC Amayo', 'email' => 'sac_amayo@omnivision.com', 'role' => 'atencion_al_cliente', 'branch_code' => 'AMAYO'],
-            ['name' => 'NOC Amayo', 'email' => 'noc_amayo@omnivision.com', 'role' => 'noc', 'branch_code' => 'AMAYO'],
-            ['name' => 'Técnico Amayo', 'email' => 'tecnico_amayo@omnivision.com', 'role' => 'technician', 'branch_code' => 'AMAYO'],
-            ['name' => 'Vendedor Amayo', 'email' => 'vendedor_amayo@omnivision.com', 'role' => 'sales_rep', 'branch_code' => 'AMAYO'],
-
-            // ── Sucursal Aguilares ──
-            ['name' => 'SAC Aguilares', 'email' => 'sac_aguilares@omnivision.com', 'role' => 'atencion_al_cliente', 'branch_code' => 'AGUILARES'],
-            ['name' => 'Técnico Aguilares', 'email' => 'tecnico_aguilares@omnivision.com', 'role' => 'technician', 'branch_code' => 'AGUILARES'],
-            ['name' => 'Vendedor Aguilares', 'email' => 'vendedor_aguilares@omnivision.com', 'role' => 'sales_rep', 'branch_code' => 'AGUILARES'],
-
-            // ── Sucursal La Palma ──
-            ['name' => 'Admin La Palma', 'email' => 'admin_lapalma@omnivision.com', 'role' => 'branch_admin', 'branch_code' => 'PALMA'],
-            ['name' => 'SAC La Palma', 'email' => 'sac_lapalma@omnivision.com', 'role' => 'atencion_al_cliente', 'branch_code' => 'PALMA'],
-            ['name' => 'Técnico La Palma', 'email' => 'tecnico_lapalma@omnivision.com', 'role' => 'technician', 'branch_code' => 'PALMA'],
-            ['name' => 'Vendedor La Palma', 'email' => 'vendedor_lapalma@omnivision.com', 'role' => 'sales_rep', 'branch_code' => 'PALMA'],
-
-            // ── Sucursal San Pablo Tacachico ──
-            ['name' => 'SAC SPT', 'email' => 'sac_spt@omnivision.com', 'role' => 'atencion_al_cliente', 'branch_code' => 'SMP'],
-            ['name' => 'Técnico SPT', 'email' => 'tecnico_spt@omnivision.com', 'role' => 'technician', 'branch_code' => 'SMP'],
-            ['name' => 'Vendedor SPT', 'email' => 'vendedor_spt@omnivision.com', 'role' => 'sales_rep', 'branch_code' => 'SMP'],
-
-            // ── Globales (sin sucursal fija) ──
-            ['name' => 'SAC Soporte', 'email' => 'soporte@omnivision.com', 'role' => 'atencion_al_cliente', 'branch_code' => null],
-            ['name' => 'NOC Supervisor', 'email' => 'noc2@omnivision.com', 'role' => 'noc', 'branch_code' => null],
-            ['name' => 'Técnico Flotante', 'email' => 'tecnico2@omnivision.com', 'role' => 'technician', 'branch_code' => null],
-            ['name' => 'Vendedor Flotante', 'email' => 'vendedor2@omnivision.com', 'role' => 'sales_rep', 'branch_code' => null],
-            ['name' => 'Vendedor Flotante 2', 'email' => 'vendedor3@omnivision.com', 'role' => 'sales_rep', 'branch_code' => null],
+            ['name' => 'Administrador', 'email' => 'admin@omnivision.com',       'role' => 'admin',             'branch_code' => null],
+            ['name' => 'Ronal Galdamez','email' => 'ronal@omnivision.com',       'role' => 'admin',             'branch_code' => null],
+            ['name' => 'Walter Marín',  'email' => 'supervisor@omnivision.com',  'role' => 'field_supervisor',  'branch_code' => null],
+            ['name' => 'Deyvi Alas',    'email' => 'noc@omnivision.com',         'role' => 'noc',               'branch_code' => null],
         ];
+
+        // ── Técnicos — globales (branch_code = null) ──
+        $tecnicos = [
+            'KEVIN MAURICIO FUNES AQUINO',
+            'OSCAR ORLANDO CRUZ MELARA',
+            'ALDAIR HUMBERTO ESCOBAR CRUZ',
+            'CARLOS AGUSTIN LOPEZ CHACON',
+            'JHONATAN EDENILSON MARTÍNEZ CRUZ',
+            'GIOVANY OLIVA',
+            'RONALD AYALA',
+            'LUIS MANUEL CARDOZA MARTINEZ',
+            'MARVIN CASTRO',
+            'JULIO CESAR GUERRA LINARES',
+            'JULIO ANTONIO MOLINA SANTOS',
+            'STANLEY PEREZ',
+            'RAFAEL MENJIVAR',
+            'JORGE LUIS CALLES CARBAJAL',
+            'CRISTIAN ALEJANDRO RAMIREZ SANTOS',
+            'MARIO OSCAR SORIANO SANCHEZ',
+            'MARCOS TULIO RODRIGUEZ RODRIGUEZ',
+            'LUIS ARMANDO HERNANDEZ LEON',
+            'WILLIAM ERNESTO GUARDADO AREVALO',
+            'ENRIQUE ALEXANDER VALLE MENJIVAR',
+        ];
+
+        foreach ($tecnicos as $nombre) {
+            $nombre = mb_convert_case(mb_strtolower($nombre), MB_CASE_TITLE, 'UTF-8');
+            $users[] = ['name' => $nombre, 'email' => $this->email($nombre, 'tech'), 'role' => 'technician', 'branch_code' => null];
+        }
+
+        // ── Ventas — globales ──
+        $ventas = [
+            'KARLA MARIBEL RAMIREZ TREJOS',
+            'PATRICIA GUADALUPE GUARDADO MEJÍA',
+            'WALTER ARMANDO MENJIVAR GRANDE',
+        ];
+
+        foreach ($ventas as $nombre) {
+            $nombre = mb_convert_case(mb_strtolower($nombre), MB_CASE_TITLE, 'UTF-8');
+            $users[] = ['name' => $nombre, 'email' => $this->email($nombre, 'sr'), 'role' => 'sales_rep', 'branch_code' => null];
+        }
+
+        // ── SAC por sucursal ──
+        $sac = [
+            ['Yancy Marleny Solis de Alvarado', 'MATRIZ'],
+            ['Karen Lissette Lopez de Aguilar', 'MATRIZ'],
+            ['Kenya Marcela Leiva Tejada', null],   // global — rota entre Amayo/Aguilares
+            ['Vicky Dinora Gutierrez Salguero', null],   // global — rota entre La Palma/Amayo
+            ['Elsy Hernández', null],   // global — rota entre Amayo/La Palma/Aguilares
+            ['Andrea Ochoa', null],   // desconocida
+            ['Susana Solis', null],   // desconocida
+            ['Emelina Landaverde', null],   // desconocida
+        ];
+
+        foreach ($sac as [$nombre, $branchCode]) {
+            $users[] = ['name' => $nombre, 'email' => $this->email($nombre, 'sac'), 'role' => 'atencion_al_cliente', 'branch_code' => $branchCode];
+        }
 
         foreach ($users as $data) {
             $branchId = $data['branch_code']
@@ -86,5 +100,14 @@ class UsersSeeder extends Seeder
         }
 
         $this->command->info('Usuarios creados: ' . count($users));
+    }
+
+    private function email(string $name, string $prefix = ''): string
+    {
+        $parts = explode(' ', strtolower($name));
+        $first = $parts[0] ?? 'usuario';
+        $last  = $parts[count($parts) - 1] ?? $first;
+        $prefix = $prefix ? $prefix . '.' : '';
+        return $prefix . $first . '.' . $last . '@omnivision.com';
     }
 }

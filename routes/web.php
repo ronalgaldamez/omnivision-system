@@ -44,9 +44,7 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('can:view kardex')->group(function () {
             Route::get('/kardex', \App\Livewire\Inventory\KardexIndex::class)->name('kardex.index');
         });
-        Route::middleware('can:access_inventory')->group(function () {
-            Route::get('/inventory/distribution', \App\Livewire\Inventory\DistributionForm::class)->name('inventory.distribution');
-        });
+
     }
 
     // ========== SUPPLIERS ==========
@@ -128,6 +126,10 @@ Route::middleware(['auth'])->group(function () {
     // ========== BODEGA ==========
     Route::prefix('bodega')->middleware(['auth'])->group(function () {
         Route::get('/requisitions', \App\Livewire\Bodega\RequisitionBodegaIndex::class)->name('bodega.requisitions.index');
+        Route::get('/shipments', \App\Livewire\Bodega\DistributionIndex::class)->name('bodega.shipments.index');
+        Route::get('/shipments/create', \App\Livewire\Bodega\DistributionCreate::class)->name('bodega.shipments.create');
+        Route::get('/shipments/{id}', \App\Livewire\Bodega\DistributionShow::class)->name('bodega.shipments.show');
+        Route::get('/receive/{code?}', \App\Livewire\Bodega\DistributionReceive::class)->name('bodega.shipments.receive');
     });
 
     // ========== TECHNICIAN RETURNS ==========

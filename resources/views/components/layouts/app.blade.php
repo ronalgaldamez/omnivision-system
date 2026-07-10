@@ -113,9 +113,9 @@
                                 @can('view_kardex_menu')<a href="{{ route('kardex.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">receipt</span> Kardex</a>@endcan
-                                @can('access_inventory')<a href="{{ route('inventory.distribution') }}"
+                                @can('access_inventory')<a href="{{ route('bodega.shipments.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
-                                class="material-symbols-outlined text-base">fork_right</span> Repartición</a>@endcan
+                                class="material-symbols-outlined text-base">local_shipping</span> Envíos</a>@endcan
                                 @can('access_inventory')<a href="{{ route('devices.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">settings_ethernet</span> Dispositivos</a>@endcan

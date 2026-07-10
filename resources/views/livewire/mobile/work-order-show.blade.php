@@ -1,5 +1,5 @@
 <div class="max-w-2xl mx-auto pb-6">
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible">
         {{-- Encabezado --}}
         <div
             class="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex flex-wrap items-center justify-between gap-3">
@@ -162,6 +162,38 @@
                     </div>
                 </div>
                 <form wire:submit.prevent="saveTechnicalData" class="space-y-4">
+                    {{-- Buscar dispositivo del técnico --}}
+                    @if ($canEditTech && $isEditing)
+                    <div>
+                        <label class="block text-[11px] font-medium text-gray-500 mb-1 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-gray-400 text-sm">settings_ethernet</span>
+                            Cargar desde dispositivo
+                        </label>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <input type="text" wire:model.live.debounce.300ms="deviceSearch"
+                                    placeholder="Buscar por MAC..."
+                                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition">
+                                <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">search</span>
+                                @if(count($deviceResults) > 0)
+                                <ul class="absolute z-30 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-48 overflow-auto">
+                                    @foreach($deviceResults as $d)
+                                    <li wire:click="selectDevice({{ $d->id }})" class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-xs flex items-center justify-between">
+                                        <span class="font-mono text-gray-800">{{ $d->mac_address }}</span>
+                                        <span class="text-gray-500">{{ $d->product?->name }}</span>
+                                    </li>
+                                    @endforeach
+                                </ul>
+                                @endif
+                            </div>
+                            <button type="button" wire:click="openDeviceModal"
+                                class="inline-flex items-center gap-1 px-3 border border-gray-200 text-gray-600 text-xs font-medium rounded-lg bg-white hover:bg-blue-50 transition whitespace-nowrap">
+                                <span class="material-symbols-outlined text-base">format_list_bulleted</span>
+                                Mis routers
+                            </button>
+                        </div>
+                    </div>
+                    @endif
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {{-- Campos del formulario --}}
                         <div>
@@ -293,9 +325,10 @@
                                 <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>Latitud *
                             </label>
                             <input type="text" wire:model.live="latitude"
-                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                x-on:input="$el.value = formatLat($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
                                 class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
-                                placeholder="14.105025">
+                                placeholder="14.1050" maxlength="7" inputmode="decimal"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}>
                             @error('latitude')
                                 <span class="text-[11px] text-red-500">{{ $message }}</span>
                             @enderror
@@ -305,9 +338,10 @@
                                 <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>Longitud *
                             </label>
                             <input type="text" wire:model.live="longitude"
-                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                x-on:input="$el.value = formatLng($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
                                 class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
-                                placeholder="-89.148894">
+                                placeholder="-89.1488" maxlength="8" inputmode="decimal"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}>
                             @error('longitude')
                                 <span class="text-[11px] text-red-500">{{ $message }}</span>
                             @enderror
@@ -319,10 +353,12 @@
                         <label class="block text-[11px] font-medium text-gray-500 mb-1.5 flex items-center gap-1.5">
                             <span class="material-symbols-outlined text-gray-400 text-sm">map</span>Mapa
                         </label>
+                        <div wire:ignore wire:key="map-{{ $workOrder->id }}">
                         <div id="map" style="height: 200px; width: 100%;" data-latitude="{{ $latitude }}"
                             data-longitude="{{ $longitude }}"
                             data-editable="{{ $canEditTech && $isEditing ? 'true' : 'false' }}"
                             class="rounded-xl border border-gray-200 shadow-inner {{ !$canEditTech || !$isEditing ? 'opacity-75 pointer-events-none' : '' }}">
+                        </div>
                         </div>
                         @if ($canEditTech && $isEditing)
                             <div class="flex gap-2 mt-2">
@@ -614,11 +650,19 @@
             {{-- Botones de acción --}}
             @if (!in_array($workOrder->status, ['completed', 'cancelled']))
                 <div class="space-y-2.5 pt-2">
-                    @if ($workOrder->status === 'pending' && $hasOpenRequisition && !$hasAnotherInProgress)
+                    @if ($workOrder->status === 'pending' && $hasApprovedRequisition && !$hasAnotherInProgress)
                         <button wire:click="promptStartWorkOrder"
                             class="w-full px-5 py-3 bg-amber-500 text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-amber-600 transition inline-flex items-center justify-center gap-2">
                             <span class="material-symbols-outlined">play_arrow</span>Iniciar OT
                         </button>
+                    @elseif($workOrder->status === 'pending' && $hasOpenRequisition && !$hasApprovedRequisition)
+                        <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                            <span class="material-symbols-outlined text-blue-600">hourglass_top</span>
+                            <div>
+                                <p class="text-sm font-medium text-blue-800">Pendiente de aprobación</p>
+                                <p class="text-xs text-blue-700">La requisición de material aún no ha sido aprobada por bodega.</p>
+                            </div>
+                        </div>
                     @elseif($workOrder->status === 'pending' && !$hasOpenRequisition)
                         @if ($technicianHasOpenRequisition)
                             <div class="flex items-start gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
@@ -857,10 +901,86 @@
             display: none !important;
         }
     </style>
+
+{{-- Modal de dispositivos --}}
+<div x-data="{ show: @entangle('showDeviceModal') }" x-show="show" x-cloak
+    x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+    class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" style="display: none;">
+    <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+        x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+        class="relative w-full max-w-lg">
+        <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-blue-600">settings_ethernet</span>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900">Mis routers</h3>
+                        <p class="text-[11px] text-gray-500">Dispositivos asignados a tu requisición</p>
+                    </div>
+                </div>
+                <button type="button" wire:click="closeDeviceModal" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                    <span class="material-symbols-outlined text-xl">close</span>
+                </button>
+            </div>
+            <div class="p-4 border-b border-gray-100">
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
+                    <input type="text" wire:model.live.debounce.300ms="deviceListSearch"
+                        placeholder="Filtrar por MAC o PON SN..."
+                        class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 bg-white text-sm">
+                </div>
+            </div>
+            <div class="p-2 max-h-80 overflow-y-auto">
+                @forelse($deviceList as $d)
+                    <button type="button" wire:click="selectDevice({{ $d->id }})"
+                        class="w-full text-left px-4 py-3 hover:bg-blue-50 rounded-xl transition flex items-center justify-between group border-b border-gray-50 last:border-0">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition">
+                                <span class="material-symbols-outlined text-gray-500 text-base group-hover:text-blue-600">settings_ethernet</span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-mono font-medium text-gray-800 group-hover:text-blue-700">{{ $d->mac_address }}</p>
+                                <p class="text-[11px] text-gray-500 mt-0.5">{{ $d->product?->name ?? '—' }}{{ $d->pon_sn ? ' · PON: '.$d->pon_sn : '' }}</p>
+                            </div>
+                        </div>
+                        <span class="material-symbols-outlined text-gray-300 group-hover:text-blue-500 text-lg flex-shrink-0">chevron_right</span>
+                    </button>
+                @empty
+                    <div class="py-10 text-center">
+                        <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">search_off</span>
+                        <p class="text-gray-500 text-sm">No tenés dispositivos asignados</p>
+                        <p class="text-xs text-gray-400 mt-1">Solicitá routers en tu requisición</p>
+                    </div>
+                @endforelse
+            </div>
+            <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+                <button type="button" wire:click="closeDeviceModal" class="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 transition">Cerrar</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 @push('scripts')
     <script>
+        function formatLat(value) {
+            let clean = value.replace(/[^0-9]/g, '');
+            if (clean.length > 2) {
+                clean = clean.slice(0, 2) + '.' + clean.slice(2, 6);
+            }
+            return clean;
+        }
+        function formatLng(value) {
+            let hasMinus = value.startsWith('-');
+            let clean = value.replace(/[^0-9]/g, '');
+            if (clean.length > 2) {
+                clean = clean.slice(0, 2) + '.' + clean.slice(2, 6);
+            }
+            return (hasMinus ? '-' : '') + clean;
+        }
+
         let mapInstance = null;
         let leafletMarker = null;
 
@@ -884,10 +1004,7 @@
             const container = document.getElementById('map');
             if (!container) return;
 
-            if (mapInstance) {
-                mapInstance.remove();
-                mapInstance = null;
-            }
+            if (mapInstance) return;
 
             const lat = container.dataset.latitude ? parseFloat(container.dataset.latitude) : null;
             const lng = container.dataset.longitude ? parseFloat(container.dataset.longitude) : null;
@@ -959,15 +1076,5 @@
             }
         });
 
-        Livewire.hook('morph.updating', ({
-            el,
-            component
-        }) => {
-            const mapContainer = el.querySelector('#map');
-            if (mapContainer && mapInstance) {
-                mapInstance.remove();
-                mapInstance = null;
-            }
-        });
     </script>
 @endpush
