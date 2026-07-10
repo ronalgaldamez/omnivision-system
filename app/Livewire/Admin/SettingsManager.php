@@ -12,6 +12,8 @@ class SettingsManager extends Component
     // ========== PROPIEDADES EXISTENTES ==========
     public $otRequired = false;
     public $invoiceRequiredForDevices = false;
+    public $documentTypesEnabled = false;
+    public $documentTypeList = [];
     public $modules = [];
     public $nocPollingInterval = 30;
 
@@ -22,6 +24,11 @@ class SettingsManager extends Component
     public $serviceName = '';
     public $serviceRequiresNoc = [];
     public $serviceRequiresNocModal = false;
+
+    // ========== PROPIEDADES DE TIPOS DE DOCUMENTO ==========
+    public $showDocTypeModal = false;
+    public $editingDocTypeIndex = null;
+    public $docTypeName = '';
 
     // ========== PROPIEDADES DE BASE DE CONOCIMIENTO ==========
     public $articles;
@@ -54,6 +61,8 @@ class SettingsManager extends Component
         // Configuración existente
         $this->otRequired = Setting::get('ot_required', 'false') === 'true';
         $this->invoiceRequiredForDevices = Setting::get('invoice_required_for_devices', 'false') === 'true';
+        $this->documentTypesEnabled = Setting::get('document_types_enabled', 'false') === 'true';
+        $this->loadDocumentTypeList();
 
         $configModules = config('modules.modules', []);
         foreach ($configModules as $key => $default) {
@@ -82,6 +91,12 @@ class SettingsManager extends Component
     public function updatedInvoiceRequiredForDevices()
     {
         Setting::set('invoice_required_for_devices', $this->invoiceRequiredForDevices ? 'true' : 'false');
+        $this->dispatch('show-toast', type: 'success', message: 'Configuración guardada.');
+    }
+
+    public function updatedDocumentTypesEnabled()
+    {
+        Setting::set('document_types_enabled', $this->documentTypesEnabled ? 'true' : 'false');
         $this->dispatch('show-toast', type: 'success', message: 'Configuración guardada.');
     }
 
@@ -181,6 +196,67 @@ class SettingsManager extends Component
         $this->editingServiceId = null;
         $this->serviceName = '';
         $this->serviceRequiresNocModal = false;
+    }
+
+    // ========== MÉTODOS PARA TIPOS DE DOCUMENTO ==========
+    public function loadDocumentTypeList()
+    {
+        $raw = Setting::get('document_types', 'DUI,NIT,Pasaporte');
+        $this->documentTypeList = array_values(array_filter(array_map('trim', explode(',', $raw))));
+    }
+
+    private function persistDocumentTypes()
+    {
+        Setting::set('document_types', implode(',', $this->documentTypeList));
+    }
+
+    public function openDocTypeModal()
+    {
+        $this->editingDocTypeIndex = null;
+        $this->docTypeName = '';
+        $this->showDocTypeModal = true;
+    }
+
+    public function editDocType($index)
+    {
+        $this->editingDocTypeIndex = $index;
+        $this->docTypeName = $this->documentTypeList[$index];
+        $this->showDocTypeModal = true;
+    }
+
+    public function saveDocType()
+    {
+        $this->validate(['docTypeName' => 'required|string|max:100']);
+
+        if ($this->editingDocTypeIndex !== null) {
+            $this->documentTypeList[$this->editingDocTypeIndex] = $this->docTypeName;
+            $message = "Tipo de documento '{$this->docTypeName}' actualizado.";
+        } else {
+            $this->documentTypeList[] = $this->docTypeName;
+            $message = "Tipo de documento '{$this->docTypeName}' creado.";
+        }
+
+        $this->persistDocumentTypes();
+        $this->dispatch('show-toast', type: 'success', message: $message);
+        $this->showDocTypeModal = false;
+        $this->docTypeName = '';
+        $this->editingDocTypeIndex = null;
+    }
+
+    public function deleteDocType($index)
+    {
+        $removed = $this->documentTypeList[$index];
+        unset($this->documentTypeList[$index]);
+        $this->documentTypeList = array_values($this->documentTypeList);
+        $this->persistDocumentTypes();
+        $this->dispatch('show-toast', type: 'success', message: "Tipo de documento '{$removed}' eliminado.");
+    }
+
+    public function closeDocTypeModal()
+    {
+        $this->showDocTypeModal = false;
+        $this->editingDocTypeIndex = null;
+        $this->docTypeName = '';
     }
 
     // ========== MÉTODOS PARA BASE DE CONOCIMIENTO ==========

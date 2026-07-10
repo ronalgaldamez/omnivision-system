@@ -40,17 +40,34 @@ class ClientForm extends Component
     public $plan_id = '';
     public $availablePlans = [];
     public $selectedPlanPrice = null;
+    public $selectedPlanOrigin = '';
     public $no_price = false;
     public $service = '';
+    public $service_type_id = '';
+    public $zone_id = '';
+
+    // Cascada de zona de servicio (reemplaza el combo plano)
+    public $svc_departamento = '';
+    public $svc_municipio = '';
+    public $svc_distrito = '';
+    public $svc_subzona = '';
+    public $svcAvailableDepartamentos = [];
+    public $svcAvailableMunicipios = [];
+    public $svcAvailableDistritos = [];
+    public $svcAvailableSubzonas = [];
+
+    public $accepts_promotions = false;
+    public $documentTypesEnabled = false;
+    public $documentTypesList = [];
 
     public $phones = [];
 
     protected function rules()
     {
-        return [
+        $rules = [
             'name' => ['required', 'string', 'max:255', 'regex:/^[a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s\.\'\-,]+$/'],
-            'document_type' => 'nullable|in:dui',
-            'document_number' => ['required', 'string', 'max:10', 'regex:/^\d{8}-\d{1}$/', Rule::unique('clients', 'document_number')],
+            'document_type' => 'nullable|string|max:50',
+            'document_number' => ['required', 'string', 'max:50'],
             'email' => 'nullable|email|max:255',
             'phone' => ['required', 'string', 'max:9', 'regex:/^\d{4}-\d{4}$/'],
             'address' => 'nullable|string',
@@ -65,11 +82,20 @@ class ClientForm extends Component
             'phones.*.number' => ['nullable', 'string', 'max:9', 'regex:/^\d{4}-\d{4}$/'],
             'phones.*.type' => 'nullable|in:personal,casa,referencia,trabajo,otro',
         ];
+
+        if ($this->accepts_promotions) {
+            $rules['email'] = 'required|email|max:255';
+        }
+
+        return $rules;
     }
 
     public function mount()
     {
         $this->loadDepartamentos();
+        $this->loadSvcDepartamentos();
+        $this->documentTypesEnabled = \App\Models\Setting::get('document_types_enabled', 'false') === 'true';
+        $this->documentTypesList = $this->loadDocumentTypes();
 
         $draft = session()->get('client_modal_draft', []);
         $this->name = $draft['name'] ?? '';
@@ -93,11 +119,21 @@ class ClientForm extends Component
         $this->no_price = $draft['no_price'] ?? false;
         $this->notes = $draft['notes'] ?? '';
         $this->phones = $draft['phones'] ?? [];
-        if ($this->branch_id) {
-            $this->loadBranchPlans($this->branch_id);
-        } else {
-            $this->loadAllPlans();
+
+        // Restore service zone cascade from draft
+        $this->svc_departamento = $draft['svc_departamento'] ?? '';
+        $this->svc_municipio = $draft['svc_municipio'] ?? '';
+        $this->svc_distrito = $draft['svc_distrito'] ?? '';
+        $this->svc_subzona = $draft['svc_subzona'] ?? '';
+        $this->zone_id = $draft['zone_id'] ?? '';
+        if ($this->svc_departamento) $this->updatedSvcDepartamento($this->svc_departamento);
+        if ($this->svc_municipio) $this->updatedSvcMunicipio($this->svc_municipio);
+        if ($this->svc_distrito) $this->updatedSvcDistrito($this->svc_distrito);
+        if ($this->svc_subzona) $this->updatedSvcSubzona($this->svc_subzona);
+        if ($this->zone_id && !$this->svc_departamento) {
+            $this->loadPlansForZone($this->zone_id);
         }
+
         if ($this->departamento_id) $this->updatedDepartamentoId($this->departamento_id);
         if ($this->municipio_id) $this->updatedMunicipioId($this->municipio_id);
     }
@@ -163,7 +199,8 @@ class ClientForm extends Component
         $draftFields = ['name', 'document_type', 'document_number', 'email', 'phone',
             'address', 'latitude', 'longitude', 'nro_luz', 'installation_address',
             'departamento', 'municipio', 'distrito', 'departamento_id', 'municipio_id', 'distrito_id',
-            'branch_id', 'plan_id', 'no_price', 'notes'];
+            'branch_id', 'zone_id', 'plan_id', 'no_price', 'notes',
+            'svc_departamento', 'svc_municipio', 'svc_distrito', 'svc_subzona'];
         if (in_array($property, $draftFields) || str_starts_with($property, 'phones')) {
             session()->put('client_modal_draft', [
                 'name' => $this->name,
@@ -183,10 +220,15 @@ class ClientForm extends Component
                 'municipio_id' => $this->municipio_id,
                 'distrito_id' => $this->distrito_id,
                 'branch_id' => $this->branch_id,
+                'zone_id' => $this->zone_id,
                 'plan_id' => $this->plan_id,
                 'no_price' => $this->no_price,
                 'notes' => $this->notes,
                 'phones' => $this->phones,
+                'svc_departamento' => $this->svc_departamento,
+                'svc_municipio' => $this->svc_municipio,
+                'svc_distrito' => $this->svc_distrito,
+                'svc_subzona' => $this->svc_subzona,
             ]);
         }
     }
@@ -204,8 +246,150 @@ class ClientForm extends Component
 
     public function loadBranchPlans($branchId)
     {
-        $zone = $this->getBranchPricingZone($branchId);
+        $this->availablePlans = [];
+    }
+
+    public function updatedBranchId($value)
+    {
+        $this->plan_id = '';
+        $this->selectedPlanPrice = null;
+        $this->selectedPlanOrigin = '';
+        $this->service = '';
+        $this->zone_id = '';
+        $this->departamento_id = '';
+        $this->municipio_id = '';
+        $this->distrito_id = '';
+        $this->availablePlans = [];
+        $this->availableMunicipios = [];
+        $this->availableDistritos = [];
+        $this->departamento = '';
+        $this->municipio = '';
+        $this->distrito = '';
+        $this->svc_departamento = '';
+        $this->svc_municipio = '';
+        $this->svc_distrito = '';
+        $this->svc_subzona = '';
+        $this->svcAvailableDepartamentos = [];
+        $this->svcAvailableMunicipios = [];
+        $this->svcAvailableDistritos = [];
+        $this->svcAvailableSubzonas = [];
+        $this->loadSvcDepartamentos();
+        $this->loadDepartamentos();
+    }
+
+    // ========== CASCADA DE ZONA DE SERVICIO ==========
+
+    private function loadSvcDepartamentos()
+    {
+        $query = Zone::whereNull('parent_id')->where('level', 'departamento');
+        if ($this->branch_id) {
+            $query->where('branch_id', $this->branch_id);
+        }
+        $this->svcAvailableDepartamentos = $query->orderBy('name')->get(['id', 'name'])->toArray();
+    }
+
+    private function resetSvcCascade($from = 'departamento')
+    {
+        if ($from === 'departamento') {
+            $this->svc_municipio = '';
+            $this->svcAvailableMunicipios = [];
+        }
+        if (in_array($from, ['departamento', 'municipio'])) {
+            $this->svc_distrito = '';
+            $this->svcAvailableDistritos = [];
+        }
+        if (in_array($from, ['departamento', 'municipio', 'distrito'])) {
+            $this->svc_subzona = '';
+            $this->svcAvailableSubzonas = [];
+        }
+        $this->zone_id = '';
+        $this->plan_id = '';
+        $this->selectedPlanPrice = null;
+        $this->selectedPlanOrigin = '';
+        $this->service = '';
+        $this->availablePlans = [];
+    }
+
+    public function updatedSvcDepartamento($value)
+    {
+        $this->resetSvcCascade('departamento');
+        if (!$value) return;
+        $this->svcAvailableMunicipios = Zone::where('parent_id', $value)
+            ->where('level', 'municipio')
+            ->orderBy('name')->get(['id', 'name'])->toArray();
+    }
+
+    public function updatedSvcMunicipio($value)
+    {
+        $this->resetSvcCascade('municipio');
+        if (!$value) return;
+        $this->svcAvailableDistritos = Zone::where('parent_id', $value)
+            ->where('level', 'distrito')
+            ->orderBy('name')->get(['id', 'name'])->toArray();
+    }
+
+    public function updatedSvcDistrito($value)
+    {
+        $this->resetSvcCascade('distrito');
+        if (!$value) return;
+        // Check if this distrito has deeper children (cantón, caserío, localidad, etc.)
+        $children = Zone::where('parent_id', $value)
+            ->whereNotIn('level', ['departamento', 'municipio', 'distrito'])
+            ->orderBy('name')->get(['id', 'name']);
+        if ($children->isNotEmpty()) {
+            $this->svcAvailableSubzonas = $children->toArray();
+        } else {
+            // No deeper levels — this is the final zone
+            $this->loadPlansForZone($value);
+        }
+    }
+
+    public function updatedSvcSubzona($value)
+    {
+        if (!$value) {
+            $this->zone_id = '';
+            $this->availablePlans = [];
+            $this->plan_id = '';
+            $this->selectedPlanPrice = null;
+            $this->selectedPlanOrigin = '';
+            $this->service = '';
+            return;
+        }
+        // Check for even deeper levels
+        $children = Zone::where('parent_id', $value)
+            ->whereNotIn('level', ['departamento', 'municipio', 'distrito'])
+            ->orderBy('name')->get(['id', 'name']);
+        if ($children->isNotEmpty()) {
+            // There's yet another level — we'd need more combos, but for now
+            // just use this zone and show a note
+            $this->svcAvailableSubzonas = $children->toArray();
+        }
+        $this->loadPlansForZone($value);
+    }
+
+    private function loadPlansForZone($zoneId)
+    {
+        $this->zone_id = $zoneId;
+        $this->plan_id = '';
+        $this->selectedPlanPrice = null;
+        $this->selectedPlanOrigin = '';
+        $this->service = '';
+        $this->availablePlans = [];
+
+        if (!$zoneId) return;
+
+        $zone = Zone::find($zoneId);
+        if (!$zone) return;
+
+        // Only show plans that have a direct assignment in zone_plan_prices for this zone
+        $assignedPlanIds = \App\Models\ZonePlanPrice::where('zone_id', $zoneId)
+            ->pluck('plan_id')
+            ->unique();
+
+        if ($assignedPlanIds->isEmpty()) return;
+
         $this->availablePlans = Plan::where('is_active', true)
+            ->whereIn('id', $assignedPlanIds)
             ->orderBy('name')
             ->get()
             ->map(fn($p) => [
@@ -213,33 +397,23 @@ class ClientForm extends Component
                 'name' => $p->name,
                 'speed' => $p->speed,
                 'service_type' => $p->service_type,
-                'base_price' => $p->base_price,
-                'price' => $zone ? $zone->getEffectivePriceForPlan($p) : $p->base_price,
+                'base_price' => (float) $p->base_price,
+                'price' => $zone->getEffectivePriceForPlan($p),
             ])
             ->values()
             ->toArray();
     }
 
-    public function updatedBranchId($value)
+    public function updatedServiceTypeId($value)
     {
-        $this->plan_id = '';
-        $this->selectedPlanPrice = null;
-        $this->service = '';
-        $this->departamento_id = '';
-        $this->municipio_id = '';
-        $this->distrito_id = '';
-        $this->availableMunicipios = [];
-        $this->availableDistritos = [];
-        $this->departamento = '';
-        $this->municipio = '';
-        $this->distrito = '';
-        if ($value) {
-            $this->loadBranchPlans($value);
-            $this->loadDepartamentos();
-        } else {
-            $this->loadAllPlans();
-            $this->loadDepartamentos();
-        }
+        $serviceType = \App\Models\ServiceType::find($value);
+        $this->service = $serviceType ? $serviceType->name : '';
+    }
+
+    private function loadDocumentTypes(): array
+    {
+        $raw = \App\Models\Setting::get('document_types', 'DUI,NIT,Pasaporte');
+        return array_filter(array_map('trim', explode(',', $raw)));
     }
 
     // ========== PLANES ==========
@@ -247,15 +421,18 @@ class ClientForm extends Component
     private function getPlanEffectivePrice($planId)
     {
         if (!$planId) return null;
+        $plan = Plan::find($planId);
+        if (!$plan) return null;
+
+        if ($this->zone_id) {
+            $zone = Zone::find($this->zone_id);
+            if ($zone) return $zone->getEffectivePriceForPlan($plan);
+        }
         if ($this->branch_id) {
             $zone = $this->getBranchPricingZone($this->branch_id);
-            $plan = Plan::find($planId);
-            if ($zone && $plan) {
-                return $zone->getEffectivePriceForPlan($plan);
-            }
+            if ($zone) return $zone->getEffectivePriceForPlan($plan);
         }
-        $plan = Plan::find($planId);
-        return $plan?->base_price;
+        return $plan->base_price;
     }
 
     private function loadAllPlans()
@@ -280,6 +457,7 @@ class ClientForm extends Component
         if ($value) {
             $this->plan_id = '';
             $this->selectedPlanPrice = null;
+            $this->selectedPlanOrigin = '';
             $this->service = '';
         } elseif ($this->plan_id) {
             $this->selectedPlanPrice = $this->getPlanEffectivePrice($this->plan_id);
@@ -289,9 +467,11 @@ class ClientForm extends Component
     public function updatedPlanId($value)
     {
         $this->selectedPlanPrice = null;
+        $this->selectedPlanOrigin = '';
         if ($value) {
             if (!$this->no_price) {
                 $this->selectedPlanPrice = $this->getPlanEffectivePrice($value);
+                $this->selectedPlanOrigin = $this->findPlanPriceOrigin($this->plan_id);
             }
             $plan = Plan::find($value);
             if ($plan) {
@@ -305,6 +485,35 @@ class ClientForm extends Component
         } else {
             $this->service = '';
         }
+    }
+
+    private function findPlanPriceOrigin($planId)
+    {
+        if (!$this->zone_id || !$planId) return '';
+        $zone = Zone::find($this->zone_id);
+        $plan = Plan::find($planId);
+        if (!$zone || !$plan) return '';
+
+        // Check if there's an explicit override at this exact zone
+        $localPrice = \App\Models\ZonePlanPrice::where('zone_id', $zone->id)
+            ->where('plan_id', $plan->id)->first();
+        if ($localPrice && $localPrice->price !== null) {
+            return 'override';
+        }
+
+        // Walk up ancestors to find inheritance source
+        $ancestor = $zone->parent;
+        while ($ancestor) {
+            $p = \App\Models\ZonePlanPrice::where('zone_id', $ancestor->id)
+                ->where('plan_id', $plan->id)->first();
+            if ($p && $p->price !== null) {
+                return 'inherited:' . $ancestor->name . ' (' . $ancestor->level . ')';
+            }
+            $ancestor = $ancestor->parent;
+        }
+
+        // Falls back to base price
+        return 'base';
     }
 
     public function addPhone()
@@ -379,7 +588,7 @@ class ClientForm extends Component
         });
 
         session()->forget('client_modal_draft');
-        $this->dispatch('clientCreated', id: $client->id, name: $client->name, phone: $client->phone);
+        $this->dispatch('clientCreated', id: $client->id, name: $client->name, phone: $client->phone, service_type_id: $this->service_type_id);
     }
 
     public function render()
