@@ -799,31 +799,39 @@
                     <button wire:click="$set('showPlanModal', false)" class="text-gray-400 hover:text-gray-600"><span class="material-symbols-outlined">close</span></button>
                 </div>
                 <div class="p-5 space-y-4">
-                    <x-forms.group name="plan_name" label="Nombre *">
-                        <x-ui.input type="text" wire:model="plan_name" />
-                    </x-forms.group>
-                    <x-forms.group name="plan_description" label="Descripción">
-                        <x-ui.textarea wire:model="plan_description" rows="2" />
-                    </x-forms.group>
                     <x-forms.group name="plan_service_type" label="Tipo de servicio">
-                        <x-ui.select wire:model="plan_service_type">
+                        <x-ui.select wire:model.live="plan_service_type">
                             <option value="internet">Solo Internet</option>
                             <option value="cable">Solo Cable</option>
                             <option value="internet_cable">Internet + Cable</option>
                         </x-ui.select>
                     </x-forms.group>
-                    <div class="grid grid-cols-2 gap-4">
+                    <x-forms.group name="plan_name" label="Nombre del plan *">
+                        <x-ui.input type="text" wire:model="plan_name" />
+                    </x-forms.group>
+                    <x-forms.group name="plan_description" label="Descripción">
+                        <x-ui.textarea wire:model="plan_description" rows="2" />
+                    </x-forms.group>
+                    @if($plan_service_type === 'cable')
                         <x-forms.group name="plan_base_price" label="Precio base ($) *">
                             <x-ui.input type="number" step="0.01" wire:model="plan_base_price" />
                         </x-forms.group>
-                        <x-forms.group name="plan_speed" label="Velocidad">
-                            <x-ui.input type="text" wire:model="plan_speed" placeholder="ej. 300" />
-                            <p class="text-xs text-gray-400 mt-1">Se agrega "Mbps" automáticamente.</p>
-                        </x-forms.group>
-                    </div>
-                    <x-forms.group name="plan_channels" label="Canales (solo cable)">
+                    @else
+                        <div class="grid grid-cols-2 gap-4">
+                            <x-forms.group name="plan_base_price" label="Precio base ($) *">
+                                <x-ui.input type="number" step="0.01" wire:model="plan_base_price" />
+                            </x-forms.group>
+                            <x-forms.group name="plan_speed" label="Velocidad">
+                                <x-ui.input type="text" wire:model="plan_speed" placeholder="ej. 300" />
+                                <p class="text-xs text-gray-400 mt-1">Se agrega "Mbps" automáticamente.</p>
+                            </x-forms.group>
+                        </div>
+                    @endif
+                    @if(in_array($plan_service_type, ['cable', 'internet_cable']))
+                    <x-forms.group name="plan_channels" label="Canales">
                         <x-ui.input type="number" wire:model="plan_channels" />
                     </x-forms.group>
+                    @endif
                 </div>
                 <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
                     <x-ui.button variant="ghost" wire:click="$set('showPlanModal', false)">Cancelar</x-ui.button>
