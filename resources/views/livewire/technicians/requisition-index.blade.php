@@ -2,7 +2,7 @@
     <x-ui.card icon="inventory_2" title="Mis Requisiciones" subtitle="Material solicitado para tus órdenes de trabajo">
         <x-slot:headerActions>
             <a href="{{ $hasPending ? '#' : route('technician.requisitions.create') }}"
-               class="inline-flex items-center gap-2 px-4 py-2 {{ $hasPending ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700' }} text-white text-sm font-medium rounded-lg shadow-sm transition">
+                class="inline-flex items-center gap-2 px-4 py-2 {{ $hasPending ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700' }} text-white text-sm font-medium rounded-lg shadow-sm transition">
                 <span class="material-symbols-outlined text-base">add_circle</span>
                 {{ $hasPending ? 'Pendiente de aprobación' : 'Nueva Requisición' }}
             </a>
@@ -31,12 +31,12 @@
                                 <x-ui.badge :variant="$s[1]">{{ $s[0] }}</x-ui.badge>
                             </div>
                             <a href="{{ route('technician.requisitions.show', $req->id) }}"
-                               class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                class="text-blue-600 hover:text-blue-800 text-sm font-medium">
                                 Ajustar consumo →
                             </a>
                         </div>
                         @if($req->workOrders->isNotEmpty())
-                            <p class="text-xs text-gray-500 mb-2">Órdenes: 
+                            <p class="text-xs text-gray-500 mb-2">Órdenes:
                                 @foreach($req->workOrders as $wo)
                                     #{{ $wo->id }}@if(!$loop->last), @endif
                                 @endforeach
@@ -45,7 +45,8 @@
                         <div class="text-sm text-gray-700">
                             <span class="font-medium">Productos:</span>
                             @foreach($req->items as $item)
-                                <span class="ml-1">{{ $item->product->name }} ({{ $item->quantity_requested }})</span>@if(!$loop->last), @endif
+                                <span class="ml-1">{{ $item->product->name }}
+                                    ({{ $item->quantity_requested }})</span>@if(!$loop->last), @endif
                             @endforeach
                         </div>
                     </div>
@@ -55,21 +56,27 @@
     </x-ui.card>
 
     <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
-         x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 3500)"
-         x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"
-         x-transition:enter="transform ease-out duration-300" x-transition:enter-start="translate-y-2 opacity-0"
-         x-transition:enter-end="translate-y-0 opacity-100" x-transition:leave="transform ease-in duration-200"
-         x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-2 opacity-0"
-         style="display: none;">
+        x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 3500)"
+        x-show="toast" x-cloak class="fixed bottom-5 right-5 z-50 transition-all duration-300"
+        x-transition:enter="transform ease-out duration-300" x-transition:enter-start="translate-y-2 opacity-0"
+        x-transition:enter-end="translate-y-0 opacity-100" x-transition:leave="transform ease-in duration-200"
+        x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-2 opacity-0"
+        style="display: none;">
         <div x-show="toastType === 'success'"
-             class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span class="material-symbols-outlined">check_circle</span> <span x-text="toastMessage" class="text-sm font-medium"></span>
+            class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+            <span class="material-symbols-outlined">check_circle</span> <span x-text="toastMessage"
+                class="text-sm font-medium"></span>
         </div>
         <div x-show="toastType === 'error'"
-             class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span class="material-symbols-outlined">error</span> <span x-text="toastMessage" class="text-sm font-medium"></span>
+            class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+            <span class="material-symbols-outlined">error</span> <span x-text="toastMessage"
+                class="text-sm font-medium"></span>
         </div>
     </div>
 
-    <style>[x-cloak] { display: none !important; }</style>
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
 </div>
