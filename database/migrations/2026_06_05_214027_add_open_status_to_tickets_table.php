@@ -9,12 +9,20 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Cambiar el ENUM para agregar 'open'
         DB::statement("ALTER TABLE `tickets` MODIFY COLUMN `status` ENUM('pending', 'in_progress', 'resolved', 'closed', 'open') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL");
     }
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Volver al estado anterior (sin 'open')
         DB::statement("ALTER TABLE `tickets` MODIFY COLUMN `status` ENUM('pending', 'in_progress', 'resolved', 'closed') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL");
     }
