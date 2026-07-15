@@ -1,0 +1,11 @@
+name,sku,brand,category,cost,stock,description
+Router Huawei HG8245H,HW-HG8245H,Huawei,ONT,35.50,150,Router GPON ONT Huawei
+Router FiberHome HG6243C,FH-HG6243C,FiberHome,ONT,28.00,200,Router GPON ONT FiberHome
+Cable FO 3m SC/APC,FO-3M-SC,Genérico,Fibra Óptica,1.50,500,Cable de fibra óptica de 3 metros
+Cable FO 5m SC/APC,FO-5M-SC,Genérico,Fibra Óptica,2.20,300,Cable de fibra óptica de 5 metros
+Fusionadora Signal Fire AI-8,SF-AI8,Signal Fire,Herramientas,450.00,5,Fusionadora de fibra óptica
+Splitter 1:8 PLC,SPL-1-8,Genérico,Divisores,8.75,100,Splitter PLC 1:8 para FTTH
+Patch Cord RJ45 Cat6 1m,PC-RJ6-1M,Genérico,Cableado,1.80,400,Cable patch RJ45 Cat6
+Router MikroTik hAP AC2,MT-HAPAC2,MikroTik,Router,85.00,25,Router inalámbrico MikroTik
+Adaptador POE 48V 0.5A,POE-48V,TP-Link,Accesorios,12.00,60,Adaptador Power over Ethernet
+Caja NAP 8 puertos,NAP-8,Genérico,Fibra Óptica,18.50,80,Caja de distribución óptica NAP
