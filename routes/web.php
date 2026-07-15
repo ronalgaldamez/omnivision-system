@@ -196,7 +196,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', \App\Livewire\Admin\Roles\RoleIndex::class)->name('admin.roles.index');
         Route::get('/create', \App\Livewire\Admin\Roles\RoleForm::class)->name('admin.roles.create');
         Route::get('/{id}/edit', \App\Livewire\Admin\Roles\RoleForm::class)->name('admin.roles.edit');
-        Route::get('/admin/settings', \App\Livewire\Admin\SettingsManager::class)->name('admin.settings');
+    });
+    Route::prefix('admin/settings')->middleware(['auth', 'can:access_admin'])->group(function () {
+        Route::get('/', \App\Livewire\Admin\SettingsManager::class)->name('admin.settings');
     });
     Route::prefix('admin/catalog')->middleware(['auth', 'can:manage catalog'])->group(function () {
         Route::get('/', \App\Livewire\Admin\Catalog\CatalogManager::class)->name('admin.catalog');

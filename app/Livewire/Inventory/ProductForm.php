@@ -348,10 +348,10 @@ class ProductForm extends Component
     {
         if ($this->modalAction === 'delete') {
             $this->removeFromList($this->modalItemIndex);
-            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Producto eliminado de la lista.']);
+            $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Producto eliminado de la lista.']);
         } elseif ($this->modalAction === 'edit') {
             $this->editItem($this->modalItemIndex);
-            $this->dispatch('showToast', ['type' => 'info', 'message' => 'Producto cargado para edición.']);
+            $this->dispatch('show-toast', ['type' => 'info', 'message' => 'Producto cargado para edición.']);
         }
         $this->closeModal();
     }
@@ -396,7 +396,7 @@ class ProductForm extends Component
     public function confirmSaveAll()
     {
         if (empty($this->productList)) {
-            $this->dispatch('showToast', ['type' => 'error', 'message' => 'Agrega al menos un producto antes de guardar.']);
+            $this->dispatch('show-toast', ['type' => 'error', 'message' => 'Agrega al menos un producto antes de guardar.']);
 
             return;
         }
@@ -412,7 +412,7 @@ class ProductForm extends Component
             Product::create($prod);
         }
         $this->clearPersistedState();
-        $this->dispatch('showToast', ['type' => 'success', 'message' => count($this->productList).' producto(s) creado(s) correctamente.']);
+        $this->dispatch('show-toast', ['type' => 'success', 'message' => count($this->productList).' producto(s) creado(s) correctamente.']);
         $this->redirectRoute('products.index');
     }
 
@@ -438,7 +438,7 @@ class ProductForm extends Component
             'category_id' => $this->currentCategoryId ?: null,
         ]);
         $this->clearPersistedState();
-        $this->dispatch('showToast', ['type' => 'success', 'message' => 'Producto actualizado correctamente.']);
+        $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Producto actualizado correctamente.']);
         $this->redirectRoute('products.index');
     }
 

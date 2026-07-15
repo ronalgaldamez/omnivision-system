@@ -94,7 +94,7 @@ class CatalogManager extends Component
             'category_id' => $this->modelCategoryId,
         ]);
         $this->showModal = false;
-        $this->dispatch('showToast', ['type' => 'success', 'message' => 'Modelo guardado correctamente.']);
+        $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Modelo guardado correctamente.']);
         $this->reset(['modelBrandId', 'modelName', 'modelCategoryId', 'editingId']);
         $this->showConfirmModal = false;
     }
@@ -111,10 +111,10 @@ class CatalogManager extends Component
     {
         $model = ProductModel::findOrFail($this->confirmId);
         if ($model->products()->count() > 0) {
-            $this->dispatch('showToast', ['type' => 'error', 'message' => 'No se puede eliminar un modelo con productos asociados.']);
+            $this->dispatch('show-toast', ['type' => 'error', 'message' => 'No se puede eliminar un modelo con productos asociados.']);
         } else {
             $model->delete();
-            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Modelo eliminado.']);
+            $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Modelo eliminado.']);
         }
         $this->showConfirmModal = false;
         $this->confirmId = null;
@@ -159,7 +159,7 @@ class CatalogManager extends Component
             'description' => $this->brandDescription,
         ]);
         $this->showModal = false;
-        $this->dispatch('showToast', ['type' => 'success', 'message' => 'Marca guardada correctamente.']);
+        $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Marca guardada correctamente.']);
         $this->reset(['brandName', 'brandDescription', 'editingId']);
         $this->showConfirmModal = false;
     }
@@ -176,10 +176,10 @@ class CatalogManager extends Component
     {
         $brand = Brand::findOrFail($this->confirmId);
         if ($brand->productModels()->count() > 0) {
-            $this->dispatch('showToast', ['type' => 'error', 'message' => 'No se puede eliminar una marca con modelos asociados.']);
+            $this->dispatch('show-toast', ['type' => 'error', 'message' => 'No se puede eliminar una marca con modelos asociados.']);
         } else {
             $brand->delete();
-            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Marca eliminada.']);
+            $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Marca eliminada.']);
         }
         $this->showConfirmModal = false;
         $this->confirmId = null;
@@ -227,7 +227,7 @@ class CatalogManager extends Component
             'requires_device_registration' => $this->categoryRequiresDevice,
         ]);
         $this->showModal = false;
-        $this->dispatch('showToast', ['type' => 'success', 'message' => 'Categoría guardada correctamente.']);
+        $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Categoría guardada correctamente.']);
         $this->reset(['categoryName', 'categoryDescription', 'categoryRequiresDevice', 'editingId']);
         $this->showConfirmModal = false;
     }
@@ -244,10 +244,10 @@ class CatalogManager extends Component
     {
         $cat = Category::findOrFail($this->confirmId);
         if ($cat->products()->count() > 0) {
-            $this->dispatch('showToast', ['type' => 'error', 'message' => 'No se puede eliminar una categoría con productos asociados.']);
+            $this->dispatch('show-toast', ['type' => 'error', 'message' => 'No se puede eliminar una categoría con productos asociados.']);
         } else {
             $cat->delete();
-            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Categoría eliminada.']);
+            $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Categoría eliminada.']);
         }
         $this->showConfirmModal = false;
         $this->confirmId = null;

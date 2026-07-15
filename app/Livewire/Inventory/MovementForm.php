@@ -147,7 +147,7 @@ class MovementForm extends Component
         $this->currentDescription = $mov['description'];
         $this->removeFromList($index, false);
         $this->editingIndex = $index;
-        $this->dispatch('showToast', ['type' => 'info', 'message' => 'Movimiento cargado para edición. Modifica los campos y haz clic en "Agregar movimiento".']);
+        $this->dispatch('show-toast', ['type' => 'info', 'message' => 'Movimiento cargado para edición. Modifica los campos y haz clic en "Agregar movimiento".']);
     }
 
     public function performDelete($index)
@@ -160,7 +160,7 @@ class MovementForm extends Component
         unset($this->movementList[$index]);
         $this->movementList = array_values($this->movementList);
         if ($showMessage) {
-            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Movimiento eliminado de la lista.']);
+            $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Movimiento eliminado de la lista.']);
         }
     }
 
@@ -175,7 +175,7 @@ class MovementForm extends Component
     public function confirmSaveAll()
     {
         if (empty($this->movementList)) {
-            $this->dispatch('showToast', ['type' => 'error', 'message' => 'Agrega al menos un movimiento antes de guardar.']);
+            $this->dispatch('show-toast', ['type' => 'error', 'message' => 'Agrega al menos un movimiento antes de guardar.']);
             return;
         }
         $this->modalAction = 'save';
@@ -192,7 +192,7 @@ class MovementForm extends Component
 
             // Validar stock para salidas
             if (in_array($mov['type'], ['exit', 'technician_out']) && $product->current_stock < $mov['quantity']) {
-                $this->dispatch('showToast', ['type' => 'error', 'message' => "Stock insuficiente para {$product->name}. No se guardó ningún movimiento."]);
+                $this->dispatch('show-toast', ['type' => 'error', 'message' => "Stock insuficiente para {$product->name}. No se guardó ningún movimiento."]);
                 return;
             }
 
@@ -217,7 +217,7 @@ class MovementForm extends Component
             }
         }
 
-        $this->dispatch('showToast', ['type' => 'success', 'message' => count($this->movementList) . ' movimiento(s) registrado(s).']);
+        $this->dispatch('show-toast', ['type' => 'success', 'message' => count($this->movementList) . ' movimiento(s) registrado(s).']);
         return redirect()->route('movements.index');
     }
 

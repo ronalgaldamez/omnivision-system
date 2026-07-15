@@ -50,9 +50,9 @@ class ProductIndex extends Component
         $product = Product::findOrFail($this->productIdToDelete);
         if ($product->current_stock == 0) {
             $product->delete();
-            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Producto eliminado.']);
+            $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Producto eliminado.']);
         } else {
-            $this->dispatch('showToast', ['type' => 'error', 'message' => 'No se puede eliminar producto con stock > 0.']);
+            $this->dispatch('show-toast', ['type' => 'error', 'message' => 'No se puede eliminar producto con stock > 0.']);
         }
         $this->showDeleteModal = false;
         $this->productIdToDelete = null;
