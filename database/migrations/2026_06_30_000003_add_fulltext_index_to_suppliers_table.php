@@ -7,11 +7,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('ALTER TABLE suppliers ADD FULLTEXT INDEX suppliers_search (name, contact_name)');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE suppliers ADD FULLTEXT INDEX suppliers_search (name, contact_name)');
+        }
     }
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE suppliers DROP INDEX suppliers_search');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE suppliers DROP INDEX suppliers_search');
+        }
     }
 };

@@ -15,12 +15,16 @@ return new class extends Migration
             $table->text('rejection_reason')->nullable()->after('approved_at');
         });
 
-        DB::statement("ALTER TABLE requisitions MODIFY COLUMN status ENUM('open', 'heredada', 'closed', 'pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE requisitions MODIFY COLUMN status ENUM('open', 'heredada', 'closed', 'pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending'");
+        }
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE requisitions MODIFY COLUMN status ENUM('open', 'heredada', 'closed') NOT NULL DEFAULT 'open'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE requisitions MODIFY COLUMN status ENUM('open', 'heredada', 'closed') NOT NULL DEFAULT 'open'");
+        }
 
         Schema::table('requisitions', function (Blueprint $table) {
             $table->dropForeign(['branch_id']);

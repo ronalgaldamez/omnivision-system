@@ -7,6 +7,10 @@ return new class extends Migration
 {
     public function up()
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE `movements` CHANGE `type` `type` ENUM(
             'entrada',
             'salida',
@@ -22,6 +26,10 @@ return new class extends Migration
 
     public function down()
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE `movements` CHANGE `type` `type` ENUM(
             'entrada',
             'salida',

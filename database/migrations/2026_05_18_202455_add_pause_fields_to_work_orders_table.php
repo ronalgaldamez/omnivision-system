@@ -15,13 +15,17 @@ return new class extends Migration
         });
 
         // Modificar el ENUM para incluir 'paused'
-        DB::statement("ALTER TABLE work_orders MODIFY COLUMN status ENUM('pending', 'in_progress', 'paused', 'completed', 'cancelled') NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE work_orders MODIFY COLUMN status ENUM('pending', 'in_progress', 'paused', 'completed', 'cancelled') NOT NULL DEFAULT 'pending'");
+        }
     }
 
     public function down()
     {
         // Revertir el ENUM
-        DB::statement("ALTER TABLE work_orders MODIFY COLUMN status ENUM('pending', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE work_orders MODIFY COLUMN status ENUM('pending', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'pending'");
+        }
 
         Schema::table('work_orders', function (Blueprint $table) {
             $table->dropColumn('accumulated_seconds');

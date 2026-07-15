@@ -7,6 +7,10 @@ return new class extends Migration
 {
     public function up()
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Obtener los valores actuales del ENUM y agregar 'entry' si no existe
         DB::statement("ALTER TABLE `movements` CHANGE `type` `type` ENUM(
             'entrada',
@@ -22,6 +26,10 @@ return new class extends Migration
 
     public function down()
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE `movements` CHANGE `type` `type` ENUM(
             'entrada',
             'salida',
