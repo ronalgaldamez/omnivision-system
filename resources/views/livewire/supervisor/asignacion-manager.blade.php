@@ -19,6 +19,7 @@
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200">
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">Encargado</th>
+                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Auxiliar</th>
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Vehículo</th>
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Zona</th>
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Estado</th>
@@ -34,6 +35,15 @@
                                     <span class="material-symbols-outlined text-gray-400 text-base">engineering</span>
                                     <span class="font-medium text-gray-800">{{ $a->encargado->name }}</span>
                                 </div>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <select wire:change="assignAuxiliar({{ $a->id }}, $event.target.value)"
+                                    class="text-xs rounded border-gray-300 w-32 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                    <option value="">— Sin auxiliar —</option>
+                                    @foreach($tecnicos->where('id', '!=', $a->encargado_id) as $t)
+                                    <option value="{{ $t->id }}" @selected($a->auxiliar_id == $t->id)>{{ $t->name }}</option>
+                                    @endforeach
+                                </select>
                             </td>
                             <td class="px-4 py-3 text-center">
                                 @if($a->vehicle)
@@ -84,7 +94,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="6" class="px-4 py-12 text-center bg-gray-50/50">
+                            <td colspan="7" class="px-4 py-12 text-center bg-gray-50/50">
                                 <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">assignment</span>
                                 <p class="text-gray-500">No hay asignaciones</p>
                             </td>

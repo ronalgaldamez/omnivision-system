@@ -22,6 +22,7 @@ class UserForm extends Component
     public $selectedPermissions = [];
     public $activeTab = '';
     public $branchId = '';
+    public $techRole = '';
 
     public function mount($id = null)
     {
@@ -33,6 +34,7 @@ class UserForm extends Component
             $this->isActive = $user->is_active;
             $this->selectedRole = $user->roles->first()->name ?? '';
             $this->branchId = $user->branch_id ?? '';
+            $this->techRole = $user->tech_role ?? '';
             $this->permissionsPersonalized = $user->hasPersonalizedPermissions();
 
             if ($this->permissionsPersonalized) {
@@ -58,6 +60,7 @@ class UserForm extends Component
             'password' => 'required|min:6|confirmed',
             'selectedRole' => 'required|exists:roles,name',
             'isActive' => 'boolean',
+            'techRole' => 'nullable|in:encargado,auxiliar',
             'permissionsPersonalized' => 'boolean',
             'selectedPermissions' => 'array',
             'selectedPermissions.*' => 'string',
@@ -98,6 +101,7 @@ class UserForm extends Component
             'email' => $this->email,
             'is_active' => $this->isActive,
             'branch_id' => $this->branchId ?: null,
+            'tech_role' => $this->techRole ?: null,
         ];
 
         if ($this->password) {
