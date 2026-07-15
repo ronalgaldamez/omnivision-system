@@ -216,6 +216,12 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin/supervisor-zones')->middleware(['auth', 'can:assign supervisors to zones'])->group(function () {
         Route::get('/', \App\Livewire\Admin\SupervisorZones\SupervisorZoneManager::class)->name('admin.supervisor-zones');
     });
+    Route::prefix('admin/vehiculos')->middleware(['auth', 'can:access_admin'])->group(function () {
+        Route::get('/', \App\Livewire\Supervisor\VehiculoManager::class)->name('admin.vehiculos');
+    });
+    Route::prefix('admin/asignaciones')->middleware(['auth', 'can:access_admin'])->group(function () {
+        Route::get('/', \App\Livewire\Supervisor\AsignacionManager::class)->name('admin.asignaciones');
+    });
 
     // ========== UI COMPONENTS PREVIEW ==========
     Route::middleware(['auth', 'can:access_admin'])->get('/admin/ui-preview', function () {
