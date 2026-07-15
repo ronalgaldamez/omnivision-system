@@ -10,6 +10,7 @@ use App\Models\Movement;
 use App\Models\Ticket;
 use App\Models\Client;
 use App\Services\SlaService;
+use App\Services\DashboardKpiService;
 use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends Component
@@ -81,6 +82,51 @@ class Dashboard extends Component
             })->latest()->limit(5)->get();
         }
 
+        // ========== NUEVOS KPI ==========
+        $kpi = app(DashboardKpiService::class);
+
+        $inventoryValue = null;
+        if ($user->can('view products')) {
+            $inventoryValue = $kpi->getInventoryValue();
+        }
+
+        $todayEntries = null;
+        $todayExits = null;
+        $topProducts = null;
+        if ($user->can('view movements')) {
+            $todayEntries = $kpi->getTodayEntries();
+            $todayExits = $kpi->getTodayExits();
+            $topProducts = $kpi->getTopProducts();
+        }
+
+        $monthlyPurchasesTotal = null;
+        $monthlyPurchasesCount = null;
+        $recentPurchases = null;
+        if ($user->can('view purchases')) {
+            $monthlyPurchasesTotal = $kpi->getMonthlyPurchasesTotal();
+            $monthlyPurchasesCount = $kpi->getMonthlyPurchasesCount();
+            $recentPurchases = $kpi->getRecentPurchases();
+        }
+
+        $devicesByStatus = null;
+        if ($user->can('access_inventory')) {
+            $devicesByStatus = $kpi->getDevicesByStatus();
+        }
+
+        $newClientsToday = null;
+        $newClientsThisMonth = null;
+        if ($user->can('view clients')) {
+            $newClientsToday = $kpi->getNewClientsToday();
+            $newClientsThisMonth = $kpi->getNewClientsThisMonth();
+        }
+
+        $pendingWorkOrders = null;
+        $completedWorkOrders = null;
+        if ($user->can('view work_orders')) {
+            $pendingWorkOrders = WorkOrder::whereIn('status', ['pending', 'in_progress'])->count();
+            $completedWorkOrders = WorkOrder::where('status', 'completed')->count();
+        }
+
         // ========== DATOS ESPECÍFICOS PARA TÉCNICO ==========
         $techPendingRequisitionsCount = null;
         $techActiveWorkOrdersCount = null;
@@ -116,7 +162,19 @@ class Dashboard extends Component
             'relatedWorkOrders',
             'techPendingRequisitionsCount',
             'techActiveWorkOrdersCount',
-            'techRecentRequisitions'
+            'techRecentRequisitions',
+            'inventoryValue',
+            'todayEntries',
+            'todayExits',
+            'monthlyPurchasesTotal',
+            'monthlyPurchasesCount',
+            'recentPurchases',
+            'topProducts',
+            'devicesByStatus',
+            'newClientsToday',
+            'newClientsThisMonth',
+            'pendingWorkOrders',
+            'completedWorkOrders'
         ))->layout('components.layouts.app');
     }
 
