@@ -490,6 +490,15 @@ class TicketForm extends Component
             $this->updatedServiceTypeId($service_type_id);
         }
 
+        // Si el ticket ya está abierto, actualizar BD inmediatamente
+        if ($this->ticketOpened && $this->ticketId) {
+            Ticket::where('id', $this->ticketId)->update([
+                'client_id' => $id,
+                'zone_id' => $client->zone_id,
+                'plan_id' => $client->plan_id,
+            ]);
+        }
+
         $this->closeClientModal();
 
         $this->dispatch('show-toast', type: 'success', message: 'Cliente creado y seleccionado correctamente.');

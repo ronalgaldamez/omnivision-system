@@ -80,11 +80,12 @@
                                         <p class="text-sm font-semibold text-gray-800">
                                             {{ $order->client->name ?? 'Cliente no especificado' }}
                                         </p>
-                                        @if($order->client->phone)
+                                        @if($order->client && $order->client->phone)
                                             <p class="text-xs text-gray-500">{{ $order->client->phone }}</p>
                                         @endif
                                     </div>
                                 </div>
+                                @if($order->client)
                                 <div class="flex items-start gap-2 ml-10">
                                     <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">location_on</span>
                                     <p class="text-xs text-gray-500 leading-relaxed">
@@ -95,6 +96,7 @@
                                         @endif
                                     </p>
                                 </div>
+                                @endif
                                 @if($order->notes)
                                     <div class="flex items-start gap-2 ml-10">
                                         <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">sticky_note_2</span>

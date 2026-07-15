@@ -190,12 +190,13 @@
                                 <span class="material-symbols-outlined text-gray-400 text-base">person</span>
                                 Datos del Cliente
                             </h4>
+                            @if($previewWorkOrder->client)
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div class="flex items-start gap-2 p-2 bg-gray-50/80 rounded-lg">
                                     <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">person</span>
                                     <div>
                                         <p class="text-xs text-gray-500">Nombre</p>
-                                        <p class="text-sm text-gray-800 font-medium">{{ $previewWorkOrder->client->name ?? 'N/A' }}</p>
+                                        <p class="text-sm text-gray-800 font-medium">{{ $previewWorkOrder->client->name }}</p>
                                     </div>
                                 </div>
                                 <div class="flex items-start gap-2 p-2 bg-gray-50/80 rounded-lg">
@@ -258,6 +259,12 @@
                                 </div>
                                 @endif
                             </div>
+                            @else
+                            <div class="flex items-center gap-3 p-4 bg-gray-50/80 rounded-lg">
+                                <span class="material-symbols-outlined text-gray-400">person_off</span>
+                                <p class="text-sm text-gray-500 italic">Cliente no asignado a esta orden de trabajo</p>
+                            </div>
+                            @endif
                         </div>
 
                         {{-- 2. Ticket --}}

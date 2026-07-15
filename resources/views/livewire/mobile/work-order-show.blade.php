@@ -12,6 +12,7 @@
                         class="material-symbols-outlined text-blue-600 bg-blue-50 p-1 rounded-lg text-xl">person</span>
                     <h2 class="text-base font-bold text-gray-800">Datos del Cliente</h2>
                 </div>
+                @if($workOrder->client)
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="flex items-center gap-3 p-3 bg-gray-50/70 rounded-xl border border-gray-100">
                         <span
@@ -19,7 +20,7 @@
                         <div class="min-w-0">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Nombre</p>
                             <p class="text-gray-800 font-medium text-sm truncate">
-                                {{ $workOrder->client->name ?? 'No especificado' }}
+                                {{ $workOrder->client->name }}
                             </p>
                         </div>
                     </div>
@@ -44,7 +45,7 @@
                         <div class="min-w-0">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Teléfono</p>
                             <p class="text-gray-700 text-sm truncate">
-                                @if ($workOrder->client && $workOrder->client->phones->isNotEmpty())
+                                @if ($workOrder->client->phones->isNotEmpty())
                                     @foreach ($workOrder->client->phones as $phone)
                                         {{ $phone->number }}{{ !$loop->last ? ', ' : '' }}
                                     @endforeach
@@ -121,6 +122,12 @@
                         </div>
                     @endif
                 </div>
+                @else
+                <div class="flex items-center gap-3 p-4 bg-gray-50/70 rounded-xl border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">person_off</span>
+                    <p class="text-sm text-gray-500 italic">Cliente no asignado a esta orden de trabajo</p>
+                </div>
+                @endif
             </section>
 
             {{-- ========== DATOS TÉCNICOS ========== --}}
