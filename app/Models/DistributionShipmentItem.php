@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class DistributionShipmentItem extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'shipment_id', 'product_id', 'product_name', 'quantity',
     ];

@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ProductPackaging extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'product_id', 'packaging_type_id', 'name', 'quantity_in_base_unit', 'is_default_for_purchase',
     ];

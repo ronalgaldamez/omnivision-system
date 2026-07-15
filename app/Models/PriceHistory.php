@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PriceHistory extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'zone_plan_price_id', 'plan_id', 'zone_id',
         'old_price', 'new_price', 'reason', 'user_id',

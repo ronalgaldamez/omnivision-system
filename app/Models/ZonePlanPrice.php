@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ZonePlanPrice extends Model
 {
+    use HasFactory;
     protected $fillable = ['zone_id', 'plan_id', 'price'];
 
     protected $casts = ['price' => 'decimal:2'];

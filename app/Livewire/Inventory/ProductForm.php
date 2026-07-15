@@ -406,6 +406,9 @@ class ProductForm extends Component
     public function saveAll()
     {
         foreach ($this->productList as $prod) {
+            $prod['brand_id'] = $prod['brand_id'] ?: null;
+            $prod['model_id'] = $prod['model_id'] ?: null;
+            $prod['category_id'] = $prod['category_id'] ?: null;
             Product::create($prod);
         }
         $this->clearPersistedState();
@@ -430,9 +433,9 @@ class ProductForm extends Component
             'stock_min' => $this->currentStockMin,
             'stock_max' => $this->currentStockMax,
             'description' => $this->currentDescription,
-            'brand_id' => $this->currentBrandId,
-            'model_id' => $this->currentModelId,
-            'category_id' => $this->currentCategoryId,
+            'brand_id' => $this->currentBrandId ?: null,
+            'model_id' => $this->currentModelId ?: null,
+            'category_id' => $this->currentCategoryId ?: null,
         ]);
         $this->clearPersistedState();
         $this->dispatch('showToast', ['type' => 'success', 'message' => 'Producto actualizado correctamente.']);

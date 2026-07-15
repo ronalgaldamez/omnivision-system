@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class DistributionShipment extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'code', 'branch_id', 'status',
         'created_by', 'confirmed_by',
