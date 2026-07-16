@@ -353,6 +353,8 @@
                             </div>
                         </div>
                     @endif
+
+
                 </nav>
 
                 <div class="border-t border-gray-100 p-3 flex-shrink-0" x-show="sidebarOpen">

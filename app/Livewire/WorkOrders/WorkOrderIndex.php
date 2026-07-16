@@ -5,6 +5,7 @@ namespace App\Livewire\WorkOrders;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\WorkOrder;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 class WorkOrderIndex extends Component
@@ -14,33 +15,44 @@ class WorkOrderIndex extends Component
     public $statusFilter = '';
     public $search = '';
 
-    // Propiedades para confirmación de eliminación
-    public $confirmingAction = null;   // 'delete'
+    public $confirmingAction = null;
     public $confirmingOrderId = null;
 
-    public function render()
-    {
-        // Recargar los permisos del usuario desde la base de datos para evitar la caché de sesión
-        $user = Auth::user();
-        if ($user) {
-            // Forzamos la recarga de la relación roles y sus permisos
-            $user->load('roles.permissions');
-            // Actualizamos la instancia en el contenedor de autorización
-            Auth::setUser($user);
-        }
+    public $selectedOrders = [];
+    public $selectAll = false;
+    public $showAssignModal = false;
+    public $assignMode = 'quick';
+    public $currentStepIndex = 0;
+    public $assignTechnicianId = '';
+    public $assignAuxiliarId = '';
+    public $scheduledDate = '';
+    public $notes = '';
 
-        $query = WorkOrder::with('technician', 'client', 'ticket');
+    public function updatedSelectAll($value)
+    {
+        if ($value) {
+            $this->selectedOrders = $this->getFilteredQuery()->pluck('id')->toArray();
+        } else {
+            $this->selectedOrders = [];
+        }
+    }
+
+    public function updatedSelectedOrders()
+    {
+        $this->selectAll = false;
+    }
+
+    protected function getFilteredQuery()
+    {
+        $user = Auth::user();
+        $query = WorkOrder::query();
 
         if ($user->can('view all work orders')) {
             // todas
         } elseif ($user->can('view own work_orders')) {
-            $query->whereHas('ticket', function ($q) use ($user) {
-                $q->where('created_by', $user->id)
-                    ->orWhere('resolved_by', $user->id);
-            });
+            $query->whereHas('ticket', fn($q) => $q->where('created_by', $user->id)->orWhere('resolved_by', $user->id));
         } else {
-            $orders = collect();
-            return view('livewire.work-orders.work-order-index', compact('orders'))->layout('components.layouts.app');
+            return null;
         }
 
         if ($this->statusFilter) {
@@ -54,22 +66,108 @@ class WorkOrderIndex extends Component
             });
         }
 
-        $orders = $query->orderBy('created_at', 'desc')->paginate(10);
-        return view('livewire.work-orders.work-order-index', compact('orders'))->layout('components.layouts.app');
+        return $query;
     }
 
-    // Prepara la confirmación para eliminar
+    public function setQuickMode()
+    {
+        $this->assignMode = 'quick';
+        $this->currentStepIndex = 0;
+    }
+
+    public function setStepMode()
+    {
+        $this->assignMode = 'step';
+        $this->currentStepIndex = 0;
+    }
+
+    public function goToStep($index)
+    {
+        if ($index >= 0 && $index < count($this->selectedOrders)) {
+            $this->currentStepIndex = $index;
+        }
+    }
+
+    public function applyStep()
+    {
+        $otId = $this->selectedOrders[$this->currentStepIndex] ?? null;
+        if (!$otId) return;
+
+        $data = [];
+        if ($this->assignTechnicianId) {
+            $data['technician_id'] = $this->assignTechnicianId;
+            $data['assigned_at'] = now();
+            $data['assigned_by'] = auth()->id();
+        }
+        if ($this->assignAuxiliarId) {
+            $data['auxiliar_technician_id'] = $this->assignAuxiliarId;
+        }
+        if ($this->scheduledDate) {
+            $data['scheduled_date'] = $this->scheduledDate;
+        }
+        if ($this->notes) {
+            $data['notes'] = $this->notes;
+        }
+
+        WorkOrder::where('id', $otId)->update($data);
+
+        $total = count($this->selectedOrders);
+        if ($this->currentStepIndex < $total - 1) {
+            $this->currentStepIndex++;
+        }
+
+        $this->dispatch('show-toast', type: 'success', message: 'OT actualizada.');
+    }
+
+    public function assignSelected()
+    {
+        if (empty($this->selectedOrders)) {
+            $this->dispatch('show-toast', type: 'error', message: 'Seleccioná al menos una OT.');
+            return;
+        }
+
+        if (!$this->assignTechnicianId && !$this->assignAuxiliarId) {
+            $this->dispatch('show-toast', type: 'error', message: 'Seleccioná un técnico o auxiliar para asignar.');
+            return;
+        }
+
+        $data = [];
+        if ($this->assignTechnicianId) {
+            $data['technician_id'] = $this->assignTechnicianId;
+            $data['assigned_at'] = now();
+            $data['assigned_by'] = auth()->id();
+        }
+        if ($this->assignAuxiliarId) {
+            $data['auxiliar_technician_id'] = $this->assignAuxiliarId;
+        }
+        if ($this->scheduledDate) {
+            $data['scheduled_date'] = $this->scheduledDate;
+        }
+        if ($this->notes) {
+            $data['notes'] = $this->notes;
+        }
+
+        $count = WorkOrder::whereIn('id', $this->selectedOrders)->update($data);
+
+        $this->selectedOrders = [];
+        $this->selectAll = false;
+        $this->showAssignModal = false;
+        $this->assignMode = 'quick';
+        $this->currentStepIndex = 0;
+        $this->scheduledDate = '';
+        $this->notes = '';
+        $this->dispatch('show-toast', type: 'success', message: "{$count} OT(s) asignadas correctamente.");
+    }
+
     public function promptDelete($id)
     {
         $user = Auth::user();
         $order = WorkOrder::findOrFail($id);
 
-        // Verificar permiso
         if ($user->cannot('delete work_orders')) {
             $this->dispatch('show-toast', type: 'error', message: 'No tienes permiso para eliminar órdenes.');
             return;
         }
-        // Verificar que esté pendiente
         if ($order->status !== 'pending') {
             $this->dispatch('show-toast', type: 'error', message: 'Solo se pueden eliminar órdenes pendientes.');
             return;
@@ -79,7 +177,6 @@ class WorkOrderIndex extends Component
         $this->confirmingOrderId = $id;
     }
 
-    // Ejecuta la acción confirmada
     public function executeConfirmedAction()
     {
         if ($this->confirmingAction === 'delete') {
@@ -90,14 +187,12 @@ class WorkOrderIndex extends Component
         $this->confirmingOrderId = null;
     }
 
-    // Cancela la confirmación
     public function cancelConfirmation()
     {
         $this->confirmingAction = null;
         $this->confirmingOrderId = null;
     }
 
-    // Eliminar (lógica original, ahora con toasts)
     public function delete($id)
     {
         $user = Auth::user();
@@ -116,7 +211,6 @@ class WorkOrderIndex extends Component
         $this->dispatch('show-toast', type: 'success', message: 'Orden eliminada.');
     }
 
-    // Método nearby (se mantiene igual)
     public function nearby($lat, $lng, $radius = 10)
     {
         $haversine = "(6371 * acos(cos(radians($lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians($lng)) + sin(radians($lat)) * sin(radians(latitude))))";
@@ -128,5 +222,32 @@ class WorkOrderIndex extends Component
             ->orderBy('distance')
             ->get();
         return $orders;
+    }
+
+    public function render()
+    {
+        $user = Auth::user();
+        if ($user) {
+            $user->load('roles.permissions');
+            Auth::setUser($user);
+        }
+
+        $query = $this->getFilteredQuery();
+
+        if ($query === null) {
+            $orders = collect();
+            $encargados = collect();
+            $tecnicos = collect();
+            return view('livewire.work-orders.work-order-index', compact('orders', 'encargados', 'tecnicos'))->layout('components.layouts.app');
+        }
+
+        $orders = $query->with(['technician', 'auxiliarTechnician', 'client', 'ticket', 'zone'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(50);
+
+        $encargados = User::role('technician')->encargados()->orderBy('name')->get(['id', 'name']);
+        $tecnicos = User::role('technician')->orderBy('name')->get(['id', 'name']);
+
+        return view('livewire.work-orders.work-order-index', compact('orders', 'encargados', 'tecnicos'))->layout('components.layouts.app');
     }
 }
