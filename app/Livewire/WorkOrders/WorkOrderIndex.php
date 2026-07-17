@@ -14,6 +14,7 @@ class WorkOrderIndex extends Component
 
     public $statusFilter = '';
     public $search = '';
+    public $viewMode = 'table';
 
     public $confirmingAction = null;
     public $confirmingOrderId = null;
@@ -21,12 +22,18 @@ class WorkOrderIndex extends Component
     public $selectedOrders = [];
     public $selectAll = false;
     public $showAssignModal = false;
-    public $assignMode = 'quick';
-    public $currentStepIndex = 0;
     public $assignTechnicianId = '';
     public $assignAuxiliarId = '';
     public $scheduledDate = '';
     public $notes = '';
+    public $skipAssigned = false;
+
+    public function updatedViewMode($value)
+    {
+        if ($value === 'planner') {
+            $this->dispatch('planner-activated');
+        }
+    }
 
     public function updatedSelectAll($value)
     {
@@ -69,54 +76,26 @@ class WorkOrderIndex extends Component
         return $query;
     }
 
-    public function setQuickMode()
+    protected function getListeners()
     {
-        $this->assignMode = 'quick';
-        $this->currentStepIndex = 0;
+        return [
+            'assignFromDrag' => 'assignFromDrag',
+        ];
     }
 
-    public function setStepMode()
+    public function assignFromDrag($otId, $technicianId)
     {
-        $this->assignMode = 'step';
-        $this->currentStepIndex = 0;
-    }
+        $wo = WorkOrder::with('technician')->findOrFail($otId);
+        $techName = $technicianId ? User::find($technicianId)?->name : 'Sin asignar';
 
-    public function goToStep($index)
-    {
-        if ($index >= 0 && $index < count($this->selectedOrders)) {
-            $this->currentStepIndex = $index;
-        }
-    }
-
-    public function applyStep()
-    {
-        $otId = $this->selectedOrders[$this->currentStepIndex] ?? null;
-        if (!$otId) return;
-
-        $data = [];
-        if ($this->assignTechnicianId) {
-            $data['technician_id'] = $this->assignTechnicianId;
+        $data = ['technician_id' => $technicianId ?: null];
+        if ($technicianId && !$wo->assigned_at) {
             $data['assigned_at'] = now();
             $data['assigned_by'] = auth()->id();
         }
-        if ($this->assignAuxiliarId) {
-            $data['auxiliar_technician_id'] = $this->assignAuxiliarId;
-        }
-        if ($this->scheduledDate) {
-            $data['scheduled_date'] = $this->scheduledDate;
-        }
-        if ($this->notes) {
-            $data['notes'] = $this->notes;
-        }
 
-        WorkOrder::where('id', $otId)->update($data);
-
-        $total = count($this->selectedOrders);
-        if ($this->currentStepIndex < $total - 1) {
-            $this->currentStepIndex++;
-        }
-
-        $this->dispatch('show-toast', type: 'success', message: 'OT actualizada.');
+        $wo->update($data);
+        $this->dispatch('show-toast', type: 'success', message: "{$wo->code} → {$techName}");
     }
 
     public function assignSelected()
@@ -126,8 +105,8 @@ class WorkOrderIndex extends Component
             return;
         }
 
-        if (!$this->assignTechnicianId && !$this->assignAuxiliarId) {
-            $this->dispatch('show-toast', type: 'error', message: 'Seleccioná un técnico o auxiliar para asignar.');
+        if (!$this->assignTechnicianId && !$this->assignAuxiliarId && !$this->scheduledDate && !$this->notes) {
+            $this->dispatch('show-toast', type: 'error', message: 'Completá al menos un campo para asignar.');
             return;
         }
 
@@ -147,16 +126,32 @@ class WorkOrderIndex extends Component
             $data['notes'] = $this->notes;
         }
 
-        $count = WorkOrder::whereIn('id', $this->selectedOrders)->update($data);
+        $totalSelected = count($this->selectedOrders);
+        $ids = $this->selectedOrders;
+        $skipped = 0;
+
+        if ($this->skipAssigned && ($this->assignTechnicianId || $this->assignAuxiliarId)) {
+            $ids = WorkOrder::whereIn('id', $ids)->whereNull('technician_id')->pluck('id')->toArray();
+            $skipped = $totalSelected - count($ids);
+        }
+
+        $count = WorkOrder::whereIn('id', $ids)->update($data);
 
         $this->selectedOrders = [];
         $this->selectAll = false;
         $this->showAssignModal = false;
-        $this->assignMode = 'quick';
-        $this->currentStepIndex = 0;
+        $this->skipAssigned = false;
         $this->scheduledDate = '';
         $this->notes = '';
-        $this->dispatch('show-toast', type: 'success', message: "{$count} OT(s) asignadas correctamente.");
+
+        if ($skipped > 0 && $count === 0) {
+            $msg = 'Todas las OT ya tenían técnico. Ninguna fue modificada.';
+        } elseif ($skipped > 0) {
+            $msg = "{$count} OT asignadas ({$skipped} saltadas por ya tener técnico).";
+        } else {
+            $msg = "{$count} OT(s) asignadas correctamente.";
+        }
+        $this->dispatch('show-toast', type: 'success', message: $msg);
     }
 
     public function promptDelete($id)
@@ -182,7 +177,6 @@ class WorkOrderIndex extends Component
         if ($this->confirmingAction === 'delete') {
             $this->delete($this->confirmingOrderId);
         }
-
         $this->confirmingAction = null;
         $this->confirmingOrderId = null;
     }
@@ -238,16 +232,45 @@ class WorkOrderIndex extends Component
             $orders = collect();
             $encargados = collect();
             $tecnicos = collect();
-            return view('livewire.work-orders.work-order-index', compact('orders', 'encargados', 'tecnicos'))->layout('components.layouts.app');
+            $technicians = collect();
+            $unassigned = collect();
+            $byTechnician = collect();
+            return view('livewire.work-orders.work-order-index', compact(
+                'orders', 'encargados', 'tecnicos', 'technicians', 'unassigned', 'byTechnician'
+            ))->layout('components.layouts.app');
         }
-
-        $orders = $query->with(['technician', 'auxiliarTechnician', 'client', 'ticket', 'zone'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(50);
 
         $encargados = User::role('technician')->encargados()->orderBy('name')->get(['id', 'name']);
         $tecnicos = User::role('technician')->orderBy('name')->get(['id', 'name']);
 
-        return view('livewire.work-orders.work-order-index', compact('orders', 'encargados', 'tecnicos'))->layout('components.layouts.app');
+        if ($this->viewMode === 'table') {
+            $orders = $query->with(['technician', 'auxiliarTechnician', 'client', 'ticket', 'zone'])
+                ->orderBy('created_at', 'desc')->paginate(50);
+
+            $alreadyAssigned = !empty($this->selectedOrders)
+                ? WorkOrder::whereIn('id', $this->selectedOrders)->whereNotNull('technician_id')->count()
+                : 0;
+
+            return view('livewire.work-orders.work-order-index', compact(
+                'orders', 'encargados', 'tecnicos', 'alreadyAssigned'
+            ))->layout('components.layouts.app');
+        }
+
+        // Planner view
+        $allOrders = $query->with(['technician', 'auxiliarTechnician', 'client', 'zone'])
+            ->orderBy('scheduled_date')->get();
+
+        $technicians = $encargados;
+        $unassigned = $allOrders->whereNull('technician_id');
+        $byTechnician = collect();
+        foreach ($technicians as $tech) {
+            $byTechnician[$tech->id] = $allOrders->where('technician_id', $tech->id);
+        }
+
+        $maxLoad = $technicians->map(fn($t) => $byTechnician[$t->id]->count())->max() ?: 1;
+
+        return view('livewire.work-orders.work-order-index', compact(
+            'encargados', 'tecnicos', 'technicians', 'unassigned', 'byTechnician', 'maxLoad'
+        ))->layout('components.layouts.app');
     }
 }

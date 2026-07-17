@@ -627,6 +627,7 @@ class TicketForm extends Component
                 'plan_id' => $planId,
                 'requires_noc' => $this->requires_noc,
                 'status' => 'resolved',
+                'resolved_by' => auth()->id(),
                 'resolved_at' => now(),
                 'l1_ended_at' => now(),
             ]);
