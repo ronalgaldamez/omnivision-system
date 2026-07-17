@@ -43,7 +43,6 @@ class ClientForm extends Component
     public $selectedPlanOrigin = '';
     public $no_price = false;
     public $service = '';
-    public $service_type_id = '';
     public $zone_id = '';
 
     // Cascada de zona de servicio (reemplaza el combo plano)
@@ -588,7 +587,7 @@ class ClientForm extends Component
         });
 
         session()->forget('client_modal_draft');
-        $this->dispatch('clientCreated', id: $client->id, name: $client->name, phone: $client->phone, service_type_id: $this->service_type_id);
+        $this->dispatch('clientCreated', id: $client->id, name: $client->name, phone: $client->phone);
     }
 
     public function render()

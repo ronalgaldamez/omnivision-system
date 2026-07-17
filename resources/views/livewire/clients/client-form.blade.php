@@ -1,13 +1,4 @@
 <div class="space-y-6">
-    {{-- Tipo de servicio rápido --}}
-    <div class="pb-5 border-b border-gray-100">
-        <x-ui.select wire:model.live="service_type_id" icon="handyman" label="Tipo de servicio">
-            @foreach(\App\Models\ServiceType::orderBy('name')->get() as $st)
-                <option value="{{ $st->id }}">{{ str_replace('_', ' ', $st->name) }}</option>
-            @endforeach
-        </x-ui.select>
-    </div>
-
     {{-- Nombre --}}
     <div x-data>
         <x-ui.input type="text" wire:model="name" icon="edit_note" label="Nombre" required
