@@ -6,11 +6,18 @@ use Livewire\Component;
 use App\Models\Client;
 use App\Models\Contract;
 use App\Models\Plan;
+use App\Models\Ticket;
 use App\Models\Zone;
 use App\Models\ServiceType;
+use App\Services\WorkOrderService;
+use Illuminate\Support\Facades\Auth;
 
 class ContractForm extends Component
 {
+    public $ticket_id = null;
+    public $fromTicket = false;
+    public $ticketData = null;
+
     public $client_id = '';
     public $clientSearch = '';
     public $clientSearchResults = [];
@@ -38,10 +45,8 @@ class ContractForm extends Component
     protected function rules()
     {
         return [
-            'client_id' => 'required|exists:clients,id',
             'plan_id' => 'nullable|exists:plans,id',
             'zone_id' => 'nullable|exists:zones,id',
-            'service_type' => 'required|string|max:100',
             'price' => 'nullable|numeric|min:0',
             'installation_address' => 'nullable|string',
             'latitude' => 'nullable|numeric',
@@ -51,13 +56,36 @@ class ContractForm extends Component
         ];
     }
 
-    public function mount()
+    public function mount(?int $ticket_id = null)
     {
         $this->contract_date = now()->format('Y-m-d');
         $this->availablePlans = Plan::where('is_active', true)->orderBy('name')->get()->toArray();
         $this->availableZones = Zone::orderBy('name')->get(['id', 'name'])->toArray();
         $this->availableServiceTypes = ServiceType::where('requires_contract', true)
             ->orderBy('name')->get(['id', 'name'])->toArray();
+
+        if ($ticket_id) {
+            $ticket = Ticket::with('client')->find($ticket_id);
+            if (!$ticket || !$ticket->requires_contract) {
+                abort(404);
+            }
+
+            $this->fromTicket = true;
+            $this->ticket_id = $ticket->id;
+            $this->ticketData = $ticket;
+
+            $client = $ticket->client;
+            $this->selectedClient = $client;
+            $this->client_id = $client->id;
+            $this->clientSearch = $client->name;
+
+            $this->service_type = $ticket->service_type;
+            $this->plan_id = $ticket->plan_id ?? '';
+            $this->zone_id = $ticket->zone_id ?? '';
+            $this->installation_address = $client?->installation_address ?? $client?->address ?? '';
+            $this->latitude = $client?->latitude ?? '';
+            $this->longitude = $client?->longitude ?? '';
+        }
     }
 
     public function updatedClientSearch($value)
@@ -115,21 +143,43 @@ class ContractForm extends Component
     {
         $this->validate();
 
-        $contract = Contract::create([
+        $data = [
             'client_id' => $this->client_id,
             'plan_id' => $this->plan_id ?: null,
             'zone_id' => $this->zone_id ?: null,
-            'service_type' => $this->service_type,
+            'service_type' => $this->fromTicket ? $this->ticketData->service_type : $this->service_type,
             'price' => $this->price ?: null,
             'installation_address' => $this->installation_address,
             'latitude' => $this->latitude ?: null,
             'longitude' => $this->longitude ?: null,
             'contract_date' => $this->contract_date,
             'status' => $this->status,
-        ]);
+        ];
 
-        $this->dispatch('show-toast', type: 'success', message: 'Contrato #' . $contract->id . ' creado correctamente.');
-        $this->redirect(route('contracts.index'), navigate: true);
+        if ($this->fromTicket) {
+            $data['ticket_id'] = $this->ticket_id;
+        }
+
+        $contract = Contract::create($data);
+
+        if ($this->fromTicket) {
+            $ticket = Ticket::with('client')->find($this->ticket_id);
+            if ($ticket) {
+                app(WorkOrderService::class)->createFromTicket($ticket);
+
+                $ticket->update([
+                    'contracts_ended_at' => now(),
+                    'status' => 'in_progress',
+                ]);
+                app(\App\Services\SlaService::class)->evaluateSla($ticket);
+            }
+
+            session()->flash('message', 'Contrato #' . $contract->id . ' creado correctamente.');
+            return redirect()->route('contracts.inbox', ['ticket_id' => $this->ticket_id]);
+        }
+
+        session()->flash('message', 'Contrato #' . $contract->id . ' creado correctamente.');
+        return redirect()->route('contracts.index');
     }
 
     public function render()

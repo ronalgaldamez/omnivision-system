@@ -4,8 +4,7 @@ namespace App\Livewire\Contracts;
 
 use Livewire\Component;
 use App\Models\Contract;
-use App\Models\WorkOrder;
-use Illuminate\Support\Facades\Auth;
+use App\Services\WorkOrderService;
 
 class ContractIndex extends Component
 {
@@ -16,17 +15,7 @@ class ContractIndex extends Component
     {
         $contract = Contract::with('client')->findOrFail($contractId);
 
-        $workOrder = WorkOrder::create([
-            'client_id' => $contract->client_id,
-            'description' => 'Contrato: ' . $contract->serviceTypeName() . ' - Seguimiento',
-            'service_type' => $contract->service_type,
-            'zone_id' => $contract->zone_id,
-            'plan_id' => $contract->plan_id,
-            'latitude' => $contract->latitude,
-            'longitude' => $contract->longitude,
-            'status' => 'pending',
-            'created_by' => Auth::id(),
-        ]);
+        $workOrder = app(WorkOrderService::class)->createFromContract($contract);
 
         $this->dispatch('show-toast', type: 'success', message: 'OT #' . $workOrder->id . ' creada desde contrato.');
         $this->confirmingCreateOt = null;

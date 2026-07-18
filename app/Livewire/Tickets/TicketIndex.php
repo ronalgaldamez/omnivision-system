@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Ticket;
 use App\Models\WorkOrder;
+use App\Services\WorkOrderService;
 use Illuminate\Support\Facades\Auth;
 
 class TicketIndex extends Component
@@ -43,9 +44,7 @@ class TicketIndex extends Component
             return view('livewire.tickets.ticket-index', compact('tickets'))->layout('components.layouts.app');
         }
 
-        if ($this->activeTab === 'contracts') {
-            $query->where('requires_contract', true);
-        } elseif ($this->activeTab === 'ot') {
+        if ($this->activeTab === 'ot') {
             $query->where('create_ot', true);
         } elseif ($this->activeTab === 'noc') {
             $query->where('requires_noc', true);
@@ -124,20 +123,14 @@ class TicketIndex extends Component
             return;
         }
 
-        $ticket = Ticket::find($ticketId);
+        $ticket = Ticket::with('client')->find($ticketId);
         if ($ticket && $ticket->requires_noc) {
-            WorkOrder::create([
-                'ticket_id' => $ticket->id,
-                'client_id' => $ticket->client_id,
-                'description' => $ticket->description,
-                'service_type' => $ticket->service_type,
-                'status' => 'pending',
+            app(WorkOrderService::class)->createFromTicket($ticket, [
                 'started_at' => now(),
-                'created_by' => $user->id,
             ]);
             $ticket->status = 'in_progress';
             $ticket->l2_ended_at = now();
-            $ticket->l2_started_at = $ticket->l2_started_at ?? now(); // ← Esto faltaba
+            $ticket->l2_started_at = $ticket->l2_started_at ?? now();
             $ticket->save();
             $this->dispatch('show-toast', type: 'success', message: 'OT creada correctamente.');
         }

@@ -12,17 +12,16 @@
         <div class="border-b border-gray-200 -mx-6 px-6 mb-5">
             <nav class="flex gap-1" role="tablist">
                 @php
-                    $tabLabels = ['all' => 'Todos', 'contracts' => 'Contratos', 'ot' => 'OT', 'noc' => 'NOC'];
-                    $tabIcons = ['all' => 'confirmation_number', 'contracts' => 'description', 'ot' => 'build', 'noc' => 'dns'];
+                    $tabLabels = ['all' => 'Todos', 'ot' => 'OT', 'noc' => 'NOC'];
+                    $tabIcons = ['all' => 'confirmation_number', 'ot' => 'build', 'noc' => 'dns'];
                     $baseQuery = \App\Models\Ticket::query();
                     $tabCounts = [
                         'all' => (clone $baseQuery)->count(),
-                        'contracts' => (clone $baseQuery)->where('requires_contract', true)->count(),
                         'ot' => (clone $baseQuery)->where('create_ot', true)->count(),
                         'noc' => (clone $baseQuery)->where('requires_noc', true)->count(),
                     ];
                 @endphp
-                @foreach (['all', 'contracts', 'ot', 'noc'] as $tab)
+                @foreach (['all', 'ot', 'noc'] as $tab)
                     <button wire:click="setActiveTab('{{ $tab }}')" role="tab"
                         class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition -mb-px
                         {{ $activeTab === $tab ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
