@@ -1,21 +1,19 @@
 <div class="space-y-6">
     {{-- Nombre --}}
-    <div x-data>
-        <x-ui.input type="text" wire:model="name" icon="edit_note" label="Nombre" required
-            placeholder="Nombre completo del cliente"
-            x-on:input="if ($event.isTrusted) { $el.value = $el.value.replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]/g, ''); $el.dispatchEvent(new Event('input', { bubbles: true })); }" />
-    </div>
+    <x-ui.input type="text" wire:model.blur="name" name="name" icon="edit_note" label="Nombre" required
+        placeholder="Nombre completo del cliente" />
 
     {{-- Tipo y número de documento --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <x-ui.select wire:model="document_type" icon="description" label="Tipo de documento" placeholder="Seleccionar tipo">
+        <x-ui.select wire:model="document_type" name="document_type" icon="description" label="Tipo de documento"
+            placeholder="Seleccionar tipo">
             @foreach($documentTypesList as $dt)
                 <option value="{{ $dt }}">{{ $dt }}</option>
             @endforeach
         </x-ui.select>
         <div x-data>
-            <x-ui.input type="text" wire:model="document_number" icon="tag" label="Número de documento"
-                placeholder="00000000-0" maxlength="10"
+            <x-ui.input type="text" wire:model="document_number" name="document_number" icon="tag"
+                label="Número de documento" placeholder="00000000-0" maxlength="10"
                 x-on:input="if ($event.isTrusted) { let val = $el.value.replace(/[^0-9]/g, '').slice(0,9); if (val.length > 8) val = val.slice(0,8) + '-' + val.slice(8); $el.value = val; $el.dispatchEvent(new Event('input', { bubbles: true })); }" />
         </div>
     </div>
@@ -28,14 +26,15 @@
         </label>
         <div class="space-y-3">
             <div x-data>
-                <x-ui.input type="text" wire:model="phone" icon="phone" placeholder="0000-0000" maxlength="9"
+                <x-ui.input type="text" wire:model="phone" name="phone" icon="phone" placeholder="0000-0000"
+                    maxlength="9"
                     x-on:input="if ($event.isTrusted) { let val = $el.value.replace(/[^0-9]/g, '').slice(0,8); if (val.length > 4) val = val.slice(0,4) + '-' + val.slice(4); $el.value = val; $el.dispatchEvent(new Event('input', { bubbles: true })); }" />
             </div>
             @foreach($phones as $index => $phone)
                 <div class="flex items-start gap-2" x-data>
                     <div class="flex-1">
-                        <x-ui.input type="text" wire:model="phones.{{ $index }}.number" icon="phone"
-                            placeholder="0000-0000" maxlength="9"
+                        <x-ui.input type="text" wire:model="phones.{{ $index }}.number" icon="phone" placeholder="0000-0000"
+                            maxlength="9"
                             x-on:input="if ($event.isTrusted) { let val = $el.value.replace(/[^0-9]/g, '').slice(0,8); if (val.length > 4) val = val.slice(0,4) + '-' + val.slice(4); $el.value = val; $el.dispatchEvent(new Event('input', { bubbles: true })); }" />
                     </div>
                     <div class="w-32">
@@ -66,26 +65,26 @@
     </div>
 
     {{-- Correo electrónico --}}
-    <x-ui.input type="email" wire:model="email" icon="alternate_email" label="Correo electrónico" placeholder="correo@ejemplo.com" />
-
-    <x-ui.checkbox wire:model.live="accepts_promotions" label="Acepta recibir promociones o facturas electrónicas" for="accepts_promotions" />
+    <x-ui.input type="email" wire:model.live="email" name="email" icon="alternate_email" label="Correo electrónico"
+        placeholder="correo@ejemplo.com" />
 
     {{-- Departamento, Municipio, Distrito --}}
     <div class="pb-5 border-b border-gray-100">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <x-ui.select wire:model.live="departamento_id" label="Departamento" placeholder="Seleccionar departamento">
+            <x-ui.select wire:model.live="departamento_id" name="departamento_id" label="Departamento"
+                placeholder="Seleccionar departamento">
                 @foreach($availableDepartamentos as $dep)
                     <option value="{{ $dep['id'] }}">{{ $dep['name'] }}</option>
                 @endforeach
             </x-ui.select>
-            <x-ui.select wire:model.live="municipio_id" label="Municipio" placeholder="Seleccionar municipio"
-                :disabled="empty($availableMunicipios)">
+            <x-ui.select wire:model.live="municipio_id" name="municipio_id" label="Municipio"
+                placeholder="Seleccionar municipio" :disabled="empty($availableMunicipios)">
                 @foreach($availableMunicipios as $mun)
                     <option value="{{ $mun['id'] }}">{{ $mun['name'] }}</option>
                 @endforeach
             </x-ui.select>
-            <x-ui.select wire:model.live="distrito_id" label="Distrito / Localidad" placeholder="Seleccionar distrito"
-                :disabled="empty($availableDistritos)">
+            <x-ui.select wire:model.live="distrito_id" name="distrito_id" label="Distrito / Localidad"
+                placeholder="Seleccionar distrito" :disabled="empty($availableDistritos)">
                 @foreach($availableDistritos as $dis)
                     <option value="{{ $dis['id'] }}">{{ $dis['name'] }}</option>
                 @endforeach
@@ -94,141 +93,12 @@
     </div>
 
     {{-- Dirección --}}
-    <x-ui.textarea wire:model="address" icon="edit_note" label="Dirección" rows="2" placeholder="Dirección del cliente" />
-
-    {{-- Dirección de instalación --}}
-    <x-ui.textarea wire:model="installation_address" icon="edit_note" label="Dirección de instalación" rows="2"
-        placeholder="Dirección donde se instalará el servicio" />
-
-    {{-- Coordenadas --}}
-    @can('capture coordinates')
-        <div class="pb-5 border-b border-gray-100">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div x-data="{
-                    formatCoordinate(value) {
-                        let clean = value.replace(/[^0-9]/g, '');
-                        if (clean.length > 2) { clean = clean.slice(0, 2) + '.' + clean.slice(2, 6); }
-                        return clean;
-                    }
-                }">
-                    <x-ui.input type="text" wire:model="latitude" icon="pin_drop" label="Latitud"
-                        placeholder="00.0000" maxlength="7" inputmode="decimal"
-                        x-on:input="$el.value = formatCoordinate($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));" />
-                </div>
-                <div x-data="{
-                    formatCoordinate(value) {
-                        let hasMinus = value.startsWith('-');
-                        let clean = value.replace(/[^0-9]/g, '');
-                        if (clean.length > 2) { clean = clean.slice(0, 2) + '.' + clean.slice(2, 6); }
-                        return (hasMinus ? '-' : '') + clean;
-                    }
-                }">
-                    <x-ui.input type="text" wire:model="longitude" icon="pin_drop" label="Longitud"
-                        placeholder="-00.0000" maxlength="8" inputmode="decimal"
-                        x-on:input="$el.value = formatCoordinate($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));" />
-                </div>
-            </div>
-        </div>
-    @endcan
-
-    {{-- NC --}}
-    <div x-data>
-        <x-ui.input type="text" wire:model="nro_luz" icon="electric_meter" label="NC"
-            placeholder="000000000000" maxlength="12"
-            x-on:input="if ($event.isTrusted) { $el.value = $el.value.replace(/[^0-9]/g, '').slice(0,12); $el.dispatchEvent(new Event('input', { bubbles: true })); }" />
-    </div>
-
-    <x-ui.checkbox wire:model.live="no_price" label="Sin precio" for="no_price" />
-    @if($no_price)
-        <p class="text-xs text-gray-500 -mt-3 italic">Nota: más adelante se le puede asignar el paquete al cliente.</p>
-    @endif
-
-    @if(!$no_price)
-        <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 space-y-4">
-            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
-                <span class="material-symbols-outlined text-sm">assignment</span>
-                Servicio contratado
-                <span class="text-xs font-normal text-gray-500 normal-case tracking-normal">(opcional)</span>
-            </h3>
-
-            <x-ui.select wire:model.live="branch_id" icon="business" label="Sucursal" placeholder="Seleccionar sucursal">
-                @foreach($branches as $b)
-                    <option value="{{ $b->id }}">{{ $b->name }}</option>
-                @endforeach
-            </x-ui.select>
-
-            <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Zona</label>
-                <div class="space-y-2">
-                    <x-ui.select wire:model.live="svc_departamento" placeholder="Departamento">
-                        @foreach($svcAvailableDepartamentos as $d)
-                            <option value="{{ $d['id'] }}">{{ $d['name'] }}</option>
-                        @endforeach
-                    </x-ui.select>
-                    @if($svcAvailableMunicipios)
-                        <x-ui.select wire:model.live="svc_municipio" placeholder="Municipio">
-                            @foreach($svcAvailableMunicipios as $m)
-                                <option value="{{ $m['id'] }}">{{ $m['name'] }}</option>
-                            @endforeach
-                        </x-ui.select>
-                    @endif
-                    @if($svcAvailableDistritos)
-                        <x-ui.select wire:model.live="svc_distrito" placeholder="Distrito / Localidad">
-                            @foreach($svcAvailableDistritos as $d)
-                                <option value="{{ $d['id'] }}">{{ $d['name'] }}</option>
-                            @endforeach
-                        </x-ui.select>
-                    @endif
-                    @if($svcAvailableSubzonas)
-                        <x-ui.select wire:model.live="svc_subzona" placeholder="Cantón / Barrio / Colonia">
-                            @foreach($svcAvailableSubzonas as $s)
-                                <option value="{{ $s['id'] }}">{{ $s['name'] }}</option>
-                            @endforeach
-                        </x-ui.select>
-                    @endif
-                </div>
-            </div>
-
-            <x-ui.select wire:model.live="plan_id" label="Plan" placeholder="Seleccionar">
-                @foreach($availablePlans as $p)
-                    <option value="{{ $p['id'] }}">
-                        {{ $p['name'] }} @if($p['speed'])({{ $p['speed'] }})@endif — ${{ number_format($p['price'], 2) }}
-                    </option>
-                @endforeach
-            </x-ui.select>
-
-            @php $selPlan = collect($availablePlans)->firstWhere('id', $plan_id); @endphp
-            @if($selPlan)
-                <div class="bg-white rounded-lg border border-gray-200 p-4">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-sm font-bold text-gray-900">{{ $selPlan['name'] }}</p>
-                            <div class="flex flex-wrap gap-1.5 mt-2">
-                                @if(str_starts_with($selectedPlanOrigin, 'inherited:'))
-                                    <x-ui.badge variant="neutral">Heredado de {{ substr($selectedPlanOrigin, 10) }}</x-ui.badge>
-                                @elseif($selectedPlanOrigin === 'base')
-                                    <x-ui.badge variant="neutral">Precio base</x-ui.badge>
-                                @elseif($selectedPlanOrigin === 'override')
-                                    <x-ui.badge variant="neutral">Precio de zona</x-ui.badge>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-lg font-bold text-gray-900">${{ number_format($selectedPlanPrice, 2) }}</p>
-                            @if($selPlan['base_price'] != $selPlan['price'])
-                                <p class="text-xs text-gray-500 mt-0.5">Base: ${{ number_format($selPlan['base_price'], 2) }}</p>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            @endif
-        </div>
-    @endif
-
-    <input type="hidden" wire:model="service">
+    <x-ui.textarea wire:model="address" name="address" icon="edit_note" label="Dirección" rows="2"
+        placeholder="Dirección del cliente" />
 
     {{-- Notas --}}
-    <x-ui.textarea wire:model="notes" icon="edit_note" label="Notas" rows="2" placeholder="Observaciones internas..." />
+    <x-ui.textarea wire:model="notes" name="notes" icon="edit_note" label="Notas" rows="2"
+        placeholder="Observaciones internas..." />
 
     {{-- Botones --}}
     <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">

@@ -245,6 +245,16 @@
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                         class="material-symbols-outlined text-base">settings_overscan</span> Bandeja
                                 NOC</a>@endcan
+                                @can('view_contracts_panel_menu')<a href="{{ route('contracts.inbox') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                        class="material-symbols-outlined text-base">description</span> Bandeja
+                                Contratos</a>@endcan
+                                <a href="{{ route('contracts.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                        class="material-symbols-outlined text-base">description</span> Contratos</a>
+                                <a href="{{ route('contracts.create') }}" wire:navigate
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                        class="material-symbols-outlined text-base">add_comment</span> Nuevo Contrato</a>
                             </div>
                         </div>
                     @endif

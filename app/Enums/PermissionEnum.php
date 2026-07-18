@@ -118,6 +118,15 @@ enum PermissionEnum: string
     case DeleteSlaGoals         = 'delete sla goals';
     case ViewSlaDashboard       = 'view sla dashboard';
 
+    // ─── Override de toggles en ticket ───
+    case ManageRequiresNocToggle     = 'manage_requires_noc_toggle';
+    case ManageCreateOtToggle        = 'manage_create_ot_toggle';
+    case ManageRequiresContractToggle = 'manage_requires_contract_toggle';
+
+    // ─── Contratos ───
+    case AccessContractsInbox   = 'access_contracts_inbox';
+    case ViewContractsPanelMenu = 'view_contracts_panel_menu';
+
     // ─── Otros ───
     case CaptureCoordinates     = 'capture coordinates';
     case AccessMyDailyJobs      = 'access my daily jobs';
@@ -238,6 +247,9 @@ enum PermissionEnum: string
             self::DeleteTickets,
             self::ViewNewTicketMenu,
             self::ViewAllTicketsMenu,
+            self::ManageRequiresNocToggle,
+            self::ManageCreateOtToggle,
+            self::ManageRequiresContractToggle,
         ];
     }
 
@@ -295,6 +307,17 @@ enum PermissionEnum: string
             self::EditSlaGoals,
             self::DeleteSlaGoals,
             self::ViewSlaDashboard,
+        ];
+    }
+
+    /**
+     * Permisos del módulo Contratos.
+     */
+    public static function contracts(): array
+    {
+        return [
+            self::AccessContractsInbox,
+            self::ViewContractsPanelMenu,
         ];
     }
 

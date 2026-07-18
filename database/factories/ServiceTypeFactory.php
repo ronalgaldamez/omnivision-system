@@ -14,6 +14,8 @@ class ServiceTypeFactory extends Factory
         return [
             'name' => fake()->unique()->word(),
             'requires_noc' => fake()->boolean(),
+            'requires_ot' => fake()->boolean(),
+            'requires_contract' => fake()->boolean(),
         ];
     }
 }

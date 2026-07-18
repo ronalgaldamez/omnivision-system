@@ -17,13 +17,13 @@ class DatabaseSeeder extends Seeder
         $this->call(UsersSeeder::class);
         $this->call(PackagingTypesSeeder::class);
         $this->call(MovementTypeSeeder::class);
-        // $this->call(ServiceTypeSeeder::class);
+        $this->call(ServiceTypeSeeder::class);
         // $this->call(KnowledgeBaseSeeder::class);
 
         // Datos de demostración (marcas, modelos, categorías, productos)
         // $this->call(DemoDataSeeder::class);
         $this->call(SuppliersSeeder::class);
         $this->call(DeviceStatusSeeder::class);
-        $this->call(PlansSeeder::class);
+        //$this->call(PlansSeeder::class);
     }
 }

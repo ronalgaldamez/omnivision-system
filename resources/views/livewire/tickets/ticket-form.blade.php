@@ -33,6 +33,14 @@
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-semibold text-gray-900 truncate">{{ $serviceTypes->firstWhere('id', $service_type_id)?->name }}</p>
+                            @php $selSt = $serviceTypes->firstWhere('id', $service_type_id); @endphp
+                            @if($selSt?->requires_contract)
+                                <x-ui.badge variant="success" size="sm" class="mt-1">Requiere Contrato</x-ui.badge>
+                            @elseif($selSt?->requires_ot)
+                                <x-ui.badge variant="warning" size="sm" class="mt-1">Requiere OT</x-ui.badge>
+                            @elseif($selSt?->requires_noc)
+                                <x-ui.badge variant="info" size="sm" class="mt-1">Requiere NOC</x-ui.badge>
+                            @endif
                         </div>
                         <div class="flex items-center gap-1 flex-shrink-0">
                             <button type="button" wire:click="clearServiceType"
@@ -52,6 +60,13 @@
                                         <li wire:click="selectServiceType({{ $st->id }})"
                                             class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
                                             <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ str_replace('_', ' ', $st->name) }}</span>
+                                            @if($st->requires_contract)
+                                                <x-ui.badge variant="success" size="sm">Requiere Contrato</x-ui.badge>
+                                            @elseif($st->requires_ot)
+                                                <x-ui.badge variant="warning" size="sm">Requiere OT</x-ui.badge>
+                                            @elseif($st->requires_noc)
+                                                <x-ui.badge variant="info" size="sm">Requiere NOC</x-ui.badge>
+                                            @endif
                                         </li>
                                     @endforeach
                                 </ul>
@@ -146,6 +161,14 @@
                             </div>
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm font-semibold text-gray-900 truncate">{{ $serviceTypes->firstWhere('id', $service_type_id)?->name ?? '—' }}</p>
+                                @php $selSt2 = $serviceTypes->firstWhere('id', $service_type_id); @endphp
+                                @if($selSt2?->requires_contract)
+                                    <x-ui.badge variant="success" size="sm" class="mt-1">Requiere Contrato</x-ui.badge>
+                                @elseif($selSt2?->requires_ot)
+                                    <x-ui.badge variant="warning" size="sm" class="mt-1">Requiere OT</x-ui.badge>
+                                @elseif($selSt2?->requires_noc)
+                                    <x-ui.badge variant="info" size="sm" class="mt-1">Requiere NOC</x-ui.badge>
+                                @endif
                             </div>
                             <div class="flex items-center gap-1 flex-shrink-0">
                                 <button type="button" wire:click="openServiceTypeModal"
@@ -160,10 +183,17 @@
                                 @if (count($serviceTypeResults) > 0)
                                     <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
                                         @foreach ($serviceTypeResults as $st)
-                                            <li wire:click="selectServiceType({{ $st->id }})"
-                                                class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
-                                                <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ str_replace('_', ' ', $st->name) }}</span>
-                                            </li>
+                                        <li wire:click="selectServiceType({{ $st->id }})"
+                                            class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
+                                            <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ str_replace('_', ' ', $st->name) }}</span>
+                                            @if($st->requires_contract)
+                                                <x-ui.badge variant="success" size="sm">Requiere Contrato</x-ui.badge>
+                                            @elseif($st->requires_ot)
+                                                <x-ui.badge variant="warning" size="sm">Requiere OT</x-ui.badge>
+                                            @elseif($st->requires_noc)
+                                                <x-ui.badge variant="info" size="sm">Requiere NOC</x-ui.badge>
+                                            @endif
+                                        </li>
                                         @endforeach
                                     </ul>
                                 @endif
@@ -203,8 +233,8 @@
                         @endif
                     </div>
                     @if ($editingEnabled)
-                        <x-ui.button type="button" variant="success" icon="person_add" wire:click="openClientModal">
-                            Nuevo
+                        <x-ui.button type="button" :variant="$selectedClient ? 'warning' : 'success'" :icon="$selectedClient ? 'edit' : 'person_add'" wire:click="openClientModal({{ $selectedClient?->id ?? 'null' }})">
+                            {{ $selectedClient ? 'Editar' : 'Nuevo' }}
                         </x-ui.button>
                     @endif
                 </div>
@@ -293,7 +323,7 @@
             </div>
 
             {{-- Descripción --}}
-            <x-ui.textarea wire:model="description" icon="edit_note" rows="3" placeholder="Describe el problema o servicio..."
+            <x-ui.textarea wire:model.live="description" icon="edit_note" rows="3" placeholder="Describe el problema o servicio..."
                 :disabled="!$editingEnabled" required />
 
             @if ($ticketId && !$ticketOpened)
@@ -310,6 +340,14 @@
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-semibold text-gray-900 truncate">{{ $serviceTypes->firstWhere('id', $service_type_id)?->name }}</p>
+                            @php $selSt3 = $serviceTypes->firstWhere('id', $service_type_id); @endphp
+                            @if($selSt3?->requires_contract)
+                                <x-ui.badge variant="success" size="sm" class="mt-1">Requiere Contrato</x-ui.badge>
+                            @elseif($selSt3?->requires_ot)
+                                <x-ui.badge variant="warning" size="sm" class="mt-1">Requiere OT</x-ui.badge>
+                            @elseif($selSt3?->requires_noc)
+                                <x-ui.badge variant="info" size="sm" class="mt-1">Requiere NOC</x-ui.badge>
+                            @endif
                         </div>
                         <div class="flex items-center gap-1 flex-shrink-0">
                             <button type="button" wire:click="openServiceTypeModal"
@@ -402,11 +440,12 @@
                 </div>
             @endif
 
-            {{-- Switches: Crear OT / Requiere NOC --}}
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-5 border-b border-gray-100">
+            {{-- Switches: Crear OT / Requiere NOC / Crear Contrato --}}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-5 border-b border-gray-100">
                 <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
                     <x-ui.toggle label="Crear OT" description="Generar orden de trabajo directamente desde el ticket."
-                        wire:model.live="create_ot" on-color="amber" :disabled="!$editingEnabled" />
+                        wire:model.live="create_ot" on-color="amber"
+                        :disabled="!$editingEnabled || !$canToggleOt" />
                     @if ($create_ot)
                         <x-ui.badge variant="warning" class="mt-2">OT: Sí</x-ui.badge>
                     @else
@@ -415,21 +454,32 @@
                 </div>
                 <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
                     <x-ui.toggle label="¿Requiere intervención del NOC?" description="Se enviará al panel NOC para su resolución."
-                        wire:model.live="requires_noc" :disabled="!$editingEnabled" />
+                        wire:model.live="requires_noc"
+                        :disabled="!$editingEnabled || !$canToggleNoc" />
                     @if ($requires_noc)
                         <x-ui.badge variant="info" class="mt-2">NOC: Sí</x-ui.badge>
                     @else
                         <x-ui.badge variant="neutral" class="mt-2">NOC: No</x-ui.badge>
                     @endif
                 </div>
+                <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                    <x-ui.toggle label="Crear Contrato" description="Generar contrato de servicio automáticamente."
+                        wire:model.live="requires_contract" on-color="green"
+                        :disabled="!$editingEnabled || !$canToggleContract" />
+                    @if ($requires_contract)
+                        <x-ui.badge variant="success" class="mt-2">Contrato: Sí</x-ui.badge>
+                    @else
+                        <x-ui.badge variant="neutral" class="mt-2">Contrato: No</x-ui.badge>
+                    @endif
+                </div>
             </div>
 
-            {{-- Info: cuándo usar OT vs NOC --}}
+            {{-- Info: cuándo usar OT vs NOC vs Contrato --}}
             <x-ui.alert variant="warning" title="¿Cuándo usar cada opción?">
                 <ul class="list-disc list-inside space-y-1">
                     <li><strong>Crear OT</strong> — El problema requiere visita técnica en campo. Se genera una orden de trabajo para que el supervisor asigne a un técnico.</li>
                     <li><strong>Requiere NOC</strong> — El problema puede resolverse de forma remota (configuración, señal, plataforma). El NOC lo evaluará y, si no puede resolverlo, generará una OT.</li>
-                    <li><strong>Ninguno</strong> — El ticket se soluciona directamente desde la mesa de ayuda (L1), sin necesidad de escalar ni enviar técnico.</li>
+                    <li><strong>Crear Contrato</strong> — Se genera un contrato de servicio al resolver el ticket.</li>
                 </ul>
             </x-ui.alert>
 
@@ -463,6 +513,10 @@
                         <x-ui.button type="button" variant="primary" icon="send" wire:click="confirmGenerate">
                             Generar Ticket
                         </x-ui.button>
+                    @elseif($requires_contract)
+                        <x-ui.button type="button" variant="info" icon="description" wire:click="confirmGenerateContract">
+                            Enviar a Contratos
+                        </x-ui.button>
                     @elseif($create_ot)
                         <x-ui.button type="button" variant="warning" icon="engineering" wire:click="confirmSolve">
                             Crear OT y Finalizar
@@ -493,7 +547,7 @@
                             <span class="material-symbols-outlined">close</span>
                         </button>
                     </x-slot:headerActions>
-                    <livewire:clients.client-form key="client-form-modal" />
+                    <livewire:clients.client-form :client-id="$editingClientId" :key="$modalKey" />
                 </x-ui.card>
             </div>
         </div>
@@ -645,6 +699,29 @@
         </div>
     @endif
 
+    {{-- Confirmación para Enviar a Contratos --}}
+    @if ($confirmingGenerateContract)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <x-ui.card overflow="visible">
+                    <div class="text-center">
+                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-indigo-100 mb-4">
+                            <span class="material-symbols-outlined text-indigo-600 text-2xl">description</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">¿Enviar a Contratos?</h3>
+                        <p class="text-sm text-gray-600 mt-2">El ticket se enviará a la bandeja de Contratos para su revisión y generación del contrato + OT.</p>
+                    </div>
+                    <x-slot:footer>
+                        <x-ui.button type="button" variant="primary" wire:click="executeGenerateContract">Sí, enviar</x-ui.button>
+                        <x-ui.button type="button" variant="secondary" @click="open = false" wire:click="cancelGenerateContract">Cancelar</x-ui.button>
+                    </x-slot:footer>
+                </x-ui.card>
+            </div>
+        </div>
+    @endif
+
     {{-- Modal de cancelación con motivo obligatorio --}}
     @if ($confirmingCancel)
         <div x-data="{ open: true }" x-show="open" x-cloak
@@ -730,7 +807,16 @@
                                         <p class="text-sm font-medium text-gray-800 group-hover:text-blue-700 truncate">{{ str_replace('_', ' ', $st->name) }}</p>
                                     </div>
                                 </div>
-                                <span class="material-symbols-outlined text-gray-300 group-hover:text-blue-500 text-lg">chevron_right</span>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    @if($st->requires_contract)
+                                        <x-ui.badge variant="success" size="sm">Requiere Contrato</x-ui.badge>
+                                    @elseif($st->requires_ot)
+                                        <x-ui.badge variant="warning" size="sm">Requiere OT</x-ui.badge>
+                                    @elseif($st->requires_noc)
+                                        <x-ui.badge variant="info" size="sm">Requiere NOC</x-ui.badge>
+                                    @endif
+                                    <span class="material-symbols-outlined text-gray-300 group-hover:text-blue-500 text-lg">chevron_right</span>
+                                </div>
                             </button>
                         @empty
                             <div class="py-12 text-center">
