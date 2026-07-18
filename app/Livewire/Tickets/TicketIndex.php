@@ -12,6 +12,7 @@ class TicketIndex extends Component
 {
     use WithPagination;
 
+    public $activeTab = 'all';
     public $statusFilter = '';
     public $search = '';
 
@@ -21,6 +22,12 @@ class TicketIndex extends Component
     // Propiedades para la confirmación
     public $confirmingAction = null;   // 'create_ot'
     public $confirmingTicketId = null;
+
+    public function setActiveTab($tab)
+    {
+        $this->activeTab = $tab;
+        $this->resetPage();
+    }
 
     public function render()
     {
@@ -34,6 +41,14 @@ class TicketIndex extends Component
         } else {
             $tickets = Ticket::query()->whereKey(0)->paginate(15);
             return view('livewire.tickets.ticket-index', compact('tickets'))->layout('components.layouts.app');
+        }
+
+        if ($this->activeTab === 'contracts') {
+            $query->where('requires_contract', true);
+        } elseif ($this->activeTab === 'ot') {
+            $query->where('create_ot', true);
+        } elseif ($this->activeTab === 'noc') {
+            $query->where('requires_noc', true);
         }
 
         if ($this->statusFilter) {

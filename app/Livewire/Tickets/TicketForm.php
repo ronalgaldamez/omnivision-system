@@ -1100,7 +1100,7 @@ class TicketForm extends Component
 
         session()->flash('message', 'Ticket enviado a Contratos para revisión.');
 
-        return redirect()->route('tickets.index');
+        return redirect()->route('contracts.inbox', ['ticket_id' => $this->ticketId]);
     }
 
     public function cancelGenerateContract()
