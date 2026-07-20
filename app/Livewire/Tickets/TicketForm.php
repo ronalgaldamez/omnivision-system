@@ -23,6 +23,10 @@ class TicketForm extends Component
     public $origin = '';
     public $requires_noc = false;
     public $create_ot = false;
+    public $requires_contract = false;
+    public $canToggleNoc = false;
+    public $canToggleOt = false;
+    public $canToggleContract = false;
     public $status = 'pending';
 
     public $clientSearch = '';
@@ -60,6 +64,7 @@ class TicketForm extends Component
     public $confirmingSolve = false;     // Modal de confirmación para Solucionar
     public $elapsedSeconds = 0;
     public $confirmingGenerate = false;
+    public $confirmingGenerateContract = false;
     public $confirmingOpen = false;
 
     // --- CANCELACIÓN ---
@@ -72,11 +77,23 @@ class TicketForm extends Component
         'service_type_id' => 'required|exists:service_types,id',
         'origin' => 'nullable|string|max:100',
         'requires_noc' => 'boolean',
+        'create_ot' => 'boolean',
+        'requires_contract' => 'boolean',
         'status' => 'in:pending,in_progress,resolved,closed,open,cancelled',
     ];
 
+    private function refreshTogglePermissions(): void
+    {
+        $user = auth()->user();
+        $this->canToggleOt = $user?->can('manage_create_ot_toggle') ?? false;
+        $this->canToggleNoc = $user?->can('manage_requires_noc_toggle') ?? false;
+        $this->canToggleContract = $user?->can('manage_requires_contract_toggle') ?? false;
+    }
+
     public function mount($id = null)
     {
+        $this->refreshTogglePermissions();
+
         $user = Auth::user();
 
         $this->loadAvailableZones();
@@ -93,6 +110,8 @@ class TicketForm extends Component
             $this->priority = $ticket->priority ?? '';
             $this->origin = $ticket->origin ?? '';
             $this->requires_noc = $ticket->requires_noc;
+            $this->requires_contract = $ticket->requires_contract ?? false;
+            $this->create_ot = $ticket->create_ot ?? false;
             $this->status = $ticket->status;
             $this->zone_id = $ticket->zone_id;
             $this->plan_id = $ticket->plan_id;
@@ -131,6 +150,8 @@ class TicketForm extends Component
                     $this->priority = $ticket->priority ?? '';
                     $this->origin = $ticket->origin ?? '';
                     $this->requires_noc = $ticket->requires_noc;
+                    $this->requires_contract = $ticket->requires_contract ?? false;
+                    $this->create_ot = $ticket->create_ot ?? false;
                     $this->status = $ticket->status;
                     $this->zone_id = $ticket->zone_id;
                     $this->plan_id = $ticket->plan_id;
@@ -180,6 +201,7 @@ class TicketForm extends Component
             $this->origin = $draft['origin'] ?? '';
             $this->requires_noc = $draft['requires_noc'] ?? false;
             $this->create_ot = $draft['create_ot'] ?? false;
+            $this->requires_contract = $draft['requires_contract'] ?? false;
             $this->zone_id = $draft['zone_id'] ?? '';
             $this->plan_id = $draft['plan_id'] ?? '';
             $this->clientSearch = $draft['clientSearch'] ?? '';
@@ -212,6 +234,10 @@ class TicketForm extends Component
 
     public function updated($property)
     {
+        if (in_array($property, ['description', 'origin', 'client_id', 'service_type_id'])) {
+            $this->resetValidation($property);
+        }
+
         if ($this->ticketOpened && $this->ticketId) {
             $this->persistOpenTicket($property);
         } elseif (!$this->ticketId && !$this->ticketOpened) {
@@ -230,6 +256,7 @@ class TicketForm extends Component
             'origin' => $this->origin,
             'requires_noc' => $this->requires_noc,
             'create_ot' => $this->create_ot,
+            'requires_contract' => $this->requires_contract,
             'zone_id' => $this->zone_id,
             'plan_id' => $this->plan_id,
             'clientSearch' => $this->clientSearch,
@@ -252,9 +279,17 @@ class TicketForm extends Component
         $serviceType = ServiceType::find($value);
         if ($serviceType) {
             $this->requires_noc = $serviceType->requires_noc;
-            $this->create_ot = false;
+            $this->create_ot = $serviceType->requires_ot;
+            $this->requires_contract = $serviceType->requires_contract;
         } else {
             $this->requires_noc = false;
+            $this->create_ot = false;
+            $this->requires_contract = false;
+        }
+        // Si requiere contrato, asegurar que noc y ot estén apagados
+        if ($serviceType && $serviceType->requires_contract) {
+            $this->requires_noc = false;
+            $this->create_ot = false;
         }
 
         $this->quickServiceTypeId = $value;
@@ -276,12 +311,22 @@ class TicketForm extends Component
     {
         if ($value) {
             $this->requires_noc = false;
+            $this->requires_contract = false;
         }
     }
 
     public function updatedRequiresNoc($value)
     {
         if ($value) {
+            $this->create_ot = false;
+            $this->requires_contract = false;
+        }
+    }
+
+    public function updatedRequiresContract($value)
+    {
+        if ($value) {
+            $this->requires_noc = false;
             $this->create_ot = false;
         }
     }
@@ -495,13 +540,24 @@ class TicketForm extends Component
         }
     }
 
-    public function openClientModal()
+    public $editingClientId = null;
+
+    #[On('clientFormReady')]
+    public function handleClientFormReady()
     {
-        if (!$this->ticketOpened && $this->hasDraftContent()) {
+        if ($this->editingClientId) {
+            $this->dispatch('loadClientData', id: $this->editingClientId);
+        }
+    }
+
+    public function openClientModal($clientId = null)
+    {
+        if (is_null($clientId) && !$this->ticketOpened && $this->hasDraftContent()) {
             $this->confirmingNewClient = true;
             return;
         }
 
+        $this->editingClientId = $clientId;
         $this->modalKey = 'client-modal-' . uniqid();
         $this->showClientModal = true;
     }
@@ -518,6 +574,7 @@ class TicketForm extends Component
     public function proceedToNewClient()
     {
         $this->confirmingNewClient = false;
+        $this->editingClientId = null;
         $this->modalKey = 'client-modal-' . uniqid();
         $this->showClientModal = true;
     }
@@ -530,6 +587,7 @@ class TicketForm extends Component
     public function closeClientModal()
     {
         $this->showClientModal = false;
+        $this->editingClientId = null;
         session()->forget('client_modal_draft');
     }
 
@@ -584,6 +642,7 @@ class TicketForm extends Component
         $this->origin = '';
         $this->requires_noc = false;
         $this->create_ot = false;
+        $this->requires_contract = false;
         $this->zone_id = '';
         $this->plan_id = '';
         $this->availablePlans = [];
@@ -630,7 +689,9 @@ class TicketForm extends Component
             'service_type' => $serviceName,
             'priority' => $this->priority ?: 'P3',
             'origin' => $this->origin ?: '',
-            'requires_noc' => false,
+            'requires_noc' => $this->requires_noc,
+            'requires_contract' => $this->requires_contract,
+            'create_ot' => $this->create_ot,
             'zone_id' => $this->zone_id ?: null,
             'plan_id' => $this->plan_id ?: null,
             'status' => 'open',
@@ -729,15 +790,6 @@ class TicketForm extends Component
 
         // Evaluar SLA
         app(SlaService::class)->evaluateSla($ticket);
-
-        // Actualizar datos de contratación del cliente
-        if (($zoneId || $planId) && $ticket->client) {
-            $ticket->client->update([
-                'zone_id' => $zoneId,
-                'plan_id' => $planId,
-                'contract_date' => now(),
-            ]);
-        }
 
         // Limpiar sesión
         session()->forget('open_ticket_id');
@@ -868,6 +920,7 @@ class TicketForm extends Component
             'priority' => $this->priority,
             'origin' => $this->origin,
             'requires_noc' => $this->requires_noc,
+            'requires_contract' => $this->requires_contract,
             'zone_id' => $this->zone_id ?: null,
             'plan_id' => $this->plan_id ?: null,
         ];
@@ -895,14 +948,6 @@ class TicketForm extends Component
 
             if ($this->create_ot) {
                 $this->createWorkOrder($ticket);
-                // Actualizar datos de contratación del cliente
-                if ($this->zone_id || $this->plan_id) {
-                    $ticket->client->update([
-                        'zone_id' => $this->zone_id ?: null,
-                        'plan_id' => $this->plan_id ?: null,
-                        'contract_date' => now(),
-                    ]);
-                }
             } elseif ($this->requires_noc) {
                 $this->dispatch('ticket-created-for-noc');
                 $this->dispatch('show-toast', type: 'info', message: 'Nuevo ticket requiere atención del NOC.');
@@ -952,6 +997,8 @@ class TicketForm extends Component
             'description' => 'description',
             'origin' => 'origin',
             'requires_noc' => 'requires_noc',
+            'requires_contract' => 'requires_contract',
+            'create_ot' => 'create_ot',
             'priority' => 'priority',
             'zone_id' => 'zone_id',
             'plan_id' => 'plan_id',
@@ -1015,14 +1062,60 @@ class TicketForm extends Component
         $this->confirmingGenerate = false;
     }
 
+    public function confirmGenerateContract()
+    {
+        $this->validate([
+            'client_id' => 'required|exists:clients,id',
+            'description' => 'required|string|min:5',
+            'service_type_id' => 'required|exists:service_types,id',
+        ]);
+
+        $this->confirmingGenerateContract = true;
+    }
+
+    public function executeGenerateContract()
+    {
+        $this->confirmingGenerateContract = false;
+
+        $ticket = Ticket::findOrFail($this->ticketId);
+        $serviceType = ServiceType::find($this->service_type_id);
+        $serviceName = $serviceType ? $serviceType->name : '';
+
+        $ticket->update([
+            'client_id' => $this->client_id,
+            'description' => $this->description,
+            'service_type' => $serviceName,
+            'priority' => $this->priority,
+            'origin' => $this->origin,
+            'requires_contract' => true,
+            'status' => 'pending',
+            'l1_ended_at' => now(),
+            'contracts_escalated_at' => now(),
+        ]);
+
+        app(SlaService::class)->evaluateSla($ticket);
+
+        session()->forget('open_ticket_id');
+        session()->forget('ticket_draft');
+
+        session()->flash('message', 'Ticket enviado a Contratos para revisión.');
+
+        return redirect()->route('tickets.index');
+    }
+
+    public function cancelGenerateContract()
+    {
+        $this->confirmingGenerateContract = false;
+    }
+
     public function render()
     {
-        // Actualizar el cronómetro en cada render si el ticket está abierto
         if ($this->ticketOpened && $this->ticketId) {
             $this->updateElapsedSeconds();
         }
 
         $serviceTypes = ServiceType::orderBy('name')->get();
-        return view('livewire.tickets.ticket-form', compact('serviceTypes'))->layout('components.layouts.app');
+        $serviceType = $this->service_type_id ? ServiceType::find($this->service_type_id) : null;
+        return view('livewire.tickets.ticket-form', compact('serviceTypes', 'serviceType'))->layout('components.layouts.app');
     }
 }

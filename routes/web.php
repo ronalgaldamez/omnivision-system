@@ -118,6 +118,13 @@ Route::middleware(['auth'])->group(function () {
         });
     }
 
+    // ========== CONTRACTS ==========
+    Route::get('/contracts', \App\Livewire\Contracts\ContractIndex::class)->name('contracts.index');
+    Route::get('/contracts/create', \App\Livewire\Contracts\ContractForm::class)->name('contracts.create');
+    Route::middleware(['can:access_contracts_inbox'])->group(function () {
+        Route::get('/contratos/inbox', \App\Livewire\Contracts\ContractInbox::class)->name('contracts.inbox');
+    });
+
     // ========== NOC ==========
     Route::middleware(['auth', 'can:access noc panel'])->group(function () {
         Route::get('/noc', \App\Livewire\Noc\NocInbox::class)->name('noc.panel');

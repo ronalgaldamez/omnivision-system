@@ -244,6 +244,9 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::ViewDashboard,
         ]);
 
+        // ── Contratos Inbox (solo admin por defecto; se asigna manualmente a quien corresponda) ──
+        // (admin ya tiene todos los permisos)
+
         // ── NOC ──
         $noc->syncPermissions([
             PermissionEnum::AccessNocPanel,

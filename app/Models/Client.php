@@ -53,4 +53,9 @@ class Client extends Model
     {
         return $this->belongsTo(Plan::class);
     }
+
+    public function contracts()
+    {
+        return $this->hasMany(Contract::class);
+    }
 }

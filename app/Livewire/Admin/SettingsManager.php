@@ -23,7 +23,9 @@ class SettingsManager extends Component
     public $editingServiceId = null;
     public $serviceName = '';
     public $serviceRequiresNoc = [];
-    public $serviceRequiresNocModal = false;
+    public $serviceRequiresOt = [];
+    public $serviceRequiresContract = [];
+    public $serviceRequirementTypeModal = '';
 
     // ========== PROPIEDADES DE TIPOS DE DOCUMENTO ==========
     public $showDocTypeModal = false;
@@ -47,6 +49,8 @@ class SettingsManager extends Component
         'nocPollingInterval' => 'required|integer|min:5|max:300',
         'serviceName' => 'required|string|max:255|unique:service_types,name',
         'serviceRequiresNoc' => 'boolean',
+        'serviceRequiresOt' => 'boolean',
+        'serviceRequiresContract' => 'boolean',
         // Reglas para KB
         'kbTitle' => 'required|string|max:255',
         'kbContent' => 'required|string',
@@ -122,6 +126,8 @@ class SettingsManager extends Component
         $this->serviceTypes = ServiceType::orderBy('name')->get();
         foreach ($this->serviceTypes as $type) {
             $this->serviceRequiresNoc[$type->id] = $type->requires_noc;
+            $this->serviceRequiresOt[$type->id] = $type->requires_ot;
+            $this->serviceRequiresContract[$type->id] = $type->requires_contract;
         }
     }
 
@@ -129,7 +135,43 @@ class SettingsManager extends Component
     {
         $serviceType = ServiceType::find($id);
         if ($serviceType) {
-            $serviceType->update(['requires_noc' => $value]);
+            if ($value) {
+                $this->serviceRequiresOt[$id] = false;
+                $this->serviceRequiresContract[$id] = false;
+                $serviceType->update(['requires_noc' => true, 'requires_ot' => false, 'requires_contract' => false]);
+            } else {
+                $serviceType->update(['requires_noc' => false]);
+            }
+            $this->dispatch('show-toast', type: 'success', message: "Tipo de servicio '{$serviceType->name}' actualizado.");
+        }
+    }
+
+    public function updatedServiceRequiresOt($value, $id)
+    {
+        $serviceType = ServiceType::find($id);
+        if ($serviceType) {
+            if ($value) {
+                $this->serviceRequiresNoc[$id] = false;
+                $this->serviceRequiresContract[$id] = false;
+                $serviceType->update(['requires_ot' => true, 'requires_noc' => false, 'requires_contract' => false]);
+            } else {
+                $serviceType->update(['requires_ot' => false]);
+            }
+            $this->dispatch('show-toast', type: 'success', message: "Tipo de servicio '{$serviceType->name}' actualizado.");
+        }
+    }
+
+    public function updatedServiceRequiresContract($value, $id)
+    {
+        $serviceType = ServiceType::find($id);
+        if ($serviceType) {
+            if ($value) {
+                $this->serviceRequiresNoc[$id] = false;
+                $this->serviceRequiresOt[$id] = false;
+                $serviceType->update(['requires_contract' => true, 'requires_noc' => false, 'requires_ot' => false]);
+            } else {
+                $serviceType->update(['requires_contract' => false]);
+            }
             $this->dispatch('show-toast', type: 'success', message: "Tipo de servicio '{$serviceType->name}' actualizado.");
         }
     }
@@ -145,7 +187,15 @@ class SettingsManager extends Component
         $serviceType = ServiceType::findOrFail($id);
         $this->editingServiceId = $serviceType->id;
         $this->serviceName = $serviceType->name;
-        $this->serviceRequiresNocModal = $serviceType->requires_noc;
+        if ($serviceType->requires_contract) {
+            $this->serviceRequirementTypeModal = 'contract';
+        } elseif ($serviceType->requires_ot) {
+            $this->serviceRequirementTypeModal = 'ot';
+        } elseif ($serviceType->requires_noc) {
+            $this->serviceRequirementTypeModal = 'noc';
+        } else {
+            $this->serviceRequirementTypeModal = '';
+        }
         $this->showServiceModal = true;
     }
 
@@ -153,21 +203,22 @@ class SettingsManager extends Component
     {
         $this->validate([
             'serviceName' => 'required|string|max:255|unique:service_types,name,' . $this->editingServiceId,
-            'serviceRequiresNocModal' => 'boolean',
+            'serviceRequirementTypeModal' => 'nullable|in:noc,ot,contract',
         ]);
+
+        $data = [
+            'name' => $this->serviceName,
+            'requires_noc' => $this->serviceRequirementTypeModal === 'noc',
+            'requires_ot' => $this->serviceRequirementTypeModal === 'ot',
+            'requires_contract' => $this->serviceRequirementTypeModal === 'contract',
+        ];
 
         if ($this->editingServiceId) {
             $serviceType = ServiceType::findOrFail($this->editingServiceId);
-            $serviceType->update([
-                'name' => $this->serviceName,
-                'requires_noc' => $this->serviceRequiresNocModal,
-            ]);
+            $serviceType->update($data);
             $message = "Tipo de servicio '{$this->serviceName}' actualizado.";
         } else {
-            ServiceType::create([
-                'name' => $this->serviceName,
-                'requires_noc' => $this->serviceRequiresNocModal,
-            ]);
+            ServiceType::create($data);
             $message = "Tipo de servicio '{$this->serviceName}' creado.";
         }
 
@@ -195,7 +246,7 @@ class SettingsManager extends Component
     {
         $this->editingServiceId = null;
         $this->serviceName = '';
-        $this->serviceRequiresNocModal = false;
+        $this->serviceRequirementTypeModal = '';
     }
 
     // ========== MÉTODOS PARA TIPOS DE DOCUMENTO ==========

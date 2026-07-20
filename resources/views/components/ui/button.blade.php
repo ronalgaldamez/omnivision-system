@@ -15,6 +15,7 @@
         'success'   => 'bg-green-600 text-white hover:bg-green-700 shadow-sm',
         'danger'    => 'bg-red-600 text-white hover:bg-red-700 shadow-sm',
         'warning'   => 'bg-amber-600 text-white hover:bg-amber-700 shadow-sm',
+        'info'      => 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm',
         'secondary' => 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50',
         'ghost'     => 'bg-transparent text-gray-700 hover:bg-gray-50',
     ];

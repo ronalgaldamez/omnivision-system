@@ -1,27 +1,28 @@
-<div x-data="{ activeTab: 'general' }" class="max-w-3xl mx-auto">
+<div x-data="{ activeTab: window.location.hash.replace('#', '') || 'general' }" class="max-w-3xl mx-auto"
+     x-init="if (!window.location.hash) window.location.hash = '#' + activeTab; window.addEventListener('hashchange', () => activeTab = window.location.hash.replace('#', '') || 'general')">
     <x-ui.card icon="settings" title="Configuraciones del Sistema" subtitle="Ajustes generales, tipos de servicio, base de conocimiento y control de módulos">
         {{-- Pestañas Alpine --}}
         <div class="border-b border-gray-200">
             <nav class="flex gap-0 -mb-px px-6">
-                <button @click="activeTab = 'general'"
+                <button @click="activeTab = 'general'; window.location.hash = '#general'"
                     :class="activeTab === 'general' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                     class="px-4 py-3 text-sm font-medium border-b-2 transition">
                     <span class="material-symbols-outlined text-base align-middle mr-1">tune</span>
                     Ajustes Generales
                 </button>
-                <button @click="activeTab = 'services'"
+                <button @click="activeTab = 'services'; window.location.hash = '#services'"
                     :class="activeTab === 'services' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                     class="px-4 py-3 text-sm font-medium border-b-2 transition">
                     <span class="material-symbols-outlined text-base align-middle mr-1">design_services</span>
                     Tipos de Servicio
                 </button>
-                <button @click="activeTab = 'knowledge'"
+                <button @click="activeTab = 'knowledge'; window.location.hash = '#knowledge'"
                     :class="activeTab === 'knowledge' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                     class="px-4 py-3 text-sm font-medium border-b-2 transition">
                     <span class="material-symbols-outlined text-base align-middle mr-1">menu_book</span>
                     Base de Conocimiento
                 </button>
-                <button @click="activeTab = 'modules'"
+                <button @click="activeTab = 'modules'; window.location.hash = '#modules'"
                     :class="activeTab === 'modules' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                     class="px-4 py-3 text-sm font-medium border-b-2 transition">
                     <span class="material-symbols-outlined text-base align-middle mr-1">extension</span>
@@ -145,17 +146,27 @@
                     </h2>
                     <x-ui.button variant="primary" icon="add_circle" wire:click="openServiceModal" class="text-xs px-3 py-1.5">Nuevo tipo</x-ui.button>
                 </div>
-                <p class="text-xs text-gray-500 mb-4">Administrá los tipos de servicio y definí cuáles requieren intervención del NOC.</p>
+                <p class="text-xs text-gray-500 mb-4">Administrá los tipos de servicio y definí sus requerimientos (NOC, OT, Contrato).</p>
 
                 <div class="space-y-3">
                     @forelse($serviceTypes as $type)
                         <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4">
                             <span class="text-sm font-medium text-gray-700 capitalize">{{ str_replace('_', ' ', $type->name) }}</span>
-                            <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-4 flex-wrap">
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" wire:model.live="serviceRequiresNoc.{{ $type->id }}" class="sr-only peer">
                                     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     <span class="ml-2 text-xs text-gray-500">Requiere NOC</span>
+                                </label>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" wire:model.live="serviceRequiresOt.{{ $type->id }}" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <span class="ml-2 text-xs text-gray-500">Requiere OT</span>
+                                </label>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" wire:model.live="serviceRequiresContract.{{ $type->id }}" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <span class="ml-2 text-xs text-gray-500">Requiere Contrato</span>
                                 </label>
                                 <div class="flex items-center gap-1">
                                     <button wire:click="editService({{ $type->id }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
@@ -276,10 +287,27 @@
                         <x-forms.group name="serviceName" label="Nombre">
                             <x-ui.input type="text" wire:model="serviceName" placeholder="Ej: instalacion, traslado" />
                         </x-forms.group>
-                        <label class="flex items-center gap-3">
-                            <input type="checkbox" wire:model="serviceRequiresNocModal" class="rounded border-gray-300 text-blue-600">
-                            <span class="text-sm text-gray-700">Requiere NOC</span>
-                        </label>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de requerimiento</label>
+                            <div class="space-y-2">
+                                <label class="flex items-center gap-3">
+                                    <input type="radio" wire:model="serviceRequirementTypeModal" value="" class="border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700">Ninguno</span>
+                                </label>
+                                <label class="flex items-center gap-3">
+                                    <input type="radio" wire:model="serviceRequirementTypeModal" value="noc" class="border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700">Requiere NOC</span>
+                                </label>
+                                <label class="flex items-center gap-3">
+                                    <input type="radio" wire:model="serviceRequirementTypeModal" value="ot" class="border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700">Requiere OT</span>
+                                </label>
+                                <label class="flex items-center gap-3">
+                                    <input type="radio" wire:model="serviceRequirementTypeModal" value="contract" class="border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700">Requiere Contrato</span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                     <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
                         <x-ui.button variant="ghost" wire:click="closeServiceModal">Cancelar</x-ui.button>
