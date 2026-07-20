@@ -355,12 +355,14 @@
                                     </div>
                                 </div>
                             @endif
-                            @if ($isPotentialClient)
+                            @if(count($quickReferencePlans) > 0)
                                 <div class="col-span-full mt-2 pt-3 border-t border-gray-200">
                                     <div class="flex items-center gap-2 mb-2">
                                         <span class="material-symbols-outlined text-amber-600 text-sm">sell</span>
                                         <span class="text-xs font-semibold text-amber-800 uppercase tracking-wide">Planes de Referencia</span>
-                                        <x-ui.badge variant="warning" size="sm">Cliente Potencial</x-ui.badge>
+                                        @if($isPotentialClient)
+                                            <x-ui.badge variant="warning" size="sm">Cliente Potencial</x-ui.badge>
+                                        @endif
                                     </div>
                                     <div class="flex flex-wrap gap-2">
                                         @forelse($quickReferencePlans as $plan)

@@ -301,9 +301,10 @@ class TicketForm extends Component
             $this->create_ot = false;
         }
 
-        // Detectar Cliente Potencial
+        // Detectar si muestra Planes de Referencia (Cliente Potencial o Instalación)
         $this->isPotentialClient = $serviceType && $serviceType->requires_potential;
-        if ($this->isPotentialClient) {
+        $showQuickReferencePlans = $serviceType && ($serviceType->requires_potential || $serviceType->requires_contract);
+        if ($showQuickReferencePlans) {
             $this->quickReferencePlans = Plan::where('is_active', true)->get();
         } else {
             $this->quickReferencePlans = collect();
