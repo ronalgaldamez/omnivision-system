@@ -37,6 +37,15 @@ class ContractWorkflow extends Component
     public $latitude;
     public $longitude;
 
+    // ─── Datos del Ticket ───
+    public $ticket_description;
+    public $ticket_priority;
+    public $ticket_origin;
+
+    // ─── Planes de Referencia (Cliente Potencial) ───
+    public $quickReferencePlans = [];
+    public $isPotentialClient = false;
+
     // ─── Step 2: Plan y Precio ───
     public $plan_id = '';
     public $zone_id = '';
@@ -121,7 +130,7 @@ class ContractWorkflow extends Component
         $this->availableZones = Zone::orderBy('name')->get(['id', 'name'])->toArray();
 
         if ($ticket_id) {
-            $ticket = Ticket::with('client.zone')->find($ticket_id);
+            $ticket = Ticket::with('client.branch', 'client.zone')->find($ticket_id);
             if (!$ticket || !$ticket->requires_contract) {
                 abort(404);
             }
@@ -144,10 +153,24 @@ class ContractWorkflow extends Component
             $this->zone_id = $ticket->zone_id ?? $client->zone_id ?? '';
             $this->client_branch_name = $client->branch?->name ?? '—';
 
-            // Si tiene zona, cargar precio efectivo
-            if ($this->zone_id && $ticket->plan_id) {
+            // ─── Datos del Ticket ───
+            $this->ticket_description = $ticket->description;
+            $this->ticket_priority = $ticket->priority;
+            $this->ticket_origin = $ticket->origin;
+
+            // ─── Detectar si es Cliente Potencial ───
+            $serviceType = \App\Models\ServiceType::where('name', $ticket->service_type)->first();
+            $this->isPotentialClient = $serviceType && $serviceType->requires_potential;
+            if ($this->isPotentialClient) {
+                $this->quickReferencePlans = Plan::where('is_active', true)->get()->toArray();
+            }
+
+            // ─── Si el ticket ya tiene plan, cargarlo ───
+            if ($ticket->plan_id) {
                 $this->plan_id = $ticket->plan_id;
-                $this->updateEffectivePrice();
+                if ($this->zone_id) {
+                    $this->updateEffectivePrice();
+                }
             }
         }
 
@@ -193,6 +216,25 @@ class ContractWorkflow extends Component
         if ($this->step > 1) {
             $this->step--;
         }
+    }
+
+    // ─── Planes de Referencia (Cliente Potencial) ───
+
+    public function addPlanReference($planId)
+    {
+        $plan = Plan::find($planId);
+        if (!$plan) return;
+
+        $price = $this->zone_id
+            ? optional(Zone::find($this->zone_id))->getEffectivePriceForPlan($plan)
+            : $plan->base_price;
+
+        // Asignar el plan directamente
+        $this->plan_id = $plan->id;
+        $this->price = $price ?? $plan->base_price;
+        $this->effective_price = $this->price;
+
+        $this->dispatch('show-toast', type: 'success', message: "Plan «{$plan->name}» seleccionado.");
     }
 
     // ─── Step 2: Plan ───
