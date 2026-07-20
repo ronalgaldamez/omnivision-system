@@ -243,6 +243,12 @@
                 @enderror
 
                 @if ($selectedClient)
+                    @php
+                        $clientBranch = $selectedClient->branch;
+                        $clientZone = $selectedClient->zone;
+                        $clientPlan = $selectedClient->plan;
+                        $clientPhones = $selectedClient->phones;
+                    @endphp
                     <div class="mt-4 bg-gray-50 rounded-lg border border-gray-200 p-4">
                         <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2 mb-3">
                             <span class="material-symbols-outlined text-gray-500 text-sm">info</span>
@@ -269,6 +275,39 @@
                                     <div>
                                         <p class="text-xs text-gray-500">{{ strtoupper($selectedClient->document_type) }}</p>
                                         <p class="text-gray-800">{{ $selectedClient->document_number }}</p>
+                                    </div>
+                                </div>
+                            @endif
+                            @if ($clientBranch)
+                                <div class="flex items-start gap-2">
+                                    <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">business</span>
+                                    <div>
+                                        <p class="text-xs text-gray-500">Sucursal</p>
+                                        <p class="text-gray-800 font-medium">{{ $clientBranch->name }}</p>
+                                    </div>
+                                </div>
+                            @endif
+                            @if ($clientZone)
+                                <div class="flex items-start gap-2">
+                                    <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">map</span>
+                                    <div>
+                                        <p class="text-xs text-gray-500">Zona</p>
+                                        <p class="text-gray-800">{{ $clientZone->name }}</p>
+                                        @if($clientZone->parent)
+                                            <p class="text-[10px] text-gray-400">{{ $clientZone->parent->name }}{{ $clientZone->parent->parent ? ' → ' . $clientZone->parent->parent->name : '' }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
+                            @if ($clientPlan)
+                                <div class="flex items-start gap-2">
+                                    <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">assignment</span>
+                                    <div>
+                                        <p class="text-xs text-gray-500">Plan</p>
+                                        <p class="text-gray-800">{{ $clientPlan->name }}</p>
+                                        @if($clientPlan->speed)
+                                            <p class="text-[10px] text-gray-400">{{ $clientPlan->speed }}</p>
+                                        @endif
                                     </div>
                                 </div>
                             @endif
@@ -314,6 +353,17 @@
                                     <div>
                                         <p class="text-xs text-gray-500">N.° de luz</p>
                                         <p class="text-gray-800">{{ $selectedClient->nro_luz }}</p>
+                                    </div>
+                                </div>
+                            @endif
+                            @if ($clientPhones && $clientPhones->count() > 0)
+                                <div class="flex items-start gap-2 col-span-2">
+                                    <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">phonelink</span>
+                                    <div>
+                                        <p class="text-xs text-gray-500">Teléfonos adicionales</p>
+                                        @foreach($clientPhones as $cp)
+                                            <p class="text-gray-800">{{ $cp->number }} <span class="text-[10px] text-gray-400">({{ $cp->type }})</span></p>
+                                        @endforeach
                                     </div>
                                 </div>
                             @endif

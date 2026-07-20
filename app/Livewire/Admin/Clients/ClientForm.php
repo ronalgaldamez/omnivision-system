@@ -310,6 +310,14 @@ class ClientForm extends Component
     {
         $this->resetSvcCascade('distrito');
         if (!$value) return;
+
+        // Auto-asignar sucursal desde la zona seleccionada
+        $zone = Zone::find($value);
+        if ($zone && $zone->branch_id) {
+            $this->branch_id = $zone->branch_id;
+            $this->loadSvcDepartamentos();
+        }
+
         $children = Zone::where('parent_id', $value)
             ->whereNotIn('level', ['departamento', 'municipio', 'distrito'])
             ->orderBy('name')->get(['id', 'name']);
@@ -331,6 +339,14 @@ class ClientForm extends Component
             $this->service = '';
             return;
         }
+
+        // Auto-asignar sucursal desde la zona seleccionada
+        $zone = Zone::find($value);
+        if ($zone && $zone->branch_id) {
+            $this->branch_id = $zone->branch_id;
+            $this->loadSvcDepartamentos();
+        }
+
         $this->loadPlansForZone($value);
     }
 

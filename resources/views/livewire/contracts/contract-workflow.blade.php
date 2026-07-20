@@ -76,7 +76,11 @@
                             <p class="text-xs text-gray-500">Correo</p>
                             <p class="font-medium text-gray-800">{{ $client_email ?? '—' }}</p>
                         </div>
-                        <div class="col-span-2">
+                        <div>
+                            <p class="text-xs text-gray-500">Sucursal</p>
+                            <p class="font-medium text-gray-800">{{ $client_branch_name }}</p>
+                        </div>
+                        <div>
                             <p class="text-xs text-gray-500">Dirección registrada</p>
                             <p class="font-medium text-gray-800">{{ $client_address ?? '—' }}</p>
                         </div>

@@ -32,6 +32,7 @@ class ContractWorkflow extends Component
     public $client_phone;
     public $client_email;
     public $client_address;
+    public $client_branch_name;
     public $installation_address;
     public $latitude;
     public $longitude;
@@ -141,6 +142,7 @@ class ContractWorkflow extends Component
             $this->longitude = $client->longitude ?? '';
             $this->service_type = $ticket->service_type;
             $this->zone_id = $ticket->zone_id ?? $client->zone_id ?? '';
+            $this->client_branch_name = $client->branch?->name ?? '—';
 
             // Si tiene zona, cargar precio efectivo
             if ($this->zone_id && $ticket->plan_id) {
