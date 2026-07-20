@@ -94,6 +94,24 @@
                 @error('branchId') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
             </div>
 
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-gray-400 text-base">badge</span>
+                    Rol Técnico
+                </label>
+                <div class="relative">
+                    <select wire:model="techRole"
+                        class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none">
+                        <option value="">— Sin rol técnico —</option>
+                        <option value="encargado">Encargado (Principal)</option>
+                        <option value="auxiliar">Auxiliar</option>
+                    </select>
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">engineering</span>
+                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+                </div>
+                @error('techRole') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+            </div>
+
             <div class="flex justify-end gap-3 pt-2">
                 <x-ui.button variant="ghost" href="{{ route('admin.users.index') }}">Cancelar</x-ui.button>
                 <x-ui.button type="submit" variant="primary" icon="save">Guardar</x-ui.button>

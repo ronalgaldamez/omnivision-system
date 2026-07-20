@@ -16,6 +16,7 @@ class UserCreate extends Component
     public $password_confirmation = '';
     public $selectedRole = '';
     public $branchId = '';
+    public $techRole = '';
 
     public function save()
     {
@@ -25,6 +26,7 @@ class UserCreate extends Component
             'password' => 'required|min:6|confirmed',
             'selectedRole' => 'required|exists:roles,name',
             'branchId' => 'nullable|exists:branches,id',
+            'techRole' => 'nullable|in:encargado,auxiliar',
         ]);
 
         $user = User::create([
@@ -32,6 +34,7 @@ class UserCreate extends Component
             'email' => $this->email,
             'password' => Hash::make($this->password),
             'branch_id' => $this->branchId ?: null,
+            'tech_role' => $this->techRole ?: null,
         ]);
 
         $user->syncRoles([$this->selectedRole]);

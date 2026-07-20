@@ -12,7 +12,7 @@ class Asignacion extends Model
     protected $table = 'asignaciones';
 
     protected $fillable = [
-        'encargado_id', 'vehicle_id', 'zone_id', 'is_active', 'assigned_at', 'ended_at',
+        'encargado_id', 'auxiliar_id', 'vehicle_id', 'zone_id', 'is_active', 'assigned_at', 'ended_at',
     ];
 
     protected $casts = [
@@ -24,6 +24,11 @@ class Asignacion extends Model
     public function encargado()
     {
         return $this->belongsTo(User::class, 'encargado_id');
+    }
+
+    public function auxiliar()
+    {
+        return $this->belongsTo(User::class, 'auxiliar_id');
     }
 
     public function vehicle()

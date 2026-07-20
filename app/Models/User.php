@@ -17,6 +17,7 @@ class User extends Authenticatable
         'password',
         'is_active',
         'branch_id',
+        'tech_role',
     ];
 
     protected $hidden = [
@@ -51,6 +52,16 @@ class User extends Authenticatable
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function scopeEncargados($q)
+    {
+        return $q->where('tech_role', 'encargado');
+    }
+
+    public function scopeAuxiliares($q)
+    {
+        return $q->where('tech_role', 'auxiliar');
     }
 
     public function activeBranchId(): ?int

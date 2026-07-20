@@ -135,16 +135,30 @@ class AsignacionManager extends Component
         $this->dispatch('show-toast', type: 'success', message: 'Asignación reactivada.');
     }
 
+    public function assignAuxiliar($asignacionId, $auxiliarId)
+    {
+        $asignacion = Asignacion::findOrFail($asignacionId);
+
+        if ($auxiliarId && $auxiliarId == $asignacion->encargado_id) {
+            $this->dispatch('show-toast', type: 'error', message: 'El auxiliar no puede ser el mismo encargado.');
+            return;
+        }
+
+        $asignacion->update(['auxiliar_id' => $auxiliarId ?: null]);
+        $this->dispatch('show-toast', type: 'success', message: $auxiliarId ? 'Auxiliar asignado.' : 'Auxiliar removido.');
+    }
+
     public function render()
     {
-        $asignaciones = Asignacion::with(['encargado', 'vehicle', 'zone'])
+        $asignaciones = Asignacion::with(['encargado', 'auxiliar', 'vehicle', 'zone'])
             ->when($this->search, fn($q) => $q->whereHas('encargado', fn($u) => $u->where('name', 'like', "%{$this->search}%"))
                 ->orWhereHas('vehicle', fn($v) => $v->where('placa', 'like', "%{$this->search}%")))
             ->orderBy('is_active', 'desc')
             ->orderBy('assigned_at', 'desc')
             ->paginate(15);
 
-        $encargados = User::role('technician')->orderBy('name')->get(['id', 'name']);
+        $encargados = User::role('technician')->encargados()->orderBy('name')->get(['id', 'name']);
+        $tecnicos = User::role('technician')->orderBy('name')->get(['id', 'name']);
         $vehiculos = Vehiculo::where('estado', 'activo')->orderBy('placa')->get(['id', 'placa', 'marca', 'modelo']);
         $allZones = Zone::with('branch', 'parent', 'children')->orderBy('name')->get();
         $rootZones = $allZones->whereNull('parent_id');
@@ -152,7 +166,7 @@ class AsignacionManager extends Component
         $selectedZoneName = $this->zone_id ? $allZones->firstWhere('id', $this->zone_id)?->name : null;
 
         return view('livewire.supervisor.asignacion-manager', compact(
-            'asignaciones', 'encargados', 'vehiculos', 'allZones', 'rootZones', 'branches', 'selectedZoneName'
+            'asignaciones', 'encargados', 'tecnicos', 'vehiculos', 'allZones', 'rootZones', 'branches', 'selectedZoneName'
         ))->layout('components.layouts.app');
     }
 }
