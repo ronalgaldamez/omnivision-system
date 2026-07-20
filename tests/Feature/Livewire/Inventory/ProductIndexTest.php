@@ -59,7 +59,7 @@ class ProductIndexTest extends TestCase
             ->call('confirmDelete', $product->id)
             ->call('deleteProduct')
             ->assertSet('showDeleteModal', false)
-            ->assertDispatched('showToast');
+            ->assertDispatched('show-toast');
 
         $this->assertNull(Product::find($product->id));
     }
@@ -73,7 +73,7 @@ class ProductIndexTest extends TestCase
         Livewire::test(ProductIndex::class)
             ->call('confirmDelete', $product->id)
             ->call('deleteProduct')
-            ->assertDispatched('showToast');
+            ->assertDispatched('show-toast');
 
         $this->assertNotNull(Product::find($product->id));
     }

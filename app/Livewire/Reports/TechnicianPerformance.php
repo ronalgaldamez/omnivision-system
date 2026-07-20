@@ -12,12 +12,12 @@ class TechnicianPerformance extends Component
     public function render()
     {
         $technicians = User::role('technician')->withCount([
-            'requisitions as total_requisitions',
-            'requisitions as open_requisitions' => function ($q) {
-                $q->where('status', 'open');
+            'requisitions as total_requests',
+            'requisitions as approved_requests' => function ($q) {
+                $q->where('status', 'approved');
             },
-            'requisitions as closed_requisitions' => function ($q) {
-                $q->where('status', 'closed');
+            'requisitions as rejected_requests' => function ($q) {
+                $q->where('status', 'rejected');
             }
         ])->get();
 

@@ -16,11 +16,12 @@ Rama activa: `feature/dashboard-kpis`
 
 | Bug | Archivo | Impacto |
 |-----|---------|---------|
-| TechnicianPerformance view/component mismatch | `app/Livewire/Reports/TechnicianPerformance.php` + `dashboard.blade.php` | Renderiza todo en cero |
-| Ruta `admin.settings` mal anidada | `routes/web.php:199` | URL real es `/admin/roles/admin/settings` |
-| WorkOrderShow desktop: 3 TODO stubs | `app/Livewire/WorkOrders/WorkOrderShow.php` | Consumo, vinculación OTs y flags no funcionales |
-| WorkOrderShow: toasts invisibles | `app/Livewire/WorkOrders/WorkOrderShow.php` | 6 dispatch usan `showToast` (debe ser `show-toast`) |
-| CatalogManager: toasts invisibles | `app/Livewire/Admin/Catalog/CatalogManager.php` | 9 dispatch usan `showToast` |
+| ~~TechnicianPerformance view/component mismatch~~ ✅ | `app/Livewire/Reports/TechnicianPerformance.php` | Corregido — `total_requisitions` → `total_requests`, `open_requisitions` → `approved_requests`, `closed_requisitions` → `rejected_requests` |
+| ~~Ruta `admin.settings` mal anidada~~ ✅ | `routes/web.php:199` | Corregido — movida fuera del group `admin/roles` |
+| ~~WorkOrderShow desktop: 3 TODO stubs~~ ✅ | `app/Livewire/WorkOrders/WorkOrderShow.php` | Corregido — flags reales, consumo y vinculación OTs funcionales |
+| ~~WorkOrderShow: toasts invisibles~~ ✅ | `app/Livewire/WorkOrders/WorkOrderShow.php` | Corregido (6 dispatch) |
+| ~~CatalogManager: toasts invisibles~~ ✅ | `app/Livewire/Admin/Catalog/CatalogManager.php` | Corregido (9 dispatch) |
+| ~~ProductIndex, ProductForm, MovementForm~~ ✅ | Inventory/*.php | Corregido (12 dispatch adicionales) |
 | Importaciones: módulo ausente | `app/Livewire/Imports/` | No existe en esta rama (está en `feature/excel-imports`) |
 
 ## 🟠 Pendientes importantes

@@ -86,7 +86,7 @@ class ProductFormTest extends TestCase
 
         Livewire::test(ProductForm::class)
             ->call('confirmSaveAll')
-            ->assertDispatched('showToast');
+            ->assertDispatched('show-toast');
     }
 
     public function test_updates_existing_product()
