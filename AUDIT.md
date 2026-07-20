@@ -22,7 +22,7 @@ Rama activa: `feature/dashboard-kpis`
 | ~~WorkOrderShow: toasts invisibles~~ ✅ | `app/Livewire/WorkOrders/WorkOrderShow.php` | Corregido (6 dispatch) |
 | ~~CatalogManager: toasts invisibles~~ ✅ | `app/Livewire/Admin/Catalog/CatalogManager.php` | Corregido (9 dispatch) |
 | ~~ProductIndex, ProductForm, MovementForm~~ ✅ | Inventory/*.php | Corregido (12 dispatch adicionales) |
-| Importaciones: módulo ausente | `app/Livewire/Imports/` | No existe en esta rama (está en `feature/excel-imports`) |
+| ~~Importaciones: módulo ausente~~ ✅ | `app/Livewire/Imports/` | Creado desde cero — ProductImport con Excel/CSV |
 
 ## 🟠 Pendientes importantes
 

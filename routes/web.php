@@ -200,6 +200,9 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin/settings')->middleware(['auth', 'can:access_admin'])->group(function () {
         Route::get('/', \App\Livewire\Admin\SettingsManager::class)->name('admin.settings');
     });
+    Route::prefix('admin/imports')->middleware(['auth', 'can:access_admin'])->group(function () {
+        Route::get('/', \App\Livewire\Imports\ProductImport::class)->name('admin.imports.products');
+    });
     Route::prefix('admin/catalog')->middleware(['auth', 'can:manage catalog'])->group(function () {
         Route::get('/', \App\Livewire\Admin\Catalog\CatalogManager::class)->name('admin.catalog');
     });
