@@ -320,6 +320,12 @@
                                 @can('access_admin')<a href="{{ route('admin.branches.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">store</span> Sucursales</a>@endcan
+                                @can('access_admin')<a href="{{ route('admin.vehiculos') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">directions_car</span> Vehículos</a>@endcan
+                                @can('access_admin')<a href="{{ route('admin.asignaciones') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">assignment_ind</span> Asignaciones</a>@endcan
                                 @can('access_admin')<a href="{{ route('admin.shelves') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">shelves</span> Estanterías</a>@endcan
