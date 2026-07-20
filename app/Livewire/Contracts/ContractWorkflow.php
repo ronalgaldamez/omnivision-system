@@ -42,9 +42,13 @@ class ContractWorkflow extends Component
     public $ticket_priority;
     public $ticket_origin;
 
-    // ─── Planes de Referencia (Cliente Potencial) ───
+    // ─── Notas del Cliente ───
+    public $client_notes;
+
+    // ─── Planes de Referencia ───
     public $quickReferencePlans = [];
     public $isPotentialClient = false;
+    public $showQuickReferencePlans = false;
 
     // ─── Step 2: Plan y Precio ───
     public $plan_id = '';
@@ -151,17 +155,29 @@ class ContractWorkflow extends Component
             $this->longitude = $client->longitude ?? '';
             $this->service_type = $ticket->service_type;
             $this->zone_id = $ticket->zone_id ?? $client->zone_id ?? '';
-            $this->client_branch_name = $client->branch?->name ?? '—';
+
+            // ─── Sucursal: si el cliente no tiene branch, intentar desde la zona ───
+            if ($client->branch) {
+                $this->client_branch_name = $client->branch->name;
+            } elseif ($client->zone && $client->zone->branch) {
+                $this->client_branch_name = $client->zone->branch->name;
+            } else {
+                $this->client_branch_name = '—';
+            }
 
             // ─── Datos del Ticket ───
             $this->ticket_description = $ticket->description;
             $this->ticket_priority = $ticket->priority;
             $this->ticket_origin = $ticket->origin;
 
-            // ─── Detectar si es Cliente Potencial ───
+            // ─── Notas del Cliente ───
+            $this->client_notes = $client->notes;
+
+            // ─── Detectar tipo de servicio y cargar planes de referencia ───
             $serviceType = \App\Models\ServiceType::where('name', $ticket->service_type)->first();
             $this->isPotentialClient = $serviceType && $serviceType->requires_potential;
-            if ($this->isPotentialClient) {
+            $this->showQuickReferencePlans = $serviceType && ($serviceType->requires_potential || $serviceType->requires_contract);
+            if ($this->showQuickReferencePlans) {
                 $this->quickReferencePlans = Plan::where('is_active', true)->get()->toArray();
             }
 

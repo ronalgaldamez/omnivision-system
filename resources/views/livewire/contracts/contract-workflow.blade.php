@@ -106,13 +106,26 @@
                     </div>
                 </div>
 
-                {{-- Planes de Referencia (Cliente Potencial) --}}
-                @if($isPotentialClient)
+                {{-- Notas del Cliente (si existen) --}}
+                @if($client_notes)
+                <div class="bg-yellow-50 rounded-lg border border-yellow-200 p-4">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="material-symbols-outlined text-yellow-600 text-sm">notes</span>
+                        <span class="text-xs font-semibold text-yellow-800 uppercase tracking-wide">Notas del Cliente</span>
+                    </div>
+                    <p class="text-sm text-yellow-900 whitespace-pre-line">{{ $client_notes }}</p>
+                </div>
+                @endif
+
+                {{-- Planes de Referencia --}}
+                @if($showQuickReferencePlans)
                 <div class="bg-amber-50 rounded-lg border border-amber-200 p-4">
                     <div class="flex items-center gap-2 mb-3">
                         <span class="material-symbols-outlined text-amber-600 text-sm">sell</span>
                         <span class="text-xs font-semibold text-amber-800 uppercase tracking-wide">Planes de Referencia</span>
-                        <x-ui.badge variant="warning" size="sm">Cliente Potencial</x-ui.badge>
+                        @if($isPotentialClient)
+                            <x-ui.badge variant="warning" size="sm">Cliente Potencial</x-ui.badge>
+                        @endif
                     </div>
                     @if($plan_id)
                         {{-- Ya hay un plan seleccionado --}}
