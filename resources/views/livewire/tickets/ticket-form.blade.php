@@ -19,16 +19,166 @@
             </a>
         </x-slot:headerActions>
 
-        {{-- Botón Abrir Ticket --}}
+        {{-- Tipo de servicio + Abrir Ticket (pre-apertura) --}}
         @if (!$ticketId && !$ticketOpened)
+            <div class="pb-5 border-b border-gray-100 mb-6">
+                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-gray-500 text-sm">handyman</span>
+                    Tipo de servicio <span class="text-red-500">*</span>
+                </label>
+                @if ($service_type_id)
+                    <div class="flex items-start gap-3 p-3.5 bg-green-50 border border-green-200 rounded-lg">
+                        <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span class="material-symbols-outlined text-green-600 text-xl">check_circle</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-900 truncate">{{ $serviceTypes->firstWhere('id', $service_type_id)?->name }}</p>
+                        </div>
+                        <div class="flex items-center gap-1 flex-shrink-0">
+                            <button type="button" wire:click="clearServiceType"
+                                class="p-1.5 text-green-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Quitar tipo de servicio">
+                                <span class="material-symbols-outlined text-lg">close</span>
+                            </button>
+                        </div>
+                    </div>
+                @else
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <x-ui.input type="text" wire:model.live.debounce.300ms="serviceTypeSearch"
+                                placeholder="Buscar tipo de servicio..." icon="search" />
+                            @if (count($serviceTypeResults) > 0)
+                                <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                    @foreach ($serviceTypeResults as $st)
+                                        <li wire:click="selectServiceType({{ $st->id }})"
+                                            class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
+                                            <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ str_replace('_', ' ', $st->name) }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </div>
+                        <button type="button" wire:click="openServiceTypeModal"
+                            class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm whitespace-nowrap"
+                            title="Ver todos los tipos de servicio">
+                            <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                            <span class="hidden sm:inline">Ver todos</span>
+                        </button>
+                    </div>
+                @endif
+                @error('service_type_id')
+                    <span class="text-xs text-red-600 mt-1.5 block font-medium">{{ $message }}</span>
+                @enderror
+            </div>
+
+            {{-- Base de Conocimiento --}}
+            @if (count($knowledgeArticles) > 0)
+                <div x-data="{ openArticle: null, filter: 'all' }" wire:key="kb-pre-{{ $service_type_id }}"
+                    class="bg-gray-50 rounded-lg border border-gray-200 p-4 space-y-3 mb-6">
+                    <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
+                        <span class="material-symbols-outlined text-gray-500 text-sm">menu_book</span>
+                        Información Técnica
+                    </h3>
+
+                    @php $categories = $knowledgeArticles->pluck('category')->filter()->unique(); @endphp
+                    @if ($categories->count() > 1)
+                        <div class="flex flex-wrap gap-1">
+                            <button type="button" @click="filter = 'all'"
+                                :class="filter === 'all' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'"
+                                class="px-2.5 py-1 rounded-full text-xs font-medium transition">Todas</button>
+                            @foreach ($categories as $cat)
+                                <button type="button" @click="filter = '{{ $cat }}'"
+                                    :class="filter === '{{ $cat }}' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'"
+                                    class="px-2.5 py-1 rounded-full text-xs font-medium transition">{{ $cat }}</button>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="space-y-2 max-h-60 overflow-y-auto">
+                        @foreach ($knowledgeArticles as $article)
+                            <div x-show="filter === 'all' || filter === '{{ $article->category }}'"
+                                class="bg-white rounded-lg border border-gray-200">
+                                <button type="button"
+                                    @click="openArticle = (openArticle === {{ $article->id }} ? null : {{ $article->id }})"
+                                    class="w-full flex items-center justify-between px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span>{{ $article->title }}</span>
+                                        @if ($article->priority)
+                                            <x-ui.badge :variant="match($article->priority) { 'P1' => 'danger', 'P2' => 'warning', 'P3' => 'info', default => 'neutral' }">
+                                                {{ $article->priority }} - @php $priorityLabels = ['P1' => 'Crítico', 'P2' => 'Alta', 'P3' => 'Media', 'P4' => 'Baja']; @endphp
+                                                {{ $priorityLabels[$article->priority] ?? $article->priority }}
+                                            </x-ui.badge>
+                                        @endif
+                                    </div>
+                                    <span class="material-symbols-outlined text-base transition-transform flex-shrink-0 ml-2"
+                                        :class="openArticle === {{ $article->id }} ? 'rotate-180' : ''">expand_more</span>
+                                </button>
+                                <div x-show="openArticle === {{ $article->id }}" x-collapse
+                                    class="px-3 pb-3 text-xs text-gray-600 whitespace-pre-line">
+                                    {{ $article->content }}
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             <div class="mb-6 flex justify-center">
-                <x-ui.button type="button" variant="success" icon="play_arrow" wire:click="openTicket" size="lg">
+                <x-ui.button type="button" variant="success" icon="play_arrow" wire:click="confirmOpen" size="lg"
+                    :disabled="!$service_type_id">
                     Abrir Ticket
                 </x-ui.button>
             </div>
         @endif
 
         <form wire:submit.prevent="promptSave" class="space-y-6">
+            @if ($ticketOpened || $ticketId)
+            {{-- Tipo de servicio (cambiable incluso después de abrir) --}}
+            @if ($ticketOpened)
+                <div class="pb-5 border-b border-gray-100">
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-gray-500 text-sm">handyman</span>
+                        Tipo de servicio
+                    </label>
+                    @if ($service_type_id)
+                        <div class="flex items-start gap-3 p-3.5 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="material-symbols-outlined text-green-600 text-xl">check_circle</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-gray-900 truncate">{{ $serviceTypes->firstWhere('id', $service_type_id)?->name ?? '—' }}</p>
+                            </div>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <button type="button" wire:click="openServiceTypeModal"
+                                    class="px-2.5 py-1.5 text-xs font-medium text-green-700 hover:text-green-800 hover:bg-green-100 rounded-lg transition">Cambiar</button>
+                            </div>
+                        </div>
+                    @else
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <x-ui.input type="text" wire:model.live.debounce.300ms="serviceTypeSearch"
+                                    placeholder="Buscar tipo de servicio..." icon="search" />
+                                @if (count($serviceTypeResults) > 0)
+                                    <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                        @foreach ($serviceTypeResults as $st)
+                                            <li wire:click="selectServiceType({{ $st->id }})"
+                                                class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
+                                                <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ str_replace('_', ' ', $st->name) }}</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </div>
+                            <button type="button" wire:click="openServiceTypeModal"
+                                class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm whitespace-nowrap"
+                                title="Ver todos los tipos de servicio">
+                                <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                                <span class="hidden sm:inline">Ver todos</span>
+                            </button>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             {{-- Cliente --}}
             <div class="pb-5 border-b border-gray-100">
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
@@ -146,21 +296,59 @@
             <x-ui.textarea wire:model="description" icon="edit_note" rows="3" placeholder="Describe el problema o servicio..."
                 :disabled="!$editingEnabled" required />
 
-            {{-- Tipo de servicio --}}
+            @if ($ticketId && !$ticketOpened)
+            {{-- Tipo de servicio (editable solo en edición) --}}
             <div class="pb-5 border-b border-gray-100">
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
                     <span class="material-symbols-outlined text-gray-500 text-sm">handyman</span>
                     Tipo de servicio <span class="text-red-500">*</span>
                 </label>
-                <x-ui.select wire:model.live="service_type_id" icon="build" :disabled="!$editingEnabled">
-                    @foreach ($serviceTypes as $type)
-                        <option value="{{ $type->id }}">{{ str_replace('_', ' ', $type->name) }}</option>
-                    @endforeach
-                </x-ui.select>
+                @if ($service_type_id)
+                    <div class="flex items-start gap-3 p-3.5 bg-green-50 border border-green-200 rounded-lg">
+                        <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span class="material-symbols-outlined text-green-600 text-xl">check_circle</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-900 truncate">{{ $serviceTypes->firstWhere('id', $service_type_id)?->name }}</p>
+                        </div>
+                        <div class="flex items-center gap-1 flex-shrink-0">
+                            <button type="button" wire:click="openServiceTypeModal"
+                                class="px-2.5 py-1.5 text-xs font-medium text-green-700 hover:text-green-800 hover:bg-green-100 rounded-lg transition">Cambiar</button>
+                            <button type="button" wire:click="clearServiceType"
+                                class="p-1.5 text-green-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Quitar tipo de servicio">
+                                <span class="material-symbols-outlined text-lg">close</span>
+                            </button>
+                        </div>
+                    </div>
+                @else
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <x-ui.input type="text" wire:model.live.debounce.300ms="serviceTypeSearch"
+                                placeholder="Buscar tipo de servicio..." icon="search" />
+                            @if (count($serviceTypeResults) > 0)
+                                <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
+                                    @foreach ($serviceTypeResults as $st)
+                                        <li wire:click="selectServiceType({{ $st->id }})"
+                                            class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
+                                            <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ str_replace('_', ' ', $st->name) }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </div>
+                        <button type="button" wire:click="openServiceTypeModal"
+                            class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm whitespace-nowrap"
+                            title="Ver todos los tipos de servicio">
+                            <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                            <span class="hidden sm:inline">Ver todos</span>
+                        </button>
+                    </div>
+                @endif
                 @error('service_type_id')
                     <span class="text-xs text-red-600 mt-1.5 block font-medium">{{ $message }}</span>
                 @enderror
             </div>
+            @endif
 
             {{-- Base de Conocimiento --}}
             @if (count($knowledgeArticles) > 0)
@@ -290,6 +478,7 @@
                     </x-ui.button>
                 @endif
             </div>
+            @endif
         </form>
     </x-ui.card>
 
@@ -406,6 +595,33 @@
         </div>
     @endif
 
+    {{-- Confirmación para Abrir Ticket --}}
+    @if ($confirmingOpen)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <x-ui.card overflow="visible">
+                    <div class="text-center">
+                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 mb-4">
+                            <span class="material-symbols-outlined text-green-600 text-2xl">play_arrow</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">¿Iniciar ticket?</h3>
+                        <p class="text-sm text-gray-600 mt-2">
+                            Se abrirá un nuevo ticket y comenzará el cronómetro de atención.
+                        </p>
+                    </div>
+                    <x-slot:footer>
+                        <div class="flex justify-center gap-3">
+                            <x-ui.button type="button" variant="success" wire:click="executeOpen">Sí, iniciar</x-ui.button>
+                            <x-ui.button type="button" variant="secondary" @click="open = false" wire:click="cancelOpen">Cancelar</x-ui.button>
+                        </div>
+                    </x-slot:footer>
+                </x-ui.card>
+            </div>
+        </div>
+    @endif
+
     {{-- Confirmación para Generar Ticket (NOC) --}}
     @if ($confirmingGenerate)
         <div x-data="{ open: true }" x-show="open" x-cloak
@@ -464,6 +680,70 @@
                         <x-ui.button type="button" variant="secondary" @click="open = false" wire:click="cancelCancel">Volver</x-ui.button>
                     </x-slot:footer>
                 </x-ui.card>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal de lista de tipos de servicio --}}
+    @if ($showServiceTypeModal)
+        <div x-data="{ show: true }" x-show="show" x-cloak
+            x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+            class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4"
+            style="display: none;">
+            <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                class="relative w-full max-w-lg">
+                <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-blue-600">handyman</span>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-semibold text-gray-900">Seleccionar tipo de servicio</h3>
+                                <p class="text-xs text-gray-500">Elegí un tipo de servicio de la lista</p>
+                            </div>
+                        </div>
+                        <button type="button" wire:click="closeServiceTypeModal" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                            <span class="material-symbols-outlined text-xl">close</span>
+                        </button>
+                    </div>
+                    <div class="p-4 border-b border-gray-100">
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                            <input type="text" wire:model.live.debounce.300ms="serviceTypeListSearch"
+                                placeholder="Filtrar tipo de servicio..."
+                                class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                        </div>
+                    </div>
+                    <div class="p-2 max-h-80 overflow-y-auto">
+                        @forelse($serviceTypeList as $st)
+                            <button type="button" wire:click="selectServiceType({{ $st->id }})"
+                                class="w-full text-left px-4 py-3 hover:bg-blue-50 rounded-xl transition flex items-center justify-between group border-b border-gray-50 last:border-0">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition">
+                                        <span class="material-symbols-outlined text-gray-500 text-lg group-hover:text-blue-600">handyman</span>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-medium text-gray-800 group-hover:text-blue-700 truncate">{{ str_replace('_', ' ', $st->name) }}</p>
+                                    </div>
+                                </div>
+                                <span class="material-symbols-outlined text-gray-300 group-hover:text-blue-500 text-lg">chevron_right</span>
+                            </button>
+                        @empty
+                            <div class="py-12 text-center">
+                                <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">search_off</span>
+                                <p class="text-gray-500 text-sm">No se encontraron tipos de servicio</p>
+                                <p class="text-xs text-gray-400 mt-1">Probá con otro término de búsqueda</p>
+                            </div>
+                        @endforelse
+                    </div>
+                    <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+                        <x-ui.button variant="secondary" wire:click="closeServiceTypeModal">Cerrar</x-ui.button>
+                    </div>
+                </div>
             </div>
         </div>
     @endif

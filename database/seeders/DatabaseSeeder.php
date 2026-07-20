@@ -19,10 +19,11 @@ class DatabaseSeeder extends Seeder
         $this->call(MovementTypeSeeder::class);
         // $this->call(ServiceTypeSeeder::class);
         // $this->call(KnowledgeBaseSeeder::class);
-        
+
         // Datos de demostración (marcas, modelos, categorías, productos)
         // $this->call(DemoDataSeeder::class);
         $this->call(SuppliersSeeder::class);
         $this->call(DeviceStatusSeeder::class);
+        $this->call(PlansSeeder::class);
     }
 }

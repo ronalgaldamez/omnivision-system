@@ -37,6 +37,13 @@ class TicketForm extends Component
 
     public $knowledgeArticles = [];
 
+    // --- SERVICE TYPE SEARCH ---
+    public $serviceTypeSearch = '';
+    public $serviceTypeResults = [];
+    public $showServiceTypeModal = false;
+    public $serviceTypeListSearch = '';
+    public $serviceTypeList = [];
+
     // --- QUICK SERVICE TYPE ---
     public $quickServiceTypeId = '';
 
@@ -53,6 +60,7 @@ class TicketForm extends Component
     public $confirmingSolve = false;     // Modal de confirmación para Solucionar
     public $elapsedSeconds = 0;
     public $confirmingGenerate = false;
+    public $confirmingOpen = false;
 
     // --- CANCELACIÓN ---
     public $confirmingCancel = false;
@@ -176,6 +184,7 @@ class TicketForm extends Component
             $this->plan_id = $draft['plan_id'] ?? '';
             $this->clientSearch = $draft['clientSearch'] ?? '';
             $this->quickServiceTypeId = $draft['quickServiceTypeId'] ?? '';
+            $this->serviceTypeSearch = $draft['serviceTypeSearch'] ?? '';
 
             if (!empty($draft['client_id'])) {
                 $client = Client::with('branch', 'zone')->find($draft['client_id']);
@@ -225,6 +234,7 @@ class TicketForm extends Component
             'plan_id' => $this->plan_id,
             'clientSearch' => $this->clientSearch,
             'quickServiceTypeId' => $this->quickServiceTypeId,
+            'serviceTypeSearch' => $this->serviceTypeSearch,
         ]);
     }
 
@@ -280,6 +290,73 @@ class TicketForm extends Component
     {
         if ($value) {
             $this->service_type_id = $value;
+        }
+    }
+
+    public function updatedServiceTypeSearch()
+    {
+        if (strlen($this->serviceTypeSearch) >= 1) {
+            $this->serviceTypeResults = ServiceType::where('name', 'like', '%' . $this->serviceTypeSearch . '%')
+                ->orderBy('name')
+                ->take(10)
+                ->get();
+        } else {
+            $this->serviceTypeResults = [];
+        }
+    }
+
+    public function selectServiceType($id)
+    {
+        $serviceType = ServiceType::find($id);
+        if (!$serviceType) return;
+
+        $this->service_type_id = $id;
+        $this->serviceTypeSearch = $serviceType->name;
+        $this->serviceTypeResults = [];
+        $this->showServiceTypeModal = false;
+
+        $this->updatedServiceTypeId($id);
+
+        if ($this->ticketOpened && $this->ticketId) {
+            $this->persistOpenTicket('service_type_id');
+        }
+    }
+
+    public function clearServiceType()
+    {
+        $this->service_type_id = '';
+        $this->serviceTypeSearch = '';
+        $this->serviceTypeResults = [];
+
+        $this->updatedServiceTypeId('');
+
+        if ($this->ticketOpened && $this->ticketId) {
+            $this->persistOpenTicket('service_type_id');
+        }
+    }
+
+    public function openServiceTypeModal()
+    {
+        $this->serviceTypeListSearch = '';
+        $this->serviceTypeList = ServiceType::orderBy('name')->get();
+        $this->showServiceTypeModal = true;
+    }
+
+    public function closeServiceTypeModal()
+    {
+        $this->showServiceTypeModal = false;
+        $this->serviceTypeListSearch = '';
+        $this->serviceTypeList = [];
+    }
+
+    public function updatedServiceTypeListSearch()
+    {
+        if (strlen($this->serviceTypeListSearch) >= 1) {
+            $this->serviceTypeList = ServiceType::where('name', 'like', '%' . $this->serviceTypeListSearch . '%')
+                ->orderBy('name')
+                ->get();
+        } else {
+            $this->serviceTypeList = ServiceType::orderBy('name')->get();
         }
     }
 
@@ -420,7 +497,7 @@ class TicketForm extends Component
 
     public function openClientModal()
     {
-        if ($this->hasDraftContent()) {
+        if (!$this->ticketOpened && $this->hasDraftContent()) {
             $this->confirmingNewClient = true;
             return;
         }
@@ -457,7 +534,7 @@ class TicketForm extends Component
     }
 
     #[On('clientCreated')]
-    public function handleClientCreated($id, $name, $phone = null, $service_type_id = null)
+    public function handleClientCreated($id, $name, $phone = null)
     {
         $id = (int) $id;
         $client = Client::with('branch', 'zone')->find($id);
@@ -483,11 +560,6 @@ class TicketForm extends Component
         }
         if ($client->branch_id) {
             $this->branch_id = $client->branch_id;
-        }
-
-        if ($service_type_id) {
-            $this->service_type_id = $service_type_id;
-            $this->updatedServiceTypeId($service_type_id);
         }
 
         // Si el ticket ya está abierto, actualizar BD inmediatamente
@@ -525,15 +597,37 @@ class TicketForm extends Component
 
     // ==================== NUEVOS MÉTODOS ====================
 
+    public function confirmOpen()
+    {
+        $this->validate([
+            'service_type_id' => 'required|exists:service_types,id',
+        ]);
+        $this->confirmingOpen = true;
+    }
+
+    public function executeOpen()
+    {
+        $this->confirmingOpen = false;
+        $this->openTicket();
+    }
+
+    public function cancelOpen()
+    {
+        $this->confirmingOpen = false;
+    }
+
     /**
      * Abre un nuevo ticket: crea el registro en BD, inicia cronómetro, habilita edición.
      */
     public function openTicket()
     {
+        $serviceType = ServiceType::find($this->service_type_id);
+        $serviceName = $serviceType ? $serviceType->name : '';
+
         $ticket = Ticket::create([
             'client_id' => $this->client_id,
             'description' => '',
-            'service_type' => '',
+            'service_type' => $serviceName,
             'priority' => $this->priority ?: 'P3',
             'origin' => $this->origin ?: '',
             'requires_noc' => false,
@@ -627,6 +721,7 @@ class TicketForm extends Component
                 'plan_id' => $planId,
                 'requires_noc' => $this->requires_noc,
                 'status' => 'resolved',
+                'resolved_by' => auth()->id(),
                 'resolved_at' => now(),
                 'l1_ended_at' => now(),
             ]);
