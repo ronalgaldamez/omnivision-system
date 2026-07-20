@@ -25,9 +25,11 @@ class TicketForm extends Component
     public $requires_noc = false;
     public $create_ot = false;
     public $requires_contract = false;
+    public $requires_potential = false;
     public $canToggleNoc = false;
     public $canToggleOt = false;
     public $canToggleContract = false;
+    public $canTogglePotential = false;
     public $status = 'pending';
 
     public $clientSearch = '';
@@ -58,6 +60,10 @@ class TicketForm extends Component
     public $availableZones = [];
     public $availablePlans = [];
     public $selectedPlanPrice = null;
+
+    // --- PLANES DE REFERENCIA (CLIENTE POTENCIAL) ---
+    public $quickReferencePlans = [];
+    public $isPotentialClient = false;
 
     // --- NUEVAS PROPIEDADES PARA CRONOMETRO Y FLUJO ---
     public $editingEnabled = false;      // Controla si los campos están habilitados
@@ -282,15 +288,25 @@ class TicketForm extends Component
             $this->requires_noc = $serviceType->requires_noc;
             $this->create_ot = $serviceType->requires_ot;
             $this->requires_contract = $serviceType->requires_contract;
+            $this->requires_potential = $serviceType->requires_potential;
         } else {
             $this->requires_noc = false;
             $this->create_ot = false;
             $this->requires_contract = false;
+            $this->requires_potential = false;
         }
         // Si requiere contrato, asegurar que noc y ot estén apagados
         if ($serviceType && $serviceType->requires_contract) {
             $this->requires_noc = false;
             $this->create_ot = false;
+        }
+
+        // Detectar Cliente Potencial
+        $this->isPotentialClient = $serviceType && $serviceType->requires_potential;
+        if ($this->isPotentialClient) {
+            $this->quickReferencePlans = Plan::where('is_active', true)->get();
+        } else {
+            $this->quickReferencePlans = collect();
         }
 
         $this->quickServiceTypeId = $value;
@@ -539,6 +555,28 @@ class TicketForm extends Component
         if ($zone && $plan) {
             $this->selectedPlanPrice = $zone->getEffectivePriceForPlan($plan);
         }
+    }
+
+    /**
+     * Agrega una referencia de plan a la descripción del ticket (Cliente Potencial).
+     */
+    public function addPlanReference($planId)
+    {
+        $plan = Plan::find($planId);
+        if (!$plan) return;
+
+        $price = $this->zone_id
+            ? optional(Zone::find($this->zone_id))->getEffectivePriceForPlan($plan)
+            : $plan->base_price;
+
+        $line = "📋 Plan de referencia: {$plan->name}";
+        if ($plan->speed) $line .= " | Velocidad: {$plan->speed}";
+        if ($plan->channels) $line .= " | Canales: {$plan->channels}";
+        $line .= ' | Precio: $' . number_format($price ?? $plan->base_price, 2);
+
+        $this->description = trim($this->description . "\n" . $line);
+
+        $this->dispatch('show-toast', type: 'success', message: "Plan «{$plan->name}» agregado como referencia.");
     }
 
     public $editingClientId = null;

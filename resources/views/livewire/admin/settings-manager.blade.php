@@ -168,6 +168,11 @@
                                     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     <span class="ml-2 text-xs text-gray-500">Requiere Contrato</span>
                                 </label>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" wire:model.live="serviceRequiresPotential.{{ $type->id }}" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <span class="ml-2 text-xs text-gray-500">Cliente Potencial</span>
+                                </label>
                                 <div class="flex items-center gap-1">
                                     <button wire:click="editService({{ $type->id }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
                                         <span class="material-symbols-outlined text-lg">edit</span>
@@ -305,6 +310,10 @@
                                 <label class="flex items-center gap-3">
                                     <input type="radio" wire:model="serviceRequirementTypeModal" value="contract" class="border-gray-300 text-blue-600 focus:ring-blue-500">
                                     <span class="text-sm text-gray-700">Requiere Contrato</span>
+                                </label>
+                                <label class="flex items-center gap-3">
+                                    <input type="radio" wire:model="serviceRequirementTypeModal" value="potential" class="border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700">Cliente Potencial</span>
                                 </label>
                             </div>
                         </div>

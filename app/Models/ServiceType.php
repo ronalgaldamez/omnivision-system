@@ -9,7 +9,7 @@ class ServiceType extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'requires_noc', 'requires_ot', 'requires_contract'];
+    protected $fillable = ['name', 'requires_noc', 'requires_ot', 'requires_contract', 'requires_potential'];
 
     public function articles()
     {

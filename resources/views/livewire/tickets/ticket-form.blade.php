@@ -36,6 +36,8 @@
                             @php $selSt = $serviceTypes->firstWhere('id', $service_type_id); @endphp
                             @if($selSt?->requires_contract)
                                 <x-ui.badge variant="success" size="sm" class="mt-1">Requiere Contrato</x-ui.badge>
+                            @elseif($selSt?->requires_potential)
+                                <x-ui.badge variant="warning" size="sm" class="mt-1">Cliente Potencial</x-ui.badge>
                             @elseif($selSt?->requires_ot)
                                 <x-ui.badge variant="warning" size="sm" class="mt-1">Requiere OT</x-ui.badge>
                             @elseif($selSt?->requires_noc)
@@ -62,6 +64,8 @@
                                             <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ str_replace('_', ' ', $st->name) }}</span>
                                             @if($st->requires_contract)
                                                 <x-ui.badge variant="success" size="sm">Requiere Contrato</x-ui.badge>
+                                            @elseif($st->requires_potential)
+                                                <x-ui.badge variant="warning" size="sm">Cliente Potencial</x-ui.badge>
                                             @elseif($st->requires_ot)
                                                 <x-ui.badge variant="warning" size="sm">Requiere OT</x-ui.badge>
                                             @elseif($st->requires_noc)
@@ -164,6 +168,8 @@
                                 @php $selSt2 = $serviceTypes->firstWhere('id', $service_type_id); @endphp
                                 @if($selSt2?->requires_contract)
                                     <x-ui.badge variant="success" size="sm" class="mt-1">Requiere Contrato</x-ui.badge>
+                                @elseif($selSt2?->requires_potential)
+                                    <x-ui.badge variant="warning" size="sm" class="mt-1">Cliente Potencial</x-ui.badge>
                                 @elseif($selSt2?->requires_ot)
                                     <x-ui.badge variant="warning" size="sm" class="mt-1">Requiere OT</x-ui.badge>
                                 @elseif($selSt2?->requires_noc)
@@ -188,6 +194,8 @@
                                             <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ str_replace('_', ' ', $st->name) }}</span>
                                             @if($st->requires_contract)
                                                 <x-ui.badge variant="success" size="sm">Requiere Contrato</x-ui.badge>
+                                            @elseif($st->requires_potential)
+                                                <x-ui.badge variant="warning" size="sm">Cliente Potencial</x-ui.badge>
                                             @elseif($st->requires_ot)
                                                 <x-ui.badge variant="warning" size="sm">Requiere OT</x-ui.badge>
                                             @elseif($st->requires_noc)
@@ -347,6 +355,37 @@
                                     </div>
                                 </div>
                             @endif
+                            @if ($isPotentialClient)
+                                <div class="col-span-full mt-2 pt-3 border-t border-gray-200">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="material-symbols-outlined text-amber-600 text-sm">sell</span>
+                                        <span class="text-xs font-semibold text-amber-800 uppercase tracking-wide">Planes de Referencia</span>
+                                        <x-ui.badge variant="warning" size="sm">Cliente Potencial</x-ui.badge>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        @forelse($quickReferencePlans as $plan)
+                                            @php
+                                                $refPrice = $zone_id
+                                                    ? optional(\App\Models\Zone::find($zone_id))->getEffectivePriceForPlan($plan)
+                                                    : $plan->base_price;
+                                            @endphp
+                                            <button type="button" wire:click="addPlanReference({{ $plan->id }})"
+                                                class="group relative flex flex-col items-start gap-1 px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 transition text-left min-w-[140px]">
+                                                <span class="text-xs font-semibold text-amber-900 group-hover:text-amber-950">{{ $plan->name }}</span>
+                                                <span class="text-[10px] text-amber-700 leading-tight">
+                                                    @if($plan->speed)⚡ {{ $plan->speed }} @endif
+                                                    @if($plan->channels)📺 {{ $plan->channels }} canales @endif
+                                                </span>
+                                                <span class="text-xs font-bold text-amber-800">${{ number_format($refPrice ?? $plan->base_price, 2) }}</span>
+                                                <span class="absolute inset-0 rounded-lg ring-1 ring-inset ring-amber-300/0 group-hover:ring-amber-400/50 transition"></span>
+                                            </button>
+                                        @empty
+                                            <p class="text-xs text-gray-400 italic">No hay planes activos disponibles.</p>
+                                        @endforelse
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 mt-1.5">Hacé clic en un plan para agregarlo como referencia en la descripción.</p>
+                                </div>
+                            @endif
                             @if ($selectedClient->nro_luz)
                                 <div class="flex items-start gap-2">
                                     <span class="material-symbols-outlined text-gray-400 text-sm mt-0.5">bolt</span>
@@ -393,6 +432,8 @@
                             @php $selSt3 = $serviceTypes->firstWhere('id', $service_type_id); @endphp
                             @if($selSt3?->requires_contract)
                                 <x-ui.badge variant="success" size="sm" class="mt-1">Requiere Contrato</x-ui.badge>
+                            @elseif($selSt3?->requires_potential)
+                                <x-ui.badge variant="warning" size="sm" class="mt-1">Cliente Potencial</x-ui.badge>
                             @elseif($selSt3?->requires_ot)
                                 <x-ui.badge variant="warning" size="sm" class="mt-1">Requiere OT</x-ui.badge>
                             @elseif($selSt3?->requires_noc)
@@ -860,6 +901,8 @@
                                 <div class="flex items-center gap-2 flex-shrink-0">
                                     @if($st->requires_contract)
                                         <x-ui.badge variant="success" size="sm">Requiere Contrato</x-ui.badge>
+                                    @elseif($st->requires_potential)
+                                        <x-ui.badge variant="warning" size="sm">Cliente Potencial</x-ui.badge>
                                     @elseif($st->requires_ot)
                                         <x-ui.badge variant="warning" size="sm">Requiere OT</x-ui.badge>
                                     @elseif($st->requires_noc)
