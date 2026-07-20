@@ -57,6 +57,25 @@
                     </div>
                 </div>
 
+                {{-- Info del Ticket (si existe) --}}
+                @if($ticket_description)
+                <div class="bg-blue-50 rounded-lg border border-blue-200 p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="material-symbols-outlined text-blue-600 text-sm">confirmation_number</span>
+                        <span class="text-xs font-semibold text-blue-800 uppercase tracking-wide">Información del Ticket</span>
+                        @if($ticket_priority)
+                            <x-ui.badge :variant="match($ticket_priority) { 'P1' => 'danger', 'P2' => 'warning', 'P3' => 'info', default => 'neutral' }">
+                                {{ $ticket_priority }}
+                            </x-ui.badge>
+                        @endif
+                    </div>
+                    <p class="text-sm text-blue-900 whitespace-pre-line">{{ $ticket_description }}</p>
+                    @if($ticket_origin)
+                        <p class="text-xs text-blue-600 mt-1">Origen: {{ $ticket_origin }}</p>
+                    @endif
+                </div>
+                @endif
+
                 {{-- Info cliente (readonly) --}}
                 <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 space-y-2">
                     <div class="grid grid-cols-2 gap-3">
@@ -76,12 +95,27 @@
                             <p class="text-xs text-gray-500">Correo</p>
                             <p class="font-medium text-gray-800">{{ $client_email ?? '—' }}</p>
                         </div>
-                        <div class="col-span-2">
+                        <div>
+                            <p class="text-xs text-gray-500">Sucursal</p>
+                            <p class="font-medium text-gray-800">{{ $client_branch_name }}</p>
+                        </div>
+                        <div>
                             <p class="text-xs text-gray-500">Dirección registrada</p>
                             <p class="font-medium text-gray-800">{{ $client_address ?? '—' }}</p>
                         </div>
                     </div>
                 </div>
+
+                {{-- Notas del Cliente (si existen) --}}
+                @if($client_notes)
+                <div class="bg-yellow-50 rounded-lg border border-yellow-200 p-4">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="material-symbols-outlined text-yellow-600 text-sm">notes</span>
+                        <span class="text-xs font-semibold text-yellow-800 uppercase tracking-wide">Notas del Cliente</span>
+                    </div>
+                    <p class="text-sm text-yellow-900 whitespace-pre-line">{{ $client_notes }}</p>
+                </div>
+                @endif
 
                 {{-- Campos editables --}}
                 <div class="space-y-4">
