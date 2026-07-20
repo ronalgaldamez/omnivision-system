@@ -1,8 +1,47 @@
 <div class="max-w-3xl mx-auto">
-    <x-ui.card icon="description" title="Nuevo Contrato" subtitle="Crear contrato de servicio sin ticket previo">
+    <x-ui.card icon="description"
+        title="{{ $fromTicket ? 'Generar Contrato' : 'Nuevo Contrato' }}"
+        subtitle="{{ $fromTicket ? 'Completar datos del contrato desde ticket' : 'Crear contrato de servicio' }}">
+
+        @if($fromTicket && $ticketData)
+            {{-- Datos del ticket (readonly) --}}
+            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
+                <p class="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-3">Datos del ticket #{{ $ticketData->id }}</p>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <p class="text-xs text-indigo-500">Cliente</p>
+                        <p class="font-medium text-gray-800">{{ $ticketData->client?->name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-indigo-500">Servicio</p>
+                        <p class="font-medium text-gray-800">{{ $ticketData->service_type }}</p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="text-xs text-indigo-500">Descripción</p>
+                        <p class="text-gray-700">{{ $ticketData->description }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-indigo-500">Prioridad</p>
+                        <p class="font-medium">
+                            @if($ticketData->priority)
+                                <x-ui.badge :variant="match($ticketData->priority) { 'P1' => 'danger', 'P2' => 'warning', 'P3' => 'info', default => 'neutral' }">
+                                    {{ $ticketData->priority }}
+                                </x-ui.badge>
+                            @else
+                                <span class="text-gray-400">—</span>
+                            @endif
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-indigo-500">Origen</p>
+                        <p class="font-medium text-gray-800">{{ $ticketData->origin ?? '—' }}</p>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         {{-- Cliente --}}
-        <div class="space-y-3 pb-6 border-b border-gray-100" x-data="{ showList: false }">
+        <div class="space-y-3 pb-6 border-b border-gray-100">
             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-2">
                 <span class="material-symbols-outlined text-sm">person</span>
                 Cliente
@@ -14,47 +53,55 @@
                         <p class="font-medium text-gray-800">{{ $selectedClient->name }}</p>
                         <p class="text-xs text-gray-500">{{ $selectedClient->phone }} @if($selectedClient->document_number) | {{ $selectedClient->document_number }} @endif</p>
                     </div>
-                    <button type="button" wire:click="$set('selectedClient', null); $set('client_id', ''); $set('clientSearch', '')"
-                        class="text-sm text-red-600 hover:text-red-700 font-medium">Cambiar</button>
+                    @unless($fromTicket)
+                        <button type="button" wire:click="$set('selectedClient', null); $set('client_id', ''); $set('clientSearch', '')"
+                            class="text-sm text-red-600 hover:text-red-700 font-medium">Cambiar</button>
+                    @endunless
                 </div>
             @else
-                <div class="flex gap-2">
-                    <div class="flex-1 relative">
-                        <x-ui.input type="text" wire:model.live.debounce.300ms="clientSearch" icon="search" placeholder="Buscar cliente por nombre, teléfono o DUI..." />
-                        @if($clientSearchResults)
-                            <div class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                @foreach($clientSearchResults as $client)
-                                    <button type="button" wire:click="selectClient({{ $client['id'] }})"
-                                        class="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm border-b border-gray-100 last:border-0">
-                                        <span class="font-medium text-gray-800">{{ $client['name'] }}</span>
-                                        <span class="text-gray-500 ml-2">{{ $client['phone'] ?? '' }}</span>
-                                    </button>
-                                @endforeach
-                            </div>
-                        @endif
+                @unless($fromTicket)
+                    <div class="flex gap-2">
+                        <div class="flex-1 relative">
+                            <x-ui.input type="text" wire:model.live.debounce.300ms="clientSearch" icon="search" placeholder="Buscar cliente por nombre, teléfono o DUI..." />
+                            @if($clientSearchResults)
+                                <div class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                    @foreach($clientSearchResults as $client)
+                                        <button type="button" wire:click="selectClient({{ $client['id'] }})"
+                                            class="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm border-b border-gray-100 last:border-0">
+                                            <span class="font-medium text-gray-800">{{ $client['name'] }}</span>
+                                            <span class="text-gray-500 ml-2">{{ $client['phone'] ?? '' }}</span>
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                        <button type="button" wire:click="$set('showClientListModal', true)"
+                            class="inline-flex items-center gap-1 px-3 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                            Ver todos
+                        </button>
+                        <button type="button" wire:click="$set('showClientModal', true)"
+                            class="inline-flex items-center gap-1 px-3 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
+                            <span class="material-symbols-outlined text-base">add</span>
+                            Nuevo
+                        </button>
                     </div>
-                    <button type="button" wire:click="$set('showClientListModal', true)"
-                        class="inline-flex items-center gap-1 px-3 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
-                        Ver todos
-                    </button>
-                    <button type="button" wire:click="$set('showClientModal', true)"
-                        class="inline-flex items-center gap-1 px-3 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
-                        <span class="material-symbols-outlined text-base">add</span>
-                        Nuevo
-                    </button>
-                </div>
+                @endunless
             @endif
         </div>
 
         {{-- Datos del contrato --}}
         <div class="space-y-4 pt-6">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <x-ui.select wire:model.live="service_type" label="Tipo de servicio" required icon="settings">
-                    <option value="">Seleccionar tipo de servicio</option>
-                    @foreach($availableServiceTypes as $st)
-                        <option value="{{ $st['name'] }}">{{ $st['name'] }}</option>
-                    @endforeach
-                </x-ui.select>
+                @if($fromTicket)
+                    <x-ui.input type="text" label="Tipo de servicio" icon="settings" value="{{ $ticketData->service_type ?? '' }}" readonly />
+                @else
+                    <x-ui.select wire:model.live="service_type" label="Tipo de servicio" required icon="settings">
+                        <option value="">Seleccionar tipo de servicio</option>
+                        @foreach($availableServiceTypes as $st)
+                            <option value="{{ $st['name'] }}">{{ $st['name'] }}</option>
+                        @endforeach
+                    </x-ui.select>
+                @endif
 
                 <x-ui.select wire:model.live="plan_id" label="Plan" icon="assignment">
                     <option value="">Sin plan</option>
@@ -97,9 +144,11 @@
 
         {{-- Botones --}}
         <div class="flex justify-end gap-3 pt-6 border-t border-gray-100 mt-6">
-            <a href="{{ route('contracts.index') }}" wire:navigate
+            <a href="{{ $fromTicket ? route('contracts.inbox') : route('contracts.index') }}" wire:navigate
                 class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">Cancelar</a>
-            <x-ui.button type="button" variant="primary" icon="save" wire:click="save">Guardar contrato</x-ui.button>
+            <x-ui.button type="button" variant="primary" icon="save" wire:click="save">
+                {{ $fromTicket ? 'Guardar contrato y generar OT' : 'Guardar contrato' }}
+            </x-ui.button>
         </div>
     </x-ui.card>
 

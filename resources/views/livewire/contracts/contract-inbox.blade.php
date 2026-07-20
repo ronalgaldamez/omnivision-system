@@ -99,8 +99,8 @@
                                                 Aceptar
                                             </x-ui.button>
                                         @elseif($activeTab === 'in_progress')
-                                            <x-ui.button variant="success" icon="assignment" size="sm" wire:click="promptGenerateContract({{ $ticket->id }})">
-                                                Generar Contrato + OT
+                                            <x-ui.button variant="success" icon="assignment" size="sm" href="{{ route('contracts.workflow', ['ticket_id' => $ticket->id]) }}">
+                                                Iniciar contratación
                                             </x-ui.button>
                                         @elseif($activeTab === 'completed')
                                             <x-ui.button variant="secondary" icon="account_tree" size="sm" href="{{ route('sla.ticket-timeline', $ticket->id) }}">
@@ -199,8 +199,8 @@
                                 </x-ui.button>
                             @endif
                             @if($activeTab === 'in_progress')
-                                <x-ui.button variant="success" icon="assignment" wire:click="promptGenerateContract({{ $selectedTicket->id }})">
-                                    Generar Contrato + OT
+                                <x-ui.button variant="success" icon="assignment" href="{{ route('contracts.workflow', ['ticket_id' => $selectedTicket->id]) }}">
+                                    Iniciar contratación
                                 </x-ui.button>
                             @endif
                             <x-ui.button variant="secondary" wire:click="closeModal">Cerrar</x-ui.button>
@@ -211,28 +211,24 @@
         </div>
     @endif
 
-    {{-- Confirmation Modal --}}
-    @if($confirmingAction)
+    {{-- Reject Confirmation Modal --}}
+    @if($confirmingReject)
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
             style="display: none;">
             <div class="relative mx-auto p-5 w-full max-w-md">
                 <x-ui.card overflow="visible">
                     <div class="text-center">
-                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-indigo-100 mb-4">
-                            <span class="material-symbols-outlined text-indigo-600 text-2xl">help</span>
+                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 mb-4">
+                            <span class="material-symbols-outlined text-red-600 text-2xl">warning</span>
                         </div>
-                        <h3 class="text-lg font-semibold text-gray-900">Confirmar acción</h3>
+                        <h3 class="text-lg font-semibold text-gray-900">Rechazar ticket</h3>
                         <p class="text-sm text-gray-600 mt-2">
-                            @if($confirmingAction === 'generate')
-                                Se creará un contrato activo y una orden de trabajo vinculada al ticket #{{ $confirmingTicketId }}.
-                            @elseif($confirmingAction === 'reject')
-                                El ticket #{{ $confirmingTicketId }} será cancelado y no se generará contrato.
-                            @endif
+                            El ticket #{{ $confirmingReject }} será cancelado y no se generará contrato.
                         </p>
                     </div>
                     <x-slot:footer>
-                        <x-ui.button variant="primary" wire:click="executeConfirmedAction">Sí, continuar</x-ui.button>
+                        <x-ui.button variant="danger" wire:click="rejectTicket">Sí, rechazar</x-ui.button>
                         <x-ui.button variant="secondary" @click="open = false" wire:click="cancelConfirmation">Cancelar</x-ui.button>
                     </x-slot:footer>
                 </x-ui.card>

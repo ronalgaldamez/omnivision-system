@@ -245,16 +245,32 @@
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                         class="material-symbols-outlined text-base">settings_overscan</span> Bandeja
                                 NOC</a>@endcan
-                                @can('view_contracts_panel_menu')<a href="{{ route('contracts.inbox') }}"
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- CONTRATOS --}}
+                    @if(auth()->user()->can('access_contracts_inbox') || auth()->user()->can('view_contracts_panel_menu'))
+                        <div x-data="{ open: false }">
+                            <button @click="open = !open"
+                                class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50/80 transition text-sm font-medium">
+                                <span class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-base">description</span>
+                                    <span x-show="sidebarOpen">Contratos</span>
+                                </span>
+                                <span x-show="sidebarOpen" class="material-symbols-outlined text-sm transition-transform"
+                                    :class="open ? 'rotate-180' : ''">expand_more</span>
+                            </button>
+                            <div x-show="open" x-collapse class="ml-4 space-y-1 mt-1">
+                                @can('access_contracts_inbox')<a href="{{ route('contracts.inbox') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
-                                        class="material-symbols-outlined text-base">description</span> Bandeja
-                                Contratos</a>@endcan
+                                class="material-symbols-outlined text-base">inbox</span> Bandeja de Entrada</a>@endcan
                                 <a href="{{ route('contracts.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
-                                        class="material-symbols-outlined text-base">description</span> Contratos</a>
+                                class="material-symbols-outlined text-base">list_alt</span> Todos los Contratos</a>
                                 <a href="{{ route('contracts.create') }}" wire:navigate
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
-                                        class="material-symbols-outlined text-base">add_comment</span> Nuevo Contrato</a>
+                                        class="material-symbols-outlined text-base">add_circle</span> Nuevo Contrato</a>
                             </div>
                         </div>
                     @endif

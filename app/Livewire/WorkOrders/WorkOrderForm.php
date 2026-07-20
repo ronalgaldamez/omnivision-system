@@ -14,6 +14,7 @@ use Illuminate\Validation\ValidationException;
 class WorkOrderForm extends Component
 {
     public $orderId;
+    public $ticket_id;
     public $technician_id = null;
     public $client_id;
     public $latitude;
@@ -82,9 +83,10 @@ class WorkOrderForm extends Component
     {
         $user = Auth::user();
         $this->canAssign = $user->can('assign technicians');
-        $this->canEditNocAndService = !$id && !$ticket_id; // solo editable en creación de OT pura
+        $this->canEditNocAndService = !$id && !$ticket_id;
 
         $this->isPureOT = !$id && !$ticket_id;
+        $this->ticket_id = $ticket_id;
 
         if ($id) {
             // Edición de OT existente
@@ -319,7 +321,10 @@ class WorkOrderForm extends Component
             $orderData['code'] = $this->generateWorkOrderCode();
             $orderData['created_by'] = Auth::id();
 
-            // Si es OT pura, arrancar SLA
+            if ($this->ticket_id) {
+                $orderData['ticket_id'] = $this->ticket_id;
+            }
+
             if ($this->isPureOT) {
                 $orderData['sla_started_at'] = now();
             }

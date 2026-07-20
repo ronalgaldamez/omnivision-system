@@ -121,6 +121,7 @@ Route::middleware(['auth'])->group(function () {
     // ========== CONTRACTS ==========
     Route::get('/contracts', \App\Livewire\Contracts\ContractIndex::class)->name('contracts.index');
     Route::get('/contracts/create', \App\Livewire\Contracts\ContractForm::class)->name('contracts.create');
+    Route::get('/contracts/workflow/{ticket_id}', \App\Livewire\Contracts\ContractWorkflow::class)->name('contracts.workflow');
     Route::middleware(['can:access_contracts_inbox'])->group(function () {
         Route::get('/contratos/inbox', \App\Livewire\Contracts\ContractInbox::class)->name('contracts.inbox');
     });
@@ -259,3 +260,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/sla/work-orders/{id}/timeline', \App\Livewire\Sla\WorkOrderTimeline::class)->name('sla.work-order-timeline');
     });
 });
+
+// ========== RUTAS PÚBLICAS (sin autenticación) ==========
+Route::get('/contratos/firmar/{token}', \App\Livewire\Public\SignContract::class)->name('public.contract.sign');

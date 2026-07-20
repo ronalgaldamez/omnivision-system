@@ -10,6 +10,7 @@ use App\Models\ServiceType;
 use App\Models\Zone;
 use App\Models\Plan;
 use App\Services\SlaService;
+use App\Services\WorkOrderService;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
@@ -964,26 +965,12 @@ class TicketForm extends Component
 
     protected function createWorkOrder($ticket)
     {
-        $zoneId = $ticket->zone_id ?? $this->zone_id;
-        $planId = $ticket->plan_id ?? $this->plan_id;
-
-        // Obtener coordenadas del cliente asociado
-        $client = $ticket->client;
-        $latitude = $client?->latitude;
-        $longitude = $client?->longitude;
-
-        \App\Models\WorkOrder::create([
-            'ticket_id' => $ticket->id,
-            'client_id' => $ticket->client_id,
-            'description' => $ticket->description,
-            'service_type' => $ticket->service_type,
+        app(WorkOrderService::class)->createFromTicket($ticket, [
+            'zone_id' => $ticket->zone_id ?? $this->zone_id,
+            'plan_id' => $ticket->plan_id ?? $this->plan_id,
             'requires_noc' => $ticket->requires_noc ?? $this->requires_noc,
-            'zone_id' => $zoneId ?: null,
-            'plan_id' => $planId ?: null,
-            'latitude' => $latitude,
-            'longitude' => $longitude,
-            'status' => 'pending',
-            'created_by' => Auth::id(),
+            'latitude' => $ticket->client?->latitude,
+            'longitude' => $ticket->client?->longitude,
         ]);
     }
 
@@ -1100,7 +1087,7 @@ class TicketForm extends Component
 
         session()->flash('message', 'Ticket enviado a Contratos para revisión.');
 
-        return redirect()->route('tickets.index');
+        return redirect()->route('contracts.inbox', ['ticket_id' => $this->ticketId]);
     }
 
     public function cancelGenerateContract()

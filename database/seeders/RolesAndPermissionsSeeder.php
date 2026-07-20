@@ -324,13 +324,32 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── Sales Rep / Vendedor ──
         $salesRep->syncPermissions([
-            PermissionEnum::AccessTechnicians,
+            // Clientes (gestionar)
+            PermissionEnum::ViewClients,
+            PermissionEnum::CreateClients,
+            PermissionEnum::EditClients,
+
+            // Contratos / Ventas
+            PermissionEnum::AccessContractsInbox,
+            PermissionEnum::ViewContractsPanelMenu,
+
+            // Tickets (solo lectura y creación)
+            PermissionEnum::AccessSupport,
+            PermissionEnum::ViewAnyTickets,
+            PermissionEnum::ViewOwnTickets,
+            PermissionEnum::CreateTickets,
+            PermissionEnum::ViewNewTicketMenu,
+            PermissionEnum::ViewAllTicketsMenu,
+
+            // Órdenes de trabajo (para seguimiento)
             PermissionEnum::ViewWorkOrders,
             PermissionEnum::CreateWorkOrders,
-            PermissionEnum::EditWorkOrders,
             PermissionEnum::ViewOwnWorkOrders,
             PermissionEnum::ViewWorkOrdersMenu,
-            PermissionEnum::CaptureCoordinates,
+
+            // Dashboard
+            PermissionEnum::ViewDashboard,
+            PermissionEnum::ViewSlaDashboard,
         ]);
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();

@@ -84,6 +84,11 @@ class Ticket extends Model
         return $this->hasOne(WorkOrder::class);
     }
 
+    public function contract()
+    {
+        return $this->hasOne(Contract::class);
+    }
+
     public function zone()
     {
         return $this->belongsTo(Zone::class);
