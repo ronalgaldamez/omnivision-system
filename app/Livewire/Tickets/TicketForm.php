@@ -129,8 +129,7 @@ class TicketForm extends Component
             $this->service_type_id = $serviceType ? $serviceType->id : '';
 
             if ($this->service_type_id) {
-                $this->loadKnowledgeArticles($this->service_type_id);
-                $this->calculatePriorityFromArticles();
+                $this->updatedServiceTypeId($this->service_type_id);
             }
 
             $this->loadAvailableZones();
@@ -209,6 +208,8 @@ class TicketForm extends Component
             $this->requires_noc = $draft['requires_noc'] ?? false;
             $this->create_ot = $draft['create_ot'] ?? false;
             $this->requires_contract = $draft['requires_contract'] ?? false;
+            $this->requires_potential = $draft['requires_potential'] ?? false;
+            $this->isPotentialClient = $draft['isPotentialClient'] ?? false;
             $this->zone_id = $draft['zone_id'] ?? '';
             $this->plan_id = $draft['plan_id'] ?? '';
             $this->clientSearch = $draft['clientSearch'] ?? '';
@@ -224,8 +225,7 @@ class TicketForm extends Component
             }
 
             if ($this->service_type_id) {
-                $this->loadKnowledgeArticles($this->service_type_id);
-                $this->calculatePriorityFromArticles();
+                $this->updatedServiceTypeId($this->service_type_id);
             }
 
             if ($this->zone_id) {
@@ -233,6 +233,11 @@ class TicketForm extends Component
             }
             if ($this->plan_id) {
                 $this->updatedPlanId($this->plan_id);
+            }
+
+            // Re-derivar planes de referencia desde el tipo de servicio restaurado
+            if ($this->isPotentialClient || $this->requires_contract) {
+                $this->quickReferencePlans = Plan::where('is_active', true)->get();
             }
 
             $this->isDraft = true;
@@ -264,6 +269,8 @@ class TicketForm extends Component
             'requires_noc' => $this->requires_noc,
             'create_ot' => $this->create_ot,
             'requires_contract' => $this->requires_contract,
+            'requires_potential' => $this->requires_potential,
+            'isPotentialClient' => $this->isPotentialClient,
             'zone_id' => $this->zone_id,
             'plan_id' => $this->plan_id,
             'clientSearch' => $this->clientSearch,
@@ -752,6 +759,9 @@ class TicketForm extends Component
 
         session()->put('open_ticket_id', $this->ticketId);
         session()->forget('ticket_draft');
+
+        // Cargar Planes de Referencia según el tipo de servicio seleccionado
+        $this->updatedServiceTypeId($this->service_type_id);
 
         $this->elapsedSeconds = 0;   // cronómetro arranca en 0
     }

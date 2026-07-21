@@ -356,36 +356,77 @@
                                 </div>
                             @endif
                             @if(count($quickReferencePlans) > 0)
+                                @php
+                                    $internetPlans = $quickReferencePlans->where('service_type', 'internet');
+                                    $comboPlans = $quickReferencePlans->where('service_type', 'internet_cable');
+                                @endphp
                                 <div class="col-span-full mt-2 pt-3 border-t border-gray-200">
-                                    <div class="flex items-center gap-2 mb-2">
+                                    <div class="flex items-center gap-2 mb-3">
                                         <span class="material-symbols-outlined text-amber-600 text-sm">sell</span>
                                         <span class="text-xs font-semibold text-amber-800 uppercase tracking-wide">Planes de Referencia</span>
                                         @if($isPotentialClient)
                                             <x-ui.badge variant="warning" size="sm">Cliente Potencial</x-ui.badge>
                                         @endif
                                     </div>
-                                    <div class="flex flex-wrap gap-2">
-                                        @forelse($quickReferencePlans as $plan)
-                                            @php
-                                                $refPrice = $zone_id
-                                                    ? optional(\App\Models\Zone::find($zone_id))->getEffectivePriceForPlan($plan)
-                                                    : $plan->base_price;
-                                            @endphp
-                                            <button type="button" wire:click="addPlanReference({{ $plan->id }})"
-                                                class="group relative flex flex-col items-start gap-1 px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 transition text-left min-w-[140px]">
-                                                <span class="text-xs font-semibold text-amber-900 group-hover:text-amber-950">{{ $plan->name }}</span>
-                                                <span class="text-[10px] text-amber-700 leading-tight">
-                                                    @if($plan->speed)⚡ {{ $plan->speed }} @endif
-                                                    @if($plan->channels)📺 {{ $plan->channels }} canales @endif
-                                                </span>
-                                                <span class="text-xs font-bold text-amber-800">${{ number_format($refPrice ?? $plan->base_price, 2) }}</span>
-                                                <span class="absolute inset-0 rounded-lg ring-1 ring-inset ring-amber-300/0 group-hover:ring-amber-400/50 transition"></span>
-                                            </button>
-                                        @empty
-                                            <p class="text-xs text-gray-400 italic">No hay planes activos disponibles.</p>
-                                        @endforelse
-                                    </div>
-                                    <p class="text-[10px] text-gray-400 mt-1.5">Hacé clic en un plan para agregarlo como referencia en la descripción.</p>
+
+                                    {{-- Internet --}}
+                                    @if($internetPlans->count() > 0)
+                                        <div class="mb-3">
+                                            <div class="flex items-center gap-1.5 mb-2">
+                                                <span class="material-symbols-outlined text-blue-600 text-sm">wifi</span>
+                                                <span class="text-xs font-semibold text-blue-800 uppercase tracking-wide">Internet</span>
+                                            </div>
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach($internetPlans as $plan)
+                                                    @php
+                                                        $refPrice = $zone_id
+                                                            ? optional(\App\Models\Zone::find($zone_id))->getEffectivePriceForPlan($plan)
+                                                            : $plan->base_price;
+                                                    @endphp
+                                                    <button type="button" wire:click="addPlanReference({{ $plan->id }})"
+                                                        class="group relative flex flex-col items-start gap-1 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 hover:border-blue-400 transition text-left min-w-[140px]">
+                                                        <span class="text-xs font-semibold text-blue-900 group-hover:text-blue-950">{{ $plan->name }}</span>
+                                                        <span class="text-[10px] text-blue-700 leading-tight">
+                                                            @if($plan->speed)⚡ {{ $plan->speed }} @endif
+                                                        </span>
+                                                        <span class="text-xs font-bold text-blue-800">${{ number_format($refPrice ?? $plan->base_price, 2) }}</span>
+                                                        <span class="absolute inset-0 rounded-lg ring-1 ring-inset ring-blue-300/0 group-hover:ring-blue-400/50 transition"></span>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    {{-- Internet + Cable --}}
+                                    @if($comboPlans->count() > 0)
+                                        <div>
+                                            <div class="flex items-center gap-1.5 mb-2">
+                                                <span class="material-symbols-outlined text-orange-600 text-sm">live_tv</span>
+                                                <span class="text-xs font-semibold text-orange-800 uppercase tracking-wide">Internet + Cable</span>
+                                            </div>
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach($comboPlans as $plan)
+                                                    @php
+                                                        $refPrice = $zone_id
+                                                            ? optional(\App\Models\Zone::find($zone_id))->getEffectivePriceForPlan($plan)
+                                                            : $plan->base_price;
+                                                    @endphp
+                                                    <button type="button" wire:click="addPlanReference({{ $plan->id }})"
+                                                        class="group relative flex flex-col items-start gap-1 px-3 py-2 rounded-lg border border-orange-200 bg-orange-50 hover:bg-orange-100 hover:border-orange-400 transition text-left min-w-[140px]">
+                                                        <span class="text-xs font-semibold text-orange-900 group-hover:text-orange-950">{{ $plan->name }}</span>
+                                                        <span class="text-[10px] text-orange-700 leading-tight">
+                                                            @if($plan->speed)⚡ {{ $plan->speed }} @endif
+                                                            @if($plan->channels) 📺 {{ $plan->channels }} canales @endif
+                                                        </span>
+                                                        <span class="text-xs font-bold text-orange-800">${{ number_format($refPrice ?? $plan->base_price, 2) }}</span>
+                                                        <span class="absolute inset-0 rounded-lg ring-1 ring-inset ring-orange-300/0 group-hover:ring-orange-400/50 transition"></span>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <p class="text-[10px] text-gray-400 mt-2">Hacé clic en un plan para agregarlo como referencia en la descripción.</p>
                                 </div>
                             @endif
                             @if ($selectedClient->nro_luz)
