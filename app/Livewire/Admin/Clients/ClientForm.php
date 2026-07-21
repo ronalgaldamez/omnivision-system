@@ -308,13 +308,13 @@ class ClientForm extends Component
 
     public function updatedSvcDistrito($value)
     {
-        $this->resetSvcCascade('distrito');
+        $this->resetSvcCascade('municipio');
         if (!$value) return;
 
-        // Auto-asignar sucursal desde la zona seleccionada
-        $zone = Zone::find($value);
-        if ($zone && $zone->branch_id) {
-            $this->branch_id = $zone->branch_id;
+        // Auto-asignar sucursal subiendo por el árbol de padres hasta encontrar branch_id
+        $branchId = $this->resolveBranchIdFromZone($value);
+        if ($branchId) {
+            $this->branch_id = $branchId;
             $this->loadSvcDepartamentos();
         }
 
@@ -340,14 +340,33 @@ class ClientForm extends Component
             return;
         }
 
-        // Auto-asignar sucursal desde la zona seleccionada
-        $zone = Zone::find($value);
-        if ($zone && $zone->branch_id) {
-            $this->branch_id = $zone->branch_id;
+        // Auto-asignar sucursal subiendo por el árbol de padres hasta encontrar branch_id
+        $branchId = $this->resolveBranchIdFromZone($value);
+        if ($branchId) {
+            $this->branch_id = $branchId;
             $this->loadSvcDepartamentos();
         }
 
         $this->loadPlansForZone($value);
+    }
+
+    /**
+     * Sube por el árbol de padres de una zona hasta encontrar una que tenga branch_id.
+     */
+    private function resolveBranchIdFromZone(int $zoneId): ?int
+    {
+        $zone = Zone::with('parent.parent.parent')->find($zoneId);
+        if (!$zone) return null;
+
+        $current = $zone;
+        while ($current) {
+            if ($current->branch_id) {
+                return (int) $current->branch_id;
+            }
+            $current = $current->parent;
+        }
+
+        return null;
     }
 
     private function loadPlansForZone($zoneId)
