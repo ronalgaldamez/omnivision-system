@@ -79,6 +79,9 @@ class UsersSeeder extends Seeder
             $users[] = ['name' => $nombre, 'email' => $this->email($nombre, 'sac'), 'role' => 'atencion_al_cliente', 'branch_code' => $branchCode];
         }
 
+        // ── Staff de Contratos (prueba) ──
+        $users[] = ['name' => 'Staff Contratos', 'email' => 'staff@omnivision.com', 'role' => 'contracts_staff', 'branch_code' => 'MATRIZ'];
+
         foreach ($users as $data) {
             $branchId = $data['branch_code']
                 ? ($branches[$data['branch_code']] ?? null)

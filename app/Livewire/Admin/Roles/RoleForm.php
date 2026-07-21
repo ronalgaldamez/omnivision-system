@@ -71,6 +71,7 @@ class RoleForm extends Component
             'Clientes'              => $this->categorize(PermissionEnum::clients()),
             'Administración'        => $this->categorize(PermissionEnum::admin()),
             'SLA'                   => $this->categorize(PermissionEnum::sla()),
+            'Contratos'             => $this->categorize(PermissionEnum::contracts()),
             'Campo / Móvil'         => $this->categorize(PermissionEnum::field()),
             'Supervisor de Zona'    => $this->categorize(PermissionEnum::supervisor()),
         ];
