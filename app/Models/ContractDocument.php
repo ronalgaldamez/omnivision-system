@@ -27,9 +27,7 @@ class ContractDocument extends Model
         return match ($this->type) {
             'dui_front'     => 'DUI (Frente)',
             'dui_back'      => 'DUI (Reverso)',
-            'selfie'        => 'Selfie con documento',
             'receipt'       => 'Recibo de luz',
-            'proof_of_address' => 'Comprobante de domicilio',
             default         => ucfirst(str_replace('_', ' ', $this->type)),
         };
     }

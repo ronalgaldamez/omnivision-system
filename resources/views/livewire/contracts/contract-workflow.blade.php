@@ -400,22 +400,6 @@
                         @endif
                     </div>
 
-                    {{-- Selfie --}}
-                    <div class="border-2 border-dashed rounded-xl p-4 text-center
-                        {{ isset($uploadedDocuments['selfie']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-gray-400' }}">
-                        <span class="material-symbols-outlined text-3xl
-                            {{ isset($uploadedDocuments['selfie']) ? 'text-green-500' : 'text-gray-300' }}">photo_camera</span>
-                        <p class="text-sm font-medium text-gray-700 mt-1">Selfie con documento</p>
-                        @if(isset($uploadedDocuments['selfie']))
-                            <p class="text-xs text-green-600 mt-1">✓ Subido</p>
-                            <button wire:click="removeDocument('selfie')"
-                                class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
-                        @else
-                            <input type="file" wire:model="selfie" accept="image/*"
-                                class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
-                        @endif
-                    </div>
-
                     {{-- Recibo de luz --}}
                     <div class="border-2 border-dashed rounded-xl p-4 text-center
                         {{ isset($uploadedDocuments['receipt']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-gray-400' }}">
@@ -431,6 +415,63 @@
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
                         @endif
                     </div>
+                </div>
+
+                {{-- Enlace público para que el cliente suba sus documentos --}}
+                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="material-symbols-outlined text-indigo-600 text-sm">cloud_upload</span>
+                        <span class="text-xs font-semibold text-indigo-800 uppercase tracking-wide">Subida del cliente</span>
+                    </div>
+                    <p class="text-xs text-indigo-700 mb-3">
+                        Enviale un enlace al cliente para que suba sus documentos desde el celular.
+                    </p>
+
+                    @if($docs_link)
+                        <div class="bg-white rounded-lg border border-indigo-200 p-3 space-y-2">
+                            <div class="flex items-center gap-2">
+                                <input type="text" value="{{ $docs_link }}" readonly
+                                    class="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded bg-gray-50 font-mono"
+                                    onclick="this.select(); navigator.clipboard?.writeText(this.value);" />
+                                <button type="button" onclick="navigator.clipboard?.writeText('{{ $docs_link }}');"
+                                    class="text-xs px-2 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">content_copy</span>
+                                    Copiar
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-indigo-500">Compartí este enlace con el cliente por WhatsApp</p>
+                            <div class="flex gap-2 pt-1">
+                                <button wire:click="refreshUploadedDocs"
+                                    class="text-xs px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">refresh</span>
+                                    Actualizar documentos
+                                </button>
+                                <button wire:click="$set('docs_link', null)"
+                                    class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
+                                    Cerrar
+                                </button>
+                            </div>
+                            @if(count($clientUploadedDocs) > 0)
+                                <div class="mt-2 pt-2 border-t border-indigo-100">
+                                    <p class="text-xs font-medium text-indigo-700 mb-1">Documentos recibidos:</p>
+                                    <ul class="space-y-1">
+                                        @foreach($clientUploadedDocs as $doc)
+                                            <li class="flex items-center gap-1.5 text-xs text-green-700">
+                                                <span class="material-symbols-outlined text-sm">check_circle</span>
+                                                {{ match($doc['type']) { 'dui_front' => 'DUI (Frente)', 'dui_back' => 'DUI (Reverso)', 'receipt' => 'Recibo de luz', default => $doc['type'] } }}
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        </div>
+                    @else
+                        <button wire:click="generateDocsLink"
+                            class="px-3 py-2 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-sm">share</span>
+                            Generar enlace para el cliente
+                        </button>
+                    @endif
                 </div>
 
                 <div class="flex justify-between pt-4 border-t border-gray-100">

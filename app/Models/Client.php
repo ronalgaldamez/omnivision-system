@@ -18,6 +18,9 @@ class Client extends Model
         'departamento', 'municipio', 'distrito',
         'gps_token',
         'gps_token_expires_at',
+        'docs_token',
+        'docs_token_expires_at',
+        'uploaded_docs',
     ];
 
     protected $casts = [
@@ -25,6 +28,8 @@ class Client extends Model
         'longitude' => 'float',
         'contract_date' => 'date',
         'gps_token_expires_at' => 'datetime',
+        'docs_token_expires_at' => 'datetime',
+        'uploaded_docs' => 'array',
     ];
 
     public function tickets()
