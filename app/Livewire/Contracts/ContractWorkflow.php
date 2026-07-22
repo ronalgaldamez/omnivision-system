@@ -15,6 +15,7 @@ use App\Services\ContractPdfService;
 use App\Services\ContractSignatureService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ContractWorkflow extends Component
 {
@@ -36,6 +37,7 @@ class ContractWorkflow extends Component
     public $installation_address;
     public $latitude;
     public $longitude;
+    public $gps_link = null;
 
     // ─── Datos del Ticket ───
     public $ticket_description;
@@ -508,6 +510,90 @@ class ContractWorkflow extends Component
         }
 
         return redirect()->route('contracts.index');
+    }
+
+    // ─── GPS / Coordenadas ───
+
+    public function generateGpsLink()
+    {
+        if (!$this->client_id) {
+            $this->dispatch('show-toast', type: 'error', message: 'No hay cliente seleccionado.');
+            return;
+        }
+
+        $client = Client::find($this->client_id);
+        if (!$client) {
+            $this->dispatch('show-toast', type: 'error', message: 'Cliente no encontrado.');
+            return;
+        }
+
+        // Si el token actual es válido (no expirado), reusarlo
+        $now = now();
+        if ($client->gps_token && $client->gps_token_expires_at && $client->gps_token_expires_at->greaterThan($now)) {
+            $this->gps_link = route('public.contract.coordinates', ['token' => $client->gps_token]);
+            $this->dispatch('show-toast', type: 'success', message: 'Enlace vigente reutilizado.');
+            return;
+        }
+
+        // Generar nuevo token con caducidad de 24 horas
+        $client->update([
+            'gps_token' => (string) Str::uuid(),
+            'gps_token_expires_at' => $now->copy()->addHours(24),
+        ]);
+
+        $this->gps_link = route('public.contract.coordinates', ['token' => $client->gps_token]);
+
+        $this->dispatch('show-toast', type: 'success', message: 'Enlace generado. Enviáselo al cliente por WhatsApp.');
+    }
+
+    public function getGpsWhatsAppUrl(): ?string
+    {
+        $client = Client::find($this->client_id);
+        if (!$client || !$client->phone) return null;
+
+        // Asegurar que el enlace GPS esté generado
+        if (!$this->gps_link) {
+            $this->generateGpsLink();
+        }
+        if (!$this->gps_link) return null;
+
+        // Limpiar el teléfono: dejar solo dígitos
+        $phone = preg_replace('/\D/', '', $client->phone);
+        // Si empieza con 0, quitarlo; si no tiene código de país, asumir 503
+        if (strlen($phone) === 8) {
+            $phone = '503' . $phone;
+        } elseif (strlen($phone) === 9 && $phone[0] === '0') {
+            $phone = '503' . substr($phone, 1);
+        }
+
+        $message = "Hola, soy de Omnivisión. Para continuar con tu instalación necesitamos tus coordenadas. Hacé clic en este enlace y permití el acceso a tu ubicación:\n\n";
+        $message .= $this->gps_link . "\n\n";
+        $message .= "⚠️ Si no estás en casa en este momento, compartí este enlace con un familiar o la persona que esté en la dirección de instalación para que capture las coordenadas desde ahí. ¡Gracias!";
+
+        return 'https://wa.me/' . $phone . '?text=' . urlencode($message);
+    }
+
+    public function sendGpsViaWhatsApp()
+    {
+        $url = $this->getGpsWhatsAppUrl();
+        if (!$url) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente no tiene un número de teléfono registrado.');
+            return;
+        }
+
+        $this->dispatch('open-whatsapp', url: $url);
+    }
+
+    public function refreshCoordinates()
+    {
+        if (!$this->client_id) return;
+
+        $client = Client::find($this->client_id);
+        if ($client && $client->latitude && $client->longitude) {
+            $this->latitude = $client->latitude;
+            $this->longitude = $client->longitude;
+            $this->dispatch('show-toast', type: 'success', message: 'Coordenadas actualizadas desde el cliente.');
+        }
     }
 
     // ─── Utilidades ───
