@@ -23,6 +23,7 @@ class ContractWorkflow extends Component
 
     public $ticket_id;
     public $step = 1;
+    protected $queryString = ['step'];
     public $contract_id = null;
 
     // ─── Step 1: Datos del Cliente ───
