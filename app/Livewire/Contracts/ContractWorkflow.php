@@ -134,7 +134,7 @@ class ContractWorkflow extends Component
         $this->availableZones = Zone::orderBy('name')->get(['id', 'name'])->toArray();
 
         if ($ticket_id) {
-            $ticket = Ticket::with('client.branch', 'client.zone')->find($ticket_id);
+            $ticket = Ticket::with('client.branch', 'client.zone.parent.parent', 'zone.parent.parent')->find($ticket_id);
             if (!$ticket || !$ticket->requires_contract) {
                 abort(404);
             }
@@ -156,13 +156,14 @@ class ContractWorkflow extends Component
             $this->service_type = $ticket->service_type;
             $this->zone_id = $ticket->zone_id ?? $client->zone_id ?? '';
 
-            // ─── Sucursal: si el cliente no tiene branch, intentar desde la zona ───
+            // ─── Sucursal: resolver desde cliente, zona del cliente o zona del ticket ───
+            // Busca primero branch directo del cliente, luego sube por el árbol de zonas
             if ($client->branch) {
                 $this->client_branch_name = $client->branch->name;
-            } elseif ($client->zone && $client->zone->branch) {
-                $this->client_branch_name = $client->zone->branch->name;
             } else {
-                $this->client_branch_name = '—';
+                $branch = $this->resolveBranchFromZone($client->zone)
+                      ?? $this->resolveBranchFromZone($ticket->zone);
+                $this->client_branch_name = $branch?->name ?? '—';
             }
 
             // ─── Datos del Ticket ───
@@ -518,6 +519,24 @@ class ContractWorkflow extends Component
         <p><strong>Tercero:</strong> El período mínimo de contratación es de 12 meses. En caso de cancelación anticipada, el cliente deberá pagar una penalidad equivalente al 25% del saldo restante.</p>
         <p><strong>Cuarto:</strong> El proveedor garantiza el servicio con una disponibilidad mínima del 99.5% mensual, excluyendo mantenimientos programados y casos de fuerza mayor.</p>
         <p><strong>Quinto:</strong> El cliente autoriza el uso de sus datos personales únicamente para fines de facturación y soporte técnico, conforme a la Ley de Protección de Datos.</p>';
+    }
+
+    /**
+     * Sube por el árbol de padres de una zona hasta encontrar una que tenga branch_id.
+     */
+    private function resolveBranchFromZone($zone): ?\App\Models\Branch
+    {
+        if (!$zone) return null;
+
+        $current = $zone;
+        while ($current) {
+            if ($current->branch) {
+                return $current->branch;
+            }
+            $current = $current->parent;
+        }
+
+        return null;
     }
 
     public function render()

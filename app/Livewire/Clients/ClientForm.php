@@ -19,6 +19,8 @@ class ClientForm extends Component
     public $notes = '';
 
     // === DATOS DEL CLIENTE ===
+    public $zone_id = '';
+    public $branch_id = '';
     public $departamento = '';
     public $municipio = '';
     public $distrito = '';
@@ -72,6 +74,8 @@ class ClientForm extends Component
             $this->departamento_id = $draft['departamento_id'] ?? '';
             $this->municipio_id = $draft['municipio_id'] ?? '';
             $this->distrito_id = $draft['distrito_id'] ?? '';
+            $this->zone_id = $draft['zone_id'] ?? '';
+            $this->branch_id = $draft['branch_id'] ?? '';
             $this->notes = $draft['notes'] ?? '';
             $this->phones = $draft['phones'] ?? [];
         }
@@ -108,6 +112,8 @@ class ClientForm extends Component
         $this->departamento_id = '';
         $this->municipio_id = '';
         $this->distrito_id = '';
+        $this->zone_id = $client->zone_id ?? '';
+        $this->branch_id = $client->branch_id ?? '';
         $this->notes = $client->notes ?? '';
         $this->phones = $client->phones->map(fn($p) => ['number' => $p->number, 'type' => $p->type])->toArray();
     }
@@ -161,8 +167,15 @@ class ClientForm extends Component
         if ($value) {
             $dis = Zone::find($value);
             $this->distrito = $dis?->name ?? '';
+            $this->zone_id = (int) $value;
+
+            $branchId = $this->resolveBranchIdFromZone($value);
+            if ($branchId) {
+                $this->branch_id = $branchId;
+            }
         } else {
             $this->distrito = '';
+            $this->zone_id = '';
         }
     }
 
@@ -189,6 +202,8 @@ class ClientForm extends Component
             'departamento_id',
             'municipio_id',
             'distrito_id',
+            'zone_id',
+            'branch_id',
             'notes'
         ];
         if (in_array($property, $draftFields) || str_starts_with($property, 'phones')) {
@@ -205,6 +220,8 @@ class ClientForm extends Component
                 'departamento_id' => $this->departamento_id,
                 'municipio_id' => $this->municipio_id,
                 'distrito_id' => $this->distrito_id,
+                'zone_id' => $this->zone_id,
+                'branch_id' => $this->branch_id,
                 'notes' => $this->notes,
                 'phones' => $this->phones,
             ]);
@@ -215,6 +232,25 @@ class ClientForm extends Component
     {
         $raw = \App\Models\Setting::get('document_types', 'DUI,NIT,Pasaporte');
         return array_filter(array_map('trim', explode(',', $raw)));
+    }
+
+    /**
+     * Sube por el árbol de padres de una zona hasta encontrar una que tenga branch_id.
+     */
+    private function resolveBranchIdFromZone(int $zoneId): ?int
+    {
+        $zone = Zone::with('parent.parent.parent')->find($zoneId);
+        if (!$zone) return null;
+
+        $current = $zone;
+        while ($current) {
+            if ($current->branch_id) {
+                return (int) $current->branch_id;
+            }
+            $current = $current->parent;
+        }
+
+        return null;
     }
 
     public function addPhone()
@@ -258,6 +294,8 @@ class ClientForm extends Component
             'departamento' => $this->departamento ?: null,
             'municipio' => $this->municipio ?: null,
             'distrito' => $this->distrito ?: null,
+            'zone_id' => $this->zone_id ?: null,
+            'branch_id' => $this->branch_id ?: null,
             'notes' => $this->notes,
         ];
 
