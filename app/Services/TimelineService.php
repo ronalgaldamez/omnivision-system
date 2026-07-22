@@ -116,6 +116,65 @@ class TimelineService
         }
 
         // ==========================================
+        // ÁREA: CONTRATOS
+        // ==========================================
+        if ($ticket->requires_contract && $ticket->contracts_escalated_at) {
+            $contractSub = [];
+
+            // Espera Contratos (desde que se escaló hasta que inician revisión)
+            if ($ticket->contracts_started_at && $ticket->contracts_started_at->gt($ticket->contracts_escalated_at)) {
+                $waitContract = $ticket->contracts_escalated_at->diffInSeconds($ticket->contracts_started_at);
+                $contractSub[] = $this->makeSubSegment(
+                    'Espera',
+                    $ticket->contracts_escalated_at,
+                    $ticket->contracts_started_at,
+                    $waitContract,
+                    false,
+                    true,
+                );
+            }
+
+            // Revisión Contratos
+            if ($ticket->contracts_started_at) {
+                $contractEnd = $ticket->contracts_ended_at ?? $now;
+                $activeContract = $ticket->contracts_started_at->diffInSeconds($contractEnd);
+                $isContractActive = !$ticket->contracts_ended_at && !$isResolved;
+                $contractSub[] = $this->makeSubSegment(
+                    'Revisión',
+                    $ticket->contracts_started_at,
+                    $ticket->contracts_ended_at,
+                    $activeContract,
+                    $isContractActive,
+                    (bool)($ticket->contracts_ended_at ?? $isResolved),
+                );
+            } elseif (!$ticket->contracts_started_at) {
+                // Escalado pero nadie lo ha tomado aún
+                $waitContractPending = $ticket->contracts_escalated_at->diffInSeconds($now);
+                $contractSub[] = $this->makeSubSegment(
+                    'Pendiente de revisión',
+                    $ticket->contracts_escalated_at,
+                    null,
+                    $waitContractPending,
+                    true,
+                    false,
+                );
+            }
+
+            $totalContract = array_sum(array_column($contractSub, 'durationSeconds'));
+            $areas[] = $this->makeArea(
+                key: 'contracts',
+                label: 'Contratos',
+                responsible: null,
+                icon: 'description',
+                color: 'purple',
+                totalSeconds: $totalContract,
+                subSegments: $contractSub,
+                isActive: !$ticket->contracts_ended_at && !$isResolved && $ticket->contracts_started_at,
+                isCompleted: (bool)($ticket->contracts_ended_at ?? $isResolved),
+            );
+        }
+
+        // ==========================================
         // ÁREA: OT / Supervisor + Técnico
         // ==========================================
         if ($ticket->workOrder) {

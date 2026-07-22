@@ -244,8 +244,13 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::ViewDashboard,
         ]);
 
-        // ── Contratos Inbox (solo admin por defecto; se asigna manualmente a quien corresponda) ──
-        // (admin ya tiene todos los permisos)
+        // ── Staff de Contratos ──
+        $contractsStaff = Role::firstOrCreate(['name' => 'contracts_staff'], ['prefix' => 'CT']);
+        $contractsStaff->syncPermissions([
+            PermissionEnum::AccessContractsInbox,
+            PermissionEnum::ViewContractsPanelMenu,
+            PermissionEnum::AccessAllBranches,
+        ]);
 
         // ── NOC ──
         $noc->syncPermissions([

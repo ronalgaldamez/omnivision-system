@@ -133,6 +133,7 @@ class UserForm extends Component
             'Clientes'              => PermissionEnum::clients(),
             'Administración'        => PermissionEnum::admin(),
             'SLA'                   => PermissionEnum::sla(),
+            'Contratos'             => PermissionEnum::contracts(),
             'Campo / Móvil'         => PermissionEnum::field(),
             'Supervisor de Zona'    => PermissionEnum::supervisor(),
         ];

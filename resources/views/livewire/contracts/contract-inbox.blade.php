@@ -1,5 +1,21 @@
 <div class="max-w-7xl mx-auto" wire:poll.15s="loadTickets">
     <x-ui.card icon="description" title="Bandeja Contratos" subtitle="Gestión de tickets que requieren generación de contrato">
+        {{-- Filtro por sucursal (solo visible para admin) --}}
+        @if(auth()->user()->can('access_all_branches') && $availableBranches->isNotEmpty())
+            <div class="mb-4 -mx-6 px-6 pb-4 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-gray-400 text-base">store</span>
+                    <select wire:model.live="branchFilter"
+                        class="text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-2 px-3">
+                        <option value="">Todas las sucursales</option>
+                        @foreach($availableBranches as $branch)
+                            <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+        @endif
+
         {{-- Tabs --}}
         <div class="border-b border-gray-200 -mx-6 px-6">
             <nav class="flex gap-1" role="tablist">
@@ -7,6 +23,18 @@
                     $tabLabels = ['pending' => 'Pendientes', 'in_progress' => 'En revisión', 'completed' => 'Completados'];
                     $tabIcons = ['pending' => 'hourglass_empty', 'in_progress' => 'rate_review', 'completed' => 'check_circle'];
                     $baseQuery = \App\Models\Ticket::where('requires_contract', true);
+
+                    if (!empty($branchFilter)) {
+                        $baseQuery->where(function ($q) {
+                            $q->whereHas('client', function ($cq) {
+                                $cq->where('branch_id', $branchFilter)
+                                    ->orWhereHas('zone', function ($zq) {
+                                        $zq->where('branch_id', $branchFilter);
+                                    });
+                            });
+                        });
+                    }
+
                     $tabCounts = [
                         'pending' => (clone $baseQuery)->whereNull('contracts_started_at')->whereNotIn('status', ['resolved', 'cancelled'])->count(),
                         'in_progress' => (clone $baseQuery)->whereNotNull('contracts_started_at')->whereNull('contracts_ended_at')->count(),
@@ -95,7 +123,7 @@
                                             Ver
                                         </x-ui.button>
                                         @if($activeTab === 'pending')
-                                            <x-ui.button variant="primary" icon="play_arrow" size="sm" wire:click="acceptTicket({{ $ticket->id }})">
+                                            <x-ui.button variant="primary" icon="play_arrow" size="sm" wire:click="promptAccept({{ $ticket->id }})">
                                                 Aceptar
                                             </x-ui.button>
                                         @elseif($activeTab === 'in_progress')
@@ -194,7 +222,7 @@
                     <x-slot:footer>
                         <div class="flex justify-end gap-2">
                             @if($activeTab === 'pending' && is_null($selectedTicket->contracts_started_at))
-                                <x-ui.button variant="primary" icon="play_arrow" wire:click="acceptTicket({{ $selectedTicket->id }})">
+                                <x-ui.button variant="primary" icon="play_arrow" wire:click="promptAccept({{ $selectedTicket->id }})">
                                     Aceptar ticket
                                 </x-ui.button>
                             @endif
@@ -204,6 +232,52 @@
                                 </x-ui.button>
                             @endif
                             <x-ui.button variant="secondary" wire:click="closeModal">Cerrar</x-ui.button>
+                        </div>
+                    </x-slot:footer>
+                </x-ui.card>
+            </div>
+        </div>
+    @endif
+
+    {{-- Accept Confirmation Modal --}}
+    @if($confirmingAccept)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <x-ui.card overflow="visible">
+                    @php $ticket = $tickets->firstWhere('id', $confirmingAccept); @endphp
+                    <div class="text-center">
+                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-indigo-100 mb-4">
+                            <span class="material-symbols-outlined text-indigo-600 text-2xl">rate_review</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Aceptar ticket para contratación</h3>
+                        <p class="text-sm text-gray-600 mt-2">
+                            ¿Estás seguro de aceptar el ticket
+                            <span class="font-semibold">#{{ $confirmingAccept }}</span>
+                            @if($ticket)
+                                de <span class="font-semibold">{{ $ticket->client?->name ?? 'Sin cliente' }}</span>?
+                            @endif
+                        </p>
+                        @if($ticket)
+                            <div class="mt-3 bg-gray-50 rounded-lg p-3 text-left text-sm space-y-1">
+                                <p><span class="text-gray-500">Servicio:</span> <span class="font-medium">{{ $ticket->service_type }}</span></p>
+                                <p><span class="text-gray-500">Prioridad:</span>
+                                    <x-ui.badge :variant="match($ticket->priority) { 'P1' => 'danger', 'P2' => 'warning', 'P3' => 'info', default => 'neutral' }" class="ml-1">
+                                        {{ $ticket->priority }}
+                                    </x-ui.badge>
+                                </p>
+                                @if($ticket->description)
+                                    <p class="text-gray-500 truncate" title="{{ $ticket->description }}">{{ Str::limit($ticket->description, 80) }}</p>
+                                @endif
+                            </div>
+                        @endif
+                        <p class="text-xs text-gray-400 mt-3">El ticket pasará a estado "En revisión" para iniciar el flujo de contratación.</p>
+                    </div>
+                    <x-slot:footer>
+                        <div class="flex justify-end gap-2">
+                            <x-ui.button variant="primary" wire:click="executeAccept">Sí, aceptar</x-ui.button>
+                            <x-ui.button variant="secondary" wire:click="cancelAccept">Cancelar</x-ui.button>
                         </div>
                     </x-slot:footer>
                 </x-ui.card>
@@ -229,7 +303,7 @@
                     </div>
                     <x-slot:footer>
                         <x-ui.button variant="danger" wire:click="rejectTicket">Sí, rechazar</x-ui.button>
-                        <x-ui.button variant="secondary" @click="open = false" wire:click="cancelConfirmation">Cancelar</x-ui.button>
+                        <x-ui.button variant="secondary" wire:click="cancelConfirmation">Cancelar</x-ui.button>
                     </x-slot:footer>
                 </x-ui.card>
             </div>

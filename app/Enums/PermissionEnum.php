@@ -126,6 +126,7 @@ enum PermissionEnum: string
     // ─── Contratos ───
     case AccessContractsInbox   = 'access_contracts_inbox';
     case ViewContractsPanelMenu = 'view_contracts_panel_menu';
+    case AccessAllBranches      = 'access_all_branches';
 
     // ─── Otros ───
     case CaptureCoordinates     = 'capture coordinates';
