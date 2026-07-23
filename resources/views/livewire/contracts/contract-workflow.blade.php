@@ -152,7 +152,8 @@
 
                         @if($gps_link)
                             {{-- Enlace generado --}}
-                            <div class="bg-white rounded-lg border border-indigo-200 p-3 space-y-2">
+                            <div class="bg-white rounded-lg border border-indigo-200 p-3 space-y-2"
+                                wire:poll.5000ms="{{ $waitingForCoordinates ? 'refreshCoordinates' : '' }}">
                                 <div class="flex items-center gap-2">
                                     <input type="text" value="{{ $gps_link }}" readonly
                                         class="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded bg-gray-50 font-mono"
@@ -163,14 +164,28 @@
                                         Copiar
                                     </button>
                                 </div>
-                                <p class="text-[10px] text-indigo-500">Compartí este enlace con el cliente por WhatsApp</p>
+                                <div class="flex items-center justify-between">
+                                    <p class="text-[10px] text-indigo-500">Compartí este enlace con el cliente por WhatsApp</p>
+                                    <button wire:click="sendGpsViaWhatsApp"
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                                        title="Enviar por WhatsApp">
+                                        <span class="material-symbols-outlined text-xs">chat</span>
+                                        WhatsApp
+                                    </button>
+                                </div>
+                                @if($waitingForCoordinates)
+                                    <div class="flex items-center gap-2 text-[10px] text-indigo-400">
+                                        <div class="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                                        Esperando coordenadas del cliente...
+                                    </div>
+                                @endif
                                 <div class="flex gap-2 pt-1">
                                     <button wire:click="refreshCoordinates"
                                         class="text-xs px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 flex items-center gap-1">
                                         <span class="material-symbols-outlined text-sm">refresh</span>
-                                        Actualizar coordenadas
+                                        Actualizar
                                     </button>
-                                    <button wire:click="$set('gps_link', null)"
+                                    <button wire:click="$set('gps_link', null); $set('waitingForCoordinates', false)"
                                         class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
                                         Cerrar
                                     </button>
@@ -365,17 +380,27 @@
                 </div>
 
                 {{-- Document uploaders --}}
+                @php
+                    $preview = fn($path, $mime) => $path ? $this->getDocPreviewUrl($path) : null;
+                @endphp
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {{-- DUI Frente (obligatorio) --}}
-                    <div class="border-2 border-dashed rounded-xl p-4 text-center
+                    <div class="border-2 border-dashed rounded-xl p-4 text-center relative
                         {{ isset($uploadedDocuments['dui_front']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
                         <span class="material-symbols-outlined text-3xl
                             {{ isset($uploadedDocuments['dui_front']) ? 'text-green-500' : 'text-gray-300' }}">badge</span>
                         <p class="text-sm font-medium text-gray-700 mt-1">DUI (Frente) *</p>
                         @if(isset($uploadedDocuments['dui_front']))
-                            <p class="text-xs text-green-600 mt-1">✓ Subido</p>
+                            @php $url = $preview($uploadedDocuments['dui_front']['path'], $uploadedDocuments['dui_front']['mime_type'] ?? ''); @endphp
+                            @if($url && str_starts_with($uploadedDocuments['dui_front']['mime_type'] ?? '', 'image/'))
+                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer" onclick="window.open('{{ $url }}','_blank')" />
+                            @elseif($url)
+                                <a href="{{ $url }}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+                                    <span class="material-symbols-outlined text-sm">visibility</span> Ver PDF
+                                </a>
+                            @endif
                             <button wire:click="removeDocument('dui_front')"
-                                class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
+                                class="text-xs text-red-600 hover:text-red-700 mt-1 block mx-auto">Eliminar</button>
                         @else
                             <input type="file" wire:model="dui_front" accept="image/*,.pdf"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
@@ -384,15 +409,22 @@
                     </div>
 
                     {{-- DUI Reverso (obligatorio) --}}
-                    <div class="border-2 border-dashed rounded-xl p-4 text-center
+                    <div class="border-2 border-dashed rounded-xl p-4 text-center relative
                         {{ isset($uploadedDocuments['dui_back']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
                         <span class="material-symbols-outlined text-3xl
                             {{ isset($uploadedDocuments['dui_back']) ? 'text-green-500' : 'text-gray-300' }}">badge</span>
                         <p class="text-sm font-medium text-gray-700 mt-1">DUI (Reverso) *</p>
                         @if(isset($uploadedDocuments['dui_back']))
-                            <p class="text-xs text-green-600 mt-1">✓ Subido</p>
+                            @php $url = $preview($uploadedDocuments['dui_back']['path'], $uploadedDocuments['dui_back']['mime_type'] ?? ''); @endphp
+                            @if($url && str_starts_with($uploadedDocuments['dui_back']['mime_type'] ?? '', 'image/'))
+                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer" onclick="window.open('{{ $url }}','_blank')" />
+                            @elseif($url)
+                                <a href="{{ $url }}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+                                    <span class="material-symbols-outlined text-sm">visibility</span> Ver PDF
+                                </a>
+                            @endif
                             <button wire:click="removeDocument('dui_back')"
-                                class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
+                                class="text-xs text-red-600 hover:text-red-700 mt-1 block mx-auto">Eliminar</button>
                         @else
                             <input type="file" wire:model="dui_back" accept="image/*,.pdf"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
@@ -401,15 +433,22 @@
                     </div>
 
                     {{-- Recibo de luz --}}
-                    <div class="border-2 border-dashed rounded-xl p-4 text-center
+                    <div class="border-2 border-dashed rounded-xl p-4 text-center relative
                         {{ isset($uploadedDocuments['receipt']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-gray-400' }}">
                         <span class="material-symbols-outlined text-3xl
                             {{ isset($uploadedDocuments['receipt']) ? 'text-green-500' : 'text-gray-300' }}">receipt</span>
                         <p class="text-sm font-medium text-gray-700 mt-1">Recibo de luz</p>
                         @if(isset($uploadedDocuments['receipt']))
-                            <p class="text-xs text-green-600 mt-1">✓ Subido</p>
+                            @php $url = $preview($uploadedDocuments['receipt']['path'], $uploadedDocuments['receipt']['mime_type'] ?? ''); @endphp
+                            @if($url && str_starts_with($uploadedDocuments['receipt']['mime_type'] ?? '', 'image/'))
+                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer" onclick="window.open('{{ $url }}','_blank')" />
+                            @elseif($url)
+                                <a href="{{ $url }}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+                                    <span class="material-symbols-outlined text-sm">visibility</span> Ver PDF
+                                </a>
+                            @endif
                             <button wire:click="removeDocument('receipt')"
-                                class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
+                                class="text-xs text-red-600 hover:text-red-700 mt-1 block mx-auto">Eliminar</button>
                         @else
                             <input type="file" wire:model="receipt" accept="image/*,.pdf"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
@@ -439,7 +478,15 @@
                                     Copiar
                                 </button>
                             </div>
-                            <p class="text-[10px] text-indigo-500">Compartí este enlace con el cliente por WhatsApp</p>
+                            <div class="flex items-center justify-between">
+                                <p class="text-[10px] text-indigo-500">Compartí este enlace con el cliente por WhatsApp</p>
+                                <button wire:click="sendDocsViaWhatsApp"
+                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                                    title="Enviar por WhatsApp">
+                                    <span class="material-symbols-outlined text-xs">chat</span>
+                                    WhatsApp
+                                </button>
+                            </div>
                             <div class="flex gap-2 pt-1">
                                 <button wire:click="refreshUploadedDocs"
                                     class="text-xs px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 flex items-center gap-1">
@@ -453,15 +500,31 @@
                             </div>
                             @if(count($clientUploadedDocs) > 0)
                                 <div class="mt-2 pt-2 border-t border-indigo-100">
-                                    <p class="text-xs font-medium text-indigo-700 mb-1">Documentos recibidos:</p>
-                                    <ul class="space-y-1">
+                                    <p class="text-xs font-medium text-indigo-700 mb-2">Documentos recibidos:</p>
+                                    <div class="grid grid-cols-3 gap-2">
                                         @foreach($clientUploadedDocs as $doc)
-                                            <li class="flex items-center gap-1.5 text-xs text-green-700">
-                                                <span class="material-symbols-outlined text-sm">check_circle</span>
-                                                {{ match($doc['type']) { 'dui_front' => 'DUI (Frente)', 'dui_back' => 'DUI (Reverso)', 'receipt' => 'Recibo de luz', default => $doc['type'] } }}
-                                            </li>
+                                            @php
+                                                $label = match($doc['type']) { 'dui_front' => 'DUI (Frente)', 'dui_back' => 'DUI (Reverso)', 'receipt' => 'Recibo de luz', default => $doc['type'] };
+                                                $url = $this->getDocPreviewUrl($doc['path']);
+                                            @endphp
+                                            <div class="bg-white rounded-lg border border-green-200 p-2 text-center">
+                                                @if($url && isset($doc['mime_type']) && str_starts_with($doc['mime_type'], 'image/'))
+                                                    <img src="{{ $url }}"
+                                                        class="max-h-16 mx-auto rounded cursor-pointer hover:opacity-80"
+                                                        onclick="window.open('{{ $url }}','_blank')" />
+                                                @elseif($url)
+                                                    <a href="{{ $url }}" target="_blank"
+                                                        class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+                                                        <span class="material-symbols-outlined text-sm">visibility</span>
+                                                        Ver
+                                                    </a>
+                                                @else
+                                                    <span class="material-symbols-outlined text-sm text-green-600">check_circle</span>
+                                                @endif
+                                                <p class="text-[10px] text-gray-600 mt-1 truncate">{{ $label }}</p>
+                                            </div>
                                         @endforeach
-                                    </ul>
+                                    </div>
                                 </div>
                             @endif
                         </div>

@@ -39,6 +39,7 @@ class ContractWorkflow extends Component
     public $latitude;
     public $longitude;
     public $gps_link = null;
+    public $waitingForCoordinates = false;
 
     // ─── Datos del Ticket ───
     public $ticket_description;
@@ -557,6 +558,7 @@ class ContractWorkflow extends Component
         ]);
 
         $this->gps_link = route('public.contract.coordinates', ['token' => $client->gps_token]);
+        $this->waitingForCoordinates = true;
 
         $this->dispatch('show-toast', type: 'success', message: 'Enlace generado. Enviáselo al cliente por WhatsApp.');
     }
@@ -607,6 +609,7 @@ class ContractWorkflow extends Component
         if ($client && $client->latitude && $client->longitude) {
             $this->latitude = $client->latitude;
             $this->longitude = $client->longitude;
+            $this->waitingForCoordinates = false;
             $this->dispatch('show-toast', type: 'success', message: 'Coordenadas actualizadas desde el cliente.');
         }
     }
@@ -685,6 +688,16 @@ class ContractWorkflow extends Component
         }
 
         $this->dispatch('open-whatsapp', url: $url);
+    }
+
+    public function getDocPreviewUrl($path): ?string
+    {
+        if (!$path) return null;
+        try {
+            return Storage::disk('s3')->temporaryUrl($path, now()->addMinutes(10));
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     public function refreshUploadedDocs()

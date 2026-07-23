@@ -86,6 +86,45 @@ class UploadDocuments extends Component
         $this->dispatch('show-toast', type: 'success', message: $labels[$field] . ' subido correctamente.');
     }
 
+    public function uploadFromCamera($field, $base64Data)
+    {
+        $base64Data = preg_replace('/^data:image\/\w+;base64,/', '', $base64Data);
+        $imageData = base64_decode($base64Data);
+        if (!$imageData) {
+            $this->dispatch('capture-error', message: 'No se pudo decodificar la imagen.');
+            return;
+        }
+
+        $folder = 'clients/' . $this->client->id . '/documents';
+        $path = $folder . '/' . uniqid('cam_') . '.jpg';
+
+        Storage::disk('s3')->put($path, $imageData);
+
+        $docs = $this->client->uploaded_docs ?? [];
+        $docs = array_filter($docs, fn($d) => $d['type'] !== $field);
+        $docs[] = [
+            'type' => $field,
+            'path' => $path,
+            'original_name' => $field . '.jpg',
+            'mime_type' => 'image/jpeg',
+            'file_size' => strlen($imageData),
+            'uploaded_at' => now()->toIso8601String(),
+        ];
+
+        $this->client->update(['uploaded_docs' => array_values($docs)]);
+        $this->uploaded = $this->client->fresh()->uploaded_docs ?? [];
+
+        $labels = [
+            'dui_front' => 'DUI (Frente)',
+            'dui_back' => 'DUI (Reverso)',
+            'receipt' => 'Recibo de luz',
+        ];
+
+        $this->dispatch('document-captured', field: $field, label: $labels[$field] ?? $field);
+    }
+
+
+
     public function updatedDuiFront()
     {
         $this->upload('dui_front');

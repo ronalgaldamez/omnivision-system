@@ -10,7 +10,6 @@
         </div>
 
         @if($expired)
-            {{-- Enlace expirado --}}
             <x-ui.card>
                 <div class="text-center py-8">
                     <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
@@ -23,7 +22,6 @@
                 </div>
             </x-ui.card>
         @elseif($successMessage)
-            {{-- Confirmación --}}
             <x-ui.card>
                 <div class="text-center py-8">
                     <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
@@ -51,6 +49,12 @@
                         @else
                             <input type="file" wire:model="dui_front" accept="image/*,.pdf"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                            <button type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
+                                x-data
+                                @click="openCamera('dui_front', $wire)">
+                                <span class="material-symbols-outlined text-sm">photo_camera</span>
+                                Capturar con cámara
+                            </button>
                             @error('dui_front') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
                         @endif
                     </div>
@@ -67,6 +71,12 @@
                         @else
                             <input type="file" wire:model="dui_back" accept="image/*,.pdf"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                            <button type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
+                                x-data
+                                @click="openCamera('dui_back', $wire)">
+                                <span class="material-symbols-outlined text-sm">photo_camera</span>
+                                Capturar con cámara
+                            </button>
                             @error('dui_back') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
                         @endif
                     </div>
@@ -83,6 +93,12 @@
                         @else
                             <input type="file" wire:model="receipt" accept="image/*,.pdf"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                            <button type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
+                                x-data
+                                @click="openCamera('receipt', $wire)">
+                                <span class="material-symbols-outlined text-sm">photo_camera</span>
+                                Capturar con cámara
+                            </button>
                             @error('receipt') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
                         @endif
                     </div>
@@ -97,16 +113,188 @@
                     </div>
                 </div>
             </x-ui.card>
+
+            {{-- Camera Overlay --}}
+            <div id="camera-overlay" class="fixed inset-0 z-50 bg-black hidden flex flex-col" style="position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100dvh;">
+                {{-- Video container (flex-1 para que ocupe el espacio disponible) --}}
+                <div class="relative flex-1 flex items-center justify-center bg-black min-h-0">
+                    <video id="camera-video" autoplay playsinline
+                        class="w-full h-full object-contain"></video>
+                    <canvas id="camera-canvas" class="hidden"></canvas>
+
+                    {{-- Corner guides --}}
+                    <div class="absolute inset-4 border-2 border-white/40 rounded-2xl pointer-events-none"></div>
+
+                    {{-- Loading --}}
+                    <div id="camera-loading" class="absolute inset-0 bg-black/60 flex items-center justify-center hidden">
+                        <div class="text-white text-center">
+                            <div class="w-10 h-10 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                            <p class="text-sm">Procesando documento...</p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Controls --}}
+                <div class="bg-gray-900 px-6 py-5 flex items-center justify-center gap-6 shrink-0">
+                    <button onclick="closeCamera()"
+                        class="px-5 py-2.5 rounded-xl bg-gray-700 text-white text-sm font-medium hover:bg-gray-600 transition-colors">
+                        Cancelar
+                    </button>
+                    <button onclick="captureDocument()"
+                        class="w-16 h-16 rounded-full bg-white flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg active:scale-95 transition-transform">
+                        <span class="w-12 h-12 rounded-full bg-red-500"></span>
+                    </button>
+                </div>
+            </div>
+
         @endif
 
-        {{-- Footer --}}
         <p class="text-center text-xs text-gray-400 mt-6">Omnivisión · Todos los derechos reservados</p>
     </div>
 </div>
 
 @push('scripts')
+<script src="{{ asset('js/jscanify.min.js') }}"></script>
+<script async src="https://docs.opencv.org/4.9.0/opencv.js"></script>
 <script>
+    let activeField = null;
+    let activeWire = null;
+    let mediaStream = null;
+    let scanner = null;
+    let scannerReady = false;
+
+    async function openCamera(field, wire) {
+        activeField = field;
+        activeWire = wire;
+
+        try {
+            // Asegurar que el loading esté oculto al abrir la cámara
+            const loading = document.getElementById('camera-loading');
+            if (loading) loading.classList.add('hidden');
+
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+            });
+            const video = document.getElementById('camera-video');
+            video.srcObject = mediaStream;
+            await video.play();
+
+            // Init jscanify
+            try {
+                scanner = new jscanify();
+                scannerReady = true;
+            } catch (e) {
+                scannerReady = false;
+            }
+
+            document.getElementById('camera-overlay').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        } catch (e) {
+            alert('No se pudo acceder a la cámara. Usá la opción de subir archivo.');
+        }
+    }
+
+
+    function closeCamera() {
+        // Ocultar loading explícitamente
+        const loading = document.getElementById('camera-loading');
+        if (loading) loading.classList.add('hidden');
+
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(t => t.stop());
+            mediaStream = null;
+        }
+        document.getElementById('camera-overlay').classList.add('hidden');
+        document.body.style.overflow = '';
+        activeField = null;
+        activeWire = null;
+    }
+
+    async function captureDocument() {
+        if (!activeWire || !activeField) return;
+
+        const video = document.getElementById('camera-video');
+        const loading = document.getElementById('camera-loading');
+        loading.classList.remove('hidden');
+
+        try {
+            const w = video.videoWidth;
+            const h = video.videoHeight;
+            let canvas;
+
+            // Intentar con jscanify (recorte inteligente)
+            if (typeof cv !== 'undefined' && scannerReady) {
+                try {
+                    const resultCanvas = scanner.extractDocument(video);
+                    if (resultCanvas && resultCanvas.width > 0 && resultCanvas.height > 0) {
+                        canvas = resultCanvas;
+                    }
+                } catch (e) {
+                    // fallback silencioso
+                }
+            }
+
+            // Fallback: capturar frame completo del video
+            if (!canvas) {
+                canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+            }
+
+            // Convertir a base64 y enviar como método Livewire
+            const base64Data = canvas.toDataURL('image/jpeg', 0.7);
+
+            const timeout = setTimeout(() => closeCamera(), 15000);
+
+            activeWire.call('uploadFromCamera', activeField, base64Data)
+                .catch(() => { clearTimeout(timeout); closeCamera(); });
+        } catch (e) {
+            closeCamera();
+        }
+    }
+
+
     document.addEventListener('livewire:init', () => {
+        // Escuchar evento de documento capturado exitosamente
+        Livewire.on('document-captured', ({ field, label }) => {
+            const loading = document.getElementById('camera-loading');
+            if (loading) {
+                // Mostrar check verde brevemente
+                loading.innerHTML = `
+                    <div class="text-white text-center">
+                        <div class="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-3">
+                            <span class="material-symbols-outlined text-4xl text-white">check</span>
+                        </div>
+                        <p class="text-sm font-medium">${label} capturado</p>
+                        <p class="text-xs text-gray-300 mt-1">Documento subido correctamente</p>
+                    </div>
+                `;
+                loading.classList.remove('hidden');
+
+                // Cerrar la cámara después de 1.2 segundos
+                setTimeout(() => {
+                    closeCamera();
+                    // Restaurar el contenido original del loading para próxima vez
+                    loading.innerHTML = `
+                        <div class="text-white text-center">
+                            <div class="w-10 h-10 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                            <p class="text-sm">Procesando documento...</p>
+                        </div>
+                    `;
+                }, 1200);
+            } else {
+                closeCamera();
+            }
+        });
+
+        // Escuchar evento de error en captura
+        Livewire.on('capture-error', ({ message }) => {
+            const loading = document.getElementById('camera-loading');
+            if (loading) loading.classList.add('hidden');
+            alert('Error: ' + message);
+        });
+
         Livewire.on('show-toast', ({ type, message }) => {
             const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
             const toast = document.createElement('div');
@@ -116,5 +304,6 @@
             setTimeout(() => toast.remove(), 3000);
         });
     });
+
 </script>
 @endpush
