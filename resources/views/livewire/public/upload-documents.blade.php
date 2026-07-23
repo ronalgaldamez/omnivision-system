@@ -36,7 +36,8 @@
         @else
             {{-- Upload form --}}
             <x-ui.card>
-                <div class="space-y-5">
+                <div class="space-y-5"
+                    x-data="{ showConfirm: false, confirmType: '', confirmLabel: '' }">
                     {{-- DUI Frente --}}
                     <div class="border-2 border-dashed rounded-xl p-5 text-center transition-colors
                         {{ $this->isUploaded('dui_front') ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
@@ -44,11 +45,15 @@
                         <p class="text-sm font-medium text-gray-700 mt-1">DUI (Frente) *</p>
                         @if($this->isUploaded('dui_front'))
                             <p class="text-xs text-green-600 mt-1">✓ Subido</p>
-                            <button wire:click="removeUpload('dui_front')"
+                            <button @click="showConfirm = true; confirmLabel = '¿Eliminar DUI (Frente)?'; confirmType = 'dui_front'"
                                 class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
                         @else
-                            <input type="file" wire:model="dui_front" accept="image/*,.pdf"
+                            <input type="file" accept="image/*,.pdf" wire:model.live="dui_front"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                            <div wire:loading wire:target="dui_front" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-xs text-indigo-600">Subiendo...</span>
+                            </div>
                             <button type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
                                 x-data
                                 @click="openCamera('dui_front', $wire)">
@@ -66,11 +71,15 @@
                         <p class="text-sm font-medium text-gray-700 mt-1">DUI (Reverso) *</p>
                         @if($this->isUploaded('dui_back'))
                             <p class="text-xs text-green-600 mt-1">✓ Subido</p>
-                            <button wire:click="removeUpload('dui_back')"
+                            <button @click="showConfirm = true; confirmLabel = '¿Eliminar DUI (Reverso)?'; confirmType = 'dui_back'"
                                 class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
                         @else
-                            <input type="file" wire:model="dui_back" accept="image/*,.pdf"
+                            <input type="file" accept="image/*,.pdf" wire:model.live="dui_back"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                            <div wire:loading wire:target="dui_back" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-xs text-indigo-600">Subiendo...</span>
+                            </div>
                             <button type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
                                 x-data
                                 @click="openCamera('dui_back', $wire)">
@@ -85,14 +94,18 @@
                     <div class="border-2 border-dashed rounded-xl p-5 text-center transition-colors
                         {{ $this->isUploaded('receipt') ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
                         <span class="material-symbols-outlined text-3xl {{ $this->isUploaded('receipt') ? 'text-green-500' : 'text-gray-300' }}">receipt</span>
-                        <p class="text-sm font-medium text-gray-700 mt-1">Recibo de luz</p>
+                        <p class="text-sm font-medium text-gray-700 mt-1">Recibo de luz *</p>
                         @if($this->isUploaded('receipt'))
                             <p class="text-xs text-green-600 mt-1">✓ Subido</p>
-                            <button wire:click="removeUpload('receipt')"
+                            <button @click="showConfirm = true; confirmLabel = '¿Eliminar Recibo de luz?'; confirmType = 'receipt'"
                                 class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
                         @else
-                            <input type="file" wire:model="receipt" accept="image/*,.pdf"
+                            <input type="file" accept="image/*,.pdf" wire:model.live="receipt"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                            <div wire:loading wire:target="receipt" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-xs text-indigo-600">Subiendo...</span>
+                            </div>
                             <button type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
                                 x-data
                                 @click="openCamera('receipt', $wire)">
@@ -103,6 +116,32 @@
                         @endif
                     </div>
 
+                    {{-- Foto de Fachada --}}
+                    <div class="border-2 border-dashed rounded-xl p-5 text-center transition-colors
+                        {{ $this->isUploaded('fachada') ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
+                        <span class="material-symbols-outlined text-3xl {{ $this->isUploaded('fachada') ? 'text-green-500' : 'text-gray-300' }}">home</span>
+                        <p class="text-sm font-medium text-gray-700 mt-1">Foto de Fachada *</p>
+                        <p class="text-xs text-gray-400">Para que los técnicos identifiquen la casa</p>
+                        @if($this->isUploaded('fachada'))
+                            <p class="text-xs text-green-600 mt-1">✓ Subido</p>
+                            <button @click="showConfirm = true; confirmLabel = '¿Eliminar Foto de Fachada?'; confirmType = 'fachada'"
+                                class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
+                        @else
+                            <input type="file" accept="image/*" wire:model.live="fachada"
+                                class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                            <div wire:loading wire:target="fachada" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-xs text-indigo-600">Subiendo...</span>
+                            </div>
+                            <button type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
+                                x-data
+                                @click="openCamera('fachada', $wire)">
+                                <span class="material-symbols-outlined text-sm">photo_camera</span>
+                                Capturar con cámara
+                            </button>
+                        @endif
+                    </div>
+
                     {{-- Finalizar --}}
                     <div class="pt-2">
                         <button wire:click="finalize"
@@ -110,6 +149,28 @@
                             <span class="material-symbols-outlined">check_circle</span>
                             Finalizar
                         </button>
+                    </div>
+
+                    {{-- Modal de confirmación --}}
+                    <div x-show="showConfirm" class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" x-cloak>
+                        <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-auto shadow-xl" @click.stop>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-red-600">help</span>
+                                </div>
+                                <p class="text-sm font-medium text-gray-800" x-text="confirmLabel"></p>
+                            </div>
+                            <div class="flex justify-end gap-3">
+                                <button @click="showConfirm = false"
+                                    class="px-4 py-2 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                                    Cancelar
+                                </button>
+                                <button @click="$wire.rejectUpload(confirmType); showConfirm = false"
+                                    class="px-4 py-2 text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">
+                                    Confirmar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </x-ui.card>
@@ -253,7 +314,6 @@
             closeCamera();
         }
     }
-
 
     document.addEventListener('livewire:init', () => {
         // Escuchar evento de documento capturado exitosamente

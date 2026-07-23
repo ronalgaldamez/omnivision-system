@@ -67,6 +67,7 @@ class ContractWorkflow extends Component
     public $dui_front = null;
     public $dui_back = null;
     public $receipt = null;
+    public $fachada = null;
     public $document_notes = '';
     public $uploadedDocuments = [];
     public $docs_link = null;
@@ -109,6 +110,7 @@ class ContractWorkflow extends Component
                 'dui_front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
                 'dui_back' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
                 'receipt' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+                'fachada' => 'nullable|file|mimes:jpg,jpeg,png|max:10240',
             ],
             4 => [
                 'client_signature_data' => 'required_without:signature_link',
@@ -227,6 +229,11 @@ class ContractWorkflow extends Component
         } elseif ($this->step === 2) {
             $this->step = 3;
         } elseif ($this->step === 3) {
+            $progress = $this->documentsProgress;
+            if (!$progress['required_completed']) {
+                $this->dispatch('show-toast', type: 'error', message: 'Todos los documentos son obligatorios (DUI frente, DUI reverso, Recibo de luz y Foto de fachada).');
+                return;
+            }
             $this->step = 4;
         } elseif ($this->step === 4) {
             // Cuando se completa la firma, ir a preview
@@ -324,6 +331,7 @@ class ContractWorkflow extends Component
             'dui_front' => 'dui_front',
             'dui_back' => 'dui_back',
             'receipt' => 'receipt',
+            'fachada' => 'fachada',
         ];
 
         $type = $typeMap[$field] ?? 'other';
@@ -353,6 +361,7 @@ class ContractWorkflow extends Component
             'dui_front' => 'dui_front',
             'dui_back' => 'dui_back',
             'receipt' => 'receipt',
+            'fachada' => 'fachada',
         ];
 
         $field = array_search($type, $map);
@@ -365,8 +374,8 @@ class ContractWorkflow extends Component
 
     public function getDocumentsProgressProperty(): array
     {
-        $required = ['dui_front', 'dui_back'];
-        $optional = ['receipt'];
+        $required = ['dui_front', 'dui_back', 'receipt', 'fachada'];
+        $optional = [];
 
         // Combinar documentos subidos por el agente y por el cliente
         $uploaded = array_keys($this->uploadedDocuments);
@@ -614,6 +623,49 @@ class ContractWorkflow extends Component
         }
     }
 
+    // ─── Rechazar documentos subidos por el cliente ───
+
+    public function rejectClientDoc($type)
+    {
+        $client = Client::find($this->client_id);
+        if (!$client) return;
+
+        $docs = $client->uploaded_docs ?? [];
+        foreach ($docs as $i => $d) {
+            if ($d['type'] === $type) {
+                Storage::disk('s3')->delete($d['path']);
+                unset($docs[$i]);
+                break;
+            }
+        }
+        $client->update(['uploaded_docs' => array_values($docs)]);
+        $this->clientUploadedDocs = $client->fresh()->uploaded_docs ?? [];
+
+        $labels = ['dui_front' => 'DUI (Frente)', 'dui_back' => 'DUI (Reverso)', 'receipt' => 'Recibo de luz', 'fachada' => 'Foto de Fachada'];
+        $this->dispatch('show-toast', type: 'info', message: $labels[$type] . ' rechazado.');
+    }
+
+    public function rejectAllClientDocs()
+    {
+        $client = Client::find($this->client_id);
+        if (!$client) return;
+
+        $docs = $client->uploaded_docs ?? [];
+        foreach ($docs as $d) {
+            Storage::disk('s3')->delete($d['path']);
+        }
+
+        $client->update([
+            'uploaded_docs' => [],
+            'docs_token' => null,
+            'docs_token_expires_at' => null,
+        ]);
+        $this->clientUploadedDocs = [];
+        $this->docs_link = null;
+
+        $this->dispatch('show-toast', type: 'info', message: 'Todos los documentos fueron rechazados. Generá un nuevo enlace.');
+    }
+
     // ─── Documentos: Enlace público de subida ───
 
     public function loadClientUploadedDocs()
@@ -672,7 +724,7 @@ class ContractWorkflow extends Component
             $phone = '503' . substr($phone, 1);
         }
 
-        $message = "Hola, soy de Omnivisión. Para continuar con tu contrato necesitamos que subas tus documentos. Hacé clic en este enlace y adjuntá DUI (frente y reverso) y recibo de luz:\n\n";
+        $message = "Hola, soy de Omnivisión. Para continuar con tu contrato necesitamos que subas tus documentos. Hacé clic en este enlace y adjuntá DUI (frente y reverso), recibo de luz y una foto de la fachada de tu casa:\n\n";
         $message .= $this->docs_link . "\n\n";
         $message .= "⚠️ El enlace expira en 24 horas.";
 
@@ -711,7 +763,6 @@ class ContractWorkflow extends Component
         }
     }
 
-    // ─── Utilidades ───
 
     private function getDefaultTerms(): string
     {

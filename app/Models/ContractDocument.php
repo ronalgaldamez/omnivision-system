@@ -28,6 +28,7 @@ class ContractDocument extends Model
             'dui_front'     => 'DUI (Frente)',
             'dui_back'      => 'DUI (Reverso)',
             'receipt'       => 'Recibo de luz',
+            'fachada'       => 'Foto de Fachada',
             default         => ucfirst(str_replace('_', ' ', $this->type)),
         };
     }

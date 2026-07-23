@@ -344,7 +344,8 @@
 
         {{-- Step 3: Documentos --}}
         @if($step === 3)
-            <div class="space-y-6">
+            <div class="space-y-6"
+                x-data="{ showConfirm: false, confirmType: '', confirmLabel: '' }">
                 <div class="flex items-center gap-3 pb-4 border-b border-gray-100">
                     <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
                         <span class="material-symbols-outlined text-indigo-600">description</span>
@@ -393,14 +394,37 @@
                         @if(isset($uploadedDocuments['dui_front']))
                             @php $url = $preview($uploadedDocuments['dui_front']['path'], $uploadedDocuments['dui_front']['mime_type'] ?? ''); @endphp
                             @if($url && str_starts_with($uploadedDocuments['dui_front']['mime_type'] ?? '', 'image/'))
-                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer" onclick="window.open('{{ $url }}','_blank')" />
+                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src)" />
                             @elseif($url)
                                 <a href="{{ $url }}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
                                     <span class="material-symbols-outlined text-sm">visibility</span> Ver PDF
                                 </a>
                             @endif
-                            <button wire:click="removeDocument('dui_front')"
-                                class="text-xs text-red-600 hover:text-red-700 mt-1 block mx-auto">Eliminar</button>
+                            <div x-data="{ confirmDelete: false }" class="mt-1">
+                                <button @click="confirmDelete = true"
+                                    class="text-xs text-red-600 hover:text-red-700 block mx-auto">Eliminar</button>
+
+                                {{-- Modal de confirmación --}}
+                                <x-ui.modal title="Eliminar documento" icon="warning" maxWidth="sm" :show="false"
+                                    x-show="confirmDelete" @click.away="confirmDelete = false">
+                                    <div class="text-center">
+                                        <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                                            <span class="material-symbols-outlined text-2xl text-red-600">delete_forever</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">¿Estás seguro de eliminar el documento <strong>DUI (Frente)</strong>?</p>
+                                        <p class="text-xs text-gray-400 mt-1">Esta acción no se puede deshacer.</p>
+                                    </div>
+                                    <x-slot:footer>
+                                        <x-ui.button variant="danger" icon="delete"
+                                            @click="confirmDelete = false; $wire.removeDocument('dui_front')">
+                                            Sí, eliminar
+                                        </x-ui.button>
+                                        <x-ui.button variant="secondary" @click="confirmDelete = false">
+                                            Cancelar
+                                        </x-ui.button>
+                                    </x-slot:footer>
+                                </x-ui.modal>
+                            </div>
                         @else
                             <input type="file" wire:model="dui_front" accept="image/*,.pdf"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
@@ -417,14 +441,37 @@
                         @if(isset($uploadedDocuments['dui_back']))
                             @php $url = $preview($uploadedDocuments['dui_back']['path'], $uploadedDocuments['dui_back']['mime_type'] ?? ''); @endphp
                             @if($url && str_starts_with($uploadedDocuments['dui_back']['mime_type'] ?? '', 'image/'))
-                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer" onclick="window.open('{{ $url }}','_blank')" />
+                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src)" />
                             @elseif($url)
                                 <a href="{{ $url }}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
                                     <span class="material-symbols-outlined text-sm">visibility</span> Ver PDF
                                 </a>
                             @endif
-                            <button wire:click="removeDocument('dui_back')"
-                                class="text-xs text-red-600 hover:text-red-700 mt-1 block mx-auto">Eliminar</button>
+                            <div x-data="{ confirmDelete: false }" class="mt-1">
+                                <button @click="confirmDelete = true"
+                                    class="text-xs text-red-600 hover:text-red-700 block mx-auto">Eliminar</button>
+
+                                {{-- Modal de confirmación --}}
+                                <x-ui.modal title="Eliminar documento" icon="warning" maxWidth="sm" :show="false"
+                                    x-show="confirmDelete" @click.away="confirmDelete = false">
+                                    <div class="text-center">
+                                        <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                                            <span class="material-symbols-outlined text-2xl text-red-600">delete_forever</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">¿Estás seguro de eliminar el documento <strong>DUI (Reverso)</strong>?</p>
+                                        <p class="text-xs text-gray-400 mt-1">Esta acción no se puede deshacer.</p>
+                                    </div>
+                                    <x-slot:footer>
+                                        <x-ui.button variant="danger" icon="delete"
+                                            @click="confirmDelete = false; $wire.removeDocument('dui_back')">
+                                            Sí, eliminar
+                                        </x-ui.button>
+                                        <x-ui.button variant="secondary" @click="confirmDelete = false">
+                                            Cancelar
+                                        </x-ui.button>
+                                    </x-slot:footer>
+                                </x-ui.modal>
+                            </div>
                         @else
                             <input type="file" wire:model="dui_back" accept="image/*,.pdf"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
@@ -437,20 +484,86 @@
                         {{ isset($uploadedDocuments['receipt']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-gray-400' }}">
                         <span class="material-symbols-outlined text-3xl
                             {{ isset($uploadedDocuments['receipt']) ? 'text-green-500' : 'text-gray-300' }}">receipt</span>
-                        <p class="text-sm font-medium text-gray-700 mt-1">Recibo de luz</p>
+                        <p class="text-sm font-medium text-gray-700 mt-1">Recibo de luz *</p>
                         @if(isset($uploadedDocuments['receipt']))
                             @php $url = $preview($uploadedDocuments['receipt']['path'], $uploadedDocuments['receipt']['mime_type'] ?? ''); @endphp
                             @if($url && str_starts_with($uploadedDocuments['receipt']['mime_type'] ?? '', 'image/'))
-                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer" onclick="window.open('{{ $url }}','_blank')" />
+                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src)" />
                             @elseif($url)
                                 <a href="{{ $url }}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
                                     <span class="material-symbols-outlined text-sm">visibility</span> Ver PDF
                                 </a>
                             @endif
-                            <button wire:click="removeDocument('receipt')"
-                                class="text-xs text-red-600 hover:text-red-700 mt-1 block mx-auto">Eliminar</button>
+                            <div x-data="{ confirmDelete: false }" class="mt-1">
+                                <button @click="confirmDelete = true"
+                                    class="text-xs text-red-600 hover:text-red-700 block mx-auto">Eliminar</button>
+
+                                {{-- Modal de confirmación --}}
+                                <x-ui.modal title="Eliminar documento" icon="warning" maxWidth="sm" :show="false"
+                                    x-show="confirmDelete" @click.away="confirmDelete = false">
+                                    <div class="text-center">
+                                        <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                                            <span class="material-symbols-outlined text-2xl text-red-600">delete_forever</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">¿Estás seguro de eliminar el documento <strong>Recibo de luz</strong>?</p>
+                                        <p class="text-xs text-gray-400 mt-1">Esta acción no se puede deshacer.</p>
+                                    </div>
+                                    <x-slot:footer>
+                                        <x-ui.button variant="danger" icon="delete"
+                                            @click="confirmDelete = false; $wire.removeDocument('receipt')">
+                                            Sí, eliminar
+                                        </x-ui.button>
+                                        <x-ui.button variant="secondary" @click="confirmDelete = false">
+                                            Cancelar
+                                        </x-ui.button>
+                                    </x-slot:footer>
+                                </x-ui.modal>
+                            </div>
                         @else
                             <input type="file" wire:model="receipt" accept="image/*,.pdf"
+                                class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
+                        @endif
+                    </div>
+
+                    {{-- Foto de Fachada --}}
+                    <div class="border-2 border-dashed rounded-xl p-4 text-center relative
+                        {{ isset($uploadedDocuments['fachada']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-gray-400' }}">
+                        <span class="material-symbols-outlined text-3xl
+                            {{ isset($uploadedDocuments['fachada']) ? 'text-green-500' : 'text-gray-300' }}">home</span>
+                        <p class="text-sm font-medium text-gray-700 mt-1">Foto de Fachada *</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Para que los técnicos identifiquen la casa</p>
+                        @if(isset($uploadedDocuments['fachada']))
+                            @php $url = $preview($uploadedDocuments['fachada']['path'], $uploadedDocuments['fachada']['mime_type'] ?? ''); @endphp
+                            @if($url && str_starts_with($uploadedDocuments['fachada']['mime_type'] ?? '', 'image/'))
+                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src)" />
+                            @endif
+                            <div x-data="{ confirmDelete: false }" class="mt-1">
+                                <button @click="confirmDelete = true"
+                                    class="text-xs text-red-600 hover:text-red-700 block mx-auto">Eliminar</button>
+
+                                {{-- Modal de confirmación --}}
+                                <x-ui.modal title="Eliminar documento" icon="warning" maxWidth="sm" :show="false"
+                                    x-show="confirmDelete" @click.away="confirmDelete = false">
+                                    <div class="text-center">
+                                        <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                                            <span class="material-symbols-outlined text-2xl text-red-600">delete_forever</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">¿Estás seguro de eliminar la <strong>Foto de Fachada</strong>?</p>
+                                        <p class="text-xs text-gray-400 mt-1">Esta acción no se puede deshacer.</p>
+                                    </div>
+                                    <x-slot:footer>
+                                        <x-ui.button variant="danger" icon="delete"
+                                            @click="confirmDelete = false; $wire.removeDocument('fachada')">
+                                            Sí, eliminar
+                                        </x-ui.button>
+                                        <x-ui.button variant="secondary" @click="confirmDelete = false">
+                                            Cancelar
+                                        </x-ui.button>
+                                    </x-slot:footer>
+                                </x-ui.modal>
+                            </div>
+                        @else
+                            <input type="file" wire:model="fachada" accept="image/*"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
                         @endif
                     </div>
@@ -500,18 +613,25 @@
                             </div>
                             @if(count($clientUploadedDocs) > 0)
                                 <div class="mt-2 pt-2 border-t border-indigo-100">
-                                    <p class="text-xs font-medium text-indigo-700 mb-2">Documentos recibidos:</p>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <p class="text-xs font-medium text-indigo-700">Documentos recibidos:</p>
+                                        <button @click="showConfirm = true; confirmLabel = '¿Rechazar todos los documentos del cliente?'; confirmType = 'all'"
+                                            class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 transition-colors flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-sm">block</span>
+                                            Rechazar todos
+                                        </button>
+                                    </div>
                                     <div class="grid grid-cols-3 gap-2">
                                         @foreach($clientUploadedDocs as $doc)
                                             @php
-                                                $label = match($doc['type']) { 'dui_front' => 'DUI (Frente)', 'dui_back' => 'DUI (Reverso)', 'receipt' => 'Recibo de luz', default => $doc['type'] };
+                                                $label = match($doc['type']) { 'dui_front' => 'DUI (Frente)', 'dui_back' => 'DUI (Reverso)', 'receipt' => 'Recibo de luz', 'fachada' => 'Foto de Fachada', default => $doc['type'] };
                                                 $url = $this->getDocPreviewUrl($doc['path']);
                                             @endphp
                                             <div class="bg-white rounded-lg border border-green-200 p-2 text-center">
                                                 @if($url && isset($doc['mime_type']) && str_starts_with($doc['mime_type'], 'image/'))
                                                     <img src="{{ $url }}"
-                                                        class="max-h-16 mx-auto rounded cursor-pointer hover:opacity-80"
-                                                        onclick="window.open('{{ $url }}','_blank')" />
+                                                        class="max-h-16 mx-auto rounded cursor-pointer preview-img hover:opacity-80"
+                                                        onclick="openPreview(this.src)" />
                                                 @elseif($url)
                                                     <a href="{{ $url }}" target="_blank"
                                                         class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
@@ -522,6 +642,10 @@
                                                     <span class="material-symbols-outlined text-sm text-green-600">check_circle</span>
                                                 @endif
                                                 <p class="text-[10px] text-gray-600 mt-1 truncate">{{ $label }}</p>
+                                                <button @click="showConfirm = true; confirmLabel = '¿Rechazar {{ $label }}?'; confirmType = '{{ $doc['type'] }}'"
+                                                    class="text-[10px] text-red-600 hover:text-red-700 mt-0.5">
+                                                    Rechazar
+                                                </button>
                                             </div>
                                         @endforeach
                                     </div>
@@ -544,6 +668,32 @@
                     <x-ui.button variant="primary" icon="arrow_forward" wire:click="nextStep">
                         Continuar
                     </x-ui.button>
+                </div>
+
+                {{-- Modal de confirmación para Rechazar --}}
+                <div x-show="showConfirm" class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" x-cloak>
+                    <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-auto shadow-xl" @click.stop>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-red-600">block</span>
+                            </div>
+                            <p class="text-sm font-medium text-gray-800" x-text="confirmLabel"></p>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-4 text-center">Esta acción no se puede deshacer.</p>
+                        <div class="flex justify-end gap-3">
+                            <button @click="showConfirm = false"
+                                class="px-4 py-2 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                                Cancelar
+                            </button>
+                            <button @click="
+                                if (confirmType === 'all') $wire.rejectAllClientDocs();
+                                else $wire.rejectClientDoc(confirmType);
+                                showConfirm = false;"
+                                class="px-4 py-2 text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">
+                                Confirmar
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         @endif
@@ -826,10 +976,42 @@
             </div>
         @endif
     </x-ui.card>
+
+    {{-- Modal slider para preview de imágenes --}}
+    <div id="preview-modal" class="fixed inset-0 z-50 bg-black/90 hidden items-center justify-center" style="display:none;">
+        <button onclick="closePreview()" class="absolute top-4 right-4 text-white/70 hover:text-white z-10">
+            <span class="material-symbols-outlined text-3xl">close</span>
+        </button>
+        <img id="preview-image" class="max-w-[95vw] max-h-[95vh] object-contain" />
+    </div>
 </div>
 
 @push('scripts')
 <script>
+    function openPreview(src) {
+        const modal = document.getElementById('preview-modal');
+        const img = document.getElementById('preview-image');
+        img.src = src;
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePreview() {
+        const modal = document.getElementById('preview-modal');
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePreview();
+    });
+
+    document.getElementById('preview-modal')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closePreview();
+    });
+
     document.addEventListener('livewire:init', () => {
         Livewire.on('open-whatsapp', ({ url }) => {
             window.open(url, '_blank');
