@@ -364,6 +364,23 @@
                 </div>
                 @endif
 
+                {{-- Datos comerciales del contrato --}}
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="material-symbols-outlined text-amber-600 text-sm">description</span>
+                        <span class="text-xs font-semibold text-amber-800 uppercase tracking-wide">Datos del contrato</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <x-ui.select wire:model="contract_type" icon="assignment" label="Tipo de contrato">
+                            <option value="nuevo">Nuevo</option>
+                            <option value="reconexion">Reconexión</option>
+                            <option value="renovacion">Renovación</option>
+                        </x-ui.select>
+                        <x-ui.input type="number" wire:model="term_months" icon="calendar_month" label="Plazo (meses)" min="1" max="60" />
+                        <x-ui.input type="text" wire:model="benefit" icon="card_giftcard" label="Beneficio / Promoción" placeholder="Opcional" />
+                    </div>
+                </div>
+
                 <div class="flex justify-between pt-4 border-t border-gray-100">
                     <x-ui.button variant="secondary" icon="arrow_back" wire:click="previousStep">
                         Atrás
@@ -829,21 +846,15 @@
                                 </div>
                             </div>
 
-                            {{-- O enviar enlace --}}
+                            {{-- Botón simple para generar enlace (el detalle va abajo) --}}
                             <div class="mt-3 pt-3 border-t border-gray-200">
                                 <button wire:click="generateSignatureLink"
                                     class="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
                                     <span class="material-symbols-outlined text-sm">link</span>
-                                    Enviar enlace al cliente para que firme
+                                    Generar enlace de firma para el cliente
                                 </button>
-                                @if($signature_link)
-                                    <div class="mt-2 bg-indigo-50 rounded-lg p-2">
-                                        <p class="text-xs text-indigo-700 mb-1">Enlace de firma:</p>
-                                        <input type="text" value="{{ $signature_link }}" readonly
-                                            class="w-full text-xs px-2 py-1 border border-indigo-200 rounded bg-white"
-                                            onclick="this.select(); navigator.clipboard?.writeText(this.value);" />
-                                        <p class="text-[10px] text-indigo-500 mt-1">Compartí este enlace con el cliente</p>
-                                    </div>
+                                @if($signature_link && !$showClientSignature)
+                                    <p class="text-[10px] text-green-600 mt-1">✓ Enlace generado. Revisá la sección de abajo.</p>
                                 @endif
                             </div>
                         @endif
@@ -927,16 +938,99 @@
                     </div>
                 </div>
 
-                {{-- Términos --}}
-                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <p class="text-sm font-semibold text-amber-800 flex items-center gap-2 mb-2">
-                        <span class="material-symbols-outlined text-base">gavel</span>
-                        Términos y Condiciones
-                    </p>
-                    <div class="text-xs text-amber-700 max-h-32 overflow-y-auto prose prose-sm">
-                        {!! $contract_terms !!}
+                {{-- Enlace público de firma (como GPS y Documentos) --}}
+                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="material-symbols-outlined text-indigo-600 text-sm">edit_note</span>
+                        <span class="text-xs font-semibold text-indigo-800 uppercase tracking-wide">Firma del cliente</span>
                     </div>
-                    <p class="text-xs text-amber-600 mt-2">
+                    <p class="text-xs text-indigo-700 mb-3">
+                        Enviale un enlace al cliente para que firme digitalmente desde su celular.
+                    </p>
+
+                    @if($signature_link)
+                        <div class="bg-white rounded-lg border border-indigo-200 p-3 space-y-2">
+                            <div class="flex items-center gap-2">
+                                <input type="text" value="{{ $signature_link }}" readonly
+                                    class="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded bg-gray-50 font-mono"
+                                    onclick="this.select(); navigator.clipboard?.writeText(this.value);" />
+                                <button type="button" onclick="navigator.clipboard?.writeText('{{ $signature_link }}');"
+                                    class="text-xs px-2 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">content_copy</span>
+                                    Copiar
+                                </button>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <p class="text-[10px] text-indigo-500">Compartí este enlace con el cliente por WhatsApp</p>
+                                <button wire:click="sendSignatureViaWhatsApp"
+                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                                    title="Enviar por WhatsApp">
+                                    <span class="material-symbols-outlined text-xs">chat</span>
+                                    WhatsApp
+                                </button>
+                            </div>
+                            <div class="flex gap-2 pt-1">
+                                <button wire:click="refreshClientSignature"
+                                    class="text-xs px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">refresh</span>
+                                    Actualizar firma
+                                </button>
+                                <button wire:click="$set('signature_link', null)"
+                                    class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
+                                    Cerrar
+                                </button>
+                            </div>
+                            @if($showClientSignature && $client_signature_data)
+                                <div class="mt-2 pt-2 border-t border-indigo-100 text-center">
+                                    <p class="text-xs text-green-700 mb-1">✓ Firma recibida</p>
+                                    <img src="{{ $client_signature_data }}" class="max-h-12 mx-auto" />
+                                </div>
+                            @endif
+                        </div>
+                    @else
+                        <button wire:click="generateSignatureLink"
+                            class="px-3 py-2 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-sm">share</span>
+                            Generar enlace para el cliente
+                        </button>
+                    @endif
+                </div>
+
+                {{-- Términos (modal) --}}
+                <div x-data="{ showTerms: false }">
+                    <button @click="showTerms = true"
+                        class="w-full text-left px-4 py-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-amber-600 text-sm">gavel</span>
+                            <span class="text-sm font-medium text-gray-700">Ver Términos y Condiciones del contrato</span>
+                        </div>
+                        <span class="material-symbols-outlined text-gray-400">open_in_new</span>
+                    </button>
+
+                    {{-- Modal --}}
+                    <div x-show="showTerms" class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" x-cloak>
+                        <div class="bg-white rounded-xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-xl" @click.stop>
+                            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-amber-600">gavel</span>
+                                    <h3 class="text-lg font-bold text-gray-900">Términos y Condiciones</h3>
+                                </div>
+                                <button @click="showTerms = false" class="text-gray-400 hover:text-gray-600">
+                                    <span class="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+                            <div class="px-6 py-4 overflow-y-auto text-sm text-gray-700 leading-relaxed space-y-3">
+                                {!! $contract_terms !!}
+                            </div>
+                            <div class="px-6 py-4 border-t border-gray-100 shrink-0 flex justify-end">
+                                <button @click="showTerms = false"
+                                    class="px-4 py-2 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">
                         Al firmar, tanto el cliente como el agente de ventas aceptan los términos y condiciones del contrato.
                     </p>
                 </div>

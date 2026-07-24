@@ -80,6 +80,11 @@ class ContractWorkflow extends Component
     public $availablePlans = [];
     public $availableZones = [];
 
+    // ─── Datos comerciales del contrato ───
+    public $contract_type = 'nuevo';
+    public $term_months = 12;
+    public $benefit = '';
+
     // ─── Step 3: Documentos ───
     public $dui_front = null;
     public $dui_back = null;
@@ -124,6 +129,8 @@ class ContractWorkflow extends Component
             2 => [
                 'plan_id' => 'required|exists:plans,id',
                 'price' => 'required|numeric|min:0',
+                'contract_type' => 'required|in:nuevo,reconexion,renovacion',
+                'term_months' => 'required|integer|min:1|max:60',
             ],
             3 => [
                 'dui_front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
@@ -305,6 +312,16 @@ class ContractWorkflow extends Component
 
     // ─── Step 2: Plan ───
 
+    private function deriveServiceContracted(): string
+    {
+        return match ($this->service_type) {
+            'internet' => 'internet',
+            'cable' => 'cable',
+            'internet_cable' => 'cable_internet',
+            default => $this->service_type ?? '',
+        };
+    }
+
     public function updatedPlanId($value)
     {
         $this->updateEffectivePrice();
@@ -449,16 +466,78 @@ class ContractWorkflow extends Component
 
     public function generateSignatureLink()
     {
-        if (!$this->contract_id) {
-            $this->dispatch('show-toast', type: 'error', message: 'Primero debe crear el contrato.');
+        if (!$this->client_id) {
+            $this->dispatch('show-toast', type: 'error', message: 'No hay cliente seleccionado.');
             return;
         }
 
-        $contract = Contract::find($this->contract_id);
-        $service = app(ContractSignatureService::class);
-        $this->signature_link = $service->generateSignatureLink($contract);
+        $client = Client::find($this->client_id);
+        if (!$client) {
+            $this->dispatch('show-toast', type: 'error', message: 'Cliente no encontrado.');
+            return;
+        }
+
+        $now = now();
+        if ($client->signature_token && $client->signature_token_expires_at && $client->signature_token_expires_at->greaterThan($now)) {
+            $this->signature_link = route('public.contract.sign', ['token' => $client->signature_token]);
+            $this->dispatch('show-toast', type: 'success', message: 'Enlace vigente reutilizado.');
+            return;
+        }
+
+        $client->update([
+            'signature_token' => (string) Str::random(64),
+            'signature_token_expires_at' => $now->copy()->addHours(24),
+        ]);
+
+        $this->signature_link = route('public.contract.sign', ['token' => $client->signature_token]);
 
         $this->dispatch('show-toast', type: 'success', message: 'Enlace de firma generado. Compártelo con el cliente.');
+    }
+
+    public function getSignatureWhatsAppUrl(): ?string
+    {
+        $client = Client::find($this->client_id);
+        if (!$client || !$client->phone) return null;
+
+        if (!$this->signature_link) {
+            $this->generateSignatureLink();
+        }
+        if (!$this->signature_link) return null;
+
+        $phone = preg_replace('/\D/', '', $client->phone);
+        if (strlen($phone) === 8) {
+            $phone = '503' . $phone;
+        } elseif (strlen($phone) === 9 && $phone[0] === '0') {
+            $phone = '503' . substr($phone, 1);
+        }
+
+        $message = "Hola, soy de Omnivisión. Para finalizar tu contrato necesitamos tu firma electrónica. Hacé clic en este enlace y firmá digitalmente:\n\n";
+        $message .= $this->signature_link . "\n\n";
+        $message .= "⚠️ El enlace expira en 24 horas.";
+
+        return 'https://wa.me/' . $phone . '?text=' . urlencode($message);
+    }
+
+    public function sendSignatureViaWhatsApp()
+    {
+        $url = $this->getSignatureWhatsAppUrl();
+        if (!$url) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente no tiene un número de teléfono registrado.');
+            return;
+        }
+
+        $this->dispatch('open-whatsapp', url: $url);
+    }
+
+    public function refreshClientSignature()
+    {
+        if (!$this->client_id) return;
+        $client = Client::find($this->client_id);
+        if ($client && $client->client_signature_data) {
+            $this->client_signature_data = $client->client_signature_data;
+            $this->showClientSignature = true;
+            $this->dispatch('show-toast', type: 'success', message: 'Firma del cliente actualizada.');
+        }
     }
 
     public function signatureSaved()
@@ -505,8 +584,12 @@ class ContractWorkflow extends Component
             'longitude' => $this->longitude ?: null,
             'contract_terms' => $this->contract_terms,
             'contract_date' => now()->format('Y-m-d'),
-            'status' => 'active',
+            'status' => 'pending',
             'created_by' => Auth::id(),
+            'contract_type' => $this->contract_type,
+            'service_contracted' => $this->deriveServiceContracted(),
+            'term_months' => $this->term_months,
+            'benefit' => $this->benefit,
         ]);
 
         $this->contract_id = $contract->id;
@@ -539,12 +622,21 @@ class ContractWorkflow extends Component
         // Guardar firmas
         $sigService = app(ContractSignatureService::class);
 
-        if ($this->client_signature_data) {
-            $sigService->saveSignature($contract, 'client', $this->client_signature_data);
+        // Si el cliente firmó vía enlace público, transferir la firma
+        $client = Client::find($this->client_id);
+        $clientSignature = $client?->client_signature_data ?? $this->client_signature_data;
+
+        if ($clientSignature) {
+            $sigService->saveSignature($contract, 'client', $clientSignature);
         }
 
         if ($this->sales_rep_signature_data) {
             $sigService->saveSignature($contract, 'sales_rep', $this->sales_rep_signature_data);
+        }
+
+        // Limpiar token de firma del cliente
+        if ($client) {
+            $client->update(['signature_token' => null, 'signature_token_expires_at' => null, 'client_signature_data' => null]);
         }
 
         // Generar PDF

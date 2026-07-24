@@ -12,48 +12,50 @@
             </div>
         @endif
 
+        {{-- Expirado --}}
+        @if($expired)
+            <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+                <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                    <span class="material-symbols-outlined text-3xl text-red-500">timer_off</span>
+                </div>
+                <h2 class="text-xl font-bold text-gray-900 mb-2">Enlace expirado</h2>
+                <p class="text-gray-600">El tiempo para firmar ha expirado. Contactá a tu agente de ventas para que te genere un nuevo enlace.</p>
+            </div>
+        @endif
+
         {{-- Ya firmado --}}
-        @if($alreadySigned && $contract)
+        @if($alreadySigned)
             <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
                 <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                     <span class="material-symbols-outlined text-3xl text-green-500">check_circle</span>
                 </div>
                 <h2 class="text-xl font-bold text-gray-900 mb-2">¡Firma registrada!</h2>
-                <p class="text-gray-600 mb-4">Tu firma ha sido registrada correctamente para el contrato.</p>
-                @if($contract->contract_digital_code)
-                    <p class="text-sm font-mono text-indigo-600 bg-indigo-50 rounded-lg px-4 py-2 inline-block">
-                        {{ $contract->contract_digital_code }}
-                    </p>
-                @endif
+                <p class="text-gray-600">Tu firma ha sido registrada correctamente.</p>
             </div>
         @endif
 
         {{-- Firma pendiente --}}
-        @if($valid && !$alreadySigned && $contract)
+        @if($valid)
             <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
                 {{-- Header --}}
                 <div class="bg-indigo-600 px-6 py-5">
-                    <h1 class="text-white text-lg font-bold">Firma Electrónica de Contrato</h1>
-                    <p class="text-indigo-200 text-sm mt-1">{{ $contract->contract_digital_code }}</p>
+                    <h1 class="text-white text-lg font-bold">Firma Electrónica</h1>
+                    <p class="text-indigo-200 text-sm mt-1">Contrato de servicios de telecomunicaciones</p>
                 </div>
 
                 <div class="p-6 space-y-5">
-                    {{-- Datos del contrato --}}
-                    <div class="bg-gray-50 rounded-xl p-4 space-y-2">
+                    {{-- Datos del cliente --}}
+                    <div class="bg-gray-50 rounded-xl p-4">
                         <div class="flex items-center gap-2">
                             <span class="material-symbols-outlined text-indigo-500 text-base">person</span>
-                            <p class="font-medium text-gray-800">{{ $contract->client?->name }}</p>
+                            <p class="font-medium text-gray-800">{{ $client->name }}</p>
                         </div>
-                        @if($contract->plan)
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-indigo-500 text-base">assignment</span>
-                            <p class="text-sm text-gray-600">Plan: <strong>{{ $contract->plan->name }}</strong></p>
+                        @if($client->document_number)
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="material-symbols-outlined text-indigo-500 text-base">badge</span>
+                            <p class="text-sm text-gray-600">DUI: {{ $client->document_number }}</p>
                         </div>
                         @endif
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-indigo-500 text-base">attach_money</span>
-                            <p class="text-sm text-gray-600">Precio: <strong>${{ number_format($contract->price, 2) }}</strong>/mes</p>
-                        </div>
                     </div>
 
                     {{-- Canvas de firma --}}
@@ -110,13 +112,28 @@
                                         $wire.call('saveSignature', data);
                                     })()"
                                     class="text-sm px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium">
-                                    Firmar contrato
+                                    Firmar
                                 </button>
-                            </div>
+</div>
+
+@push('scripts')
+<script>
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('show-toast', ({ type, message }) => {
+            const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 z-50 px-4 py-2.5 rounded-lg text-white text-sm shadow-lg ${colors[type] || 'bg-gray-700'}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        });
+    });
+</script>
+@endpush
+
                         </div>
                     </div>
 
-                    {{-- Términos --}}
                     <p class="text-xs text-gray-400 text-center">
                         Al firmar, aceptás los términos y condiciones del contrato de servicios.
                         Esta firma electrónica tiene validez legal según la legislación de El Salvador.

@@ -3,16 +3,15 @@
 namespace App\Livewire\Public;
 
 use Livewire\Component;
-use App\Models\Contract;
-use App\Models\ContractSignature;
-use App\Services\ContractSignatureService;
+use App\Models\Client;
 
 class SignContract extends Component
 {
     public $token;
-    public $contract = null;
+    public $client = null;
     public $valid = false;
     public $alreadySigned = false;
+    public $expired = false;
     public $error = null;
 
     public $signatureData = null;
@@ -21,49 +20,48 @@ class SignContract extends Component
     {
         $this->token = $token;
 
-        $signature = ContractSignature::where('signature_token', $token)
-            ->with('contract.client', 'contract.plan')
-            ->first();
+        $this->client = Client::where('signature_token', $token)->first();
 
-        if (!$signature) {
+        if (!$this->client) {
             $this->error = 'El enlace de firma no es válido o ha expirado.';
             return;
         }
 
-        if ($signature->signed_at) {
-            $this->alreadySigned = true;
-            $this->contract = $signature->contract;
+        if ($this->client->signature_token_expires_at && $this->client->signature_token_expires_at->isPast()) {
+            $this->expired = true;
             return;
         }
 
-        $this->contract = $signature->contract;
+        if ($this->client->client_signature_data) {
+            $this->alreadySigned = true;
+            return;
+        }
+
         $this->valid = true;
     }
 
     public function saveSignature($signatureData)
     {
-        $this->validate([
-            'signatureData' => 'required|string',
-        ]);
+        if (!$signatureData || !is_string($signatureData)) {
+            $this->error = 'No se recibieron datos de firma válidos.';
+            return;
+        }
 
-        $signature = ContractSignature::where('signature_token', $this->token)->first();
+        $client = Client::where('signature_token', $this->token)->first();
 
-        if (!$signature || $signature->signed_at) {
+        if (!$client || $client->client_signature_data) {
             $this->error = 'Esta firma ya fue registrada o el enlace no es válido.';
             return;
         }
 
-        $service = app(ContractSignatureService::class);
-        $service->saveSignature(
-            $this->contract,
-            'client',
-            $signatureData
-        );
-
-        // Invalidar el token
-        $signature->update(['signature_token' => null]);
+        $client->update([
+            'client_signature_data' => $signatureData,
+            'signature_token' => null,
+            'signature_token_expires_at' => null,
+        ]);
 
         $this->alreadySigned = true;
+        $this->valid = false;
         $this->dispatch('show-toast', type: 'success', message: 'Firma registrada correctamente.');
     }
 

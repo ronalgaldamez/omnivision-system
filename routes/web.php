@@ -122,6 +122,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/contracts', \App\Livewire\Contracts\ContractIndex::class)->name('contracts.index');
     Route::get('/contracts/create', \App\Livewire\Contracts\ContractForm::class)->name('contracts.create');
     Route::get('/contracts/workflow/{ticket_id}', \App\Livewire\Contracts\ContractWorkflow::class)->name('contracts.workflow');
+    Route::get('/contracts/pdf-preview/{id}', function ($id) {
+        $contract = \App\Models\Contract::with('client', 'plan', 'zone', 'signatures', 'documents', 'creator')->findOrFail($id);
+        $pdf = app(\App\Services\ContractPdfService::class)->preview($contract);
+        return $pdf->stream('contrato-' . $contract->contract_digital_code . '.pdf');
+    })->name('contracts.pdf-preview');
     Route::middleware(['can:access_contracts_inbox'])->group(function () {
         Route::get('/contratos/inbox', \App\Livewire\Contracts\ContractInbox::class)->name('contracts.inbox');
     });

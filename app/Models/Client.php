@@ -17,6 +17,7 @@ class Client extends Model
         'occupation', 'workplace', 'position', 'monthly_income',
         'boss_name', 'work_phone', 'work_address',
         'billing_address',
+        'client_signature_data', 'signature_token', 'signature_token_expires_at',
         'latitude', 'longitude', 'nro_luz',
         'installation_address', 'notes',
         'branch_id', 'zone_id', 'plan_id', 'contract_date',
@@ -35,6 +36,7 @@ class Client extends Model
         'dui_expedition_date' => 'date',
         'gps_token_expires_at' => 'datetime',
         'docs_token_expires_at' => 'datetime',
+        'signature_token_expires_at' => 'datetime',
         'uploaded_docs' => 'array',
     ];
 

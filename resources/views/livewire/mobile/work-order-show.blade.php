@@ -361,10 +361,57 @@
                                     <span class="material-symbols-outlined text-sm">delete</span>Limpiar
                                 </button>
                             </div>
-                        @endif
-                    </div>
+                    @endif
+                </div>
 
-                    @if ($canEditTech && $isEditing)
+                {{-- Datos para el contrato (se sincronizan al guardar) --}}
+                @if ($workOrder->ticket?->contract)
+                <div class="mt-3 border-t border-gray-100 pt-3">
+                    <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-gray-400 text-sm">description</span>
+                        Datos para el contrato
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">Tipo de acceso</label>
+                            <input type="text" wire:model.live="access_type"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                placeholder="Fibra óptica, Coaxial..."
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">Velocidad</label>
+                            <input type="text" wire:model.live="speed"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                placeholder="10 Mbps"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">Tecnología</label>
+                            <input type="text" wire:model.live="technology"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                placeholder="GPON, ADSL..."
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">Serial del modem</label>
+                            <input type="text" wire:model.live="modem_serial"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                placeholder="SN-123456"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">Costo de instalación ($)</label>
+                            <input type="number" wire:model.live="installation_cost"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                step="0.01" min="0" placeholder="0.00"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                @if ($canEditTech && $isEditing)
                         <div class="flex justify-end pt-2">
                             <x-ui.button type="submit" variant="primary" icon="save">Guardar datos técnicos</x-ui.button>
                         </div>
