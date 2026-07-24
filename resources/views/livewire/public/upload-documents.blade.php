@@ -17,7 +17,8 @@
                     </div>
                     <h2 class="text-lg font-bold text-gray-900">Enlace expirado</h2>
                     <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto">
-                        El tiempo para subir documentos ha expirado. Contactá a tu agente de ventas para que te genere un nuevo enlace.
+                        El tiempo para subir documentos ha expirado. Contactá a tu agente de ventas para que te genere un
+                        nuevo enlace.
                     </p>
                 </div>
             </x-ui.card>
@@ -29,34 +30,40 @@
                     </div>
                     <h2 class="text-lg font-bold text-gray-900">¡Documentos recibidos!</h2>
                     <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto">
-                        Gracias, tus documentos han sido subidos correctamente. Tu agente de ventas continuará con el proceso.
+                        Gracias, tus documentos han sido subidos correctamente. Tu agente de ventas continuará con el
+                        proceso.
                     </p>
                 </div>
             </x-ui.card>
         @else
             {{-- Upload form --}}
             <x-ui.card>
-                <div class="space-y-5"
-                    x-data="{ showConfirm: false, confirmType: '', confirmLabel: '' }">
+                <div class="space-y-5" x-data="{ showConfirm: false, confirmType: '', confirmLabel: '', uploading: '' }">
                     {{-- DUI Frente --}}
-                    <div class="border-2 border-dashed rounded-xl p-5 text-center transition-colors
-                        {{ $this->isUploaded('dui_front') ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
-                        <span class="material-symbols-outlined text-3xl {{ $this->isUploaded('dui_front') ? 'text-green-500' : 'text-gray-300' }}">badge</span>
+                    <div
+                        class="border-2 border-dashed rounded-xl p-5 text-center transition-colors
+                            {{ $this->isUploaded('dui_front') ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
+                        <span
+                            class="material-symbols-outlined text-3xl {{ $this->isUploaded('dui_front') ? 'text-green-500' : 'text-gray-300' }}">badge</span>
                         <p class="text-sm font-medium text-gray-700 mt-1">DUI (Frente) *</p>
                         @if($this->isUploaded('dui_front'))
                             <p class="text-xs text-green-600 mt-1">✓ Subido</p>
-                            <button @click="showConfirm = true; confirmLabel = '¿Eliminar DUI (Frente)?'; confirmType = 'dui_front'"
+                            <button
+                                @click="showConfirm = true; confirmLabel = '¿Eliminar DUI (Frente)?'; confirmType = 'dui_front'"
                                 class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
                         @else
-                            <input type="file" accept="image/*,.pdf" wire:model.live="dui_front"
-                                class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-                            <div wire:loading wire:target="dui_front" class="mt-2 flex items-center justify-center gap-2">
-                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                            <input type="file" accept="image/*,.pdf"
+                                class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                @change="if($event.target.files[0]) { uploading='dui_front'; resizeAndUpload($event.target.files[0], 'dui_front', $wire, function(){ uploading=''; }); $event.target.value=''; }" />
+
+                            <div x-show="uploading==='dui_front'" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin">
+                                </div>
                                 <span class="text-xs text-indigo-600">Subiendo...</span>
                             </div>
-                            <button type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
-                                x-data
-                                @click="openCamera('dui_front', $wire)">
+                            <button type="button"
+                                class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
+                                x-data @click="openCamera('dui_front', $wire)">
                                 <span class="material-symbols-outlined text-sm">photo_camera</span>
                                 Capturar con cámara
                             </button>
@@ -65,24 +72,30 @@
                     </div>
 
                     {{-- DUI Reverso --}}
-                    <div class="border-2 border-dashed rounded-xl p-5 text-center transition-colors
-                        {{ $this->isUploaded('dui_back') ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
-                        <span class="material-symbols-outlined text-3xl {{ $this->isUploaded('dui_back') ? 'text-green-500' : 'text-gray-300' }}">badge</span>
+                    <div
+                        class="border-2 border-dashed rounded-xl p-5 text-center transition-colors
+                            {{ $this->isUploaded('dui_back') ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
+                        <span
+                            class="material-symbols-outlined text-3xl {{ $this->isUploaded('dui_back') ? 'text-green-500' : 'text-gray-300' }}">badge</span>
                         <p class="text-sm font-medium text-gray-700 mt-1">DUI (Reverso) *</p>
                         @if($this->isUploaded('dui_back'))
                             <p class="text-xs text-green-600 mt-1">✓ Subido</p>
-                            <button @click="showConfirm = true; confirmLabel = '¿Eliminar DUI (Reverso)?'; confirmType = 'dui_back'"
+                            <button
+                                @click="showConfirm = true; confirmLabel = '¿Eliminar DUI (Reverso)?'; confirmType = 'dui_back'"
                                 class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
                         @else
-                            <input type="file" accept="image/*,.pdf" wire:model.live="dui_back"
-                                class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-                            <div wire:loading wire:target="dui_back" class="mt-2 flex items-center justify-center gap-2">
-                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                            <input type="file" accept="image/*,.pdf"
+                                class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                @change="if($event.target.files[0]) { uploading='dui_back'; resizeAndUpload($event.target.files[0], 'dui_back', $wire, function(){ uploading=''; }); $event.target.value=''; }" />
+
+                            <div x-show="uploading==='dui_back'" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin">
+                                </div>
                                 <span class="text-xs text-indigo-600">Subiendo...</span>
                             </div>
-                            <button type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
-                                x-data
-                                @click="openCamera('dui_back', $wire)">
+                            <button type="button"
+                                class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
+                                x-data @click="openCamera('dui_back', $wire)">
                                 <span class="material-symbols-outlined text-sm">photo_camera</span>
                                 Capturar con cámara
                             </button>
@@ -91,24 +104,30 @@
                     </div>
 
                     {{-- Recibo de luz --}}
-                    <div class="border-2 border-dashed rounded-xl p-5 text-center transition-colors
-                        {{ $this->isUploaded('receipt') ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
-                        <span class="material-symbols-outlined text-3xl {{ $this->isUploaded('receipt') ? 'text-green-500' : 'text-gray-300' }}">receipt</span>
+                    <div
+                        class="border-2 border-dashed rounded-xl p-5 text-center transition-colors
+                            {{ $this->isUploaded('receipt') ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
+                        <span
+                            class="material-symbols-outlined text-3xl {{ $this->isUploaded('receipt') ? 'text-green-500' : 'text-gray-300' }}">receipt</span>
                         <p class="text-sm font-medium text-gray-700 mt-1">Recibo de luz *</p>
                         @if($this->isUploaded('receipt'))
                             <p class="text-xs text-green-600 mt-1">✓ Subido</p>
-                            <button @click="showConfirm = true; confirmLabel = '¿Eliminar Recibo de luz?'; confirmType = 'receipt'"
+                            <button
+                                @click="showConfirm = true; confirmLabel = '¿Eliminar Recibo de luz?'; confirmType = 'receipt'"
                                 class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
                         @else
-                            <input type="file" accept="image/*,.pdf" wire:model.live="receipt"
-                                class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-                            <div wire:loading wire:target="receipt" class="mt-2 flex items-center justify-center gap-2">
-                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                            <input type="file" accept="image/*,.pdf"
+                                class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                @change="if($event.target.files[0]) { uploading='receipt'; resizeAndUpload($event.target.files[0], 'receipt', $wire, function(){ uploading=''; }); $event.target.value=''; }" />
+
+                            <div x-show="uploading==='receipt'" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin">
+                                </div>
                                 <span class="text-xs text-indigo-600">Subiendo...</span>
                             </div>
-                            <button type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
-                                x-data
-                                @click="openCamera('receipt', $wire)">
+                            <button type="button"
+                                class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
+                                x-data @click="openCamera('receipt', $wire)">
                                 <span class="material-symbols-outlined text-sm">photo_camera</span>
                                 Capturar con cámara
                             </button>
@@ -117,25 +136,31 @@
                     </div>
 
                     {{-- Foto de Fachada --}}
-                    <div class="border-2 border-dashed rounded-xl p-5 text-center transition-colors
-                        {{ $this->isUploaded('fachada') ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
-                        <span class="material-symbols-outlined text-3xl {{ $this->isUploaded('fachada') ? 'text-green-500' : 'text-gray-300' }}">home</span>
+                    <div
+                        class="border-2 border-dashed rounded-xl p-5 text-center transition-colors
+                            {{ $this->isUploaded('fachada') ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
+                        <span
+                            class="material-symbols-outlined text-3xl {{ $this->isUploaded('fachada') ? 'text-green-500' : 'text-gray-300' }}">home</span>
                         <p class="text-sm font-medium text-gray-700 mt-1">Foto de Fachada *</p>
                         <p class="text-xs text-gray-400">Para que los técnicos identifiquen la casa</p>
                         @if($this->isUploaded('fachada'))
                             <p class="text-xs text-green-600 mt-1">✓ Subido</p>
-                            <button @click="showConfirm = true; confirmLabel = '¿Eliminar Foto de Fachada?'; confirmType = 'fachada'"
+                            <button
+                                @click="showConfirm = true; confirmLabel = '¿Eliminar Foto de Fachada?'; confirmType = 'fachada'"
                                 class="text-xs text-red-600 hover:text-red-700 mt-1">Eliminar</button>
                         @else
-                            <input type="file" accept="image/*" wire:model.live="fachada"
-                                class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-                            <div wire:loading wire:target="fachada" class="mt-2 flex items-center justify-center gap-2">
-                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                            <input type="file" accept="image/*"
+                                class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                @change="if($event.target.files[0]) { uploading='fachada'; resizeAndUpload($event.target.files[0], 'fachada', $wire, function(){ uploading=''; }); $event.target.value=''; }" />
+
+                            <div x-show="uploading==='fachada'" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin">
+                                </div>
                                 <span class="text-xs text-indigo-600">Subiendo...</span>
                             </div>
-                            <button type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
-                                x-data
-                                @click="openCamera('fachada', $wire)">
+                            <button type="button"
+                                class="mt-2 w-full px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
+                                x-data @click="openCamera('fachada', $wire)">
                                 <span class="material-symbols-outlined text-sm">photo_camera</span>
                                 Capturar con cámara
                             </button>
@@ -152,7 +177,8 @@
                     </div>
 
                     {{-- Modal de confirmación --}}
-                    <div x-show="showConfirm" class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" x-cloak>
+                    <div x-show="showConfirm" class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+                        x-cloak>
                         <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-auto shadow-xl" @click.stop>
                             <div class="flex items-center gap-3 mb-4">
                                 <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -176,11 +202,11 @@
             </x-ui.card>
 
             {{-- Camera Overlay --}}
-            <div id="camera-overlay" class="fixed inset-0 z-50 bg-black hidden flex flex-col" style="position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100dvh;">
+            <div id="camera-overlay" class="fixed inset-0 z-50 bg-black hidden flex flex-col"
+                style="position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100dvh;">
                 {{-- Video container (flex-1 para que ocupe el espacio disponible) --}}
                 <div class="relative flex-1 flex items-center justify-center bg-black min-h-0">
-                    <video id="camera-video" autoplay playsinline
-                        class="w-full h-full object-contain"></video>
+                    <video id="camera-video" autoplay playsinline class="w-full h-full object-contain"></video>
                     <canvas id="camera-canvas" class="hidden"></canvas>
 
                     {{-- Corner guides --}}
@@ -189,7 +215,9 @@
                     {{-- Loading --}}
                     <div id="camera-loading" class="absolute inset-0 bg-black/60 flex items-center justify-center hidden">
                         <div class="text-white text-center">
-                            <div class="w-10 h-10 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                            <div
+                                class="w-10 h-10 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin mx-auto mb-3">
+                            </div>
                             <p class="text-sm">Procesando documento...</p>
                         </div>
                     </div>
@@ -215,155 +243,218 @@
 </div>
 
 @push('scripts')
-<script src="{{ asset('js/jscanify.min.js') }}"></script>
-<script async src="https://docs.opencv.org/4.9.0/opencv.js"></script>
-<script>
-    let activeField = null;
-    let activeWire = null;
-    let mediaStream = null;
-    let scanner = null;
-    let scannerReady = false;
+    <script src="{{ asset('js/jscanify.min.js') }}"></script>
+    <script async src="https://docs.opencv.org/4.9.0/opencv.js"></script>
+    <script>
+        let activeField = null;
+        let activeWire = null;
+        let mediaStream = null;
+        let scanner = null;
+        let scannerReady = false;
 
-    async function openCamera(field, wire) {
-        activeField = field;
-        activeWire = wire;
+        async function openCamera(field, wire) {
+            activeField = field;
+            activeWire = wire;
 
-        try {
-            // Asegurar que el loading esté oculto al abrir la cámara
+            try {
+                const loading = document.getElementById('camera-loading');
+                if (loading) loading.classList.add('hidden');
+
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+                });
+                const video = document.getElementById('camera-video');
+                video.srcObject = mediaStream;
+                await video.play();
+
+                try {
+                    scanner = new jscanify();
+                    scannerReady = true;
+                } catch (e) {
+                    scannerReady = false;
+                }
+
+                document.getElementById('camera-overlay').classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            } catch (e) {
+                alert('No se pudo acceder a la cámara. Usá la opción de subir archivo.');
+            }
+        }
+
+        function closeCamera() {
             const loading = document.getElementById('camera-loading');
             if (loading) loading.classList.add('hidden');
 
-            mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-            });
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(t => t.stop());
+                mediaStream = null;
+            }
+            document.getElementById('camera-overlay').classList.add('hidden');
+            document.body.style.overflow = '';
+            activeField = null;
+            activeWire = null;
+        }
+
+        async function captureDocument() {
+            if (!activeWire || !activeField) return;
+
             const video = document.getElementById('camera-video');
-            video.srcObject = mediaStream;
-            await video.play();
+            const loading = document.getElementById('camera-loading');
+            if (loading) loading.classList.remove('hidden');
 
-            // Init jscanify
             try {
-                scanner = new jscanify();
-                scannerReady = true;
-            } catch (e) {
-                scannerReady = false;
-            }
-
-            document.getElementById('camera-overlay').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        } catch (e) {
-            alert('No se pudo acceder a la cámara. Usá la opción de subir archivo.');
-        }
-    }
-
-
-    function closeCamera() {
-        // Ocultar loading explícitamente
-        const loading = document.getElementById('camera-loading');
-        if (loading) loading.classList.add('hidden');
-
-        if (mediaStream) {
-            mediaStream.getTracks().forEach(t => t.stop());
-            mediaStream = null;
-        }
-        document.getElementById('camera-overlay').classList.add('hidden');
-        document.body.style.overflow = '';
-        activeField = null;
-        activeWire = null;
-    }
-
-    async function captureDocument() {
-        if (!activeWire || !activeField) return;
-
-        const video = document.getElementById('camera-video');
-        const loading = document.getElementById('camera-loading');
-        loading.classList.remove('hidden');
-
-        try {
-            const w = video.videoWidth;
-            const h = video.videoHeight;
-            let canvas;
-
-            // Intentar con jscanify (recorte inteligente)
-            if (typeof cv !== 'undefined' && scannerReady) {
-                try {
-                    const resultCanvas = scanner.extractDocument(video);
-                    if (resultCanvas && resultCanvas.width > 0 && resultCanvas.height > 0) {
-                        canvas = resultCanvas;
-                    }
-                } catch (e) {
-                    // fallback silencioso
+                // Esperar brevemente a que el video tenga dimensiones válidas (común en móviles)
+                if (video.videoWidth === 0 || video.videoHeight === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
-            }
 
-            // Fallback: capturar frame completo del video
-            if (!canvas) {
-                canvas = document.createElement('canvas');
+                const w = video.videoWidth || 1280;
+                const h = video.videoHeight || 720;
+                let canvas;
+
+                // Intentar con jscanify (recorte inteligente)
+                if (typeof cv !== 'undefined' && scannerReady) {
+                    try {
+                        const resultCanvas = scanner.extractDocument(video);
+                        if (resultCanvas && resultCanvas.width > 0 && resultCanvas.height > 0) {
+                            canvas = resultCanvas;
+                        }
+                    } catch (e) {
+                        console.warn('Fallo en jscanify, usando fallback', e);
+                    }
+                }
+
+                // Fallback: capturar frame completo del video
+                if (!canvas) {
+                    canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+                }
+
+                // OPTIMIZACIÓN CRÍTICA PARA MÓVILES: Redimensionar para evitar payloads gigantes
+                // que causan timeouts o cuelgues en redes lentas.
+                const MAX_WIDTH = 1200;
+                let finalWidth = canvas.width;
+                let finalHeight = canvas.height;
+
+                if (finalWidth > MAX_WIDTH) {
+                    finalHeight = Math.round((canvas.height * MAX_WIDTH) / canvas.width);
+                    finalWidth = MAX_WIDTH;
+                }
+
+                const finalCanvas = document.createElement('canvas');
+                finalCanvas.width = finalWidth;
+                finalCanvas.height = finalHeight;
+                finalCanvas.getContext('2d').drawImage(canvas, 0, 0, finalWidth, finalHeight);
+
+                // Calidad 0.6 es un buen equilibrio entre legibilidad y tamaño de archivo
+                const base64Data = finalCanvas.toDataURL('image/jpeg', 0.6);
+
+                // Timeout de seguridad: si la red falla o es muy lenta, cerramos la cámara para no dejar al usuario atrapado
+                const timeout = setTimeout(() => {
+                    console.warn('Timeout de subida alcanzado');
+                    closeCamera();
+                    alert('La conexión es lenta o se interrumpió. Por favor, verifica tu red e intenta de nuevo.');
+                }, 15000);
+
+                activeWire.call('saveBase64File', activeField, base64Data)
+                    .then(() => {
+                        clearTimeout(timeout);
+                        // El cierre con animación de éxito lo maneja el evento 'document-captured'
+                    })
+                    .catch((error) => {
+                        clearTimeout(timeout);
+                        console.error('Error en la subida:', error);
+                        closeCamera();
+                    });
+
+            } catch (e) {
+                console.error('Error al capturar documento:', e);
+                closeCamera();
+            }
+        }
+
+        // Redimensionar imagen o subir PDF como base64
+    function resizeAndUpload(file, field, wire, done) {
+        if (!file) return;
+        var isPdf = file.type === 'application/pdf' || file.name.match(/\.pdf$/i);
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            if (isPdf) {
+                // PDF: enviar sin resize
+                wire.call('saveBase64File', field, e.target.result, file.name)
+                    .then(function() { if (done) done(); })
+                    .catch(function() { if (done) done(); });
+                return;
+            }
+            // Imagen: redimensionar a max 1200px
+            var img = new Image();
+            img.onload = function() {
+                var MAX_WIDTH = 1200;
+                var w = img.width;
+                var h = img.height;
+                if (w > MAX_WIDTH) {
+                    h = Math.round((h * MAX_WIDTH) / w);
+                    w = MAX_WIDTH;
+                }
+                var canvas = document.createElement('canvas');
                 canvas.width = w;
                 canvas.height = h;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-            }
-
-            // Convertir a base64 y enviar como método Livewire
-            const base64Data = canvas.toDataURL('image/jpeg', 0.7);
-
-            const timeout = setTimeout(() => closeCamera(), 15000);
-
-            activeWire.call('uploadFromCamera', activeField, base64Data)
-                .catch(() => { clearTimeout(timeout); closeCamera(); });
-        } catch (e) {
-            closeCamera();
-        }
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                var resizedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                wire.call('saveBase64File', field, resizedBase64, file.name)
+                    .then(function() { if (done) done(); })
+                    .catch(function() { if (done) done(); });
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
     }
 
     document.addEventListener('livewire:init', () => {
-        // Escuchar evento de documento capturado exitosamente
-        Livewire.on('document-captured', ({ field, label }) => {
-            const loading = document.getElementById('camera-loading');
-            if (loading) {
-                // Mostrar check verde brevemente
-                loading.innerHTML = `
-                    <div class="text-white text-center">
-                        <div class="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-3">
-                            <span class="material-symbols-outlined text-4xl text-white">check</span>
-                        </div>
-                        <p class="text-sm font-medium">${label} capturado</p>
-                        <p class="text-xs text-gray-300 mt-1">Documento subido correctamente</p>
-                    </div>
-                `;
-                loading.classList.remove('hidden');
-
-                // Cerrar la cámara después de 1.2 segundos
-                setTimeout(() => {
-                    closeCamera();
-                    // Restaurar el contenido original del loading para próxima vez
+            Livewire.on('document-captured', ({ field, label }) => {
+                const loading = document.getElementById('camera-loading');
+                if (loading) {
                     loading.innerHTML = `
                         <div class="text-white text-center">
-                            <div class="w-10 h-10 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                            <p class="text-sm">Procesando documento...</p>
+                            <div class="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-3">
+                                <span class="material-symbols-outlined text-4xl text-white">check</span>
+                            </div>
+                            <p class="text-sm font-medium">${label} capturado</p>
+                            <p class="text-xs text-gray-300 mt-1">Documento subido correctamente</p>
                         </div>
                     `;
-                }, 1200);
-            } else {
-                closeCamera();
-            }
-        });
+                    loading.classList.remove('hidden');
 
-        // Escuchar evento de error en captura
-        Livewire.on('capture-error', ({ message }) => {
-            const loading = document.getElementById('camera-loading');
-            if (loading) loading.classList.add('hidden');
-            alert('Error: ' + message);
-        });
+                    setTimeout(() => {
+                        closeCamera();
+                        loading.innerHTML = `
+                            <div class="text-white text-center">
+                                <div class="w-10 h-10 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                                <p class="text-sm">Procesando documento...</p>
+                            </div>
+                        `;
+                    }, 1200);
+                } else {
+                    closeCamera();
+                }
+            });
 
-        Livewire.on('show-toast', ({ type, message }) => {
-            const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
-            const toast = document.createElement('div');
-            toast.className = `fixed top-4 right-4 z-50 px-4 py-2.5 rounded-lg text-white text-sm shadow-lg ${colors[type] || 'bg-gray-700'}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        });
-    });
+            Livewire.on('capture-error', ({ message }) => {
+                const loading = document.getElementById('camera-loading');
+                if (loading) loading.classList.add('hidden');
+                alert('Error: ' + message);
+            });
 
-</script>
+            Livewire.on('show-toast', ({ type, message }) => {
+                const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
+                const toast = document.createElement('div');
+                toast.className = `fixed top-4 right-4 z-50 px-4 py-2.5 rounded-lg text-white text-sm shadow-lg ${colors[type] || 'bg-gray-700'}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            });
+        });
+    </script>
 @endpush
