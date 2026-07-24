@@ -41,6 +41,23 @@ class ContractWorkflow extends Component
     public $gps_link = null;
     public $waitingForCoordinates = false;
 
+    // ─── Datos legales del cliente (contrato) ───
+    public $client_nit;
+    public $client_nrc;
+    public $dui_expedition_date;
+    public $dui_expedition_place;
+    public $client_nationality;
+    public $client_marital_status;
+    public $client_spouse_name;
+    public $client_occupation;
+    public $client_workplace;
+    public $client_position;
+    public $client_monthly_income;
+    public $client_boss_name;
+    public $client_work_phone;
+    public $client_work_address;
+    public $client_billing_address;
+
     // ─── Datos del Ticket ───
     public $ticket_description;
     public $ticket_priority;
@@ -101,6 +118,8 @@ class ContractWorkflow extends Component
                 'installation_address' => 'required|string|max:500',
                 'latitude' => 'nullable|numeric',
                 'longitude' => 'nullable|numeric',
+                'client_nit' => 'nullable|string|max:20',
+                'client_billing_address' => 'required|string|max:500',
             ],
             2 => [
                 'plan_id' => 'required|exists:plans,id',
@@ -161,6 +180,23 @@ class ContractWorkflow extends Component
             $this->longitude = $client->longitude ?? '';
             $this->service_type = $ticket->service_type;
             $this->zone_id = $ticket->zone_id ?? $client->zone_id ?? '';
+
+            // ─── Datos legales del contrato ───
+            $this->client_nit = $client->nit ?? '';
+            $this->client_nrc = $client->nrc ?? '';
+            $this->dui_expedition_date = $client->dui_expedition_date ?? '';
+            $this->dui_expedition_place = $client->dui_expedition_place ?? '';
+            $this->client_nationality = $client->nationality ?? '';
+            $this->client_marital_status = $client->marital_status ?? '';
+            $this->client_spouse_name = $client->spouse_name ?? '';
+            $this->client_occupation = $client->occupation ?? '';
+            $this->client_workplace = $client->workplace ?? '';
+            $this->client_position = $client->position ?? '';
+            $this->client_monthly_income = $client->monthly_income ?? '';
+            $this->client_boss_name = $client->boss_name ?? '';
+            $this->client_work_phone = $client->work_phone ?? '';
+            $this->client_work_address = $client->work_address ?? '';
+            $this->client_billing_address = $client->billing_address ?? $client->address ?? '';
 
             // ─── Sucursal: resolver desde cliente, zona del cliente o zona del ticket ───
             // Busca primero branch directo del cliente, luego sube por el árbol de zonas
@@ -436,6 +472,26 @@ class ContractWorkflow extends Component
     public function createContract()
     {
         $this->validate();
+
+        // Guardar datos legales en el cliente
+        Client::where('id', $this->client_id)->update([
+            'nit' => $this->client_nit,
+            'nrc' => $this->client_nrc,
+            'dui_expedition_date' => $this->dui_expedition_date ?: null,
+            'dui_expedition_place' => $this->dui_expedition_place,
+            'nationality' => $this->client_nationality,
+            'marital_status' => $this->client_marital_status,
+            'spouse_name' => $this->client_spouse_name,
+            'occupation' => $this->client_occupation,
+            'workplace' => $this->client_workplace,
+            'position' => $this->client_position,
+            'monthly_income' => $this->client_monthly_income ?: null,
+            'boss_name' => $this->client_boss_name,
+            'work_phone' => $this->client_work_phone,
+            'work_address' => $this->client_work_address,
+            'billing_address' => $this->client_billing_address,
+            'installation_address' => $this->installation_address,
+        ]);
 
         $contract = Contract::create([
             'client_id' => $this->client_id,
@@ -766,11 +822,41 @@ class ContractWorkflow extends Component
 
     private function getDefaultTerms(): string
     {
-        return '<p><strong>Primero:</strong> El proveedor se compromete a instalar y proporcionar el servicio contratado en la dirección indicada por el cliente.</p>
-        <p><strong>Segundo:</strong> El cliente se obliga al pago puntual de la tarifa acordada por el servicio, la cual podrá ser ajustada previa notificación con 30 días de anticipación.</p>
-        <p><strong>Tercero:</strong> El período mínimo de contratación es de 12 meses. En caso de cancelación anticipada, el cliente deberá pagar una penalidad equivalente al 25% del saldo restante.</p>
-        <p><strong>Cuarto:</strong> El proveedor garantiza el servicio con una disponibilidad mínima del 99.5% mensual, excluyendo mantenimientos programados y casos de fuerza mayor.</p>
-        <p><strong>Quinto:</strong> El cliente autoriza el uso de sus datos personales únicamente para fines de facturación y soporte técnico, conforme a la Ley de Protección de Datos.</p>';
+        return '
+        <p><strong>SECCION PRIMERA: DATOS GENERALES DEL CLIENTE.</strong></p>
+        <p>Nombre Completo: ' . e($this->client_name ?? '') . '</p>
+        <p>DUI: ' . e($this->client_document_number ?? '') . '</p>
+        <p>NIT: ' . e($this->client_nit ?? '') . '</p>
+        <p>Dirección de instalación: ' . e($this->installation_address ?? '') . '</p>
+        <p>Dirección de cobro: ' . e($this->client_billing_address ?? '') . '</p>
+
+        <p><strong>SECCION SEGUNDA: ESPECIFICACIONES DE LOS SERVICIOS PRESTADOS AL CLIENTE.</strong></p>
+
+        <p><strong>1.</strong> CLIENTE: Declaro que recibiré de parte de OMNIVISION-OMNICOM el servicio de telecomunicaciones hasta la finalización del plazo acordado; y estoy consciente que el contrato de servicio entra en vigencia a partir de la fecha de suscripción.</p>
+
+        <p><strong>2. TARIFAS Y PRECIOS:</strong> Las tarifas y precios estarán consignadas en este contrato. Por el servicio que reciba me obligo a pagar a OMNIVISION-OMNICOM: I) Tarifa y Precio por el valor del paquete contratado. II) Precio por activación, instalación, desactivación, desinstalación, traslado de servicio, recargos por facturas vencidas y otros semejantes previamente informados. III) Precio por venta o arrendamiento de equipo.</p>
+
+        <p><strong>3. FACTURACION:</strong> Me comprometo a pagar los servicios antes indicados en dólares de los Estados Unidos de América, en concepto de servicios contratados, los cuales serán facturados por períodos mensuales de acuerdo al sistema de facturación utilizado por OMNIVISION-OMNICOM. Así mismo tengo el conocimiento que si al día del inicio del servicio faltare menos de un mes para la emisión de la factura correspondiente, los cargos básicos se me facturarán proporcional. También deberé pagar dicha factura o crédito fiscal como máximo en la fecha última de pago que se me ha indicado por cualquier medio verificable que disponga la empresa. La falta de recibir el documento de cobro correspondiente, no me exime de la responsabilidad del pago oportuno.</p>
+
+        <p><strong>4. VIGENCIA Y PLAZO:</strong> El plazo obligatorio de vigencia aplicable al servicio de cable tv e Internet, prestado por OMNIVISION-OMNICOM se estipula en este contrato de servicio que suscribo y entrará en vigencia a partir de la fecha de mi suscripción, luego de finalizado el plazo obligatorio.</p>
+
+        <p><strong>5. TERMINACION CONTRACTUAL Y CONDICIONES DE RETIRO ANTICIPADO:</strong> En caso de dar por terminado el contrato de servicio tv e Internet, dentro del plazo obligatorio establecido en el presente contrato, debo de notificar por escrito a las oficinas administrativas con diez días hábiles de anticipación al retiro efectivo del servicio, deberé pagar todos y cada uno de los montos adecuados al momento de la terminación (Valor del número de meses restante para la finalización del contrato), y penalidades por terminación anticipada de manera particular.</p>
+
+        <p><strong>6. EL SERVICIO CONTRATADO PODRA SUSPENDERSE EN LOS CASOS SIGUIENTES:</strong> OMNIVISION-OMNICOM, podrá suspender la prestación de servicio de cable tv e Internet por incumplimiento de cualquiera de las obligaciones establecidas en el contrato, especialmente por mora de una factura o crédito fiscal por servicio prestado, por casos establecidos en la ley y su respectivo reglamento. La cancelación en el servicio por parte de "EL CLIENTE" no lo exime del pago de las cantidades adeudadas. Este deberá cubrirlas al 100% al momento de la cancelación; así mismo cancelará la suma de los meses pendientes cuando falte para la finalización del contrato; de igual manera permitir el retiro del equipo suministrado por el PROVEEDOR y de las instalaciones realizadas en el domicilio de "EL CLIENTE".</p>
+
+        <p><strong>7. EQUIPO ENTREGADO EN COMODATO:</strong> a) Recibí de parte de OMNIVISION-OMNICOM en entera satisfacción y en calidad de comodato el equipo que permitirá recibir el servicio de cable tv e internet. b) Es mi responsabilidad el mantenimiento y cuidado del equipo por uso normal durante el tiempo del contrato vigente. c) El equipo se encontrará en la dirección proporcionada por el cliente. d) Me comprometo a devolver el equipo al final del plazo en buen estado. e) En caso de hurto, robo o pérdida del equipo notificaré a OMNIVISION-OMNICOM para el bloqueo del servicio. f) Para reposición del equipo, el cliente podrá solicitar la reposición pagando el valor total del equipo. g) El cliente no podrá arrendar ni ceder los derechos emanados del equipo.</p>
+
+        <p><strong>8. CONDICIONES ESPECIALES DE CONTRATACION DE SERVICIOS DE INTERNET:</strong> a) El cliente podrá utilizar el servicio únicamente desde el número de protocolo de interconexión asignada por la empresa. b) El servicio se prestará en forma continua, las 24 horas del día, todo el año; salvo mora en el pago o caso fortuito de fuerza mayor. c) El cliente garantiza las instalaciones eléctricas, equipos de protección y equipo informático adecuado.</p>
+
+        <p><strong>9. OBLIGACIONES DE OMNIVISION-OMNICOM:</strong> a) Suministrar el servicio de Internet y Cable TV, bajo las condiciones establecidas en el presente contrato. b) Obligaciones Legales indicadas en las leyes aplicables. c) Brindar respuesta clara y oportuna a reclamos del cliente. d) Reintegrar en próxima factura cantidades cobradas de forma contraria a lo pactado.</p>
+
+        <p><strong>10. OBLIGACIONES DEL CLIENTE:</strong> a) Pagar puntualmente los cargos por la prestación de servicios, así como los recargos por pagos tardíos. b) No utilizar las redes de telecomunicaciones para actividades contrarias a la ley. c) Cuidado de los equipos, aceptando la responsabilidad por su buen uso y conservación.</p>
+
+        <p><strong>11. ES RESPONSABILIDAD DEL CLIENTE:</strong> El cuido de la Red y Equipo que la empresa Omnivisión proporciona; luego de su instalación; ya que no nos haremos responsables por el daño que sea causado con dolo por la parte contratante, siempre y cuando el personal encargado lo manifieste y así mismo se le hará saber al cliente, luego del diagnóstico presencial que nuestro personal realice en su domicilio.</p>
+
+        <p><strong>PAGARE SIN PROTESTO:</strong> Pagaré en forma incondicional a la orden de OMNIVISION-OMNICOM la cantidad establecida en el presente contrato. En caso de no ser pagado a su vencimiento, pagaré además el interés moratorio del % mensual. Para los efectos legales me someto a los tribunales de la ciudad de Chalatenango.</p>
+
+        <p><em>Nota: El uso de la señal de telecomunicaciones es exclusivo para la persona que lo contrata. Por ningún motivo podrá compartir la señal, de lo contrario se suspenderá el servicio y será demandado por los daños correspondientes a nuestra empresa.</em></p>';
     }
 
     /**

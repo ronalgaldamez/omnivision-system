@@ -140,6 +140,39 @@
                             placeholder="-89.2182" />
                     </div>
 
+                    {{-- Datos legales del contrato --}}
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-symbols-outlined text-amber-600 text-sm">gavel</span>
+                            <span class="text-xs font-semibold text-amber-800 uppercase tracking-wide">Datos legales del contrato</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <x-ui.input type="text" wire:model="client_nit" icon="badge" label="NIT" maxlength="20" />
+                            <x-ui.input type="text" wire:model="client_nrc" icon="badge" label="NRC" maxlength="20" />
+                            <x-ui.input type="date" wire:model="dui_expedition_date" icon="calendar_month" label="Fecha de expedición DUI" />
+                            <x-ui.input type="text" wire:model="dui_expedition_place" icon="location_on" label="Lugar de expedición DUI" />
+                            <x-ui.input type="text" wire:model="client_nationality" icon="flag" label="Nacionalidad" />
+                            <x-ui.select wire:model="client_marital_status" icon="diversity_2" label="Estado civil">
+                                <option value="">Seleccionar</option>
+                                <option value="Soltero/a">Soltero/a</option>
+                                <option value="Casado/a">Casado/a</option>
+                                <option value="Divorciado/a">Divorciado/a</option>
+                                <option value="Viudo/a">Viudo/a</option>
+                                <option value="Acompañado/a">Acompañado/a</option>
+                            </x-ui.select>
+                            <x-ui.input type="text" wire:model="client_spouse_name" icon="diversity_2" label="Nombre del cónyuge" />
+                            <x-ui.input type="text" wire:model="client_occupation" icon="work" label="Ocupación" />
+                            <x-ui.input type="text" wire:model="client_workplace" icon="business" label="Lugar de trabajo" />
+                            <x-ui.input type="text" wire:model="client_position" icon="badge" label="Cargo" />
+                            <x-ui.input type="number" wire:model="client_monthly_income" icon="attach_money" label="Ingreso mensual" step="0.01" />
+                            <x-ui.input type="text" wire:model="client_boss_name" icon="supervisor_account" label="Jefe inmediato" />
+                            <x-ui.input type="text" wire:model="client_work_phone" icon="call" label="Tel. trabajo" />
+                            <x-ui.input type="text" wire:model="client_work_address" icon="business" label="Dirección de trabajo" />
+                            <x-ui.textarea wire:model="client_billing_address" icon="receipt" label="Dirección de cobro" rows="2"
+                                placeholder="Dirección donde recibirá las facturas" class="sm:col-span-2" />
+                        </div>
+                    </div>
+
                     {{-- Captura de coordenadas vía enlace GPS --}}
                     <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
                         <div class="flex items-center gap-2 mb-2">
