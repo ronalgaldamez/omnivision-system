@@ -364,6 +364,52 @@
                     @endif
                 </div>
 
+                {{-- Verificación de instalación --}}
+                @if ($workOrder->ticket?->service_type === 'verificacion_instalacion')
+                @php $vr = $this->verificationRules; @endphp
+                <div class="mt-3 border-t border-gray-100 pt-3">
+                    <label class="block text-[11px] font-medium text-green-600 mb-2 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-green-600 text-sm">verified</span>
+                        Verificación de instalación
+                        @if($vr)
+                        <span class="text-[10px] text-green-500 font-normal ml-1">
+                            (gratis ≤ {{ $vr['free_distance'] }}m, ${{ $vr['price_per_meter'] }}/m extra)
+                        </span>
+                        @endif
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">¿Hay espacio en mufa?</label>
+                            <select wire:model.live="mufa_has_space"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                                <option value="">Seleccionar</option>
+                                <option value="1">Sí</option>
+                                <option value="0">No</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">Distancia (metros)</label>
+                            <input type="number" wire:model.live="drop_distance"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                step="0.01" min="0" placeholder="0.00"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">Costo ($)
+                                @if($drop_distance)
+                                <span class="text-[9px] text-green-500">(sugerido: ${{ number_format($this->suggestedVerificationPrice, 2) }})</span>
+                                @endif
+                            </label>
+                            <input type="number" wire:model.live="verification_price"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                step="0.01" min="0" placeholder="0.00"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 {{-- Datos para el contrato (se sincronizan al guardar) --}}
                 @if ($workOrder->ticket?->contract)
                 <div class="mt-3 border-t border-gray-100 pt-3">

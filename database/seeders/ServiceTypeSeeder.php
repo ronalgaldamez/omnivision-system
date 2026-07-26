@@ -26,6 +26,7 @@ class ServiceTypeSeeder extends Seeder
             ['name' => 'adicion_equipo', 'requires_noc' => false, 'requires_ot' => true, 'requires_contract' => false],
             ['name' => 'cambio_plan', 'requires_noc' => true, 'requires_ot' => false, 'requires_contract' => false],
             ['name' => 'soporte_tecnico', 'requires_noc' => false, 'requires_ot' => true, 'requires_contract' => false],
+            ['name' => 'verificacion_instalacion', 'requires_noc' => false, 'requires_ot' => true, 'requires_contract' => false],
         ];
 
         foreach ($types as $type) {

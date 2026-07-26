@@ -221,6 +221,7 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::prefix('admin/plans')->middleware(['auth', 'can:manage catalog'])->group(function () {
         Route::get('/', \App\Livewire\Admin\Plans\PlanManager::class)->name('admin.plans');
+        Route::get('/rules', \App\Livewire\Admin\Plans\PlanRuleManager::class)->name('admin.plans.rules');
     });
     Route::prefix('admin/shelves')->middleware(['auth', 'can:access_admin'])->group(function () {
         Route::get('/', \App\Livewire\Admin\ShelvesManager::class)->name('admin.shelves');
