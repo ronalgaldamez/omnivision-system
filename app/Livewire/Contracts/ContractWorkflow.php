@@ -248,12 +248,30 @@ class ContractWorkflow extends Component
             }
 
             $this->recalculateBenefits();
+
+            // Cargar la firma del cliente si ya existe (portal o enlace único de firma)
+            if ($client->client_signature_data) {
+                $this->client_signature_data = $client->client_signature_data;
+                $this->showClientSignature = true;
+            }
         }
 
         $this->contract_terms = $this->getDefaultTerms();
 
         $this->loadClientUploadedDocs();
         $this->computeDocumentsProgress();
+    }
+
+    public function updatedStep($value)
+    {
+        // Al entrar al paso de firma, refrescar la firma del cliente (portal o enlace único)
+        if ((int) $value === 4 && $this->client_id) {
+            $client = Client::find($this->client_id);
+            if ($client && $client->client_signature_data) {
+                $this->client_signature_data = $client->client_signature_data;
+                $this->showClientSignature = true;
+            }
+        }
     }
 
     // ─── Navegación del Wizard ───
@@ -571,6 +589,12 @@ class ContractWorkflow extends Component
     {
         $this->client_signature_data = $signatureData;
         $this->showClientSignature = true;
+
+        // Persistir en el cliente para que la firma presencial quede registrada igual que la del portal
+        if ($this->client_id) {
+            Client::where('id', $this->client_id)->update(['client_signature_data' => $signatureData]);
+        }
+
         $this->dispatch('show-toast', type: 'success', message: 'Firma del cliente capturada.');
     }
 
@@ -823,7 +847,12 @@ class ContractWorkflow extends Component
 
         // Limpiar token de firma del cliente
         if ($client) {
-            $client->update(['signature_token' => null, 'signature_token_expires_at' => null, 'client_signature_data' => null]);
+            $client->update([
+                'signature_token' => null,
+                'signature_token_expires_at' => null,
+                'client_signature_data' => null,
+                'signature_approved' => false,
+            ]);
         }
 
         // Generar PDF
@@ -981,14 +1010,31 @@ class ContractWorkflow extends Component
         $client->update([
             'uploaded_docs' => array_values($docs),
             'portal_docs_approved' => false,
-            'latitude' => null,
-            'longitude' => null,
-            'client_signature_data' => null,
         ]);
         $this->clientUploadedDocs = $client->fresh()->uploaded_docs ?? [];
 
         $labels = ['dui_front' => 'DUI (Frente)', 'dui_back' => 'DUI (Reverso)', 'receipt' => 'Recibo de luz', 'fachada' => 'Foto de Fachada'];
         $this->dispatch('show-toast', type: 'info', message: $labels[$type] . ' rechazado.');
+    }
+
+    public function rejectClientDocs()
+    {
+        $client = Client::find($this->client_id);
+        if (!$client)
+            return;
+
+        $docs = $client->uploaded_docs ?? [];
+        foreach ($docs as $d) {
+            Storage::disk('s3')->delete($d['path']);
+        }
+
+        $client->update([
+            'uploaded_docs' => [],
+            'portal_docs_approved' => false,
+        ]);
+        $this->clientUploadedDocs = [];
+
+        $this->dispatch('show-toast', type: 'info', message: 'Documentos rechazados. El enlace sigue vigente para que el cliente los vuelva a subir.');
     }
 
     public function rejectClientCoordinates()
@@ -999,10 +1045,25 @@ class ContractWorkflow extends Component
         $client->update([
             'latitude' => null,
             'longitude' => null,
-            'portal_docs_approved' => false,
-            'client_signature_data' => null,
+            'coordinates_approved' => false,
         ]);
         $this->dispatch('show-toast', type: 'info', message: 'Coordenadas del cliente rechazadas.');
+    }
+
+    public function approveClientCoordinates()
+    {
+        if (!$this->client_id) return;
+
+        $client = Client::find($this->client_id);
+        if (!$client) return;
+
+        if (!$client->latitude || !$client->longitude) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente aún no ha enviado coordenadas.');
+            return;
+        }
+
+        $client->update(['coordinates_approved' => true]);
+        $this->dispatch('show-toast', type: 'success', message: 'Coordenadas aprobadas para la instalación.');
     }
 
     public function rejectClientSignature()
@@ -1012,9 +1073,25 @@ class ContractWorkflow extends Component
 
         $client->update([
             'client_signature_data' => null,
-            'portal_docs_approved' => false,
+            'signature_approved' => false,
         ]);
         $this->dispatch('show-toast', type: 'info', message: 'Firma del cliente rechazada.');
+    }
+
+    public function approveClientSignature()
+    {
+        if (!$this->client_id) return;
+
+        $client = Client::find($this->client_id);
+        if (!$client) return;
+
+        if (!$client->client_signature_data) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente aún no ha firmado.');
+            return;
+        }
+
+        $client->update(['signature_approved' => true]);
+        $this->dispatch('show-toast', type: 'success', message: 'Firma aprobada. Ya podés generar el contrato.');
     }
 
     public function rejectAllClientDocs()
@@ -1028,22 +1105,31 @@ class ContractWorkflow extends Component
             Storage::disk('s3')->delete($d['path']);
         }
 
+        $newToken = (string) Str::random(64);
+        $expiresAt = now()->copy()->addHours(24);
+
         $client->update([
             'uploaded_docs' => [],
             'docs_token' => null,
             'docs_token_expires_at' => null,
-            'portal_token' => null,
-            'portal_token_expires_at' => null,
+            'gps_token' => null,
+            'gps_token_expires_at' => null,
+            'signature_token' => null,
+            'signature_token_expires_at' => null,
+            'portal_token' => $newToken,
+            'portal_token_expires_at' => $expiresAt,
             'portal_docs_approved' => false,
             'latitude' => null,
             'longitude' => null,
+            'coordinates_approved' => false,
             'client_signature_data' => null,
+            'signature_approved' => false,
         ]);
         $this->clientUploadedDocs = [];
         $this->docs_link = null;
-        $this->portal_link = null;
+        $this->portal_link = route('public.contract.portal', ['token' => $newToken]);
 
-        $this->dispatch('show-toast', type: 'info', message: 'Todos los documentos fueron rechazados. Generá un nuevo enlace.');
+        $this->dispatch('show-toast', type: 'success', message: 'Todo rechazado. Se generó un enlace nuevo para el cliente.');
     }
 
     // ─── Documentos: Enlace público de subida ───

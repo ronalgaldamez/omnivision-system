@@ -148,12 +148,18 @@
                                 <code class="text-sm font-mono font-medium text-gray-800">{{ $longitude }}</code>
                             </div>
                         </div>
-                        @if(!$client->portal_docs_approved)
+                        @if(!$client->portal_docs_approved || !$client->coordinates_approved)
                             <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center mt-4">
                                 <span class="material-symbols-outlined text-2xl text-amber-600">hourglass_empty</span>
                                 <h3 class="text-sm font-bold text-amber-800 mt-2">Pendiente de aprobación</h3>
                                 <p class="text-xs text-amber-700 mt-1 leading-relaxed">
-                                    Tus documentos están siendo revisados por un agente.
+                                    @if(!$client->portal_docs_approved && !$client->coordinates_approved)
+                                        Tus documentos y coordenadas están siendo revisados por un agente.
+                                    @elseif(!$client->portal_docs_approved)
+                                        Tus documentos están siendo revisados por un agente.
+                                    @else
+                                        Tus coordenadas están siendo revisadas por un agente.
+                                    @endif
                                     <strong>Máximo 10 minutos.</strong>
                                 </p>
                                 <p class="text-xs text-amber-600 mt-2">

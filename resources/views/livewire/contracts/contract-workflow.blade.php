@@ -198,82 +198,132 @@
                     </div>
 
                     {{-- Portal del cliente: docs + coordenadas + firma en un solo enlace --}}
-                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="material-symbols-outlined text-indigo-600 text-sm">globe</span>
-                            <span class="text-xs font-semibold text-indigo-800 uppercase tracking-wide">Portal del
-                                cliente</span>
+                    <div class="bg-white border border-indigo-200 rounded-xl shadow-sm overflow-hidden">
+                        {{-- Header del panel --}}
+                        <div class="bg-gradient-to-r from-indigo-600 to-indigo-500 px-5 py-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-white">globe</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-white">Portal del cliente</h4>
+                                        <p class="text-xs text-indigo-100">Un solo enlace: documentos, ubicación y firma digital</p>
+                                    </div>
+                                </div>
+                                @if ($portal_link)
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium bg-white/15 text-white">
+                                        <span class="material-symbols-outlined text-xs">link</span>
+                                        Enlace activo
+                                    </span>
+                                @endif
+                            </div>
                         </div>
-                        <p class="text-xs text-indigo-700 mb-3">
-                            Enviale un solo enlace al cliente para que suba documentos, comparta ubicación y firme
-                            digitalmente.
-                        </p>
 
-                        @if ($portal_link)
-                            <div class="bg-white rounded-lg border border-indigo-200 p-3 space-y-2">
-                                <div class="flex items-center gap-2">
-                                    <input type="text" value="{{ $portal_link }}" readonly
-                                        class="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded bg-gray-50 font-mono"
-                                        onclick="this.select(); navigator.clipboard?.writeText(this.value);" />
-                                    <button type="button"
-                                        onclick="navigator.clipboard?.writeText('{{ $portal_link }}');"
-                                        class="text-xs px-2 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-sm">content_copy</span>
-                                        Copiar
-                                    </button>
+                        <div class="p-5 space-y-4" x-data="{
+                            confirm: '',
+                            confirmTitle: '',
+                            confirmMessage: '',
+                            confirmVariant: 'danger',
+                            docType: '',
+                            requestConfirm(action, title, message, docType = '') {
+                                this.confirm = action;
+                                this.confirmTitle = title;
+                                this.confirmMessage = message;
+                                this.docType = docType;
+                                this.confirmVariant = action.startsWith('approve') ? 'success' : 'danger';
+                            },
+                            execConfirm() {
+                                const c = this.confirm;
+                                this.confirm = '';
+                                if (c === 'approve_docs') $wire.approveClientDocs();
+                                else if (c === 'reject_docs') $wire.rejectClientDocs();
+                                else if (c === 'reject_all') $wire.rejectAllClientDocs();
+                                else if (c === 'reject_doc') $wire.rejectClientDoc(this.docType);
+                                else if (c === 'approve_coords') $wire.approveClientCoordinates();
+                                else if (c === 'reject_coords') $wire.rejectClientCoordinates();
+                                else if (c === 'approve_sig') $wire.approveClientSignature();
+                                else if (c === 'reject_sig') $wire.rejectClientSignature();
+                            }
+                        }" @request-confirm.window="requestConfirm($event.detail.action, $event.detail.title, $event.detail.message, $event.detail.docType ?? '')">
+                            @if ($portal_link)
+                                {{-- Sección 1: Enlace del portal --}}
+                                <div class="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4">
+                                    <label class="block text-xs font-semibold text-indigo-800 uppercase tracking-wide mb-2">Enlace del portal</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" value="{{ $portal_link }}" readonly
+                                            class="flex-1 text-xs px-3 py-2 border border-indigo-200 rounded-lg bg-white font-mono focus:outline-none"
+                                            onclick="this.select();" />
+                                        <button type="button"
+                                            onclick="copyToClipboard('{{ $portal_link }}', this)"
+                                            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors text-xs font-medium">
+                                            <span class="material-symbols-outlined text-sm">content_copy</span>
+                                            Copiar
+                                        </button>
+                                    </div>
+                                    <div class="flex flex-wrap items-center justify-between gap-2 mt-3">
+                                        <span class="inline-flex items-center gap-1 text-[10px] text-indigo-500">
+                                            <span class="material-symbols-outlined text-xs">schedule</span>
+                                            El enlace expira en 24 horas
+                                        </span>
+                                        <button wire:click="sendPortalViaWhatsApp"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
+                                            <span class="material-symbols-outlined text-sm">chat</span>
+                                            Enviar por WhatsApp
+                                        </button>
+                                    </div>
+                                    <div class="flex gap-2 pt-3 mt-3 border-t border-indigo-100">
+                                        <button wire:click="refreshUploadedDocs"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 transition-colors">
+                                            <span class="material-symbols-outlined text-sm">refresh</span>
+                                            Actualizar documentos
+                                        </button>
+                                        <button wire:click="$set('portal_link', null)"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                                            <span class="material-symbols-outlined text-sm">close</span>
+                                            Cerrar enlace
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="flex items-center justify-between">
-                                    <p class="text-[10px] text-indigo-500">Compartí este enlace con el cliente por
-                                        WhatsApp</p>
-                                    <button wire:click="sendPortalViaWhatsApp"
-                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
-                                        title="Enviar por WhatsApp">
-                                        <span class="material-symbols-outlined text-xs">chat</span>
-                                        WhatsApp
-                                    </button>
-                                </div>
-                                <div class="flex gap-2 pt-1">
-                                    <button wire:click="refreshUploadedDocs"
-                                        class="text-xs px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-sm">refresh</span>
-                                        Actualizar documentos
-                                    </button>
-                                    <button wire:click="$set('portal_link', null)"
-                                        class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
-                                        Cerrar
-                                    </button>
-                                </div>
+
                                 @if (count($clientUploadedDocs) > 0)
-                                    <div class="mt-2 pt-2 border-t border-indigo-100">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <p class="text-xs font-medium text-indigo-700">Documentos recibidos:</p>
-                                            <div class="flex items-center gap-1">
-                                                @php
-                                                    $_client = \App\Models\Client::find($client_id);
-                                                    $_docsApproved = $_client?->portal_docs_approved ?? false;
-                                                @endphp
+                                    {{-- Sección 2: Documentos recibidos --}}
+                                    @php
+                                        $_client = \App\Models\Client::find($client_id);
+                                        $_docsApproved = $_client?->portal_docs_approved ?? false;
+                                    @endphp
+                                    <div class="border border-gray-100 rounded-xl overflow-hidden">
+                                        <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-gray-50 border-b border-gray-100">
+                                            <div class="flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-gray-500 text-sm">description</span>
+                                                <p class="text-xs font-semibold text-gray-700">Documentos recibidos</p>
+                                                <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700">
+                                                    {{ count($clientUploadedDocs) }}
+                                                </span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
                                                 @if ($_docsApproved)
-                                                    <span
-                                                        class="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium bg-green-100 text-green-700">
-                                                        <span
-                                                            class="material-symbols-outlined text-xs">check_circle</span>
-                                                        Aprobados
-                                                    </span>
+                                                    <x-ui.badge variant="success" icon="check_circle">Aprobados</x-ui.badge>
                                                 @else
-                                                    <button wire:click="approveClientDocs"
-                                                        class="text-xs px-2 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 transition-colors flex items-center gap-1">
+                                                    <button @click="requestConfirm('approve_docs', '¿Aprobar los documentos?', 'El cliente podrá continuar con el proceso de firma.')"
+                                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
                                                         <span class="material-symbols-outlined text-sm">verified</span>
                                                         Aprobar documentos
                                                     </button>
                                                 @endif
-                                                <button wire:click="rejectAllClientDocs"
-                                                    class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 transition-colors flex items-center gap-1">
+                                                <button @click="requestConfirm('reject_docs', '¿Rechazar todos los documentos?', 'Se eliminarán los documentos y el cliente deberá volver a subirlos con el mismo enlace.')"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors">
+                                                    <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                                                    Rechazar documentos
+                                                </button>
+                                                <button @click="requestConfirm('reject_all', '¿Rechazar todo el proceso?', 'Se eliminarán documentos, coordenadas y firma. Se generará un enlace nuevo para el cliente.')"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition-colors">
                                                     <span class="material-symbols-outlined text-sm">block</span>
-                                                    Rechazar todos
+                                                    Rechazar todo
                                                 </button>
                                             </div>
                                         </div>
-                                        <div class="grid grid-cols-3 gap-2">
+                                        <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                                             @foreach ($clientUploadedDocs as $doc)
                                                 @php
                                                     $label = match ($doc['type']) {
@@ -285,29 +335,29 @@
                                                     };
                                                     $url = $this->getDocPreviewUrl($doc['path']);
                                                 @endphp
-                                                <div
-                                                    class="bg-white rounded-lg border border-green-200 p-2 text-center">
-                                                    @if ($url && isset($doc['mime_type']) && str_starts_with($doc['mime_type'], 'image/'))
-                                                        <img src="{{ $url }}"
-                                                            class="max-h-16 mx-auto rounded cursor-pointer preview-img hover:opacity-80"
-                                                            onclick="openPreview(this.src, '{{ $contract_id ?? ($ticket_id ?? 'new') }}')" />
-                                                    @elseif($url)
-                                                        <a href="{{ $url }}" target="_blank"
-                                                            class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
-                                                            <span
-                                                                class="material-symbols-outlined text-sm">visibility</span>
-                                                            Ver
-                                                        </a>
-                                                    @else
-                                                        <span
-                                                            class="material-symbols-outlined text-sm text-green-600">check_circle</span>
-                                                    @endif
-                                                    <p class="text-[10px] text-gray-600 mt-1 truncate">
-                                                        {{ $label }}</p>
-                                                    <button wire:click="rejectClientDoc('{{ $doc['type'] }}')"
-                                                        class="text-[10px] text-red-600 hover:text-red-700 mt-0.5">
-                                                        Rechazar
-                                                    </button>
+                                                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden hover:border-indigo-300 hover:shadow-md transition-all">
+                                                    <div class="h-20 bg-gray-50 flex items-center justify-center overflow-hidden">
+                                                        @if ($url && isset($doc['mime_type']) && str_starts_with($doc['mime_type'], 'image/'))
+                                                            <img src="{{ $url }}" alt="{{ $label }}"
+                                                                class="w-full h-full object-cover cursor-pointer hover:opacity-85 transition-opacity"
+                                                                onclick="openPreview(this.src, '{{ $contract_id ?? ($ticket_id ?? 'new') }}')" />
+                                                        @elseif($url)
+                                                            <a href="{{ $url }}" target="_blank"
+                                                                class="inline-flex flex-col items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+                                                                <span class="material-symbols-outlined text-xl">picture_as_pdf</span>
+                                                                Ver PDF
+                                                            </a>
+                                                        @else
+                                                            <span class="material-symbols-outlined text-xl text-green-500">check_circle</span>
+                                                        @endif
+                                                    </div>
+                                                    <div class="p-2 text-center">
+                                                        <p class="text-[10px] text-gray-600 font-medium truncate">{{ $label }}</p>
+                                                        <button @click="requestConfirm('reject_doc', '¿Rechazar este documento?', 'El documento «{{ $label }}» será eliminado y el cliente deberá volver a subirlo.', '{{ $doc['type'] }}')"
+                                                            class="text-[10px] text-red-500 hover:text-red-700 mt-0.5">
+                                                            Rechazar
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             @endforeach
                                         </div>
@@ -316,81 +366,209 @@
 
                                 @php $_clientCoords = $_client ?? \App\Models\Client::find($client_id); @endphp
                                 @if($_clientCoords && $_clientCoords->latitude && $_clientCoords->longitude)
-                                    <div class="mt-2 pt-2 border-t border-indigo-100">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <div class="flex items-center gap-2">
-                                                <span class="material-symbols-outlined text-indigo-600 text-sm">near_me</span>
-                                                <span class="text-xs text-indigo-700">
-                                                    Coordenadas: {{ $_clientCoords->latitude }}, {{ $_clientCoords->longitude }}
-                                                </span>
+                                    {{-- Sección 3: Coordenadas --}}
+                                    @php $_coordsApproved = $_clientCoords->coordinates_approved ?? false; @endphp
+                                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                                <span class="material-symbols-outlined text-blue-600 text-base">near_me</span>
                                             </div>
-                                            <div class="flex items-center gap-1">
-                                                <a href="https://www.google.com/maps?q={{ $_clientCoords->latitude }},{{ $_clientCoords->longitude }}"
-                                                    target="_blank"
-                                                    class="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors flex items-center gap-1">
-                                                    <span class="material-symbols-outlined text-sm">map</span>
-                                                    Ver en mapa
-                                                </a>
-                                                <button wire:click="rejectClientCoordinates"
-                                                    class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 transition-colors flex items-center gap-1">
-                                                    <span class="material-symbols-outlined text-sm">block</span>
-                                                    Rechazar
+                                            <div>
+                                                <div class="flex items-center gap-2">
+                                                    <p class="text-xs font-semibold text-gray-700">Coordenadas de instalación</p>
+                                                    @if($_coordsApproved)
+                                                        <x-ui.badge variant="success" icon="verified">Aprobadas</x-ui.badge>
+                                                    @else
+                                                        <x-ui.badge variant="warning" icon="hourglass_top">Pendientes</x-ui.badge>
+                                                    @endif
+                                                </div>
+                                                <p class="text-[11px] text-gray-500 font-mono">
+                                                    {{ $_clientCoords->latitude }}, {{ $_clientCoords->longitude }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <a href="https://www.google.com/maps?q={{ $_clientCoords->latitude }},{{ $_clientCoords->longitude }}"
+                                                target="_blank"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+                                                <span class="material-symbols-outlined text-sm">map</span>
+                                                Ver en mapa
+                                            </a>
+                                            @if(!$_coordsApproved)
+                                                <button @click="requestConfirm('approve_coords', '¿Aprobar las coordenadas?', 'Confirmá que la ubicación capturada es correcta para la instalación.')"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
+                                                    <span class="material-symbols-outlined text-sm">verified</span>
+                                                    Aprobar
                                                 </button>
-                                            </div>
+                                            @endif
+                                            <button @click="requestConfirm('reject_coords', '¿Rechazar las coordenadas?', 'Se eliminarán las coordenadas y el cliente deberá volver a compartir su ubicación con el mismo enlace.')"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors">
+                                                <span class="material-symbols-outlined text-sm">block</span>
+                                                Rechazar
+                                            </button>
                                         </div>
                                     </div>
                                 @endif
 
                                 @if($_clientCoords && $_clientCoords->client_signature_data)
-                                    @php $_sig = $_clientCoords->client_signature_data; @endphp
-                                    <div class="mt-2 pt-2 border-t border-indigo-100">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <div class="flex items-center gap-2">
-                                                <span class="material-symbols-outlined text-green-600 text-sm">edit_note</span>
-                                                <span class="text-xs text-green-700 font-medium">Firma del cliente</span>
+                                    {{-- Sección 4: Firma del cliente --}}
+                                    @php $_sig = $_clientCoords->client_signature_data; $_sigApproved = $_clientCoords->signature_approved ?? false; @endphp
+                                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                                <span class="material-symbols-outlined text-green-600 text-base">edit_note</span>
                                             </div>
-                                            <button wire:click="rejectClientSignature"
-                                                class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 transition-colors flex items-center gap-1">
-                                                <span class="material-symbols-outlined text-sm">block</span>
-                                                Rechazar firma
-                                            </button>
+                                            <div>
+                                                <div class="flex items-center gap-2">
+                                                    <p class="text-xs font-semibold text-gray-700">Firma del cliente</p>
+                                                    @if($_sigApproved)
+                                                        <x-ui.badge variant="success" icon="verified">Aprobada</x-ui.badge>
+                                                    @else
+                                                        <x-ui.badge variant="warning" icon="hourglass_top">Pendiente</x-ui.badge>
+                                                    @endif
+                                                </div>
+                                                <img src="{{ $_sig }}" alt="Firma del cliente" onclick="openSignaturePreview()"
+                                                    class="h-10 mt-1.5 bg-white rounded border border-gray-200 p-0.5 cursor-pointer hover:border-green-400 transition-colors" />
+                                            </div>
                                         </div>
-                                        <img src="{{ $_sig }}" alt="Firma del cliente" x-data @click="$el.closest('[x-data]').__x.$data.sigPreview = true"
-                                            class="max-h-16 bg-white rounded border border-gray-200 p-1 cursor-pointer hover:opacity-80" />
+                                        @if(!$_sigApproved)
+                                            <div class="flex items-center gap-1.5">
+                                                <button @click="requestConfirm('approve_sig', '¿Aprobar la firma?', 'Confirmá que la firma coincide con el documento de identidad.')"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
+                                                    <span class="material-symbols-outlined text-sm">verified</span>
+                                                    Aprobar
+                                                </button>
+                                                <button @click="requestConfirm('reject_sig', '¿Rechazar la firma?', 'La firma se eliminará y el cliente deberá firmar nuevamente.')"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors">
+                                                    <span class="material-symbols-outlined text-sm">block</span>
+                                                    Rechazar
+                                                </button>
+                                            </div>
+                                        @endif
                                     </div>
                                 @endif
-                            </div>
-
-
-                        @else
-                            <button wire:click="generatePortalLink"
-                                class="px-3 py-2 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-sm">share</span>
-                                Generar enlace del portal
-                            </button>
-                        @endif
-                    </div>
-                </div>
-
-                {{-- Modal para previsualizar firma (Alpine nativo) --}}
-                <div x-data="{ sigPreview: false }"
-                    @if(isset($_sig)) x-init="$watch('sigPreview', v => { if(v) document.body.style.overflow = 'hidden'; else document.body.style.overflow = '' })" @endif>
-                    <div x-show="sigPreview" @click.away="sigPreview = false; document.body.style.overflow = ''"
-                        class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" x-cloak>
-                        <div class="bg-white rounded-xl p-6 max-w-lg w-full shadow-xl" @click.stop>
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-bold text-gray-800">Firma del cliente</h3>
-                                <button @click="sigPreview = false; document.body.style.overflow = ''" class="text-gray-400 hover:text-gray-600">
-                                    <span class="material-symbols-outlined">close</span>
-                                </button>
-                            </div>
-                            @if(isset($_sig))
-                            <img src="{{ $_sig }}" alt="Firma del cliente" class="w-full bg-white rounded border border-gray-200 p-2" />
+                            @else
+                                {{-- Estado vacío: sin enlace generado --}}
+                                <div class="text-center py-8">
+                                    <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mx-auto mb-4">
+                                        <span class="material-symbols-outlined text-indigo-600 text-3xl">link</span>
+                                    </div>
+                                    <h5 class="text-sm font-bold text-gray-800">Generá el enlace del portal</h5>
+                                    <p class="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
+                                        El cliente podrá subir sus documentos, compartir su ubicación y firmar digitalmente desde un solo enlace.
+                                    </p>
+                                    <button wire:click="generatePortalLink"
+                                        class="mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+                                        <span class="material-symbols-outlined text-sm">share</span>
+                                        Generar enlace del portal
+                                    </button>
+                                </div>
                             @endif
-                            <p class="text-xs text-gray-400 text-center mt-3">Revisá que la firma coincida con el documento del cliente.</p>
+
+                            {{-- Modal de confirmación de aprobar/rechazar --}}
+                            <div x-show="confirm" x-cloak @click="confirm = ''"
+                                class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                                <div class="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl" @click.stop>
+                                    <div class="flex items-start gap-3 mb-4">
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                                            :class="confirmVariant === 'success' ? 'bg-green-100' : 'bg-red-100'">
+                                            <span class="material-symbols-outlined text-xl"
+                                                :class="confirmVariant === 'success' ? 'text-green-600' : 'text-red-600'">warning</span>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-sm font-bold text-gray-900" x-text="confirmTitle"></h4>
+                                            <p class="text-xs text-gray-500 mt-1 leading-relaxed" x-text="confirmMessage"></p>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end gap-3 mt-2">
+                                        <button @click="confirm = ''"
+                                            class="px-4 py-2 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                                            Cancelar
+                                        </button>
+                                        <button @click="execConfirm()"
+                                            class="inline-flex items-center gap-1 px-4 py-2 text-xs font-medium rounded-lg text-white transition-colors"
+                                            :class="confirmVariant === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'">
+                                            <span class="material-symbols-outlined text-sm">check</span>
+                                            Confirmar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                {{-- Modal para previsualizar firma (JS puro, igual patrón que el preview de imágenes) --}}
+                @php
+                    $_duiFront = collect($clientUploadedDocs)->firstWhere('type', 'dui_front');
+                    $_duiFrontUrl = $_duiFront && isset($_duiFront['path'])
+                        ? $this->getDocPreviewUrl($_duiFront['path'])
+                        : null;
+                @endphp
+                @if(isset($_sig))
+                    <div id="signature-preview-modal"
+                        class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 hidden"
+                        style="display:none;">
+                        <div class="bg-white rounded-xl p-6 max-w-3xl w-full shadow-xl max-h-[90vh] overflow-y-auto">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-bold text-gray-800">Firma del cliente</h3>
+                                <div class="flex items-center gap-2">
+                                    @if($_sigApproved ?? false)
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">
+                                            <span class="material-symbols-outlined text-xs">verified</span>
+                                            Aprobada
+                                        </span>
+                                    @endif
+                                    <button type="button" onclick="closeSignaturePreview()" class="text-gray-400 hover:text-gray-600">
+                                        <span class="material-symbols-outlined">close</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Firma capturada</p>
+                                    <img src="{{ $_sig }}" alt="Firma del cliente" class="w-full bg-white rounded border border-gray-200 p-2" />
+                                </div>
+                                <div>
+                                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Documento (DUI frente)</p>
+                                    @if($_duiFrontUrl)
+                                    <img src="{{ $_duiFrontUrl }}" alt="DUI frente" class="w-full bg-white rounded border border-gray-200 p-2" />
+                                    @else
+                                    <div class="w-full h-40 flex items-center justify-center bg-gray-50 rounded border border-gray-200 text-xs text-gray-400">
+                                        No hay DUI disponible para comparar
+                                    </div>
+                                    @endif
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-400 text-center mt-3">Compará la firma capturada con la firma estampada en el documento del cliente.</p>
+                            <div class="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
+                                @if(!($_sigApproved ?? false))
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" @click="closeSignaturePreview(); $dispatch('request-confirm', { action: 'approve_sig', title: '¿Aprobar la firma?', message: 'Confirmá que la firma coincide con el documento de identidad.' })"
+                                            class="inline-flex items-center gap-1 px-4 py-2 text-xs font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors">
+                                            <span class="material-symbols-outlined text-sm">verified</span>
+                                            Aprobar firma
+                                        </button>
+                                        <button type="button" @click="closeSignaturePreview(); $dispatch('request-confirm', { action: 'reject_sig', title: '¿Rechazar la firma?', message: 'La firma se eliminará y el cliente deberá firmar nuevamente.' })"
+                                            class="inline-flex items-center gap-1 px-4 py-2 text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">
+                                            <span class="material-symbols-outlined text-sm">block</span>
+                                            Rechazar firma
+                                        </button>
+                                    </div>
+                                @else
+                                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                        <span class="material-symbols-outlined text-sm">verified</span>
+                                        Firma aprobada
+                                    </span>
+                                @endif
+                                <button type="button" onclick="closeSignaturePreview()"
+                                    class="px-4 py-2 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 <div class="flex justify-end pt-4 border-t border-gray-100">
                     <x-ui.button variant="primary" icon="arrow_forward" wire:click="nextStep">
@@ -656,17 +834,40 @@
                 {{-- Document uploaders --}}
                 @php
                     $preview = fn($path, $mime) => $path ? $this->getDocPreviewUrl($path) : null;
+                    $portalDoc = fn($type) => collect($clientUploadedDocs)->firstWhere('type', $type);
                 @endphp
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {{-- DUI Frente (obligatorio) --}}
+                    @php $_pDoc = $portalDoc('dui_front'); @endphp
                     <div
                         class="border-2 border-dashed rounded-xl p-4 text-center relative
-                        {{ isset($uploadedDocuments['dui_front']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
+                        {{ $_pDoc || isset($uploadedDocuments['dui_front']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
                         <span
                             class="material-symbols-outlined text-3xl
-                            {{ isset($uploadedDocuments['dui_front']) ? 'text-green-500' : 'text-gray-300' }}">badge</span>
+                            {{ $_pDoc || isset($uploadedDocuments['dui_front']) ? 'text-green-500' : 'text-gray-300' }}">badge</span>
                         <p class="text-sm font-medium text-gray-700 mt-1">DUI (Frente) *</p>
-                        @if (isset($uploadedDocuments['dui_front']))
+                        @if ($_pDoc)
+                            @php $_url = $preview($_pDoc['path'], $_pDoc['mime_type'] ?? ''); @endphp
+                            @if ($_url && str_starts_with($_pDoc['mime_type'] ?? '', 'image/'))
+                                <img src="{{ $_url }}"
+                                    class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img"
+                                    onclick="openPreview(this.src, '{{ $contract_id ?? ($ticket_id ?? 'new') }}')" />
+                            @elseif($_url)
+                                <a href="{{ $_url }}" target="_blank"
+                                    class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+                                    <span class="material-symbols-outlined text-sm">picture_as_pdf</span> Ver PDF
+                                </a>
+                            @endif
+                            <span
+                                class="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">
+                                <span class="material-symbols-outlined text-xs">cloud_done</span>
+                                Recibido del portal
+                            </span>
+                            @if ($_url)
+                                <a href="{{ $_url }}" target="_blank"
+                                    class="block text-xs text-indigo-600 hover:text-indigo-700 mt-1">Descargar</a>
+                            @endif
+                        @elseif (isset($uploadedDocuments['dui_front']))
                             @php $url = $preview($uploadedDocuments['dui_front']['path'], $uploadedDocuments['dui_front']['mime_type'] ?? ''); @endphp
                             @if ($url && str_starts_with($uploadedDocuments['dui_front']['mime_type'] ?? '', 'image/'))
                                 <img src="{{ $url }}"
@@ -717,14 +918,36 @@
                     </div>
 
                     {{-- DUI Reverso (obligatorio) --}}
+                    @php $_pDoc = $portalDoc('dui_back'); @endphp
                     <div
                         class="border-2 border-dashed rounded-xl p-4 text-center relative
-                        {{ isset($uploadedDocuments['dui_back']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
+                        {{ $_pDoc || isset($uploadedDocuments['dui_back']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300' }}">
                         <span
                             class="material-symbols-outlined text-3xl
-                            {{ isset($uploadedDocuments['dui_back']) ? 'text-green-500' : 'text-gray-300' }}">badge</span>
+                            {{ $_pDoc || isset($uploadedDocuments['dui_back']) ? 'text-green-500' : 'text-gray-300' }}">badge</span>
                         <p class="text-sm font-medium text-gray-700 mt-1">DUI (Reverso) *</p>
-                        @if (isset($uploadedDocuments['dui_back']))
+                        @if ($_pDoc)
+                            @php $_url = $preview($_pDoc['path'], $_pDoc['mime_type'] ?? ''); @endphp
+                            @if ($_url && str_starts_with($_pDoc['mime_type'] ?? '', 'image/'))
+                                <img src="{{ $_url }}"
+                                    class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img"
+                                    onclick="openPreview(this.src, '{{ $contract_id ?? ($ticket_id ?? 'new') }}')" />
+                            @elseif($_url)
+                                <a href="{{ $_url }}" target="_blank"
+                                    class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+                                    <span class="material-symbols-outlined text-sm">picture_as_pdf</span> Ver PDF
+                                </a>
+                            @endif
+                            <span
+                                class="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">
+                                <span class="material-symbols-outlined text-xs">cloud_done</span>
+                                Recibido del portal
+                            </span>
+                            @if ($_url)
+                                <a href="{{ $_url }}" target="_blank"
+                                    class="block text-xs text-indigo-600 hover:text-indigo-700 mt-1">Descargar</a>
+                            @endif
+                        @elseif (isset($uploadedDocuments['dui_back']))
                             @php $url = $preview($uploadedDocuments['dui_back']['path'], $uploadedDocuments['dui_back']['mime_type'] ?? ''); @endphp
                             @if ($url && str_starts_with($uploadedDocuments['dui_back']['mime_type'] ?? '', 'image/'))
                                 <img src="{{ $url }}"
@@ -775,14 +998,36 @@
                     </div>
 
                     {{-- Recibo de luz --}}
+                    @php $_pDoc = $portalDoc('receipt'); @endphp
                     <div
                         class="border-2 border-dashed rounded-xl p-4 text-center relative
-                        {{ isset($uploadedDocuments['receipt']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-gray-400' }}">
+                        {{ $_pDoc || isset($uploadedDocuments['receipt']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-gray-400' }}">
                         <span
                             class="material-symbols-outlined text-3xl
-                            {{ isset($uploadedDocuments['receipt']) ? 'text-green-500' : 'text-gray-300' }}">receipt</span>
+                            {{ $_pDoc || isset($uploadedDocuments['receipt']) ? 'text-green-500' : 'text-gray-300' }}">receipt</span>
                         <p class="text-sm font-medium text-gray-700 mt-1">Recibo de luz *</p>
-                        @if (isset($uploadedDocuments['receipt']))
+                        @if ($_pDoc)
+                            @php $_url = $preview($_pDoc['path'], $_pDoc['mime_type'] ?? ''); @endphp
+                            @if ($_url && str_starts_with($_pDoc['mime_type'] ?? '', 'image/'))
+                                <img src="{{ $_url }}"
+                                    class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img"
+                                    onclick="openPreview(this.src, '{{ $contract_id ?? ($ticket_id ?? 'new') }}')" />
+                            @elseif($_url)
+                                <a href="{{ $_url }}" target="_blank"
+                                    class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+                                    <span class="material-symbols-outlined text-sm">picture_as_pdf</span> Ver PDF
+                                </a>
+                            @endif
+                            <span
+                                class="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">
+                                <span class="material-symbols-outlined text-xs">cloud_done</span>
+                                Recibido del portal
+                            </span>
+                            @if ($_url)
+                                <a href="{{ $_url }}" target="_blank"
+                                    class="block text-xs text-indigo-600 hover:text-indigo-700 mt-1">Descargar</a>
+                            @endif
+                        @elseif (isset($uploadedDocuments['receipt']))
                             @php $url = $preview($uploadedDocuments['receipt']['path'], $uploadedDocuments['receipt']['mime_type'] ?? ''); @endphp
                             @if ($url && str_starts_with($uploadedDocuments['receipt']['mime_type'] ?? '', 'image/'))
                                 <img src="{{ $url }}"
@@ -830,15 +1075,37 @@
                     </div>
 
                     {{-- Foto de Fachada --}}
+                    @php $_pDoc = $portalDoc('fachada'); @endphp
                     <div
                         class="border-2 border-dashed rounded-xl p-4 text-center relative
-                        {{ isset($uploadedDocuments['fachada']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-gray-400' }}">
+                        {{ $_pDoc || isset($uploadedDocuments['fachada']) ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-gray-400' }}">
                         <span
                             class="material-symbols-outlined text-3xl
-                            {{ isset($uploadedDocuments['fachada']) ? 'text-green-500' : 'text-gray-300' }}">home</span>
+                            {{ $_pDoc || isset($uploadedDocuments['fachada']) ? 'text-green-500' : 'text-gray-300' }}">home</span>
                         <p class="text-sm font-medium text-gray-700 mt-1">Foto de Fachada *</p>
                         <p class="text-xs text-gray-400 mt-0.5">Para que los técnicos identifiquen la casa</p>
-                        @if (isset($uploadedDocuments['fachada']))
+                        @if ($_pDoc)
+                            @php $_url = $preview($_pDoc['path'], $_pDoc['mime_type'] ?? ''); @endphp
+                            @if ($_url && str_starts_with($_pDoc['mime_type'] ?? '', 'image/'))
+                                <img src="{{ $_url }}"
+                                    class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img"
+                                    onclick="openPreview(this.src, '{{ $contract_id ?? ($ticket_id ?? 'new') }}')" />
+                            @elseif($_url)
+                                <a href="{{ $_url }}" target="_blank"
+                                    class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+                                    <span class="material-symbols-outlined text-sm">picture_as_pdf</span> Ver PDF
+                                </a>
+                            @endif
+                            <span
+                                class="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">
+                                <span class="material-symbols-outlined text-xs">cloud_done</span>
+                                Recibido del portal
+                            </span>
+                            @if ($_url)
+                                <a href="{{ $_url }}" target="_blank"
+                                    class="block text-xs text-indigo-600 hover:text-indigo-700 mt-1">Descargar</a>
+                            @endif
+                        @elseif (isset($uploadedDocuments['fachada']))
                             @php $url = $preview($uploadedDocuments['fachada']['path'], $uploadedDocuments['fachada']['mime_type'] ?? ''); @endphp
                             @if ($url && str_starts_with($uploadedDocuments['fachada']['mime_type'] ?? '', 'image/'))
                                 <img src="{{ $url }}"
@@ -1099,9 +1366,9 @@
                             <div class="flex items-center gap-2">
                                 <input type="text" value="{{ $signature_link }}" readonly
                                     class="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded bg-gray-50 font-mono"
-                                    onclick="this.select(); navigator.clipboard?.writeText(this.value);" />
+                                    onclick="this.select();" />
                                 <button type="button"
-                                    onclick="navigator.clipboard?.writeText('{{ $signature_link }}');"
+                                    onclick="copyToClipboard('{{ $signature_link }}', this)"
                                     class="text-xs px-2 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-1">
                                     <span class="material-symbols-outlined text-sm">content_copy</span>
                                     Copiar
@@ -1262,7 +1529,7 @@
     @php $previewId = 'preview-modal-' . ($contract_id ?? $ticket_id ?? 'new'); @endphp
     <div id="{{ $previewId }}" class="fixed inset-0 z-50 bg-black/90 hidden items-center justify-center"
         style="display:none;">
-        <button onclick="closePreview('{{ $previewId }}')"
+        <button onclick="closePreview('{{ $contract_id ?? ($ticket_id ?? 'new') }}')"
             class="absolute top-4 right-4 text-white/70 hover:text-white z-10">
             <span class="material-symbols-outlined text-3xl">close</span>
         </button>
@@ -1291,9 +1558,65 @@
             document.body.style.overflow = '';
         }
 
+        function openSignaturePreview() {
+            const modal = document.getElementById('signature-preview-modal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSignaturePreview() {
+            const modal = document.getElementById('signature-preview-modal');
+            if (!modal) return;
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function copyToClipboard(text, btn) {
+            const fallback = () => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                } catch (e) {}
+                document.body.removeChild(ta);
+                showCopiedFeedback(btn);
+            };
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopiedFeedback(btn);
+                }).catch(() => {
+                    fallback();
+                });
+            } else {
+                fallback();
+            }
+        }
+
+        function showCopiedFeedback(btn) {
+            if (!btn) return;
+            const original = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined text-sm">check</span> Copiado';
+            btn.classList.add('!bg-green-600');
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.classList.remove('!bg-green-600');
+            }, 2000);
+        }
+
         document.addEventListener('keydown', (e) => {
             const previewId = '{{ $contract_id ?? ($ticket_id ?? 'new') }}';
-            if (e.key === 'Escape') closePreview(previewId);
+            if (e.key === 'Escape') {
+                closePreview(previewId);
+                closeSignaturePreview();
+            }
         });
 
         document.addEventListener('livewire:init', () => {

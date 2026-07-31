@@ -54,9 +54,10 @@ class ClientPortal extends Component
         }
 
         $docsApproved = $this->client->portal_docs_approved ?? false;
+        $coordsApproved = $this->client->coordinates_approved ?? false;
 
-        // Solo mostrar "completado" si docs fueron aprobados Y hay firma
-        if ($this->client->client_signature_data && $docsApproved) {
+        // Solo mostrar "completado" si docs y coordenadas fueron aprobados Y hay firma
+        if ($this->client->client_signature_data && $docsApproved && $coordsApproved) {
             $this->alreadySigned = true;
         }
 
@@ -69,8 +70,9 @@ class ClientPortal extends Component
         $docsComplete = $this->allDocumentsUploaded();
         $coordsComplete = $this->coordinatesCaptured;
         $docsApproved = $this->client->portal_docs_approved ?? false;
+        $coordsApproved = $this->client->coordinates_approved ?? false;
 
-        if ($docsComplete && $coordsComplete && $docsApproved) {
+        if ($docsComplete && $coordsComplete && $docsApproved && $coordsApproved) {
             $this->step = 3;
         } elseif ($docsComplete && $coordsComplete) {
             $this->step = 2;
@@ -200,8 +202,9 @@ class ClientPortal extends Component
         $this->error = null;
 
         $docsApproved = $this->client->portal_docs_approved ?? false;
+        $coordsApproved = $this->client->coordinates_approved ?? false;
 
-        if ($this->step === 2 && $docsApproved) {
+        if ($this->step === 2 && $docsApproved && $coordsApproved) {
             $this->step = 3;
         }
 
@@ -238,6 +241,14 @@ class ClientPortal extends Component
             return;
         }
 
+        $docsApproved = $this->client->portal_docs_approved ?? false;
+        $coordsApproved = $this->client->coordinates_approved ?? false;
+
+        if (!$docsApproved || !$coordsApproved) {
+            $this->dispatch('show-toast', type: 'error', message: 'Tus documentos y coordenadas aún no han sido aprobados por un agente. Intentá más tarde.');
+            return;
+        }
+
         $this->client->update([
             'client_signature_data' => $signatureData,
             'portal_token' => null,
@@ -254,7 +265,7 @@ class ClientPortal extends Component
     public function goToStep($step)
     {
         if ($step === 2 && !$this->allDocumentsUploaded()) return;
-        if ($step === 3 && (!$this->allDocumentsUploaded() || !$this->coordinatesCaptured || !($this->client->portal_docs_approved ?? false))) return;
+        if ($step === 3 && (!$this->allDocumentsUploaded() || !$this->coordinatesCaptured || !($this->client->portal_docs_approved ?? false) || !($this->client->coordinates_approved ?? false))) return;
         $this->step = $step;
     }
 
