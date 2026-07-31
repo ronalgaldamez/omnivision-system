@@ -35,6 +35,9 @@ class WorkOrder extends Model
         'pon',
         'mufa',
         'installation_date',
+        'mufa_has_space',
+        'drop_distance',
+        'verification_price',
         'assigned_at',
         'assigned_by',
         'requires_noc',
@@ -51,6 +54,7 @@ class WorkOrder extends Model
         'installation_date' => 'date',
         'assigned_at' => 'datetime',
         'requires_noc' => 'boolean',
+        'mufa_has_space' => 'boolean',
     ];
 
     public function technician()

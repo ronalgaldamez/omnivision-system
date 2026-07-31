@@ -71,19 +71,19 @@
     {{-- Departamento, Municipio, Distrito --}}
     <div class="pb-5 border-b border-gray-100">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <x-ui.select wire:model.live="departamento_id" name="departamento_id" label="Departamento"
+            <x-ui.select wire:model.live="departamento_id" name="departamento_id" label="Departamento" required
                 placeholder="Seleccionar departamento">
                 @foreach($availableDepartamentos as $dep)
                     <option value="{{ $dep['id'] }}">{{ $dep['name'] }}</option>
                 @endforeach
             </x-ui.select>
-            <x-ui.select wire:model.live="municipio_id" name="municipio_id" label="Municipio"
+            <x-ui.select wire:model.live="municipio_id" name="municipio_id" label="Municipio" required
                 placeholder="Seleccionar municipio" :disabled="empty($availableMunicipios)">
                 @foreach($availableMunicipios as $mun)
                     <option value="{{ $mun['id'] }}">{{ $mun['name'] }}</option>
                 @endforeach
             </x-ui.select>
-            <x-ui.select wire:model.live="distrito_id" name="distrito_id" label="Distrito / Localidad"
+            <x-ui.select wire:model.live="distrito_id" name="distrito_id" label="Distrito / Localidad" required
                 placeholder="Seleccionar distrito" :disabled="empty($availableDistritos)">
                 @foreach($availableDistritos as $dis)
                     <option value="{{ $dis['id'] }}">{{ $dis['name'] }}</option>

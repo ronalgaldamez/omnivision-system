@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\Contract;
 use App\Models\ContractDocument;
 use App\Models\Plan;
+use App\Models\PlanRule;
 use App\Models\Ticket;
 use App\Models\Zone;
 use App\Services\WorkOrderService;
@@ -312,6 +313,28 @@ class ContractWorkflow extends Component
 
     // ─── Step 2: Plan ───
 
+    private function getAppliedBenefits(): string
+    {
+        if (!$this->plan_id || !$this->term_months) return '';
+
+        $rules = PlanRule::getEffectiveRules($this->plan_id, $this->zone_id ?: null, $this->term_months);
+        if (empty($rules)) return '';
+
+        $benefits = [];
+        foreach ($rules as $key => $value) {
+            if ($key === 'free_installation') $benefits[] = 'Instalación gratuita';
+            if ($key === 'double_speed') $benefits[] = 'Doble velocidad';
+            if ($key === 'discount_months') {
+                $pay = $value['pay'] ?? '';
+                $total = $value['total'] ?? '';
+                $benefits[] = $pay && $total ? "Descuento: paga {$pay} meses, recibe {$total}" : 'Descuento por prepago';
+            }
+            if ($key === 'festive_eligible') $benefits[] = 'Elegible para promos festivas';
+        }
+
+        return implode(', ', $benefits);
+    }
+
     private function deriveServiceContracted(): string
     {
         return match ($this->service_type) {
@@ -589,7 +612,7 @@ class ContractWorkflow extends Component
             'contract_type' => $this->contract_type,
             'service_contracted' => $this->deriveServiceContracted(),
             'term_months' => $this->term_months,
-            'benefit' => $this->benefit,
+            'benefit' => $this->benefit ?: $this->getAppliedBenefits(),
         ]);
 
         $this->contract_id = $contract->id;

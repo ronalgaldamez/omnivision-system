@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use Livewire\Component;
 use App\Models\Setting;
 use App\Models\ServiceType;
+use App\Models\ServiceRule;
 use App\Models\KnowledgeBaseArticle;
 
 class SettingsManager extends Component
@@ -27,6 +28,13 @@ class SettingsManager extends Component
     public $serviceRequiresContract = [];
     public $serviceRequiresPotential = [];
     public $serviceRequirementTypeModal = '';
+
+    // ========== REGLAS DE SERVICIO ==========
+    public $showServiceRules = false;
+    public $editingRuleServiceId = null;
+    public $ruleFreeDistance = 150;
+    public $rulePricePerMeter = 5;
+    public $ruleAutoCreateOt = true;
 
     // ========== PROPIEDADES DE TIPOS DE DOCUMENTO ==========
     public $showDocTypeModal = false;
@@ -416,6 +424,42 @@ class SettingsManager extends Component
         $this->kbPriority = '';
         $this->kbCategory = '';
         $this->selectedKbServiceTypes = [];
+    }
+
+    // ========== MÉTODOS DE REGLAS ==========
+
+    public function openServiceRules($serviceTypeId)
+    {
+        $this->editingRuleServiceId = $serviceTypeId;
+        $this->showServiceRules = true;
+
+        $freeDist = ServiceRule::getRule($serviceTypeId, 'free_distance', ['meters' => 150]);
+        $this->ruleFreeDistance = $freeDist['meters'] ?? 150;
+        $pricePer = ServiceRule::getRule($serviceTypeId, 'price_per_meter', ['amount' => 5]);
+        $this->rulePricePerMeter = $pricePer['amount'] ?? 5;
+        $autoOt = ServiceRule::getRule($serviceTypeId, 'auto_create_ot', ['enabled' => false]);
+        $this->ruleAutoCreateOt = $autoOt['enabled'] ?? false;
+    }
+
+    public function saveServiceRules()
+    {
+        if (!$this->editingRuleServiceId) return;
+
+        ServiceRule::updateOrCreate(
+            ['service_type_id' => $this->editingRuleServiceId, 'rule_key' => 'free_distance'],
+            ['rule_value' => ['meters' => (int) $this->ruleFreeDistance], 'is_active' => true]
+        );
+        ServiceRule::updateOrCreate(
+            ['service_type_id' => $this->editingRuleServiceId, 'rule_key' => 'price_per_meter'],
+            ['rule_value' => ['amount' => (int) $this->rulePricePerMeter], 'is_active' => true]
+        );
+        ServiceRule::updateOrCreate(
+            ['service_type_id' => $this->editingRuleServiceId, 'rule_key' => 'auto_create_ot'],
+            ['rule_value' => ['enabled' => (bool) $this->ruleAutoCreateOt], 'is_active' => true]
+        );
+
+        $this->showServiceRules = false;
+        $this->dispatch('show-toast', type: 'success', message: 'Reglas guardadas.');
     }
 
     public function render()

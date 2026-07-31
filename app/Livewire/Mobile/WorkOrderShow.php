@@ -9,6 +9,8 @@ use App\Models\Requisition;
 use App\Models\RequisitionItem;
 use App\Models\TechnicianInventory;
 use App\Models\WorkOrderMaterial;
+use App\Models\ServiceRule;
+use App\Models\PlanRule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
@@ -56,6 +58,52 @@ class WorkOrderShow extends Component
     public $modem_serial = '';
     public $installation_cost = '';
 
+    // Verificación de instalación
+    public $mufa_has_space = null;
+    public $drop_distance = null;
+    public $verification_price = null;
+
+    public function getVerificationRulesProperty(): array
+    {
+        $ticket = $this->workOrder->ticket;
+        if (!$ticket || $ticket->service_type !== 'verificacion_instalacion') return [];
+
+        // Primero buscar en plan_rules (más específicas: plan + zona)
+        $contract = $ticket->contract;
+        if ($contract && $contract->plan_id && $contract->zone_id) {
+            $freeDist = PlanRule::getEffectiveRule($contract->plan_id, $contract->zone_id, $contract->term_months ?? 12, 'free_distance');
+            $pricePer = PlanRule::getEffectiveRule($contract->plan_id, $contract->zone_id, $contract->term_months ?? 12, 'price_per_meter');
+
+            if ($freeDist || $pricePer) {
+                return [
+                    'free_distance' => (int)($freeDist['meters'] ?? 150),
+                    'price_per_meter' => (float)($pricePer['amount'] ?? 5),
+                ];
+            }
+        }
+
+        // Fallback: service_rules (global por tipo de servicio)
+        $st = \App\Models\ServiceType::where('name', 'verificacion_instalacion')->first();
+        if (!$st) return [];
+        $freeDist = ServiceRule::getRule($st->id, 'free_distance', ['meters' => 150]);
+        $pricePer = ServiceRule::getRule($st->id, 'price_per_meter', ['amount' => 5]);
+        return [
+            'free_distance' => $freeDist['meters'] ?? 150,
+            'price_per_meter' => $pricePer['amount'] ?? 5,
+        ];
+    }
+
+    public function getSuggestedVerificationPrice(): float
+    {
+        $rules = $this->verificationRules;
+        if (!$rules || !$this->drop_distance) return 0;
+        $meters = (float) $this->drop_distance;
+        $free = (int) $rules['free_distance'];
+        $price = (float) $rules['price_per_meter'];
+        if ($meters <= $free) return 0;
+        return ($meters - $free) * $price;
+    }
+
     // Búsqueda de dispositivo
     public $deviceSearch = '';
     public $deviceResults = [];
@@ -99,6 +147,10 @@ class WorkOrderShow extends Component
         $this->pon = $draft['pon'] ?? $this->workOrder->pon;
         $this->mufa = $draft['mufa'] ?? $this->workOrder->mufa;
         $this->installation_date = $draft['installation_date'] ?? $this->workOrder->installation_date?->format('Y-m-d');
+
+        $this->mufa_has_space = $draft['mufa_has_space'] ?? $this->workOrder->mufa_has_space;
+        $this->drop_distance = $draft['drop_distance'] ?? $this->workOrder->drop_distance;
+        $this->verification_price = $draft['verification_price'] ?? $this->workOrder->verification_price;
 
         $contract = $this->workOrder->ticket?->contract;
         $this->access_type = $contract->access_type ?? '';
@@ -267,9 +319,12 @@ class WorkOrderShow extends Component
         $client = $this->workOrder->client;
         if ($client) {
             $client->update([
-                'latitude' => $this->latitude,
-                'longitude' => $this->longitude,
-            ]);
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
+            'mufa_has_space' => $this->mufa_has_space,
+            'drop_distance' => $this->drop_distance,
+            'verification_price' => $this->verification_price ?: null,
+        ]);
         }
 
         session()->forget('work_order_draft_' . $this->workOrder->id);

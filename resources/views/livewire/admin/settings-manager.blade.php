@@ -179,6 +179,9 @@
                                     <button wire:click="editService({{ $type->id }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
                                         <span class="material-symbols-outlined text-lg">edit</span>
                                     </button>
+                                    <button wire:click="openServiceRules({{ $type->id }})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition" title="Reglas">
+                                        <span class="material-symbols-outlined text-lg">tune</span>
+                                    </button>
                                     <button wire:click="deleteService({{ $type->id }})" onclick="return confirm('¿Eliminar este tipo de servicio?')" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
                                         <span class="material-symbols-outlined text-lg">delete</span>
                                     </button>
@@ -432,4 +435,42 @@
     </div>
 
     <style>[x-cloak] { display: none !important; }</style>
+
+    {{-- Modal: Reglas del servicio --}}
+    @if($showServiceRules)
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-xl" @click.stop>
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-amber-600">tune</span>
+                    Reglas del servicio
+                </h3>
+                <button wire:click="$set('showServiceRules', false)" class="text-gray-400 hover:text-gray-600">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="px-6 py-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Distancia gratuita (metros)</label>
+                    <input type="number" wire:model="ruleFreeDistance" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" min="0">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Precio por metro extra ($)</label>
+                    <input type="number" wire:model="rulePricePerMeter" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" min="0" step="1">
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" wire:model="ruleAutoCreateOt" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                    <span class="text-sm text-gray-700">Auto-crear OT al abrir ticket</span>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+                <button wire:click="$set('showServiceRules', false)" class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">Cancelar</button>
+                <button wire:click="saveServiceRules" class="px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Guardar</button>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>

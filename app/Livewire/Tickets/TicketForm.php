@@ -7,6 +7,7 @@ use Livewire\Attributes\On;
 use App\Models\Client;
 use App\Models\Ticket;
 use App\Models\ServiceType;
+use App\Models\ServiceRule;
 use App\Models\Zone;
 use App\Models\Plan;
 use App\Services\SlaService;
@@ -730,6 +731,33 @@ class TicketForm extends Component
         $serviceType = ServiceType::find($this->service_type_id);
         $serviceName = $serviceType ? $serviceType->name : '';
 
+        // Validación de campos obligatorios del cliente (siempre)
+        $client = Client::find($this->client_id);
+        if (!$client) {
+            $this->dispatch('show-toast', type: 'error', message: 'Debe seleccionar un cliente.');
+            return;
+        }
+        if (!$client->phone) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe tener teléfono.');
+            return;
+        }
+        if (!$client->departamento) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe tener departamento asignado.');
+            return;
+        }
+        if (!$client->municipio) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe tener municipio asignado.');
+            return;
+        }
+        if (!$client->distrito) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe tener distrito/localidad asignado.');
+            return;
+        }
+        if (!$client->address) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe tener dirección.');
+            return;
+        }
+
         $ticket = Ticket::create([
             'client_id' => $this->client_id,
             'description' => '',
@@ -752,6 +780,12 @@ class TicketForm extends Component
 
         // Asignar meta SLA
         app(SlaService::class)->assignSlaToTicket($ticket);
+
+        // Auto-crear OT si la regla lo indica
+        $autoOt = ServiceRule::getRule($serviceType->id, 'auto_create_ot', ['enabled' => false]);
+        if (($autoOt['enabled'] ?? false) || $this->create_ot) {
+            app(WorkOrderService::class)->createFromTicket($ticket);
+        }
 
         $this->ticketId = $ticket->id;
         $this->ticketOpened = true;

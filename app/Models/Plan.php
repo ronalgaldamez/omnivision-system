@@ -32,4 +32,9 @@ class Plan extends Model
     {
         return $this->hasMany(Ticket::class);
     }
+
+    public function rules()
+    {
+        return $this->hasMany(PlanRule::class);
+    }
 }
