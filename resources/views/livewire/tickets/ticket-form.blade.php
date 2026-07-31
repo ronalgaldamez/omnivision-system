@@ -27,62 +27,9 @@
                     Tipo de servicio <span class="text-red-500">*</span>
                 </label>
                 @if ($service_type_id)
-                    <div class="flex items-start gap-3 p-3.5 bg-green-50 border border-green-200 rounded-lg">
-                        <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span class="material-symbols-outlined text-green-600 text-xl">check_circle</span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-gray-900 truncate">{{ $serviceTypes->firstWhere('id', $service_type_id)?->name }}</p>
-                            @php $selSt = $serviceTypes->firstWhere('id', $service_type_id); @endphp
-                            @if($selSt?->requires_contract)
-                                <x-ui.badge variant="success" size="sm" class="mt-1">Requiere Contrato</x-ui.badge>
-                            @elseif($selSt?->requires_potential)
-                                <x-ui.badge variant="warning" size="sm" class="mt-1">Cliente Potencial</x-ui.badge>
-                            @elseif($selSt?->requires_ot)
-                                <x-ui.badge variant="warning" size="sm" class="mt-1">Requiere OT</x-ui.badge>
-                            @elseif($selSt?->requires_noc)
-                                <x-ui.badge variant="info" size="sm" class="mt-1">Requiere NOC</x-ui.badge>
-                            @endif
-                        </div>
-                        <div class="flex items-center gap-1 flex-shrink-0">
-                            <button type="button" wire:click="clearServiceType"
-                                class="p-1.5 text-green-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Quitar tipo de servicio">
-                                <span class="material-symbols-outlined text-lg">close</span>
-                            </button>
-                        </div>
-                    </div>
+                    @include('livewire.tickets._service-type-selected', ['showClose' => true])
                 @else
-                    <div class="flex gap-2">
-                        <div class="relative flex-1">
-                            <x-ui.input type="text" wire:model.live.debounce.300ms="serviceTypeSearch"
-                                placeholder="Buscar tipo de servicio..." icon="search" />
-                            @if (count($serviceTypeResults) > 0)
-                                <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
-                                    @foreach ($serviceTypeResults as $st)
-                                        <li wire:click="selectServiceType({{ $st->id }})"
-                                            class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
-                                            <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ str_replace('_', ' ', $st->name) }}</span>
-                                            @if($st->requires_contract)
-                                                <x-ui.badge variant="success" size="sm">Requiere Contrato</x-ui.badge>
-                                            @elseif($st->requires_potential)
-                                                <x-ui.badge variant="warning" size="sm">Cliente Potencial</x-ui.badge>
-                                            @elseif($st->requires_ot)
-                                                <x-ui.badge variant="warning" size="sm">Requiere OT</x-ui.badge>
-                                            @elseif($st->requires_noc)
-                                                <x-ui.badge variant="info" size="sm">Requiere NOC</x-ui.badge>
-                                            @endif
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
-                        </div>
-                        <button type="button" wire:click="openServiceTypeModal"
-                            class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm whitespace-nowrap"
-                            title="Ver todos los tipos de servicio">
-                            <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
-                            <span class="hidden sm:inline">Ver todos</span>
-                        </button>
-                    </div>
+                    @include('livewire.tickets._service-type-search')
                 @endif
                 @error('service_type_id')
                     <span class="text-xs text-red-600 mt-1.5 block font-medium">{{ $message }}</span>
@@ -159,60 +106,9 @@
                         Tipo de servicio
                     </label>
                     @if ($service_type_id)
-                        <div class="flex items-start gap-3 p-3.5 bg-green-50 border border-green-200 rounded-lg">
-                            <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span class="material-symbols-outlined text-green-600 text-xl">check_circle</span>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-gray-900 truncate">{{ $serviceTypes->firstWhere('id', $service_type_id)?->name ?? '—' }}</p>
-                                @php $selSt2 = $serviceTypes->firstWhere('id', $service_type_id); @endphp
-                                @if($selSt2?->requires_contract)
-                                    <x-ui.badge variant="success" size="sm" class="mt-1">Requiere Contrato</x-ui.badge>
-                                @elseif($selSt2?->requires_potential)
-                                    <x-ui.badge variant="warning" size="sm" class="mt-1">Cliente Potencial</x-ui.badge>
-                                @elseif($selSt2?->requires_ot)
-                                    <x-ui.badge variant="warning" size="sm" class="mt-1">Requiere OT</x-ui.badge>
-                                @elseif($selSt2?->requires_noc)
-                                    <x-ui.badge variant="info" size="sm" class="mt-1">Requiere NOC</x-ui.badge>
-                                @endif
-                            </div>
-                            <div class="flex items-center gap-1 flex-shrink-0">
-                                <button type="button" wire:click="openServiceTypeModal"
-                                    class="px-2.5 py-1.5 text-xs font-medium text-green-700 hover:text-green-800 hover:bg-green-100 rounded-lg transition">Cambiar</button>
-                            </div>
-                        </div>
+                        @include('livewire.tickets._service-type-selected', ['showChange' => true])
                     @else
-                        <div class="flex gap-2">
-                            <div class="relative flex-1">
-                                <x-ui.input type="text" wire:model.live.debounce.300ms="serviceTypeSearch"
-                                    placeholder="Buscar tipo de servicio..." icon="search" />
-                                @if (count($serviceTypeResults) > 0)
-                                    <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
-                                        @foreach ($serviceTypeResults as $st)
-                                        <li wire:click="selectServiceType({{ $st->id }})"
-                                            class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
-                                            <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ str_replace('_', ' ', $st->name) }}</span>
-                                            @if($st->requires_contract)
-                                                <x-ui.badge variant="success" size="sm">Requiere Contrato</x-ui.badge>
-                                            @elseif($st->requires_potential)
-                                                <x-ui.badge variant="warning" size="sm">Cliente Potencial</x-ui.badge>
-                                            @elseif($st->requires_ot)
-                                                <x-ui.badge variant="warning" size="sm">Requiere OT</x-ui.badge>
-                                            @elseif($st->requires_noc)
-                                                <x-ui.badge variant="info" size="sm">Requiere NOC</x-ui.badge>
-                                            @endif
-                                        </li>
-                                        @endforeach
-                                    </ul>
-                                @endif
-                            </div>
-                            <button type="button" wire:click="openServiceTypeModal"
-                                class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm whitespace-nowrap"
-                                title="Ver todos los tipos de servicio">
-                                <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
-                                <span class="hidden sm:inline">Ver todos</span>
-                            </button>
-                        </div>
+                        @include('livewire.tickets._service-type-search')
                     @endif
                 </div>
             @endif
@@ -226,8 +122,7 @@
                 <div class="flex gap-2">
                     <div class="relative flex-1">
                         <x-ui.input type="text" wire:model.live.debounce.300ms="clientSearch"
-                            placeholder="Buscar por nombre o teléfono..." icon="search"
-                            :disabled="!$editingEnabled" />
+                            placeholder="Buscar por nombre o teléfono..." icon="search" />
                         @if (count($clientSearchResults) > 0)
                             <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
                                 @foreach ($clientSearchResults as $client)
@@ -387,7 +282,7 @@
                                                         class="group relative flex flex-col items-start gap-1 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 hover:border-blue-400 transition text-left min-w-[140px]">
                                                         <span class="text-xs font-semibold text-blue-900 group-hover:text-blue-950">{{ $plan->name }}</span>
                                                         <span class="text-[10px] text-blue-700 leading-tight">
-                                                            @if($plan->speed)⚡ {{ $plan->speed }} @endif
+                                                            @if($plan->speed)<span class="material-symbols-outlined text-xs align-text-bottom text-blue-600">bolt</span> {{ $plan->speed }} @endif
                                                         </span>
                                                         <span class="text-xs font-bold text-blue-800">${{ number_format($refPrice ?? $plan->base_price, 2) }}</span>
                                                         <span class="absolute inset-0 rounded-lg ring-1 ring-inset ring-blue-300/0 group-hover:ring-blue-400/50 transition"></span>
@@ -415,8 +310,8 @@
                                                         class="group relative flex flex-col items-start gap-1 px-3 py-2 rounded-lg border border-orange-200 bg-orange-50 hover:bg-orange-100 hover:border-orange-400 transition text-left min-w-[140px]">
                                                         <span class="text-xs font-semibold text-orange-900 group-hover:text-orange-950">{{ $plan->name }}</span>
                                                         <span class="text-[10px] text-orange-700 leading-tight">
-                                                            @if($plan->speed)⚡ {{ $plan->speed }} @endif
-                                                            @if($plan->channels) 📺 {{ $plan->channels }} canales @endif
+                                                            @if($plan->speed)<span class="material-symbols-outlined text-xs align-text-bottom text-orange-600">bolt</span> {{ $plan->speed }} @endif
+                                                            @if($plan->channels)<span class="material-symbols-outlined text-xs align-text-bottom text-orange-600">live_tv</span> {{ $plan->channels }} canales @endif
                                                         </span>
                                                         <span class="text-xs font-bold text-orange-800">${{ number_format($refPrice ?? $plan->base_price, 2) }}</span>
                                                         <span class="absolute inset-0 rounded-lg ring-1 ring-inset ring-orange-300/0 group-hover:ring-orange-400/50 transition"></span>
@@ -466,55 +361,9 @@
                     Tipo de servicio <span class="text-red-500">*</span>
                 </label>
                 @if ($service_type_id)
-                    <div class="flex items-start gap-3 p-3.5 bg-green-50 border border-green-200 rounded-lg">
-                        <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span class="material-symbols-outlined text-green-600 text-xl">check_circle</span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-gray-900 truncate">{{ $serviceTypes->firstWhere('id', $service_type_id)?->name }}</p>
-                            @php $selSt3 = $serviceTypes->firstWhere('id', $service_type_id); @endphp
-                            @if($selSt3?->requires_contract)
-                                <x-ui.badge variant="success" size="sm" class="mt-1">Requiere Contrato</x-ui.badge>
-                            @elseif($selSt3?->requires_potential)
-                                <x-ui.badge variant="warning" size="sm" class="mt-1">Cliente Potencial</x-ui.badge>
-                            @elseif($selSt3?->requires_ot)
-                                <x-ui.badge variant="warning" size="sm" class="mt-1">Requiere OT</x-ui.badge>
-                            @elseif($selSt3?->requires_noc)
-                                <x-ui.badge variant="info" size="sm" class="mt-1">Requiere NOC</x-ui.badge>
-                            @endif
-                        </div>
-                        <div class="flex items-center gap-1 flex-shrink-0">
-                            <button type="button" wire:click="openServiceTypeModal"
-                                class="px-2.5 py-1.5 text-xs font-medium text-green-700 hover:text-green-800 hover:bg-green-100 rounded-lg transition">Cambiar</button>
-                            <button type="button" wire:click="clearServiceType"
-                                class="p-1.5 text-green-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Quitar tipo de servicio">
-                                <span class="material-symbols-outlined text-lg">close</span>
-                            </button>
-                        </div>
-                    </div>
+                    @include('livewire.tickets._service-type-selected', ['showChange' => true, 'showClose' => true])
                 @else
-                    <div class="flex gap-2">
-                        <div class="relative flex-1">
-                            <x-ui.input type="text" wire:model.live.debounce.300ms="serviceTypeSearch"
-                                placeholder="Buscar tipo de servicio..." icon="search" />
-                            @if (count($serviceTypeResults) > 0)
-                                <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
-                                    @foreach ($serviceTypeResults as $st)
-                                        <li wire:click="selectServiceType({{ $st->id }})"
-                                            class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
-                                            <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ str_replace('_', ' ', $st->name) }}</span>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
-                        </div>
-                        <button type="button" wire:click="openServiceTypeModal"
-                            class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm whitespace-nowrap"
-                            title="Ver todos los tipos de servicio">
-                            <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
-                            <span class="hidden sm:inline">Ver todos</span>
-                        </button>
-                    </div>
+                    @include('livewire.tickets._service-type-search', ['showBadges' => false])
                 @endif
                 @error('service_type_id')
                     <span class="text-xs text-red-600 mt-1.5 block font-medium">{{ $message }}</span>

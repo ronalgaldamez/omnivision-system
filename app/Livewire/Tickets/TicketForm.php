@@ -7,11 +7,10 @@ use Livewire\Attributes\On;
 use App\Models\Client;
 use App\Models\Ticket;
 use App\Models\ServiceType;
-use App\Models\ServiceRule;
 use App\Models\Zone;
 use App\Models\Plan;
 use App\Services\SlaService;
-use App\Services\WorkOrderService;
+use App\Services\TicketService;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
@@ -30,7 +29,6 @@ class TicketForm extends Component
     public $canToggleNoc = false;
     public $canToggleOt = false;
     public $canToggleContract = false;
-    public $canTogglePotential = false;
     public $status = 'pending';
 
     public $clientSearch = '';
@@ -578,7 +576,7 @@ class TicketForm extends Component
             ? optional(Zone::find($this->zone_id))->getEffectivePriceForPlan($plan)
             : $plan->base_price;
 
-        $line = "📋 Plan de referencia: {$plan->name}";
+        $line = "Plan de referencia: {$plan->name}";
         if ($plan->speed) $line .= " | Velocidad: {$plan->speed}";
         if ($plan->channels) $line .= " | Canales: {$plan->channels}";
         $line .= ' | Precio: $' . number_format($price ?? $plan->base_price, 2);
@@ -731,35 +729,22 @@ class TicketForm extends Component
         $serviceType = ServiceType::find($this->service_type_id);
         $serviceName = $serviceType ? $serviceType->name : '';
 
-        // Validación de campos obligatorios del cliente (siempre)
-        $client = Client::find($this->client_id);
-        if (!$client) {
-            $this->dispatch('show-toast', type: 'error', message: 'Debe seleccionar un cliente.');
-            return;
-        }
-        if (!$client->phone) {
-            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe tener teléfono.');
-            return;
-        }
-        if (!$client->departamento) {
-            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe tener departamento asignado.');
-            return;
-        }
-        if (!$client->municipio) {
-            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe tener municipio asignado.');
-            return;
-        }
-        if (!$client->distrito) {
-            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe tener distrito/localidad asignado.');
-            return;
-        }
-        if (!$client->address) {
-            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe tener dirección.');
-            return;
+        // Validar cliente solo si ya fue seleccionado
+        if ($this->client_id) {
+            $client = Client::find($this->client_id);
+            if (!$client) {
+                $this->dispatch('show-toast', type: 'error', message: 'Cliente no encontrado.');
+                return;
+            }
+            $eligibility = $client->isEligibleForTicket();
+            if ($eligibility !== true) {
+                $this->dispatch('show-toast', type: 'error', message: $eligibility);
+                return;
+            }
         }
 
         $ticket = Ticket::create([
-            'client_id' => $this->client_id,
+            'client_id' => $this->client_id ?: null,
             'description' => '',
             'service_type' => $serviceName,
             'priority' => $this->priority ?: 'P3',
@@ -775,16 +760,15 @@ class TicketForm extends Component
         ]);
 
         // Generar y guardar el código de ticket
-        $ticket->ticket_code = $this->generateTicketCode($ticket->id);
+        $ticket->ticket_code = app(TicketService::class)->generateTicketCode($ticket, $this->origin);
         $ticket->save();
 
         // Asignar meta SLA
         app(SlaService::class)->assignSlaToTicket($ticket);
 
-        // Auto-crear OT si la regla lo indica
-        $autoOt = ServiceRule::getRule($serviceType->id, 'auto_create_ot', ['enabled' => false]);
-        if (($autoOt['enabled'] ?? false) || $this->create_ot) {
-            app(WorkOrderService::class)->createFromTicket($ticket);
+        // Auto-crear OT si la regla lo indica (pero NO si requiere contrato)
+        if (app(TicketService::class)->shouldAutoCreateOt($serviceType, $this->create_ot, $this->requires_contract)) {
+            app(TicketService::class)->createWorkOrder($ticket);
         }
 
         $this->ticketId = $ticket->id;
@@ -842,7 +826,7 @@ class TicketForm extends Component
         $planId = $this->plan_id ?: null;
 
         if ($this->create_ot) {
-            $this->createWorkOrder($ticket);
+            app(TicketService::class)->createWorkOrder($ticket);
 
             $ticket->update([
                 'client_id' => $this->client_id,
@@ -929,44 +913,6 @@ class TicketForm extends Component
 
     // ==================== FIN NUEVOS MÉTODOS ====================
 
-    private function generateTicketCode($ticketId)
-    {
-        $user = Auth::user();
-        $role = $user->roles()->first();
-        $prefix = $role->prefix ?? 'TK';
-
-        $originMap = [
-            'Facebook Messenger' => 'FB',
-            'SMS WhatsApp' => 'WH',
-            'Llamada de WhatsApp' => 'WHL',
-            'Llamada Telefónica' => 'LL',
-            'SMS' => 'SMS',
-            'Presencial' => 'PR',
-            'Otros' => 'OT',
-        ];
-        $originCode = $originMap[$this->origin] ?? 'GEN';
-
-        $nextNumber = $this->getNextTicketSequence($prefix, $originCode);
-
-        return sprintf('TK-%s-%s-%04d', $prefix, $originCode, $nextNumber);
-    }
-
-    private function getNextTicketSequence(string $prefix, string $originCode): int
-    {
-        $likePattern = "TK-{$prefix}-{$originCode}-%";
-        $lastTicket = Ticket::where('ticket_code', 'like', $likePattern)
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if (!$lastTicket) {
-            return 1;
-        }
-
-        $parts = explode('-', $lastTicket->ticket_code);
-        $lastNumber = (int) end($parts);
-        return $lastNumber + 1;
-    }
-
     public function promptSave()
     {
         $this->validate();
@@ -1025,13 +971,13 @@ class TicketForm extends Component
             $data['status'] = 'pending';
             $ticket = Ticket::create($data);
 
-            $ticket->ticket_code = $this->generateTicketCode($ticket->id);
+            $ticket->ticket_code = app(TicketService::class)->generateTicketCode($ticket, $this->origin);
             $ticket->save();
 
             app(SlaService::class)->assignSlaToTicket($ticket);
 
             if ($this->create_ot) {
-                $this->createWorkOrder($ticket);
+                app(TicketService::class)->createWorkOrder($ticket);
             } elseif ($this->requires_noc) {
                 $this->dispatch('ticket-created-for-noc');
                 $this->dispatch('show-toast', type: 'info', message: 'Nuevo ticket requiere atención del NOC.');
@@ -1044,17 +990,6 @@ class TicketForm extends Component
         }
 
         return redirect()->route('tickets.index');
-    }
-
-    protected function createWorkOrder($ticket)
-    {
-        app(WorkOrderService::class)->createFromTicket($ticket, [
-            'zone_id' => $ticket->zone_id ?? $this->zone_id,
-            'plan_id' => $ticket->plan_id ?? $this->plan_id,
-            'requires_noc' => $ticket->requires_noc ?? $this->requires_noc,
-            'latitude' => $ticket->client?->latitude,
-            'longitude' => $ticket->client?->longitude,
-        ]);
     }
 
     protected function persistOpenTicket($property)

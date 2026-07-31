@@ -74,4 +74,14 @@ class Client extends Model
     {
         return $this->hasMany(Contract::class);
     }
+
+    public function isEligibleForTicket(): true|string
+    {
+        if (!$this->phone) return 'El cliente debe tener teléfono.';
+        if (!$this->departamento) return 'El cliente debe tener departamento asignado.';
+        if (!$this->municipio) return 'El cliente debe tener municipio asignado.';
+        if (!$this->distrito) return 'El cliente debe tener distrito/localidad asignado.';
+        if (!$this->address) return 'El cliente debe tener dirección.';
+        return true;
+    }
 }
