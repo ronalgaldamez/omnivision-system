@@ -223,49 +223,73 @@
                     </x-ui.select>
                 </div>
 
-                {{-- Catálogo de planes (radio buttons: solo uno seleccionable) --}}
+                {{-- Catálogo de planes agrupados por tipo --}}
+                @php
+                    $internetPlans = array_filter($availablePlans, fn($p) => $p['service_type'] === 'internet');
+                    $cablePlans = array_filter($availablePlans, fn($p) => $p['service_type'] === 'cable');
+                    $comboPlans = array_filter($availablePlans, fn($p) => $p['service_type'] === 'internet_cable');
+                    $zoneModel = $zone_id ? \App\Models\Zone::find($zone_id) : null;
+                @endphp
+
+                {{-- Internet --}}
+                @if(count($internetPlans) > 0)
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Seleccionar Plan</label>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="material-symbols-outlined text-blue-600 text-lg">wifi</span>
+                        <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Internet</span>
+                    </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        @foreach($availablePlans as $plan)
+                        @foreach($internetPlans as $plan)
                             @php
-                                $zoneModel = $zone_id ? \App\Models\Zone::find($zone_id) : null;
                                 $planModel = \App\Models\Plan::find($plan['id']);
                                 $effPrice = $zoneModel && $planModel ? $zoneModel->getEffectivePriceForPlan($planModel) : (float) $plan['base_price'];
                                 $isSelected = $plan_id == $plan['id'];
                             @endphp
-                            <label class="relative text-left p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer
-                                {{ $isSelected ? 'border-indigo-500 bg-indigo-50 shadow-md' : 'border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm' }}">
-                                <input type="radio" name="plan_id" value="{{ $plan['id'] }}"
-                                    wire:model.live="plan_id"
-                                    class="absolute opacity-0 w-0 h-0" />
-                                <div class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center
-                                    {{ $isSelected ? 'bg-indigo-600' : 'border-2 border-gray-300 bg-white' }}">
-                                    @if($isSelected)
-                                        <span class="material-symbols-outlined text-white text-sm">check</span>
-                                    @endif
-                                </div>
-                                <p class="font-bold text-gray-900">{{ $plan['name'] }}</p>
-                                <div class="mt-1 space-y-0.5">
-                                    <p class="text-xs text-gray-500 capitalize">{{ str_replace('_', ' ', $plan['service_type']) }}</p>
-                                    @if($plan['speed'])
-                                        <p class="text-xs text-gray-500">Velocidad: {{ $plan['speed'] }}</p>
-                                    @endif
-                                    @if($plan['channels'])
-                                        <p class="text-xs text-gray-500">Canales: {{ $plan['channels'] }}</p>
-                                    @endif
-                                </div>
-                                <div class="mt-3 flex items-baseline gap-1">
-                                    <span class="text-lg font-bold text-indigo-700">${{ number_format($effPrice, 2) }}</span>
-                                    <span class="text-xs text-gray-400">/mes</span>
-                                </div>
-                                @if($effPrice != $plan['base_price'])
-                                    <p class="text-[10px] text-amber-600 mt-1">Precio especial para esta zona</p>
-                                @endif
-                            </label>
+                            @include('livewire.contracts._plan_card', ['plan' => $plan, 'effPrice' => $effPrice, 'isSelected' => $isSelected])
                         @endforeach
                     </div>
                 </div>
+                @endif
+
+                {{-- Cable --}}
+                @if(count($cablePlans) > 0)
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="material-symbols-outlined text-gray-500 text-lg">live_tv</span>
+                        <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Cable</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        @foreach($cablePlans as $plan)
+                            @php
+                                $planModel = \App\Models\Plan::find($plan['id']);
+                                $effPrice = $zoneModel && $planModel ? $zoneModel->getEffectivePriceForPlan($planModel) : (float) $plan['base_price'];
+                                $isSelected = $plan_id == $plan['id'];
+                            @endphp
+                            @include('livewire.contracts._plan_card', ['plan' => $plan, 'effPrice' => $effPrice, 'isSelected' => $isSelected])
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
+                {{-- Internet + Cable --}}
+                @if(count($comboPlans) > 0)
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="material-symbols-outlined text-orange-600 text-lg">live_tv</span>
+                        <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Internet + Cable</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        @foreach($comboPlans as $plan)
+                            @php
+                                $planModel = \App\Models\Plan::find($plan['id']);
+                                $effPrice = $zoneModel && $planModel ? $zoneModel->getEffectivePriceForPlan($planModel) : (float) $plan['base_price'];
+                                $isSelected = $plan_id == $plan['id'];
+                            @endphp
+                            @include('livewire.contracts._plan_card', ['plan' => $plan, 'effPrice' => $effPrice, 'isSelected' => $isSelected])
+                        @endforeach
+                    </div>
+                </div>
+                @endif
 
                 {{-- Precio personalizado --}}
                 @if($plan_id)
