@@ -25,6 +25,7 @@ class ContractWorkflow extends Component
     public $step = 1;
     protected $queryString = ['step'];
     public $contract_id = null;
+    public $documentsProgress = [];
 
     // ─── Step 1: Datos del Cliente ───
     public $client_id;
@@ -101,6 +102,9 @@ class ContractWorkflow extends Component
 
     // ─── Documentos subidos por el cliente vía enlace público ───
     public $clientUploadedDocs = [];
+
+    // ─── Portal unificado del cliente ───
+    public $portal_link = null;
 
     // ─── Step 4: Firma Digital ───
     public $client_signature_data = null;
@@ -577,6 +581,73 @@ class ContractWorkflow extends Component
         $this->dispatch('show-toast', type: 'success', message: 'Tu firma ha sido capturada.');
     }
 
+    public function generatePortalLink()
+    {
+        if (!$this->client_id) {
+            $this->dispatch('show-toast', type: 'error', message: 'No hay cliente seleccionado.');
+            return;
+        }
+
+        $client = Client::find($this->client_id);
+        if (!$client) {
+            $this->dispatch('show-toast', type: 'error', message: 'Cliente no encontrado.');
+            return;
+        }
+
+        $now = now();
+        if ($client->portal_token && $client->portal_token_expires_at && $client->portal_token_expires_at->greaterThan($now)) {
+            $this->portal_link = route('public.contract.portal', ['token' => $client->portal_token]);
+            $this->dispatch('show-toast', type: 'success', message: 'Enlace vigente reutilizado.');
+            return;
+        }
+
+        $client->update([
+            'portal_token' => (string) Str::random(64),
+            'portal_token_expires_at' => $now->copy()->addHours(24),
+        ]);
+
+        $this->portal_link = route('public.contract.portal', ['token' => $client->portal_token]);
+
+        $this->dispatch('show-toast', type: 'success', message: 'Enlace del portal generado. Compártelo con el cliente.');
+    }
+
+    public function getPortalWhatsAppUrl(): ?string
+    {
+        $client = Client::find($this->client_id);
+        if (!$client || !$client->phone)
+            return null;
+
+        if (!$this->portal_link) {
+            $this->generatePortalLink();
+        }
+        if (!$this->portal_link)
+            return null;
+
+        $phone = preg_replace('/\D/', '', $client->phone);
+        if (strlen($phone) === 8) {
+            $phone = '503' . $phone;
+        } elseif (strlen($phone) === 9 && $phone[0] === '0') {
+            $phone = '503' . substr($phone, 1);
+        }
+
+        $message = "Hola, soy de Omnivisión. Para finalizar tu contrato, ingresá a este enlace para subir tus documentos, compartir tu ubicación y firmar digitalmente:\n\n";
+        $message .= $this->portal_link . "\n\n";
+        $message .= "⚠️ El enlace expira en 24 horas.";
+
+        return 'https://wa.me/' . $phone . '?text=' . urlencode($message);
+    }
+
+    public function sendPortalViaWhatsApp()
+    {
+        $url = $this->getPortalWhatsAppUrl();
+        if (!$url) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente no tiene un número de teléfono registrado.');
+            return;
+        }
+
+        $this->dispatch('open-whatsapp', url: $url);
+    }
+
     public function generateSignatureLink()
     {
         if (!$this->client_id) {
@@ -907,11 +978,43 @@ class ContractWorkflow extends Component
                 break;
             }
         }
-        $client->update(['uploaded_docs' => array_values($docs)]);
+        $client->update([
+            'uploaded_docs' => array_values($docs),
+            'portal_docs_approved' => false,
+            'latitude' => null,
+            'longitude' => null,
+            'client_signature_data' => null,
+        ]);
         $this->clientUploadedDocs = $client->fresh()->uploaded_docs ?? [];
 
         $labels = ['dui_front' => 'DUI (Frente)', 'dui_back' => 'DUI (Reverso)', 'receipt' => 'Recibo de luz', 'fachada' => 'Foto de Fachada'];
         $this->dispatch('show-toast', type: 'info', message: $labels[$type] . ' rechazado.');
+    }
+
+    public function rejectClientCoordinates()
+    {
+        $client = Client::find($this->client_id);
+        if (!$client) return;
+
+        $client->update([
+            'latitude' => null,
+            'longitude' => null,
+            'portal_docs_approved' => false,
+            'client_signature_data' => null,
+        ]);
+        $this->dispatch('show-toast', type: 'info', message: 'Coordenadas del cliente rechazadas.');
+    }
+
+    public function rejectClientSignature()
+    {
+        $client = Client::find($this->client_id);
+        if (!$client) return;
+
+        $client->update([
+            'client_signature_data' => null,
+            'portal_docs_approved' => false,
+        ]);
+        $this->dispatch('show-toast', type: 'info', message: 'Firma del cliente rechazada.');
     }
 
     public function rejectAllClientDocs()
@@ -929,9 +1032,16 @@ class ContractWorkflow extends Component
             'uploaded_docs' => [],
             'docs_token' => null,
             'docs_token_expires_at' => null,
+            'portal_token' => null,
+            'portal_token_expires_at' => null,
+            'portal_docs_approved' => false,
+            'latitude' => null,
+            'longitude' => null,
+            'client_signature_data' => null,
         ]);
         $this->clientUploadedDocs = [];
         $this->docs_link = null;
+        $this->portal_link = null;
 
         $this->dispatch('show-toast', type: 'info', message: 'Todos los documentos fueron rechazados. Generá un nuevo enlace.');
     }
@@ -1036,6 +1146,26 @@ class ContractWorkflow extends Component
             $this->clientUploadedDocs = $client->uploaded_docs ?? [];
             $this->dispatch('show-toast', type: 'success', message: 'Documentos actualizados desde el cliente.');
         }
+    }
+
+    public function approveClientDocs()
+    {
+        if (!$this->client_id) return;
+
+        $client = Client::find($this->client_id);
+        if (!$client) return;
+
+        $required = ['dui_front', 'dui_back', 'receipt', 'fachada'];
+        $uploadedTypes = array_column($client->uploaded_docs ?? [], 'type');
+        $missing = array_diff($required, $uploadedTypes);
+
+        if (!empty($missing)) {
+            $this->dispatch('show-toast', type: 'error', message: 'Faltan documentos requeridos para aprobar.');
+            return;
+        }
+
+        $client->update(['portal_docs_approved' => true]);
+        $this->dispatch('show-toast', type: 'success', message: 'Documentos aprobados. El cliente ya puede firmar.');
     }
 
 

@@ -26,6 +26,9 @@ class Client extends Model
         'gps_token_expires_at',
         'docs_token',
         'docs_token_expires_at',
+        'portal_token',
+        'portal_token_expires_at',
+        'portal_docs_approved',
         'uploaded_docs',
     ];
 
@@ -36,6 +39,8 @@ class Client extends Model
         'dui_expedition_date' => 'date',
         'gps_token_expires_at' => 'datetime',
         'docs_token_expires_at' => 'datetime',
+        'portal_token_expires_at' => 'datetime',
+        'portal_docs_approved' => 'boolean',
         'signature_token_expires_at' => 'datetime',
         'uploaded_docs' => 'array',
     ];
