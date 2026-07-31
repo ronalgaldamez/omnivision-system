@@ -39,6 +39,7 @@ class ContractWorkflow extends Component
     public $latitude;
     public $longitude;
     public $gps_link = null;
+    public $waitingForCoordinates = false;
 
     // ─── Datos del Ticket ───
     public $ticket_description;
@@ -65,11 +66,14 @@ class ContractWorkflow extends Component
     // ─── Step 3: Documentos ───
     public $dui_front = null;
     public $dui_back = null;
-    public $selfie = null;
     public $receipt = null;
-    public $proof_of_address = null;
+    public $fachada = null;
     public $document_notes = '';
     public $uploadedDocuments = [];
+    public $docs_link = null;
+
+    // ─── Documentos subidos por el cliente vía enlace público ───
+    public $clientUploadedDocs = [];
 
     // ─── Step 4: Firma Digital ───
     public $client_signature_data = null;
@@ -105,9 +109,8 @@ class ContractWorkflow extends Component
             3 => [
                 'dui_front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
                 'dui_back' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
-                'selfie' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
                 'receipt' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
-                'proof_of_address' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+                'fachada' => 'nullable|file|mimes:jpg,jpeg,png|max:10240',
             ],
             4 => [
                 'client_signature_data' => 'required_without:signature_link',
@@ -195,6 +198,8 @@ class ContractWorkflow extends Component
         }
 
         $this->contract_terms = $this->getDefaultTerms();
+
+        $this->loadClientUploadedDocs();
     }
 
     // ─── Navegación del Wizard ───
@@ -224,6 +229,11 @@ class ContractWorkflow extends Component
         } elseif ($this->step === 2) {
             $this->step = 3;
         } elseif ($this->step === 3) {
+            $progress = $this->documentsProgress;
+            if (!$progress['required_completed']) {
+                $this->dispatch('show-toast', type: 'error', message: 'Todos los documentos son obligatorios (DUI frente, DUI reverso, Recibo de luz y Foto de fachada).');
+                return;
+            }
             $this->step = 4;
         } elseif ($this->step === 4) {
             // Cuando se completa la firma, ir a preview
@@ -320,13 +330,13 @@ class ContractWorkflow extends Component
         $typeMap = [
             'dui_front' => 'dui_front',
             'dui_back' => 'dui_back',
-            'selfie' => 'selfie',
             'receipt' => 'receipt',
-            'proof_of_address' => 'proof_of_address',
+            'fachada' => 'fachada',
         ];
 
         $type = $typeMap[$field] ?? 'other';
-        $path = $file->store('contract-documents', 'public');
+        $folder = 'clients/' . $this->client_id . '/documents';
+        $path = $file->store($folder, 's3');
 
         $this->uploadedDocuments[$type] = [
             'path' => $path,
@@ -342,7 +352,7 @@ class ContractWorkflow extends Component
     public function removeDocument($type)
     {
         if (isset($this->uploadedDocuments[$type])) {
-            Storage::disk('public')->delete($this->uploadedDocuments[$type]['path']);
+            Storage::disk('s3')->delete($this->uploadedDocuments[$type]['path']);
             unset($this->uploadedDocuments[$type]);
         }
 
@@ -350,9 +360,8 @@ class ContractWorkflow extends Component
         $map = [
             'dui_front' => 'dui_front',
             'dui_back' => 'dui_back',
-            'selfie' => 'selfie',
             'receipt' => 'receipt',
-            'proof_of_address' => 'proof_of_address',
+            'fachada' => 'fachada',
         ];
 
         $field = array_search($type, $map);
@@ -365,21 +374,24 @@ class ContractWorkflow extends Component
 
     public function getDocumentsProgressProperty(): array
     {
-        $required = ['dui_front', 'dui_back'];
-        $optional = ['selfie', 'receipt', 'proof_of_address'];
+        $required = ['dui_front', 'dui_back', 'receipt', 'fachada'];
+        $optional = [];
 
+        // Combinar documentos subidos por el agente y por el cliente
         $uploaded = array_keys($this->uploadedDocuments);
+        $clientTypes = array_column($this->clientUploadedDocs, 'type');
+        $allUploaded = array_unique(array_merge($uploaded, $clientTypes));
 
-        $requiredCompleted = empty(array_diff($required, $uploaded));
+        $requiredCompleted = empty(array_diff($required, $allUploaded));
         $totalRequired = count($required);
-        $completedRequired = count(array_intersect($required, $uploaded));
+        $completedRequired = count(array_intersect($required, $allUploaded));
 
         return [
             'required_completed' => $requiredCompleted,
             'completed_required' => $completedRequired,
             'total_required' => $totalRequired,
-            'completed_optional' => count(array_intersect($optional, $uploaded)),
-            'total' => count($uploaded),
+            'completed_optional' => count(array_intersect($optional, $allUploaded)),
+            'total' => count($allUploaded),
         ];
     }
 
@@ -444,11 +456,23 @@ class ContractWorkflow extends Component
         $this->contract_id = $contract->id;
         $this->contractDigitalCode = $contract->contract_digital_code;
 
-        // Guardar documentos subidos
+        // Guardar documentos subidos por el agente
         foreach ($this->uploadedDocuments as $type => $doc) {
             ContractDocument::create([
                 'contract_id' => $contract->id,
                 'type' => $type,
+                'file_path' => $doc['path'],
+                'original_name' => $doc['original_name'],
+                'mime_type' => $doc['mime_type'],
+                'file_size' => $doc['file_size'],
+            ]);
+        }
+
+        // Guardar documentos subidos por el cliente vía enlace público
+        foreach ($this->clientUploadedDocs as $doc) {
+            ContractDocument::create([
+                'contract_id' => $contract->id,
+                'type' => $doc['type'],
                 'file_path' => $doc['path'],
                 'original_name' => $doc['original_name'],
                 'mime_type' => $doc['mime_type'],
@@ -543,6 +567,7 @@ class ContractWorkflow extends Component
         ]);
 
         $this->gps_link = route('public.contract.coordinates', ['token' => $client->gps_token]);
+        $this->waitingForCoordinates = true;
 
         $this->dispatch('show-toast', type: 'success', message: 'Enlace generado. Enviáselo al cliente por WhatsApp.');
     }
@@ -593,11 +618,151 @@ class ContractWorkflow extends Component
         if ($client && $client->latitude && $client->longitude) {
             $this->latitude = $client->latitude;
             $this->longitude = $client->longitude;
+            $this->waitingForCoordinates = false;
             $this->dispatch('show-toast', type: 'success', message: 'Coordenadas actualizadas desde el cliente.');
         }
     }
 
-    // ─── Utilidades ───
+    // ─── Rechazar documentos subidos por el cliente ───
+
+    public function rejectClientDoc($type)
+    {
+        $client = Client::find($this->client_id);
+        if (!$client) return;
+
+        $docs = $client->uploaded_docs ?? [];
+        foreach ($docs as $i => $d) {
+            if ($d['type'] === $type) {
+                Storage::disk('s3')->delete($d['path']);
+                unset($docs[$i]);
+                break;
+            }
+        }
+        $client->update(['uploaded_docs' => array_values($docs)]);
+        $this->clientUploadedDocs = $client->fresh()->uploaded_docs ?? [];
+
+        $labels = ['dui_front' => 'DUI (Frente)', 'dui_back' => 'DUI (Reverso)', 'receipt' => 'Recibo de luz', 'fachada' => 'Foto de Fachada'];
+        $this->dispatch('show-toast', type: 'info', message: $labels[$type] . ' rechazado.');
+    }
+
+    public function rejectAllClientDocs()
+    {
+        $client = Client::find($this->client_id);
+        if (!$client) return;
+
+        $docs = $client->uploaded_docs ?? [];
+        foreach ($docs as $d) {
+            Storage::disk('s3')->delete($d['path']);
+        }
+
+        $client->update([
+            'uploaded_docs' => [],
+            'docs_token' => null,
+            'docs_token_expires_at' => null,
+        ]);
+        $this->clientUploadedDocs = [];
+        $this->docs_link = null;
+
+        $this->dispatch('show-toast', type: 'info', message: 'Todos los documentos fueron rechazados. Generá un nuevo enlace.');
+    }
+
+    // ─── Documentos: Enlace público de subida ───
+
+    public function loadClientUploadedDocs()
+    {
+        if (!$this->client_id) return;
+        $client = Client::find($this->client_id);
+        if ($client) {
+            $this->clientUploadedDocs = $client->uploaded_docs ?? [];
+        }
+    }
+
+    public function generateDocsLink()
+    {
+        if (!$this->client_id) {
+            $this->dispatch('show-toast', type: 'error', message: 'No hay cliente seleccionado.');
+            return;
+        }
+
+        $client = Client::find($this->client_id);
+        if (!$client) {
+            $this->dispatch('show-toast', type: 'error', message: 'Cliente no encontrado.');
+            return;
+        }
+
+        $now = now();
+        if ($client->docs_token && $client->docs_token_expires_at && $client->docs_token_expires_at->greaterThan($now)) {
+            $this->docs_link = route('public.contract.documents', ['token' => $client->docs_token]);
+            $this->dispatch('show-toast', type: 'success', message: 'Enlace vigente reutilizado.');
+            return;
+        }
+
+        $client->update([
+            'docs_token' => (string) Str::uuid(),
+            'docs_token_expires_at' => $now->copy()->addHours(24),
+        ]);
+
+        $this->docs_link = route('public.contract.documents', ['token' => $client->docs_token]);
+
+        $this->dispatch('show-toast', type: 'success', message: 'Enlace generado. Enviáselo al cliente por WhatsApp.');
+    }
+
+    public function getDocsWhatsAppUrl(): ?string
+    {
+        $client = Client::find($this->client_id);
+        if (!$client || !$client->phone) return null;
+
+        if (!$this->docs_link) {
+            $this->generateDocsLink();
+        }
+        if (!$this->docs_link) return null;
+
+        $phone = preg_replace('/\D/', '', $client->phone);
+        if (strlen($phone) === 8) {
+            $phone = '503' . $phone;
+        } elseif (strlen($phone) === 9 && $phone[0] === '0') {
+            $phone = '503' . substr($phone, 1);
+        }
+
+        $message = "Hola, soy de Omnivisión. Para continuar con tu contrato necesitamos que subas tus documentos. Hacé clic en este enlace y adjuntá DUI (frente y reverso), recibo de luz y una foto de la fachada de tu casa:\n\n";
+        $message .= $this->docs_link . "\n\n";
+        $message .= "⚠️ El enlace expira en 24 horas.";
+
+        return 'https://wa.me/' . $phone . '?text=' . urlencode($message);
+    }
+
+    public function sendDocsViaWhatsApp()
+    {
+        $url = $this->getDocsWhatsAppUrl();
+        if (!$url) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente no tiene un número de teléfono registrado.');
+            return;
+        }
+
+        $this->dispatch('open-whatsapp', url: $url);
+    }
+
+    public function getDocPreviewUrl($path): ?string
+    {
+        if (!$path) return null;
+        try {
+            return Storage::disk('s3')->temporaryUrl($path, now()->addMinutes(10));
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    public function refreshUploadedDocs()
+    {
+        if (!$this->client_id) return;
+
+        $client = Client::find($this->client_id);
+        if ($client) {
+            $this->clientUploadedDocs = $client->uploaded_docs ?? [];
+            $this->dispatch('show-toast', type: 'success', message: 'Documentos actualizados desde el cliente.');
+        }
+    }
+
 
     private function getDefaultTerms(): string
     {
