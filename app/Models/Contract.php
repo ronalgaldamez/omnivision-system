@@ -26,6 +26,15 @@ class Contract extends Model
         'contract_terms',
         'contract_date',
         'created_by',
+        'contract_type',
+        'service_contracted',
+        'access_type',
+        'speed',
+        'technology',
+        'modem_serial',
+        'term_months',
+        'installation_cost',
+        'benefit',
     ];
 
     protected function casts(): array

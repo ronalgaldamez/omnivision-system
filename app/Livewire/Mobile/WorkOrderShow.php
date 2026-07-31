@@ -49,6 +49,13 @@ class WorkOrderShow extends Component
     public $latitude = null;
     public $longitude = null;
 
+    // Datos técnicos del contrato
+    public $access_type = '';
+    public $speed = '';
+    public $technology = '';
+    public $modem_serial = '';
+    public $installation_cost = '';
+
     // Búsqueda de dispositivo
     public $deviceSearch = '';
     public $deviceResults = [];
@@ -92,6 +99,13 @@ class WorkOrderShow extends Component
         $this->pon = $draft['pon'] ?? $this->workOrder->pon;
         $this->mufa = $draft['mufa'] ?? $this->workOrder->mufa;
         $this->installation_date = $draft['installation_date'] ?? $this->workOrder->installation_date?->format('Y-m-d');
+
+        $contract = $this->workOrder->ticket?->contract;
+        $this->access_type = $contract->access_type ?? '';
+        $this->speed = $contract->speed ?? '';
+        $this->technology = $contract->technology ?? '';
+        $this->modem_serial = $contract->modem_serial ?? '';
+        $this->installation_cost = $contract->installation_cost ?? '';
 
         $client = $this->workOrder->client;
         $this->latitude = $draft['latitude'] ?? $this->workOrder->latitude ?? $client->latitude ?? null;
@@ -237,6 +251,18 @@ class WorkOrderShow extends Component
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
         ]);
+
+        // Sincronizar datos técnicos al contrato asociado
+        $contract = $this->workOrder->ticket?->contract;
+        if ($contract) {
+            $contract->update([
+                'access_type' => $this->access_type,
+                'speed' => $this->speed,
+                'technology' => $this->technology,
+                'modem_serial' => $this->modem_serial,
+                'installation_cost' => $this->installation_cost ?: null,
+            ]);
+        }
 
         $client = $this->workOrder->client;
         if ($client) {

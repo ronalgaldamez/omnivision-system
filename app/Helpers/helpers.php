@@ -3,6 +3,16 @@
 use App\Helpers\ModuleHelper;
 use Illuminate\Support\Facades\Schema; // ← añade este use
 
+if (! function_exists('setting')) {
+    function setting(string $key, mixed $default = null): mixed
+    {
+        if (! Schema::hasTable('settings')) {
+            return $default;
+        }
+        return \App\Models\Setting::get($key, $default);
+    }
+}
+
 if (! function_exists('module_active')) {
     function module_active(string $moduleName): bool
     {
