@@ -273,14 +273,14 @@
 
                 {{-- Catálogo de planes agrupados por tipo --}}
                 @php
-                    $internetPlans = array_filter($availablePlans, fn($p) => $p['service_type'] === 'internet');
-                    $cablePlans = array_filter($availablePlans, fn($p) => $p['service_type'] === 'cable');
-                    $comboPlans = array_filter($availablePlans, fn($p) => $p['service_type'] === 'internet_cable');
-                    $zoneModel = $zone_id ? \App\Models\Zone::find($zone_id) : null;
+                    $internetPlans = $availablePlans->filter(fn($p) => $p->service_type === 'internet');
+                    $cablePlans = $availablePlans->filter(fn($p) => $p->service_type === 'cable');
+                    $comboPlans = $availablePlans->filter(fn($p) => $p->service_type === 'internet_cable');
+                    $zoneModel = $this->getZoneModel();
                 @endphp
 
                 {{-- Internet --}}
-                @if(count($internetPlans) > 0)
+                @if($internetPlans->count() > 0)
                 <div>
                     <div class="flex items-center gap-2 mb-3">
                         <span class="material-symbols-outlined text-blue-600 text-lg">wifi</span>
@@ -289,9 +289,8 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         @foreach($internetPlans as $plan)
                             @php
-                                $planModel = \App\Models\Plan::find($plan['id']);
-                                $effPrice = $zoneModel && $planModel ? $zoneModel->getEffectivePriceForPlan($planModel) : (float) $plan['base_price'];
-                                $isSelected = $plan_id == $plan['id'];
+                                $effPrice = $zoneModel ? (float) $zoneModel->getEffectivePriceForPlan($plan) : (float) $plan->base_price;
+                                $isSelected = $plan_id == $plan->id;
                             @endphp
                             @include('livewire.contracts._plan_card', ['plan' => $plan, 'effPrice' => $effPrice, 'isSelected' => $isSelected])
                         @endforeach
@@ -300,7 +299,7 @@
                 @endif
 
                 {{-- Cable --}}
-                @if(count($cablePlans) > 0)
+                @if($cablePlans->count() > 0)
                 <div>
                     <div class="flex items-center gap-2 mb-3">
                         <span class="material-symbols-outlined text-gray-500 text-lg">live_tv</span>
@@ -309,9 +308,8 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         @foreach($cablePlans as $plan)
                             @php
-                                $planModel = \App\Models\Plan::find($plan['id']);
-                                $effPrice = $zoneModel && $planModel ? $zoneModel->getEffectivePriceForPlan($planModel) : (float) $plan['base_price'];
-                                $isSelected = $plan_id == $plan['id'];
+                                $effPrice = $zoneModel ? (float) $zoneModel->getEffectivePriceForPlan($plan) : (float) $plan->base_price;
+                                $isSelected = $plan_id == $plan->id;
                             @endphp
                             @include('livewire.contracts._plan_card', ['plan' => $plan, 'effPrice' => $effPrice, 'isSelected' => $isSelected])
                         @endforeach
@@ -320,7 +318,7 @@
                 @endif
 
                 {{-- Internet + Cable --}}
-                @if(count($comboPlans) > 0)
+                @if($comboPlans->count() > 0)
                 <div>
                     <div class="flex items-center gap-2 mb-3">
                         <span class="material-symbols-outlined text-orange-600 text-lg">live_tv</span>
@@ -329,9 +327,8 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         @foreach($comboPlans as $plan)
                             @php
-                                $planModel = \App\Models\Plan::find($plan['id']);
-                                $effPrice = $zoneModel && $planModel ? $zoneModel->getEffectivePriceForPlan($planModel) : (float) $plan['base_price'];
-                                $isSelected = $plan_id == $plan['id'];
+                                $effPrice = $zoneModel ? (float) $zoneModel->getEffectivePriceForPlan($plan) : (float) $plan->base_price;
+                                $isSelected = $plan_id == $plan->id;
                             @endphp
                             @include('livewire.contracts._plan_card', ['plan' => $plan, 'effPrice' => $effPrice, 'isSelected' => $isSelected])
                         @endforeach
@@ -339,7 +336,7 @@
                 </div>
                 @endif
 
-                {{-- Precio personalizado --}}
+                {{-- Precio personalizado + Beneficios --}}
                 @if($plan_id)
                 <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
                     <p class="text-sm font-medium text-amber-800 flex items-center gap-2">
@@ -362,6 +359,45 @@
                             step="0.01" min="0" placeholder="0.00" />
                     </div>
                 </div>
+
+                {{-- Beneficios interactivos --}}
+                @if(count($availableBenefits) > 0)
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-green-600 text-sm">card_giftcard</span>
+                            <span class="text-xs font-semibold text-green-800 uppercase tracking-wide">Beneficios disponibles</span>
+                        </div>
+                        <button wire:click="resetBenefits" class="text-xs text-green-700 hover:text-green-800 flex items-center gap-1" title="Restablecer todos">
+                            <span class="material-symbols-outlined text-sm">refresh</span>
+                            Restablecer
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach($availableBenefits as $ruleKey => $benefitData)
+                            @php $isActive = in_array($ruleKey, $selectedBenefits); @endphp
+                            <button wire:click="toggleBenefit('{{ $ruleKey }}')" type="button"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150
+                                {{ $isActive
+                                    ? 'bg-green-600 text-white shadow-sm hover:bg-green-700'
+                                    : 'bg-white text-gray-500 border border-gray-300 hover:border-gray-400 hover:text-gray-700' }}">
+                                <span class="material-symbols-outlined text-sm">
+                                    {{ $isActive ? 'check_circle' : 'radio_button_unchecked' }}
+                                </span>
+                                {{ $benefitData['label'] }}
+                            </button>
+                        @endforeach
+                    </div>
+                    @if($selectedBenefits)
+                    <div class="mt-3 pt-3 border-t border-green-200">
+                        <p class="text-xs text-green-700">
+                            <span class="font-semibold">Beneficios seleccionados:</span>
+                            {{ $this->getAppliedBenefits() }}
+                        </p>
+                    </div>
+                    @endif
+                </div>
+                @endif
                 @endif
 
                 {{-- Datos comerciales del contrato --}}
@@ -444,7 +480,7 @@
                         @if(isset($uploadedDocuments['dui_front']))
                             @php $url = $preview($uploadedDocuments['dui_front']['path'], $uploadedDocuments['dui_front']['mime_type'] ?? ''); @endphp
                             @if($url && str_starts_with($uploadedDocuments['dui_front']['mime_type'] ?? '', 'image/'))
-                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src)" />
+                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src, '{{ $contract_id ?? $ticket_id ?? 'new' }}')" />
                             @elseif($url)
                                 <a href="{{ $url }}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
                                     <span class="material-symbols-outlined text-sm">visibility</span> Ver PDF
@@ -491,7 +527,7 @@
                         @if(isset($uploadedDocuments['dui_back']))
                             @php $url = $preview($uploadedDocuments['dui_back']['path'], $uploadedDocuments['dui_back']['mime_type'] ?? ''); @endphp
                             @if($url && str_starts_with($uploadedDocuments['dui_back']['mime_type'] ?? '', 'image/'))
-                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src)" />
+                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src, '{{ $contract_id ?? $ticket_id ?? 'new' }}')" />
                             @elseif($url)
                                 <a href="{{ $url }}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
                                     <span class="material-symbols-outlined text-sm">visibility</span> Ver PDF
@@ -538,7 +574,7 @@
                         @if(isset($uploadedDocuments['receipt']))
                             @php $url = $preview($uploadedDocuments['receipt']['path'], $uploadedDocuments['receipt']['mime_type'] ?? ''); @endphp
                             @if($url && str_starts_with($uploadedDocuments['receipt']['mime_type'] ?? '', 'image/'))
-                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src)" />
+                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src, '{{ $contract_id ?? $ticket_id ?? 'new' }}')" />
                             @elseif($url)
                                 <a href="{{ $url }}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
                                     <span class="material-symbols-outlined text-sm">visibility</span> Ver PDF
@@ -585,7 +621,7 @@
                         @if(isset($uploadedDocuments['fachada']))
                             @php $url = $preview($uploadedDocuments['fachada']['path'], $uploadedDocuments['fachada']['mime_type'] ?? ''); @endphp
                             @if($url && str_starts_with($uploadedDocuments['fachada']['mime_type'] ?? '', 'image/'))
-                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src)" />
+                                <img src="{{ $url }}" class="mt-2 max-h-28 mx-auto rounded-lg border border-green-200 cursor-pointer preview-img" onclick="openPreview(this.src, '{{ $contract_id ?? $ticket_id ?? 'new' }}')" />
                             @endif
                             <div x-data="{ confirmDelete: false }" class="mt-1">
                                 <button @click="confirmDelete = true"
@@ -681,7 +717,7 @@
                                                 @if($url && isset($doc['mime_type']) && str_starts_with($doc['mime_type'], 'image/'))
                                                     <img src="{{ $url }}"
                                                         class="max-h-16 mx-auto rounded cursor-pointer preview-img hover:opacity-80"
-                                                        onclick="openPreview(this.src)" />
+                                                        onclick="openPreview(this.src, '{{ $contract_id ?? $ticket_id ?? 'new' }}')" />
                                                 @elseif($url)
                                                     <a href="{{ $url }}" target="_blank"
                                                         class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
@@ -1078,7 +1114,7 @@
                         </div>
                         <div>
                             <p class="text-xs text-gray-500">Plan</p>
-                            <p class="font-medium text-gray-800">{{ $availablePlans[array_search($plan_id, array_column($availablePlans, 'id'))]['name'] ?? '—' }}</p>
+                            <p class="font-medium text-gray-800">{{ $availablePlans->firstWhere('id', $plan_id)?->name ?? '—' }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-gray-500">Precio mensual</p>
@@ -1105,38 +1141,38 @@
     </x-ui.card>
 
     {{-- Modal slider para preview de imágenes --}}
-    <div id="preview-modal" class="fixed inset-0 z-50 bg-black/90 hidden items-center justify-center" style="display:none;">
-        <button onclick="closePreview()" class="absolute top-4 right-4 text-white/70 hover:text-white z-10">
+    @php $previewId = 'preview-modal-' . ($contract_id ?? $ticket_id ?? 'new'); @endphp
+    <div id="{{ $previewId }}" class="fixed inset-0 z-50 bg-black/90 hidden items-center justify-center" style="display:none;">
+        <button onclick="closePreview('{{ $previewId }}')" class="absolute top-4 right-4 text-white/70 hover:text-white z-10">
             <span class="material-symbols-outlined text-3xl">close</span>
         </button>
-        <img id="preview-image" class="max-w-[95vw] max-h-[95vh] object-contain" />
+        <img id="preview-image-{{ $contract_id ?? $ticket_id ?? 'new' }}" class="max-w-[95vw] max-h-[95vh] object-contain" />
     </div>
 </div>
 
 @push('scripts')
 <script>
-    function openPreview(src) {
-        const modal = document.getElementById('preview-modal');
-        const img = document.getElementById('preview-image');
+    function openPreview(src, id) {
+        const modal = document.getElementById('preview-modal-' + id);
+        const img = document.getElementById('preview-image-' + id);
+        if (!modal || !img) return;
         img.src = src;
         modal.style.display = 'flex';
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
 
-    function closePreview() {
-        const modal = document.getElementById('preview-modal');
+    function closePreview(id) {
+        const modal = document.getElementById('preview-modal-' + id);
+        if (!modal) return;
         modal.style.display = 'none';
         modal.classList.add('hidden');
         document.body.style.overflow = '';
     }
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closePreview();
-    });
-
-    document.getElementById('preview-modal')?.addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) closePreview();
+        const previewId = '{{ $contract_id ?? $ticket_id ?? 'new' }}';
+        if (e.key === 'Escape') closePreview(previewId);
     });
 
     document.addEventListener('livewire:init', () => {

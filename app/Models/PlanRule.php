@@ -29,6 +29,16 @@ class PlanRule extends Model
      */
     public static function getEffectiveRule(int $planId, ?int $zoneId, int $termMonths, string $ruleKey, mixed $default = null): mixed
     {
+        // Buscar regla global primero (sin zona)
+        $globalRule = static::where('plan_id', $planId)
+            ->whereNull('zone_id')
+            ->where('term_months', $termMonths)
+            ->where('rule_key', $ruleKey)
+            ->where('is_active', true)
+            ->first();
+
+        if ($globalRule) return $globalRule->rule_value;
+
         if (!$zoneId) return $default;
 
         $zone = Zone::find($zoneId);
@@ -58,6 +68,19 @@ class PlanRule extends Model
     public static function getEffectiveRules(int $planId, ?int $zoneId, int $termMonths): array
     {
         $rules = [];
+
+        // Siempre incluir reglas globales (sin zona específica)
+        $globalRules = static::where('plan_id', $planId)
+            ->whereNull('zone_id')
+            ->where('term_months', $termMonths)
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($globalRules as $r) {
+            $rules[$r->rule_key] = $r->rule_value;
+        }
+
+        // Reglas específicas de la zona y sus ancestros
         $zone = Zone::find($zoneId);
         while ($zone) {
             $zoneRules = static::where('plan_id', $planId)

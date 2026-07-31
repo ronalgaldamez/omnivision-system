@@ -11,7 +11,6 @@ use App\Models\Plan;
 use App\Models\PlanRule;
 use App\Models\Ticket;
 use App\Models\Zone;
-use App\Services\WorkOrderService;
 use App\Services\ContractPdfService;
 use App\Services\ContractSignatureService;
 use Illuminate\Support\Facades\Auth;
@@ -83,8 +82,13 @@ class ContractWorkflow extends Component
 
     // ─── Datos comerciales del contrato ───
     public $contract_type = 'nuevo';
-    public $term_months = 12;
+    public $term_months = 24;
     public $benefit = '';
+    public $benefitManuallySet = false;
+
+    // ─── Beneficios interactivos ───
+    public array $availableBenefits = [];
+    public array $selectedBenefits = [];
 
     // ─── Step 3: Documentos ───
     public $dui_front = null;
@@ -162,8 +166,7 @@ class ContractWorkflow extends Component
 
         $this->availablePlans = Plan::where('is_active', true)
             ->orderBy('name')
-            ->get()
-            ->toArray();
+            ->get();
         $this->availableZones = Zone::orderBy('name')->get(['id', 'name'])->toArray();
 
         if ($ticket_id) {
@@ -212,7 +215,7 @@ class ContractWorkflow extends Component
                 $this->client_branch_name = $client->branch->name;
             } else {
                 $branch = $this->resolveBranchFromZone($client->zone)
-                      ?? $this->resolveBranchFromZone($ticket->zone);
+                    ?? $this->resolveBranchFromZone($ticket->zone);
                 $this->client_branch_name = $branch?->name ?? '—';
             }
 
@@ -229,7 +232,7 @@ class ContractWorkflow extends Component
             $this->isPotentialClient = $serviceType && $serviceType->requires_potential;
             $this->showQuickReferencePlans = $serviceType && ($serviceType->requires_potential || $serviceType->requires_contract);
             if ($this->showQuickReferencePlans) {
-                $this->quickReferencePlans = Plan::where('is_active', true)->get()->toArray();
+                $this->quickReferencePlans = Plan::where('is_active', true)->get();
             }
 
             // ─── Si el ticket ya tiene plan, cargarlo ───
@@ -239,11 +242,14 @@ class ContractWorkflow extends Component
                     $this->updateEffectivePrice();
                 }
             }
+
+            $this->recalculateBenefits();
         }
 
         $this->contract_terms = $this->getDefaultTerms();
 
         $this->loadClientUploadedDocs();
+        $this->computeDocumentsProgress();
     }
 
     // ─── Navegación del Wizard ───
@@ -292,47 +298,101 @@ class ContractWorkflow extends Component
         }
     }
 
+    private $_cachedZone = null;
+
+    private function getZoneModel(): ?Zone
+    {
+        if ($this->_cachedZone === null && $this->zone_id) {
+            $this->_cachedZone = Zone::find($this->zone_id);
+        }
+        return $this->_cachedZone;
+    }
+
     // ─── Planes de Referencia (Cliente Potencial) ───
 
     public function addPlanReference($planId)
     {
         $plan = Plan::find($planId);
-        if (!$plan) return;
+        if (!$plan)
+            return;
 
-        $price = $this->zone_id
-            ? optional(Zone::find($this->zone_id))->getEffectivePriceForPlan($plan)
-            : $plan->base_price;
+        $zone = $this->getZoneModel();
+        $price = $zone ? $zone->getEffectivePriceForPlan($plan) : $plan->base_price;
 
-        // Asignar el plan directamente
         $this->plan_id = $plan->id;
         $this->price = $price ?? $plan->base_price;
         $this->effective_price = $this->price;
+        $this->benefitManuallySet = false;
+        $this->loadAvailableBenefits();
+        $this->selectedBenefits = array_keys($this->availableBenefits);
+        $this->benefit = $this->getAppliedBenefits();
 
         $this->dispatch('show-toast', type: 'success', message: "Plan «{$plan->name}» seleccionado.");
     }
 
     // ─── Step 2: Plan ───
 
-    private function getAppliedBenefits(): string
+    private function benefitLabel(string $ruleKey, mixed $value = null): string
     {
-        if (!$this->plan_id || !$this->term_months) return '';
+        $label = match ($ruleKey) {
+            'free_installation' => 'Instalación gratuita',
+            'double_speed' => 'Doble velocidad',
+            'discount_months' => 'Descuento por prepago',
+            'festive_eligible' => 'Elegible para promos festivas',
+            default => $ruleKey,
+        };
 
-        $rules = PlanRule::getEffectiveRules($this->plan_id, $this->zone_id ?: null, $this->term_months);
-        if (empty($rules)) return '';
-
-        $benefits = [];
-        foreach ($rules as $key => $value) {
-            if ($key === 'free_installation') $benefits[] = 'Instalación gratuita';
-            if ($key === 'double_speed') $benefits[] = 'Doble velocidad';
-            if ($key === 'discount_months') {
-                $pay = $value['pay'] ?? '';
-                $total = $value['total'] ?? '';
-                $benefits[] = $pay && $total ? "Descuento: paga {$pay} meses, recibe {$total}" : 'Descuento por prepago';
+        if ($ruleKey === 'discount_months' && is_array($value)) {
+            $pay = $value['pay'] ?? '';
+            $total = $value['total'] ?? '';
+            if ($pay && $total) {
+                $label = "Descuento: paga {$pay} meses, recibe {$total}";
             }
-            if ($key === 'festive_eligible') $benefits[] = 'Elegible para promos festivas';
         }
 
-        return implode(', ', $benefits);
+        return $label;
+    }
+
+    public function getAppliedBenefits(): string
+    {
+        $labels = array_map(fn($k) => $this->benefitLabel($k), $this->selectedBenefits);
+        return implode(', ', $labels);
+    }
+
+    public function loadAvailableBenefits(): void
+    {
+        if (!$this->plan_id || !$this->term_months) {
+            $this->availableBenefits = [];
+            return;
+        }
+
+        $rules = PlanRule::getEffectiveRules($this->plan_id, $this->zone_id ?: null, $this->term_months);
+        $this->availableBenefits = [];
+        foreach ($rules as $key => $value) {
+            $this->availableBenefits[$key] = [
+                'label' => $this->benefitLabel($key, $value),
+            ];
+        }
+    }
+
+    public function toggleBenefit(string $ruleKey): void
+    {
+        $this->benefitManuallySet = false;
+
+        if (in_array($ruleKey, $this->selectedBenefits, true)) {
+            $this->selectedBenefits = array_values(array_filter($this->selectedBenefits, fn($k) => $k !== $ruleKey));
+        } else {
+            $this->selectedBenefits[] = $ruleKey;
+        }
+
+        $this->benefit = $this->getAppliedBenefits();
+    }
+
+    public function resetBenefits(): void
+    {
+        $this->benefitManuallySet = false;
+        $this->selectedBenefits = array_keys($this->availableBenefits);
+        $this->benefit = $this->getAppliedBenefits();
     }
 
     private function deriveServiceContracted(): string
@@ -347,12 +407,50 @@ class ContractWorkflow extends Component
 
     public function updatedPlanId($value)
     {
+        $this->benefitManuallySet = false;
         $this->updateEffectivePrice();
+        $this->loadAvailableBenefits();
+        $this->selectedBenefits = array_keys($this->availableBenefits);
+        $this->benefit = $this->getAppliedBenefits();
     }
 
     public function updatedZoneId($value)
     {
+        $this->benefitManuallySet = false;
+        $this->_cachedZone = null;
         $this->updateEffectivePrice();
+        $this->refreshBenefitsFromAvailable();
+    }
+
+    public function updatedTermMonths($value)
+    {
+        $this->benefitManuallySet = false;
+        $this->refreshBenefitsFromAvailable();
+    }
+
+    private function refreshBenefitsFromAvailable(): void
+    {
+        $this->loadAvailableBenefits();
+        // Mantener solo los que siguen disponibles, descartar los que ya no aplican
+        $this->selectedBenefits = array_values(array_intersect(
+            $this->selectedBenefits,
+            array_keys($this->availableBenefits)
+        ));
+        $this->benefit = $this->getAppliedBenefits();
+    }
+
+    public function updatedBenefit($value)
+    {
+        $this->benefitManuallySet = !empty($value);
+    }
+
+    private function recalculateBenefits(): void
+    {
+        if ($this->benefitManuallySet) return;
+
+        $this->loadAvailableBenefits();
+        $this->selectedBenefits = array_keys($this->availableBenefits);
+        $this->benefit = $this->getAppliedBenefits();
     }
 
     public function updateEffectivePrice()
@@ -364,28 +462,22 @@ class ContractWorkflow extends Component
         }
 
         $plan = Plan::find($this->plan_id);
-        if (!$plan) return;
+        if (!$plan)
+            return;
 
-        if ($this->zone_id) {
-            $zone = Zone::find($this->zone_id);
-            if ($zone) {
-                $this->effective_price = $zone->getEffectivePriceForPlan($plan);
-            } else {
-                $this->effective_price = (float) $plan->base_price;
-            }
-        } else {
-            $this->effective_price = (float) $plan->base_price;
-        }
-
+        $zone = $this->getZoneModel();
+        $this->effective_price = $zone ? (float) $zone->getEffectivePriceForPlan($plan) : (float) $plan->base_price;
         $this->price = $this->effective_price;
     }
 
     public function getPlanPriceDetailProperty()
     {
-        if (!$this->plan_id) return null;
+        if (!$this->plan_id)
+            return null;
 
         $plan = Plan::find($this->plan_id);
-        if (!$plan) return null;
+        if (!$plan)
+            return null;
 
         return [
             'base_price' => (float) $plan->base_price,
@@ -401,7 +493,8 @@ class ContractWorkflow extends Component
         $this->validateOnly($field);
 
         $file = $this->$field;
-        if (!$file) return;
+        if (!$file)
+            return;
 
         $typeMap = [
             'dui_front' => 'dui_front',
@@ -422,6 +515,7 @@ class ContractWorkflow extends Component
             'temp' => true,
         ];
 
+        $this->computeDocumentsProgress();
         $this->dispatch('show-toast', type: 'success', message: 'Documento subido correctamente.');
     }
 
@@ -445,27 +539,23 @@ class ContractWorkflow extends Component
             $this->$field = null;
         }
 
+        $this->computeDocumentsProgress();
         $this->dispatch('show-toast', type: 'info', message: 'Documento eliminado.');
     }
 
-    public function getDocumentsProgressProperty(): array
+    private function computeDocumentsProgress(): void
     {
         $required = ['dui_front', 'dui_back', 'receipt', 'fachada'];
         $optional = [];
 
-        // Combinar documentos subidos por el agente y por el cliente
         $uploaded = array_keys($this->uploadedDocuments);
         $clientTypes = array_column($this->clientUploadedDocs, 'type');
         $allUploaded = array_unique(array_merge($uploaded, $clientTypes));
 
-        $requiredCompleted = empty(array_diff($required, $allUploaded));
-        $totalRequired = count($required);
-        $completedRequired = count(array_intersect($required, $allUploaded));
-
-        return [
-            'required_completed' => $requiredCompleted,
-            'completed_required' => $completedRequired,
-            'total_required' => $totalRequired,
+        $this->documentsProgress = [
+            'required_completed' => empty(array_diff($required, $allUploaded)),
+            'completed_required' => count(array_intersect($required, $allUploaded)),
+            'total_required' => count($required),
             'completed_optional' => count(array_intersect($optional, $allUploaded)),
             'total' => count($allUploaded),
         ];
@@ -520,12 +610,14 @@ class ContractWorkflow extends Component
     public function getSignatureWhatsAppUrl(): ?string
     {
         $client = Client::find($this->client_id);
-        if (!$client || !$client->phone) return null;
+        if (!$client || !$client->phone)
+            return null;
 
         if (!$this->signature_link) {
             $this->generateSignatureLink();
         }
-        if (!$this->signature_link) return null;
+        if (!$this->signature_link)
+            return null;
 
         $phone = preg_replace('/\D/', '', $client->phone);
         if (strlen($phone) === 8) {
@@ -554,7 +646,8 @@ class ContractWorkflow extends Component
 
     public function refreshClientSignature()
     {
-        if (!$this->client_id) return;
+        if (!$this->client_id)
+            return;
         $client = Client::find($this->client_id);
         if ($client && $client->client_signature_data) {
             $this->client_signature_data = $client->client_signature_data;
@@ -612,7 +705,7 @@ class ContractWorkflow extends Component
             'contract_type' => $this->contract_type,
             'service_contracted' => $this->deriveServiceContracted(),
             'term_months' => $this->term_months,
-            'benefit' => $this->benefit ?: $this->getAppliedBenefits(),
+            'benefit' => $this->benefit,
         ]);
 
         $this->contract_id = $contract->id;
@@ -666,15 +759,15 @@ class ContractWorkflow extends Component
         $pdfService = app(ContractPdfService::class);
         $pdfService->generate($contract);
 
-        // Crear OT si viene de ticket
+        // Ticket finalizado — WFM creará la OT manualmente si aplica
         if ($this->ticket_id) {
             $ticket = Ticket::with('client')->find($this->ticket_id);
             if ($ticket) {
-                app(WorkOrderService::class)->createFromTicket($ticket);
-
                 $ticket->update([
                     'contracts_ended_at' => now(),
-                    'status' => 'in_progress',
+                    'status' => 'resolved',
+                    'resolved_by' => Auth::id(),
+                    'resolved_at' => now(),
                 ]);
                 app(\App\Services\SlaService::class)->evaluateSla($ticket);
             }
@@ -686,7 +779,8 @@ class ContractWorkflow extends Component
 
     public function downloadPdf()
     {
-        if (!$this->contract_id) return;
+        if (!$this->contract_id)
+            return;
 
         $contract = Contract::find($this->contract_id);
         $pdfService = app(ContractPdfService::class);
@@ -746,13 +840,15 @@ class ContractWorkflow extends Component
     public function getGpsWhatsAppUrl(): ?string
     {
         $client = Client::find($this->client_id);
-        if (!$client || !$client->phone) return null;
+        if (!$client || !$client->phone)
+            return null;
 
         // Asegurar que el enlace GPS esté generado
         if (!$this->gps_link) {
             $this->generateGpsLink();
         }
-        if (!$this->gps_link) return null;
+        if (!$this->gps_link)
+            return null;
 
         // Limpiar el teléfono: dejar solo dígitos
         $phone = preg_replace('/\D/', '', $client->phone);
@@ -783,7 +879,8 @@ class ContractWorkflow extends Component
 
     public function refreshCoordinates()
     {
-        if (!$this->client_id) return;
+        if (!$this->client_id)
+            return;
 
         $client = Client::find($this->client_id);
         if ($client && $client->latitude && $client->longitude) {
@@ -799,7 +896,8 @@ class ContractWorkflow extends Component
     public function rejectClientDoc($type)
     {
         $client = Client::find($this->client_id);
-        if (!$client) return;
+        if (!$client)
+            return;
 
         $docs = $client->uploaded_docs ?? [];
         foreach ($docs as $i => $d) {
@@ -819,7 +917,8 @@ class ContractWorkflow extends Component
     public function rejectAllClientDocs()
     {
         $client = Client::find($this->client_id);
-        if (!$client) return;
+        if (!$client)
+            return;
 
         $docs = $client->uploaded_docs ?? [];
         foreach ($docs as $d) {
@@ -841,7 +940,8 @@ class ContractWorkflow extends Component
 
     public function loadClientUploadedDocs()
     {
-        if (!$this->client_id) return;
+        if (!$this->client_id)
+            return;
         $client = Client::find($this->client_id);
         if ($client) {
             $this->clientUploadedDocs = $client->uploaded_docs ?? [];
@@ -881,12 +981,14 @@ class ContractWorkflow extends Component
     public function getDocsWhatsAppUrl(): ?string
     {
         $client = Client::find($this->client_id);
-        if (!$client || !$client->phone) return null;
+        if (!$client || !$client->phone)
+            return null;
 
         if (!$this->docs_link) {
             $this->generateDocsLink();
         }
-        if (!$this->docs_link) return null;
+        if (!$this->docs_link)
+            return null;
 
         $phone = preg_replace('/\D/', '', $client->phone);
         if (strlen($phone) === 8) {
@@ -915,7 +1017,8 @@ class ContractWorkflow extends Component
 
     public function getDocPreviewUrl($path): ?string
     {
-        if (!$path) return null;
+        if (!$path)
+            return null;
         try {
             return Storage::disk('s3')->temporaryUrl($path, now()->addMinutes(10));
         } catch (\Exception $e) {
@@ -925,7 +1028,8 @@ class ContractWorkflow extends Component
 
     public function refreshUploadedDocs()
     {
-        if (!$this->client_id) return;
+        if (!$this->client_id)
+            return;
 
         $client = Client::find($this->client_id);
         if ($client) {
@@ -937,7 +1041,7 @@ class ContractWorkflow extends Component
 
     private function getDefaultTerms(): string
     {
-        return '
+        $defaultTerms = '
         <p><strong>SECCION PRIMERA: DATOS GENERALES DEL CLIENTE.</strong></p>
         <p>Nombre Completo: ' . e($this->client_name ?? '') . '</p>
         <p>DUI: ' . e($this->client_document_number ?? '') . '</p>
@@ -969,9 +1073,11 @@ class ContractWorkflow extends Component
 
         <p><strong>11. ES RESPONSABILIDAD DEL CLIENTE:</strong> El cuido de la Red y Equipo que la empresa Omnivisión proporciona; luego de su instalación; ya que no nos haremos responsables por el daño que sea causado con dolo por la parte contratante, siempre y cuando el personal encargado lo manifieste y así mismo se le hará saber al cliente, luego del diagnóstico presencial que nuestro personal realice en su domicilio.</p>
 
-        <p><strong>PAGARE SIN PROTESTO:</strong> Pagaré en forma incondicional a la orden de OMNIVISION-OMNICOM la cantidad establecida en el presente contrato. En caso de no ser pagado a su vencimiento, pagaré además el interés moratorio del % mensual. Para los efectos legales me someto a los tribunales de la ciudad de Chalatenango.</p>
+        <p><strong>PAGARE SIN PROTESTIO:</strong> Pagaré en forma incondicional a la orden de OMNIVISION-OMNICOM la cantidad establecida en el presente contrato. En caso de no ser pagado a su vencimiento, pagaré además el interés moratorio del % mensual. Para los efectos legales me someto a los tribunales de la ciudad de Chalatenango.</p>
 
         <p><em>Nota: El uso de la señal de telecomunicaciones es exclusivo para la persona que lo contrata. Por ningún motivo podrá compartir la señal, de lo contrario se suspenderá el servicio y será demandado por los daños correspondientes a nuestra empresa.</em></p>';
+
+        return \App\Models\Setting::get('contract_terms', $defaultTerms);
     }
 
     /**
@@ -979,7 +1085,8 @@ class ContractWorkflow extends Component
      */
     private function resolveBranchFromZone($zone): ?\App\Models\Branch
     {
-        if (!$zone) return null;
+        if (!$zone)
+            return null;
 
         $current = $zone;
         while ($current) {
