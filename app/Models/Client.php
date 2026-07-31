@@ -16,12 +16,15 @@ class Client extends Model
         'installation_address', 'notes',
         'branch_id', 'zone_id', 'plan_id', 'contract_date',
         'departamento', 'municipio', 'distrito',
+        'gps_token',
+        'gps_token_expires_at',
     ];
 
     protected $casts = [
         'latitude' => 'float',
         'longitude' => 'float',
         'contract_date' => 'date',
+        'gps_token_expires_at' => 'datetime',
     ];
 
     public function tickets()

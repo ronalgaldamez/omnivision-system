@@ -263,3 +263,4 @@ Route::middleware(['auth'])->group(function () {
 
 // ========== RUTAS PÚBLICAS (sin autenticación) ==========
 Route::get('/contratos/firmar/{token}', \App\Livewire\Public\SignContract::class)->name('public.contract.sign');
+Route::get('/contratos/coordenadas/{token}', \App\Livewire\Public\CaptureCoordinates::class)->name('public.contract.coordinates');

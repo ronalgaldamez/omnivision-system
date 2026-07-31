@@ -17,6 +17,7 @@
                     @if($num > 1)
                         <div class="absolute top-5 right-1/2 w-full h-0.5 -z-10
                             {{ $num <= $step ? 'bg-indigo-600' : 'bg-gray-200' }}"></div>
+
                     @endif
 
                     {{-- Circle --}}
@@ -89,7 +90,17 @@
                         </div>
                         <div>
                             <p class="text-xs text-gray-500">Teléfono</p>
-                            <p class="font-medium text-gray-800">{{ $client_phone ?? '—' }}</p>
+                            <div class="flex items-center gap-2">
+                                <p class="font-medium text-gray-800">{{ $client_phone ?? '—' }}</p>
+                                @if($client_phone)
+                                    <button type="button" wire:click="sendGpsViaWhatsApp"
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                                        title="Enviar enlace de coordenadas por WhatsApp">
+                                        <span class="material-symbols-outlined text-xs">chat</span>
+                                        WhatsApp
+                                    </button>
+                                @endif
+                            </div>
                         </div>
                         <div>
                             <p class="text-xs text-gray-500">Correo</p>
@@ -128,10 +139,51 @@
                         <x-ui.input type="text" wire:model="longitude" icon="pin_drop" label="Longitud"
                             placeholder="-89.2182" />
                     </div>
-                    <p class="text-xs text-gray-400 flex items-center gap-1">
-                        <span class="material-symbols-outlined text-sm">info</span>
-                        Las coordenadas se pueden capturar enviando un enlace al cliente.
-                    </p>
+
+                    {{-- Captura de coordenadas vía enlace GPS --}}
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="material-symbols-outlined text-indigo-600 text-sm">near_me</span>
+                            <span class="text-xs font-semibold text-indigo-800 uppercase tracking-wide">Capturar coordenadas</span>
+                        </div>
+                        <p class="text-xs text-indigo-700 mb-3">
+                            Enviale un enlace al cliente para que comparta su ubicación desde el celular.
+                        </p>
+
+                        @if($gps_link)
+                            {{-- Enlace generado --}}
+                            <div class="bg-white rounded-lg border border-indigo-200 p-3 space-y-2">
+                                <div class="flex items-center gap-2">
+                                    <input type="text" value="{{ $gps_link }}" readonly
+                                        class="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded bg-gray-50 font-mono"
+                                        onclick="this.select(); navigator.clipboard?.writeText(this.value);" />
+                                    <button type="button" onclick="navigator.clipboard?.writeText('{{ $gps_link }}');"
+                                        class="text-xs px-2 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-sm">content_copy</span>
+                                        Copiar
+                                    </button>
+                                </div>
+                                <p class="text-[10px] text-indigo-500">Compartí este enlace con el cliente por WhatsApp</p>
+                                <div class="flex gap-2 pt-1">
+                                    <button wire:click="refreshCoordinates"
+                                        class="text-xs px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-sm">refresh</span>
+                                        Actualizar coordenadas
+                                    </button>
+                                    <button wire:click="$set('gps_link', null)"
+                                        class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
+                                        Cerrar
+                                    </button>
+                                </div>
+                            </div>
+                        @else
+                            <button wire:click="generateGpsLink"
+                                class="px-3 py-2 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-sm">share</span>
+                                Generar enlace para el cliente
+                            </button>
+                        @endif
+                    </div>
                 </div>
 
                 <div class="flex justify-end pt-4 border-t border-gray-100">
@@ -171,7 +223,7 @@
                     </x-ui.select>
                 </div>
 
-                {{-- Catálogo de planes --}}
+                {{-- Catálogo de planes (radio buttons: solo uno seleccionable) --}}
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Seleccionar Plan</label>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -182,14 +234,17 @@
                                 $effPrice = $zoneModel && $planModel ? $zoneModel->getEffectivePriceForPlan($planModel) : (float) $plan['base_price'];
                                 $isSelected = $plan_id == $plan['id'];
                             @endphp
-                            <button type="button" wire:click="$set('plan_id', {{ $plan['id'] }})"
-                                class="relative text-left p-4 rounded-xl border-2 transition-all duration-200
+                            <label class="relative text-left p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer
                                 {{ $isSelected ? 'border-indigo-500 bg-indigo-50 shadow-md' : 'border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm' }}">
-                                @if($isSelected)
-                                    <div class="absolute top-2 right-2 w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center">
+                                <input type="radio" name="plan_id" value="{{ $plan['id'] }}"
+                                    wire:model.live="plan_id"
+                                    class="absolute opacity-0 w-0 h-0" />
+                                <div class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center
+                                    {{ $isSelected ? 'bg-indigo-600' : 'border-2 border-gray-300 bg-white' }}">
+                                    @if($isSelected)
                                         <span class="material-symbols-outlined text-white text-sm">check</span>
-                                    </div>
-                                @endif
+                                    @endif
+                                </div>
                                 <p class="font-bold text-gray-900">{{ $plan['name'] }}</p>
                                 <div class="mt-1 space-y-0.5">
                                     <p class="text-xs text-gray-500 capitalize">{{ str_replace('_', ' ', $plan['service_type']) }}</p>
@@ -207,7 +262,7 @@
                                 @if($effPrice != $plan['base_price'])
                                     <p class="text-[10px] text-amber-600 mt-1">Precio especial para esta zona</p>
                                 @endif
-                            </button>
+                            </label>
                         @endforeach
                     </div>
                 </div>
@@ -644,3 +699,13 @@
         @endif
     </x-ui.card>
 </div>
+
+@push('scripts')
+<script>
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('open-whatsapp', ({ url }) => {
+            window.open(url, '_blank');
+        });
+    });
+</script>
+@endpush
