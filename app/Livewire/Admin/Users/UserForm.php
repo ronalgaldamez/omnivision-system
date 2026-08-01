@@ -117,7 +117,7 @@ class UserForm extends Component
             $user->syncPermissions([]);
         }
 
-        session()->flash('message', 'Usuario guardado correctamente.');
+        $this->dispatch('show-toast', type: 'success', message: 'Usuario guardado correctamente.');
     }
 
     public function getRolePermissionsProperty(): array

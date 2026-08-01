@@ -12,6 +12,7 @@ class WorkOrder extends Model
     protected $fillable = [
         'technician_id',
         'auxiliar_technician_id',
+        'vehicle_id',
         'client_id',
         'ticket_id',
         'latitude',
@@ -65,6 +66,11 @@ class WorkOrder extends Model
     public function auxiliarTechnician()
     {
         return $this->belongsTo(User::class, 'auxiliar_technician_id');
+    }
+
+    public function vehicle()
+    {
+        return $this->belongsTo(Vehiculo::class, 'vehicle_id');
     }
 
     public function client()

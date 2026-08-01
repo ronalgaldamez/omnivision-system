@@ -57,9 +57,15 @@
                     @endif
                 </div>
                 @empty
-                <div class="col-span-2 text-center py-12 text-gray-500 bg-gray-50/50 rounded-xl border border-gray-200">
-                    <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">directions_car_off</span>
-                    <p>No hay vehículos registrados</p>
+                <div class="col-span-2 text-center py-14 text-gray-500 bg-gray-50/50 rounded-xl border border-gray-200">
+                    <span class="material-symbols-outlined text-gray-300 text-5xl mb-3 block">directions_car</span>
+                    <p class="text-gray-500 font-medium">No hay vehículos registrados</p>
+                    <p class="text-sm text-gray-400 mt-1">Registrá el primer vehículo para poder asignarlo a un encargado</p>
+                    <button wire:click="openForm"
+                        class="mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition shadow-sm">
+                        <span class="material-symbols-outlined text-sm">add</span>
+                        Registrar vehículo
+                    </button>
                 </div>
                 @endforelse
             </div>

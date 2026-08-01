@@ -911,6 +911,10 @@
                         @else
                             <input type="file" wire:model="dui_front" accept="image/*,.pdf"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                            <div wire:loading wire:target="dui_front" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-xs text-indigo-600">Subiendo...</span>
+                            </div>
                             @error('dui_front')
                                 <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
                             @enderror
@@ -991,6 +995,10 @@
                         @else
                             <input type="file" wire:model="dui_back" accept="image/*,.pdf"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                            <div wire:loading wire:target="dui_back" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-xs text-indigo-600">Subiendo...</span>
+                            </div>
                             @error('dui_back')
                                 <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
                             @enderror
@@ -1071,6 +1079,10 @@
                         @else
                             <input type="file" wire:model="receipt" accept="image/*,.pdf"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
+                            <div wire:loading wire:target="receipt" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-xs text-gray-600">Subiendo...</span>
+                            </div>
                         @endif
                     </div>
 
@@ -1143,6 +1155,10 @@
                         @else
                             <input type="file" wire:model="fachada" accept="image/*"
                                 class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
+                            <div wire:loading wire:target="fachada" class="mt-2 flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-xs text-gray-600">Subiendo...</span>
+                            </div>
                         @endif
                     </div>
                 </div>
@@ -1190,12 +1206,14 @@
                                 <img src="{{ $client_signature_data }}" alt="Firma del Cliente"
                                     class="max-h-20 mx-auto" />
                                 <button
-                                    wire:click="$set('client_signature_data', null); $set('showClientSignature', false)"
+                                    @click="$wire.call('resetClientSignature')"
                                     class="text-xs text-red-600 hover:text-red-700 mt-2">Volver a firmar</button>
                             </div>
                         @else
                             {{-- Canvas para firma --}}
-                            <div x-data="{ canvas: null, ctx: null, drawing: false, sigData: null }" x-init="canvas = $refs.canvas;
+                            <div x-data="{ canvas: null, ctx: null, drawing: false, sigData: null }" x-init="Alpine.nextTick(() => {
+                            canvas = $refs.canvas;
+                            if (!canvas) return;
                             ctx = canvas.getContext('2d');
                             canvas.width = canvas.offsetWidth;
                             canvas.height = 120;
@@ -1237,7 +1255,8 @@
                             
                             window.addEventListener('clearClientSignature', () => {
                                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                            });" class="space-y-2">
+                            });
+                        })" class="space-y-2">
                                 <canvas x-ref="canvas"
                                     class="w-full h-[120px] bg-white border-2 border-dashed border-gray-300 rounded-lg cursor-crosshair"></canvas>
                                 <div class="flex gap-2">
@@ -1289,12 +1308,14 @@
                                 <img src="{{ $sales_rep_signature_data }}" alt="Firma del Agente"
                                     class="max-h-20 mx-auto" />
                                 <button
-                                    wire:click="$set('sales_rep_signature_data', null); $set('showSalesRepSignature', false)"
+                                    @click="$wire.call('resetSalesRepSignature')"
                                     class="text-xs text-red-600 hover:text-red-700 mt-2">Volver a firmar</button>
                             </div>
                         @else
                             {{-- Canvas para firma del agente --}}
-                            <div x-data="{ canvas2: null, ctx2: null, drawing2: false, sigData2: null }" x-init="canvas2 = $refs.canvas2;
+                            <div x-data="{ canvas2: null, ctx2: null, drawing2: false, sigData2: null }" x-init="Alpine.nextTick(() => {
+                            canvas2 = $refs.canvas2;
+                            if (!canvas2) return;
                             ctx2 = canvas2.getContext('2d');
                             canvas2.width = canvas2.offsetWidth;
                             canvas2.height = 120;
@@ -1327,7 +1348,8 @@
                             canvas2.addEventListener('mouseleave', endDraw2);
                             canvas2.addEventListener('touchstart', startDraw2, { passive: true });
                             canvas2.addEventListener('touchmove', draw2, { passive: false });
-                            canvas2.addEventListener('touchend', endDraw2);" class="space-y-2">
+                            canvas2.addEventListener('touchend', endDraw2);
+                        })" class="space-y-2">
                                 <canvas x-ref="canvas2"
                                     class="w-full h-[120px] bg-white border-2 border-dashed border-gray-300 rounded-lg cursor-crosshair"></canvas>
                                 <div class="flex gap-2">
@@ -1511,6 +1533,29 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- OT de instalación creada --}}
+                @if ($createdWorkOrderCode)
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-indigo-600">assignment</span>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-indigo-900">OT de instalación creada</h4>
+                                <p class="text-xs text-indigo-600">Un supervisor la asignará a un técnico</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between gap-2 bg-white rounded-lg border border-indigo-100 px-4 py-2.5">
+                            <span class="text-sm font-bold text-indigo-800 font-mono">{{ $createdWorkOrderCode }}</span>
+                            <a href="{{ route('work-orders.index') }}"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+                                <span class="material-symbols-outlined text-sm">assignment</span>
+                                Ver órdenes de trabajo
+                            </a>
+                        </div>
+                    </div>
+                @endif
 
                 {{-- Acciones --}}
                 <div class="flex flex-col sm:flex-row gap-3 justify-center pt-4 border-t border-gray-100">

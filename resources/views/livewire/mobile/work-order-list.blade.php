@@ -109,6 +109,12 @@
 
                             <div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
                                 <div class="flex items-center gap-2">
+                                    @if($order->vehicle)
+                                        <span class="inline-flex items-center gap-1 text-xs text-gray-500" title="Vehículo asignado">
+                                            <span class="material-symbols-outlined text-sm">directions_car</span>
+                                            {{ $order->vehicle->placa }}
+                                        </span>
+                                    @endif
                                     @if($order->requisitions()->where('status', 'open')->exists())
                                         <span class="inline-flex items-center gap-1 text-xs text-green-600">
                                             <span class="material-symbols-outlined text-sm">inventory_2</span>

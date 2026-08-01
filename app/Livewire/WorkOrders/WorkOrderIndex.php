@@ -24,9 +24,23 @@ class WorkOrderIndex extends Component
     public $showAssignModal = false;
     public $assignTechnicianId = '';
     public $assignAuxiliarId = '';
+    public $assignVehicleId = '';
     public $scheduledDate = '';
     public $notes = '';
     public $skipAssigned = false;
+
+    public function updatedAssignTechnicianId($value)
+    {
+        // Pre-cargar el vehículo de la asignación activa del encargado (editable)
+        if ($value) {
+            $asignacion = \App\Models\Asignacion::where('encargado_id', $value)
+                ->where('is_active', true)
+                ->first();
+            $this->assignVehicleId = $asignacion?->vehicle_id ? (string) $asignacion->vehicle_id : '';
+        } else {
+            $this->assignVehicleId = '';
+        }
+    }
 
     public function updatedViewMode($value)
     {
@@ -119,6 +133,9 @@ class WorkOrderIndex extends Component
         if ($this->assignAuxiliarId) {
             $data['auxiliar_technician_id'] = $this->assignAuxiliarId;
         }
+        if ($this->assignVehicleId) {
+            $data['vehicle_id'] = $this->assignVehicleId;
+        }
         if ($this->scheduledDate) {
             $data['scheduled_date'] = $this->scheduledDate;
         }
@@ -143,6 +160,7 @@ class WorkOrderIndex extends Component
         $this->skipAssigned = false;
         $this->scheduledDate = '';
         $this->notes = '';
+        $this->assignVehicleId = '';
 
         if ($skipped > 0 && $count === 0) {
             $msg = 'Todas las OT ya tenían técnico. Ninguna fue modificada.';
@@ -232,19 +250,21 @@ class WorkOrderIndex extends Component
             $orders = collect();
             $encargados = collect();
             $tecnicos = collect();
+            $vehiculos = collect();
             $technicians = collect();
             $unassigned = collect();
             $byTechnician = collect();
             return view('livewire.work-orders.work-order-index', compact(
-                'orders', 'encargados', 'tecnicos', 'technicians', 'unassigned', 'byTechnician'
+                'orders', 'encargados', 'tecnicos', 'vehiculos', 'technicians', 'unassigned', 'byTechnician'
             ))->layout('components.layouts.app');
         }
 
         $encargados = User::role('technician')->encargados()->orderBy('name')->get(['id', 'name']);
         $tecnicos = User::role('technician')->orderBy('name')->get(['id', 'name']);
+        $vehiculos = \App\Models\Vehiculo::where('estado', 'activo')->orderBy('placa')->get(['id', 'placa', 'marca', 'modelo']);
 
         if ($this->viewMode === 'table') {
-            $orders = $query->with(['technician', 'auxiliarTechnician', 'client', 'ticket', 'zone'])
+            $orders = $query->with(['technician', 'auxiliarTechnician', 'vehicle', 'client', 'ticket', 'zone'])
                 ->orderBy('created_at', 'desc')->paginate(50);
 
             $alreadyAssigned = !empty($this->selectedOrders)
@@ -252,7 +272,7 @@ class WorkOrderIndex extends Component
                 : 0;
 
             return view('livewire.work-orders.work-order-index', compact(
-                'orders', 'encargados', 'tecnicos', 'alreadyAssigned'
+                'orders', 'encargados', 'tecnicos', 'vehiculos', 'alreadyAssigned'
             ))->layout('components.layouts.app');
         }
 
@@ -270,7 +290,7 @@ class WorkOrderIndex extends Component
         $maxLoad = $technicians->map(fn($t) => $byTechnician[$t->id]->count())->max() ?: 1;
 
         return view('livewire.work-orders.work-order-index', compact(
-            'encargados', 'tecnicos', 'technicians', 'unassigned', 'byTechnician', 'maxLoad'
+            'encargados', 'tecnicos', 'vehiculos', 'technicians', 'unassigned', 'byTechnician', 'maxLoad'
         ))->layout('components.layouts.app');
     }
 }
