@@ -245,39 +245,6 @@ class WorkOrderForm extends Component
         }
     }
 
-    private function generateWorkOrderCode(): string
-    {
-        $user = Auth::user();
-        $role = $user->roles()->first();
-        $prefix = $role->prefix ?? 'OT';
-
-        $originMap = [
-            'Facebook Messenger' => 'FB',
-            'SMS WhatsApp' => 'WH',
-            'Llamada de WhatsApp' => 'WHL',
-            'Llamada Telefónica' => 'LL',
-            'SMS' => 'SMS',
-            'Presencial' => 'PR',
-            'Otros' => 'OT',
-        ];
-
-        $ticket = Ticket::find($this->orderId ? WorkOrder::find($this->orderId)->ticket_id : null);
-        $origin = $ticket ? $originMap[$ticket->origin] ?? 'GEN' : 'GEN';
-
-        $lastCode = WorkOrder::where('code', 'like', "OT-{$prefix}-{$origin}-%")
-            ->orderBy('id', 'desc')
-            ->value('code');
-
-        $nextNumber = 1;
-        if ($lastCode) {
-            $parts = explode('-', $lastCode);
-            $lastNumber = (int) end($parts);
-            $nextNumber = $lastNumber + 1;
-        }
-
-        return sprintf('OT-%s-%s-%04d', $prefix, $origin, $nextNumber);
-    }
-
     public function save()
     {
         try {
@@ -318,7 +285,10 @@ class WorkOrderForm extends Component
             $order = WorkOrder::findOrFail($this->orderId);
             $order->update($orderData);
         } else {
-            $orderData['code'] = $this->generateWorkOrderCode();
+            $orderData['code'] = app(\App\Services\WorkOrderService::class)->generateCode(
+                Auth::user(),
+                $this->ticket_id ? Ticket::find($this->ticket_id) : null
+            );
             $orderData['created_by'] = Auth::id();
 
             if ($this->ticket_id) {

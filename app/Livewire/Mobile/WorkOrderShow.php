@@ -124,7 +124,7 @@ class WorkOrderShow extends Component
 
     public function mount($id)
     {
-        $this->workOrder = WorkOrder::with('technician', 'products.product', 'client', 'ticket.createdBy', 'createdBy')
+        $this->workOrder = WorkOrder::with('technician', 'vehicle', 'products.product', 'client', 'ticket.createdBy', 'createdBy')
             ->where('technician_id', Auth::id())
             ->findOrFail($id);
 

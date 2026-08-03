@@ -558,6 +558,16 @@
                     </div>
                     <div class="flex items-center gap-3 p-3 bg-gray-50/70 rounded-xl border border-gray-100">
                         <span
+                            class="material-symbols-outlined text-gray-400 bg-white p-1.5 rounded-lg shadow-sm">directions_car</span>
+                        <div class="min-w-0">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Vehículo
+                            </p>
+                            <p class="text-gray-700 text-sm">{{ $workOrder->vehicle?->placa ?? '—' }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 bg-gray-50/70 rounded-xl border border-gray-100">
+                        <span
                             class="material-symbols-outlined text-gray-400 bg-white p-1.5 rounded-lg shadow-sm">flag</span>
                         <div>
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Estado</p>

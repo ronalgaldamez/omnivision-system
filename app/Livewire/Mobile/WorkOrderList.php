@@ -26,7 +26,7 @@ class WorkOrderList extends Component
     public function render()
     {
         $statusArray = explode(',', $this->statusFilter);
-        $orders = WorkOrder::with('client')
+        $orders = WorkOrder::with(['client', 'vehicle'])
             ->where('technician_id', Auth::id())
             ->whereIn('status', $statusArray)
             ->when($this->search, function ($q) {

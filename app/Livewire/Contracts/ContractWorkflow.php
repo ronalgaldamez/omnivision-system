@@ -10,6 +10,7 @@ use App\Models\ContractDocument;
 use App\Models\Plan;
 use App\Models\PlanRule;
 use App\Models\Ticket;
+use App\Models\WorkOrder;
 use App\Models\Zone;
 use App\Services\ContractPdfService;
 use App\Services\ContractSignatureService;
@@ -119,6 +120,8 @@ class ContractWorkflow extends Component
     public $showPdfPreview = false;
     public $pdfPreviewUrl = null;
     public $contractDigitalCode = null;
+    public $createdWorkOrderCode = null;
+    public $createdWorkOrderId = null;
 
     protected $listeners = [
         'signatureSaved',
@@ -254,12 +257,67 @@ class ContractWorkflow extends Component
                 $this->client_signature_data = $client->client_signature_data;
                 $this->showClientSignature = true;
             }
+
+            // Precargar el contrato del ticket si ya existe (para descargar PDF tras recargar)
+            $existingContract = $ticket->contract;
+            if ($existingContract) {
+                $this->contract_id = $existingContract->id;
+                $this->contractDigitalCode = $existingContract->contract_digital_code;
+            }
         }
 
         $this->contract_terms = $this->getDefaultTerms();
 
+        // Restaurar documento del draft (persistencia al recargar)
+        $draft = session()->get($this->draftKey(), []);
+        if (is_array($draft)) {
+            if (isset($draft['uploaded_documents']) && is_array($draft['uploaded_documents'])) {
+                $this->uploadedDocuments = $draft['uploaded_documents'];
+            } elseif (isset($draft['dui_front']) || isset($draft['dui_back']) || isset($draft['receipt']) || isset($draft['fachada'])) {
+                // Compatibilidad con drafts viejos (el draft era el array de documentos directo)
+                $this->uploadedDocuments = $draft;
+            }
+            if (!empty($draft['sales_rep_signature'])) {
+                $this->sales_rep_signature_data = $draft['sales_rep_signature'];
+                $this->showSalesRepSignature = true;
+            }
+        }
+
         $this->loadClientUploadedDocs();
         $this->computeDocumentsProgress();
+    }
+
+    private function draftKey(): string
+    {
+        return 'contract_workflow_docs_' . ($this->ticket_id ?? 'no-ticket');
+    }
+
+    private function persistDraft(): void
+    {
+        session()->put($this->draftKey(), [
+            'uploaded_documents' => $this->uploadedDocuments,
+            'sales_rep_signature' => $this->sales_rep_signature_data,
+        ]);
+    }
+
+    public function updatedLatitude($value)
+    {
+        $this->persistClientCoordinates();
+    }
+
+    public function updatedLongitude($value)
+    {
+        $this->persistClientCoordinates();
+    }
+
+    private function persistClientCoordinates(): void
+    {
+        if (!$this->client_id) return;
+
+        Client::where('id', $this->client_id)->update([
+            'latitude' => $this->latitude !== '' && $this->latitude !== null ? $this->latitude : null,
+            'longitude' => $this->longitude !== '' && $this->longitude !== null ? $this->longitude : null,
+        ]);
     }
 
     public function updatedStep($value)
@@ -434,6 +492,11 @@ class ContractWorkflow extends Component
         $this->loadAvailableBenefits();
         $this->selectedBenefits = array_keys($this->availableBenefits);
         $this->benefit = $this->getAppliedBenefits();
+
+        // Persistir el plan en el ticket para que no se pierda al recargar la página
+        if ($this->ticket_id) {
+            Ticket::where('id', $this->ticket_id)->update(['plan_id' => $value ?: null]);
+        }
     }
 
     public function updatedZoneId($value)
@@ -538,7 +601,28 @@ class ContractWorkflow extends Component
         ];
 
         $this->computeDocumentsProgress();
+        $this->persistDraft();
         $this->dispatch('show-toast', type: 'success', message: 'Documento subido correctamente.');
+    }
+
+    public function updatedDuiFront()
+    {
+        $this->uploadDocument('dui_front');
+    }
+
+    public function updatedDuiBack()
+    {
+        $this->uploadDocument('dui_back');
+    }
+
+    public function updatedReceipt()
+    {
+        $this->uploadDocument('receipt');
+    }
+
+    public function updatedFachada()
+    {
+        $this->uploadDocument('fachada');
     }
 
     public function removeDocument($type)
@@ -562,6 +646,7 @@ class ContractWorkflow extends Component
         }
 
         $this->computeDocumentsProgress();
+        $this->persistDraft();
         $this->dispatch('show-toast', type: 'info', message: 'Documento eliminado.');
     }
 
@@ -598,11 +683,36 @@ class ContractWorkflow extends Component
         $this->dispatch('show-toast', type: 'success', message: 'Firma del cliente capturada.');
     }
 
+    public function resetClientSignature()
+    {
+        $this->client_signature_data = null;
+        $this->showClientSignature = false;
+
+        // Limpiar también la firma del cliente para que el portal permita volver a firmar
+        if ($this->client_id) {
+            Client::where('id', $this->client_id)->update([
+                'client_signature_data' => null,
+                'signature_approved' => false,
+            ]);
+        }
+
+        $this->dispatch('show-toast', type: 'info', message: 'Firma reiniciada. El cliente deberá firmar nuevamente.');
+    }
+
     public function saveSalesRepSignature($signatureData)
     {
         $this->sales_rep_signature_data = $signatureData;
         $this->showSalesRepSignature = true;
+        $this->persistDraft();
         $this->dispatch('show-toast', type: 'success', message: 'Tu firma ha sido capturada.');
+    }
+
+    public function resetSalesRepSignature()
+    {
+        $this->sales_rep_signature_data = null;
+        $this->showSalesRepSignature = false;
+        $this->persistDraft();
+        $this->dispatch('show-toast', type: 'info', message: 'Firma del agente reiniciada.');
     }
 
     public function generatePortalLink()
@@ -859,28 +969,54 @@ class ContractWorkflow extends Component
         $pdfService = app(ContractPdfService::class);
         $pdfService->generate($contract);
 
-        // Ticket finalizado — WFM creará la OT manualmente si aplica
+        // El ticket NO se resuelve aquí: queda esperando la instalación.
+        // Se cerrará cuando el técnico complete la OT (completeWorkOrder).
         if ($this->ticket_id) {
-            $ticket = Ticket::with('client')->find($this->ticket_id);
-            if ($ticket) {
-                $ticket->update([
-                    'contracts_ended_at' => now(),
-                    'status' => 'resolved',
-                    'resolved_by' => Auth::id(),
-                    'resolved_at' => now(),
+            Ticket::where('id', $this->ticket_id)->update([
+                'contracts_ended_at' => now(),
+            ]);
+        }
+
+        // Crear la OT de instalación (la asigna el supervisor). Si el ticket ya tiene una, se reutiliza.
+        if ($this->ticket_id) {
+            $workOrder = WorkOrder::where('ticket_id', $this->ticket_id)->first();
+
+            if (!$workOrder) {
+                $ticket = Ticket::find($this->ticket_id);
+                $woService = app(\App\Services\WorkOrderService::class);
+                $workOrder = $woService->createFromContract($contract, [
+                    'code' => $woService->generateCode(Auth::user(), $ticket),
+                    'sla_started_at' => now(),
+                    'requires_noc' => $ticket?->requires_noc ?? false,
+                    'description' => 'Instalación - Contrato #' . $contract->id,
                 ]);
-                app(\App\Services\SlaService::class)->evaluateSla($ticket);
+            }
+
+            if ($workOrder) {
+                $this->createdWorkOrderCode = $workOrder->code;
+                $this->createdWorkOrderId = $workOrder->id;
             }
         }
 
         $this->step = 5;
+        session()->forget($this->draftKey());
         $this->dispatch('show-toast', type: 'success', message: 'Contrato #' . $contract->contract_digital_code . ' creado correctamente.');
     }
 
     public function downloadPdf()
     {
-        if (!$this->contract_id)
+        if (!$this->contract_id && $this->ticket_id) {
+            $contract = Contract::where('ticket_id', $this->ticket_id)->first();
+            if ($contract) {
+                $this->contract_id = $contract->id;
+                $this->contractDigitalCode = $contract->contract_digital_code;
+            }
+        }
+
+        if (!$this->contract_id) {
+            $this->dispatch('show-toast', type: 'error', message: 'No hay contrato para descargar.');
             return;
+        }
 
         $contract = Contract::find($this->contract_id);
         $pdfService = app(ContractPdfService::class);

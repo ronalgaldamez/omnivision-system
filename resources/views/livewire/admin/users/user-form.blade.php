@@ -148,12 +148,6 @@
                 @endforeach
             </div>
         </div>
-
-        @if(session('message'))
-            <div class="mx-6 mb-6">
-                <x-ui.alert variant="success">{{ session('message') }}</x-ui.alert>
-            </div>
-        @endif
     </div>
     @endif
 </div>

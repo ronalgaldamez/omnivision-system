@@ -4,11 +4,47 @@ namespace App\Services;
 
 use App\Models\Contract;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Models\WorkOrder;
 use Illuminate\Support\Facades\Auth;
 
 class WorkOrderService
 {
+    /**
+     * Genera el código de una OT en el formato OT-{prefix}-{origen}-{0001}.
+     * Es el ÚNICO punto de generación de códigos de OT.
+     */
+    public function generateCode(User $creator, ?Ticket $ticket = null): string
+    {
+        $role = $creator->roles()->first();
+        $prefix = $role->prefix ?? 'OT';
+
+        $originMap = [
+            'Facebook Messenger' => 'FB',
+            'SMS WhatsApp' => 'WH',
+            'Llamada de WhatsApp' => 'WHL',
+            'Llamada Telefónica' => 'LL',
+            'SMS' => 'SMS',
+            'Presencial' => 'PR',
+            'Otros' => 'OT',
+        ];
+
+        $origin = $ticket ? ($originMap[$ticket->origin] ?? 'GEN') : 'GEN';
+
+        $lastCode = WorkOrder::where('code', 'like', "OT-{$prefix}-{$origin}-%")
+            ->orderBy('id', 'desc')
+            ->value('code');
+
+        $nextNumber = 1;
+        if ($lastCode) {
+            $parts = explode('-', $lastCode);
+            $lastNumber = (int) end($parts);
+            $nextNumber = $lastNumber + 1;
+        }
+
+        return sprintf('OT-%s-%s-%04d', $prefix, $origin, $nextNumber);
+    }
+
     /**
      * Crea una WorkOrder a partir de un Ticket.
      * Es el ÚNICO punto de creación de OTs en todo el sistema.
@@ -34,6 +70,10 @@ class WorkOrderService
             'status'       => 'pending',
             'created_by'   => Auth::id(),
         ], $extra);
+
+        if (!isset($data['code'])) {
+            $data['code'] = $this->generateCode(Auth::user(), $ticket);
+        }
 
         return WorkOrder::create($data);
     }
@@ -61,6 +101,11 @@ class WorkOrderService
 
         if ($contract->ticket_id) {
             $data['ticket_id'] = $contract->ticket_id;
+        }
+
+        if (!isset($data['code'])) {
+            $ticket = $contract->ticket_id ? Ticket::find($contract->ticket_id) : null;
+            $data['code'] = $this->generateCode(Auth::user(), $ticket);
         }
 
         return WorkOrder::create($data);

@@ -6,6 +6,7 @@ use Livewire\Component;
 use App\Models\Ticket;
 use App\Models\WorkOrder;
 use App\Services\SlaService;
+use App\Services\WorkOrderService;
 use Illuminate\Support\Facades\Auth;
 
 class NocInbox extends Component
@@ -129,14 +130,8 @@ class NocInbox extends Component
     {
         $ticket = Ticket::with('client')->find($ticketId);
         if ($ticket) {
-            WorkOrder::create([
-                'ticket_id' => $ticket->id,
-                'client_id' => $ticket->client_id,
-                'description' => $ticket->description,
-                'service_type' => $ticket->service_type,
-                'status' => 'pending',
-                'created_by' => Auth::id(),
-            ]);
+            app(WorkOrderService::class)->createFromTicket($ticket);
+
             $ticket->status = 'in_progress';
             $ticket->l2_ended_at = now();
             $ticket->l2_started_at = $ticket->l2_started_at ?? now();

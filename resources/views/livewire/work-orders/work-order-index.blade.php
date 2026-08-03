@@ -48,6 +48,7 @@
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Zona</th>
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Técnico</th>
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Auxiliar</th>
+                            <th class="px-4 py-3 text-center text-gray-600 font-medium">Vehículo</th>
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Estado</th>
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Fecha</th>
                             <th class="px-4 py-3 text-center text-gray-600 font-medium">Acciones</th>
@@ -78,6 +79,16 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-center">
+                                @if($order->vehicle)
+                                <span class="inline-flex items-center gap-1 text-xs font-mono text-gray-700">
+                                    <span class="material-symbols-outlined text-sm text-gray-400">directions_car</span>
+                                    {{ $order->vehicle->placa }}
+                                </span>
+                                @else
+                                <span class="text-xs text-gray-400 italic">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center">
                                 @php $b = match($order->status) { 'pending' => 'warning', 'in_progress' => 'info', 'completed' => 'success', 'paused' => 'secondary', default => 'danger' }; $sl = ucfirst(str_replace('_', ' ', $order->status)); @endphp
                                 <x-ui.badge variant="{{ $b }}">{{ $sl }}</x-ui.badge>
                             </td>
@@ -102,7 +113,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="10" class="px-4 py-12 text-center bg-gray-50/50">
+                            <td colspan="11" class="px-4 py-12 text-center bg-gray-50/50">
                                 <span class="material-symbols-outlined text-gray-300 text-4xl mb-2 block">inbox</span>
                                 <p class="text-gray-500">No hay órdenes de trabajo registradas</p>
                             </td>
@@ -349,6 +360,16 @@
                                 <option value="{{ $t->id }}">{{ $t->name }}</option>
                                 @endforeach
                             </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Vehículo</label>
+                            <select wire:model="assignVehicleId" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                <option value="">Sin vehículo</option>
+                                @foreach($vehiculos as $v)
+                                <option value="{{ $v->id }}">{{ $v->placa }} · {{ $v->marca }} {{ $v->modelo }}</option>
+                                @endforeach
+                            </select>
+                            <p class="text-[10px] text-gray-400 mt-1">Se sugiere el vehículo del encargado al elegir técnico. Podés cambiarlo.</p>
                         </div>
                     </div>
                     <div>
