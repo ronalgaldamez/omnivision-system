@@ -93,12 +93,20 @@ class NocInbox extends Component
         $this->confirmingTicketId = $ticketId;
     }
 
+    public function promptAccept($ticketId)
+    {
+        $this->confirmingAction = 'accept';
+        $this->confirmingTicketId = $ticketId;
+    }
+
     public function executeConfirmedAction()
     {
         if ($this->confirmingAction === 'resolve') {
             $this->resolveRemote($this->confirmingTicketId);
         } elseif ($this->confirmingAction === 'create_ot') {
             $this->createWorkOrder($this->confirmingTicketId);
+        } elseif ($this->confirmingAction === 'accept') {
+            $this->acceptTicket($this->confirmingTicketId);
         }
         $this->confirmingAction = null;
         $this->confirmingTicketId = null;
@@ -137,7 +145,6 @@ class NocInbox extends Component
             $ticket->l2_started_at = $ticket->l2_started_at ?? now();
             $ticket->resolved_by = $ticket->resolved_by ?? Auth::id();
             $ticket->save();
-            app(SlaService::class)->evaluateSla($ticket);
         }
         $this->loadTickets();
         $this->closeModal();

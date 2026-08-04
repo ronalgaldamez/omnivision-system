@@ -41,6 +41,7 @@ class WorkOrder extends Model
         'verification_price',
         'assigned_at',
         'assigned_by',
+        'accepted_at',
         'requires_noc',
         'zone_id',
         'plan_id',
@@ -54,6 +55,7 @@ class WorkOrder extends Model
         'accumulated_seconds' => 'integer',
         'installation_date' => 'date',
         'assigned_at' => 'datetime',
+        'accepted_at' => 'datetime',
         'requires_noc' => 'boolean',
         'mufa_has_space' => 'boolean',
     ];

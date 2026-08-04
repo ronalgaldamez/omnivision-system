@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+
+use App\Models\SlaGoal;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -26,5 +28,6 @@ class DatabaseSeeder extends Seeder
         $this->call(DeviceStatusSeeder::class);
         $this->call(PlansSeeder::class);
         $this->call(ZonesAndBranchesSeeder::class);
+        $this->call(SlaGoalSeeder::class);
     }
 }

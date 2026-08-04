@@ -854,10 +854,10 @@ class TicketForm extends Component
                 'resolved_at' => now(),
                 'l1_ended_at' => now(),
             ]);
-        }
 
-        // Evaluar SLA
-        app(SlaService::class)->evaluateSla($ticket);
+            // El SLA solo se evalúa cuando el ticket se resuelve de verdad (sin OT pendiente)
+            app(SlaService::class)->evaluateSla($ticket);
+        }
 
         // Limpiar sesión
         session()->forget('open_ticket_id');
@@ -1017,6 +1017,12 @@ class TicketForm extends Component
             $serviceType = ServiceType::find($this->service_type_id);
             $ticket->update(['service_type' => $serviceType ? $serviceType->name : '']);
         }
+
+        // Recalcular SLA cuando cambia el tipo de servicio o la prioridad
+        if (in_array($property, ['service_type_id', 'priority'])) {
+            $ticket->refresh();
+            app(SlaService::class)->assignSlaToTicket($ticket);
+        }
     }
 
     public function confirmGenerate()
@@ -1049,9 +1055,6 @@ class TicketForm extends Component
             'l1_ended_at' => now(),   // ← L1 termina su parte
             'escalated_at' => now(),   // ← momento del traspaso a NOC
         ]);
-
-        // Evaluar SLA para el nivel L1
-        app(SlaService::class)->evaluateSla($ticket);
 
         session()->forget('open_ticket_id');
         session()->forget('ticket_draft');
@@ -1097,8 +1100,6 @@ class TicketForm extends Component
             'l1_ended_at' => now(),
             'contracts_escalated_at' => now(),
         ]);
-
-        app(SlaService::class)->evaluateSla($ticket);
 
         session()->forget('open_ticket_id');
         session()->forget('ticket_draft');

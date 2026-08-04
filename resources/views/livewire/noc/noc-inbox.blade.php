@@ -95,7 +95,7 @@
                                             Ver
                                         </x-ui.button>
                                         @if($activeTab === 'pending')
-                                            <x-ui.button variant="primary" icon="play_arrow" size="sm" wire:click="acceptTicket({{ $ticket->id }})">
+                                            <x-ui.button variant="primary" icon="play_arrow" size="sm" wire:click="promptAccept({{ $ticket->id }})">
                                                 Aceptar
                                             </x-ui.button>
                                         @elseif($activeTab === 'in_progress')
@@ -197,7 +197,7 @@
                     <x-slot:footer>
                         <div class="flex justify-end gap-2">
                             @if($activeTab === 'pending' && is_null($selectedTicket->l2_started_at))
-                                <x-ui.button variant="primary" icon="play_arrow" wire:click="acceptTicket({{ $selectedTicket->id }})">
+                                <x-ui.button variant="primary" icon="play_arrow" wire:click="promptAccept({{ $selectedTicket->id }})">
                                     Aceptar ticket
                                 </x-ui.button>
                             @endif
@@ -232,8 +232,10 @@
                         <p class="text-sm text-gray-600 mt-2">
                             @if($confirmingAction === 'resolve')
                                 ¿Confirmas la resolución remota del ticket #{{ $confirmingTicketId }}?
-                            @else
+                            @elseif($confirmingAction === 'create_ot')
                                 ¿Crear una orden de trabajo a partir del ticket #{{ $confirmingTicketId }}?
+                            @elseif($confirmingAction === 'accept')
+                                ¿Aceptar el ticket #{{ $confirmingTicketId }} para atenderlo en NOC?
                             @endif
                         </p>
                     </div>

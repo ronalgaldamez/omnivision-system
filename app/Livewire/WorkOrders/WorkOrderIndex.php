@@ -97,9 +97,32 @@ class WorkOrderIndex extends Component
         ];
     }
 
-    public function assignFromDrag($otId, $technicianId)
+    public function acceptOrder($otId)
     {
-        $wo = WorkOrder::with('technician')->findOrFail($otId);
+        $wo = WorkOrder::findOrFail($otId);
+
+        if ($wo->status !== 'pending') {
+            $this->dispatch('show-toast', type: 'error', message: 'Solo se pueden aceptar OT pendientes.');
+            return;
+        }
+
+        if ($wo->accepted_at) {
+            $this->dispatch('show-toast', type: 'info', message: 'Esta OT ya fue aceptada.');
+            return;
+        }
+
+        $wo->update(['accepted_at' => now()]);
+        $this->dispatch('show-toast', type: 'success', message: "OT {$wo->code} aceptada. Ahora podés asignarla.");
+    }
+
+    public function assignFromDrag($otId, $technicianId)
+    {        $wo = WorkOrder::with('technician')->findOrFail($otId);
+
+        if ($technicianId && $wo->auxiliar_technician_id && (int) $technicianId === (int) $wo->auxiliar_technician_id) {
+            $this->dispatch('show-toast', type: 'error', message: 'El técnico no puede ser el mismo que el auxiliar.');
+            return;
+        }
+
         $techName = $technicianId ? User::find($technicianId)?->name : 'Sin asignar';
 
         $data = ['technician_id' => $technicianId ?: null];
@@ -119,8 +142,13 @@ class WorkOrderIndex extends Component
             return;
         }
 
-        if (!$this->assignTechnicianId && !$this->assignAuxiliarId && !$this->scheduledDate && !$this->notes) {
+        if (!$this->assignTechnicianId && !$this->assignAuxiliarId && !$this->assignVehicleId && !$this->scheduledDate && !$this->notes) {
             $this->dispatch('show-toast', type: 'error', message: 'Completá al menos un campo para asignar.');
+            return;
+        }
+
+        if ($this->assignTechnicianId && $this->assignAuxiliarId && $this->assignAuxiliarId === $this->assignTechnicianId) {
+            $this->dispatch('show-toast', type: 'error', message: 'El auxiliar no puede ser el mismo técnico.');
             return;
         }
 
