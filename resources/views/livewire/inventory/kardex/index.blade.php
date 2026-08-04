@@ -18,9 +18,10 @@
                 </x-ui.alert>
             @endif
 
-            <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
+            <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 space-y-4">
+                {{-- Fila principal: Producto (jerarquía dominante) + Sucursal --}}
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    <div class="{{ $product_id ? 'lg:col-span-3' : 'lg:col-span-4' }}">
                         <label class="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
                             <span class="material-symbols-outlined text-gray-400 text-sm">inventory_2</span>
                             Producto
@@ -59,21 +60,139 @@
                         @endif
                     </div>
 
-                    <x-ui.select icon="swap_vert" wire:model.live="type" placeholder="Todos" label="Tipo">
-                        <option value="entry">Entrada</option>
-                        <option value="exit">Salida</option>
-                        <option value="technician_out">Salida a técnico</option>
-                        <option value="technician_return">Devolución técnico</option>
-                        <option value="damage">Dañado</option>
-                        <option value="return_to_supplier">Dev. proveedor</option>
-                        <option value="requisition_out">Requisición</option>
-                    </x-ui.select>
-
-                    <x-ui.input type="date" icon="event" wire:model.live="date_from" label="Desde" />
-                    <x-ui.input type="date" icon="event" wire:model.live="date_to" label="Hasta" />
+                    @if($product_id && $canManageBranches)
+                        <x-ui.select icon="store" wire:model.live="branch_id" label="Sucursal">
+                            <option value="">Activa: {{ $activeBranch?->name ?? 'Todas' }}</option>
+                            @foreach($branches as $branch)
+                                <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                            @endforeach
+                        </x-ui.select>
+                    @endif
                 </div>
+
+                {{-- Fila secundaria: filtros de acotación (tipo + rango de fechas) --}}
+                @if($product_id)
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <x-ui.select icon="swap_vert" wire:model.live="type" placeholder="Todos" label="Tipo">
+                            <option value="entry">Entrada</option>
+                            <option value="exit">Salida</option>
+                            <option value="technician_out">Salida a técnico</option>
+                            <option value="technician_return">Devolución técnico</option>
+                            <option value="damage">Dañado</option>
+                            <option value="return_to_supplier">Dev. proveedor</option>
+                            <option value="requisition_out">Requisición</option>
+                        </x-ui.select>
+
+                        <x-ui.input type="date" icon="event" wire:model.live="date_from" label="Desde" />
+                        <x-ui.input type="date" icon="event" wire:model.live="date_to" label="Hasta" />
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-medium text-gray-500 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-gray-400 text-sm">date_range</span>
+                            Rango rápido:
+                        </span>
+                        @php
+                            $rangeActive = fn($preset) => match ($preset) {
+                                'this_month' => $date_from === now()->startOfMonth()->toDateString() && $date_to === now()->toDateString(),
+                                'last_quarter' => $date_from === now()->subMonths(3)->toDateString() && $date_to === now()->toDateString(),
+                                'this_year' => $date_from === now()->startOfYear()->toDateString() && $date_to === now()->toDateString(),
+                                default => false,
+                            };
+                        @endphp
+                        @foreach([
+                            ['this_month', 'Este mes'],
+                            ['last_quarter', 'Último trimestre'],
+                            ['this_year', 'Año actual'],
+                        ] as [$preset, $label])
+                            <button type="button" wire:click="setDateRange('{{ $preset }}')"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border transition
+                                {{ $rangeActive($preset) ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-300 text-gray-600 bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700' }}">
+                                {{ $label }}
+                            </button>
+                        @endforeach
+                        @if($date_from || $date_to)
+                            <button type="button" wire:click="setDateRange('clear')"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-gray-300 text-gray-500 bg-white hover:bg-gray-50 transition">
+                                <span class="material-symbols-outlined text-xs">close</span>
+                                Limpiar
+                            </button>
+                        @endif
+                    </div>
+                @endif
             </div>
 
+            @if($product_id && isset($product))
+                <div class="bg-blue-50/60 border border-blue-200 rounded-xl px-4 py-3 space-y-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-xl">inventory_2</span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-gray-900 truncate">{{ $product->name }}</p>
+                                <p class="text-xs text-gray-500 font-mono truncate">{{ $product->sku }} · {{ $product->category->name ?? 'Sin categoría' }}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <button type="button" wire:click="printKardex"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition whitespace-nowrap">
+                                <span class="material-symbols-outlined text-sm">print</span>
+                                Imprimir
+                            </button>
+                            <button type="button" wire:click="exportKardex"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-50 transition whitespace-nowrap">
+                                <span class="material-symbols-outlined text-sm">download</span>
+                                Exportar Excel
+                            </button>
+                            <button type="button" wire:click="clearProduct"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition whitespace-nowrap">
+                                <span class="material-symbols-outlined text-sm">arrow_back</span>
+                                Volver a la lista
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-3 bg-white rounded-lg border border-blue-200 px-4 py-2.5">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-9 h-9 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-lg">account_balance</span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-[11px] font-medium text-gray-500">Total Consolidado de Saldos</p>
+                                <p class="text-lg font-bold text-gray-900 leading-tight font-mono truncate">${{ number_format($consolidated->total_value ?? 0, 2) }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-[11px] font-medium text-gray-500">Unidades en existencia</p>
+                            <p class="text-lg font-bold text-gray-900 leading-tight">{{ (int) ($consolidated->total_stock ?? 0) }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 lg:grid-cols-2 gap-3">
+                        <div class="flex items-center gap-2.5 bg-white rounded-lg border border-gray-200 px-3 py-2">
+                            <div class="w-8 h-8 rounded-md bg-cyan-50 text-cyan-600 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-base">calculate</span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-bold text-gray-900 leading-none font-mono">${{ number_format($product->average_cost ?? 0, 2) }}</p>
+                                <p class="text-[11px] font-medium text-gray-500 mt-1">Costo promedio</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2.5 bg-white rounded-lg border border-gray-200 px-3 py-2">
+                            <div class="w-8 h-8 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-base">receipt_long</span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-bold text-gray-900 leading-none">{{ $totalMovements }}</p>
+                                <p class="text-[11px] font-medium text-gray-500 mt-1">Movimientos (filtrados)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if($product_id)
             <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                 <table class="min-w-full text-sm border-collapse">
                     <thead>
@@ -193,10 +312,122 @@
             </div>
 
             @if(count($items) > 0)
-                <div class="text-right text-xs text-gray-500 flex items-center justify-end gap-2">
-                    <span class="material-symbols-outlined text-gray-400 text-sm">info</span>
-                    Mostrando {{ count($items) }} movimientos
+                @php $lastPageKardex = max(1, (int) ceil($totalMovements / $perPage)); @endphp
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <div class="text-xs text-gray-500 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-gray-400 text-sm">info</span>
+                        Mostrando {{ $offset + 1 }} a {{ $offset + count($items) }} de {{ $totalMovements }} movimientos
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" wire:click="$set('movementPage', {{ $movementPage - 1 }})" {{ $movementPage <= 1 ? 'disabled' : '' }}
+                            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border transition
+                            {{ $movementPage <= 1 ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-300 text-gray-600 bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700' }}">
+                            <span class="material-symbols-outlined text-sm">chevron_left</span>
+                            Anterior
+                        </button>
+                        <span class="text-xs text-gray-600 font-medium">Página {{ $movementPage }} de {{ $lastPageKardex }}</span>
+                        <button type="button" wire:click="$set('movementPage', {{ $movementPage + 1 }})" {{ $movementPage >= $lastPageKardex ? 'disabled' : '' }}
+                            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border transition
+                            {{ $movementPage >= $lastPageKardex ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-300 text-gray-600 bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700' }}">
+                            Siguiente
+                            <span class="material-symbols-outlined text-sm">chevron_right</span>
+                        </button>
+                    </div>
                 </div>
+            @endif
+            @else
+
+            {{-- Lista general de productos con paginación --}}
+            <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                <table class="min-w-full text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th class="px-3 py-3 text-left text-gray-600 font-medium">
+                                <div class="flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-gray-400 text-base">inventory_2</span>
+                                    PRODUCTO
+                                </div>
+                            </th>
+                            <th class="px-3 py-3 text-left text-gray-600 font-medium">
+                                <div class="flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-gray-400 text-base">category</span>
+                                    CATEGORÍA
+                                </div>
+                            </th>
+                            <th class="px-3 py-3 text-right text-gray-600 font-medium">
+                                <div class="flex items-center justify-end gap-1">
+                                    <span class="material-symbols-outlined text-gray-400 text-base">inventory</span>
+                                    STOCK
+                                </div>
+                            </th>
+                            <th class="px-3 py-3 text-right text-gray-600 font-medium">
+                                <div class="flex items-center justify-end gap-1">
+                                    <span class="material-symbols-outlined text-gray-400 text-base">calculate</span>
+                                    C. PROMEDIO
+                                </div>
+                            </th>
+                            <th class="px-3 py-3 text-right text-gray-600 font-medium">
+                                <div class="flex items-center justify-end gap-1">
+                                    <span class="material-symbols-outlined text-gray-400 text-base">payments</span>
+                                    VALOR TOTAL
+                                </div>
+                            </th>
+                            <th class="px-3 py-3 text-center text-gray-600 font-medium">ACCIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @forelse($products as $product)
+                            <tr class="hover:bg-gray-50/80 transition">
+                                <td class="px-3 py-2.5">
+                                    <p class="font-medium text-gray-800">{{ $product->name }}</p>
+                                    <p class="text-xs text-gray-500 font-mono mt-0.5">{{ $product->sku }}</p>
+                                </td>
+                                <td class="px-3 py-2.5">
+                                    @if($product->category)
+                                        <span class="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                                            {{ $product->category->name }}
+                                        </span>
+                                    @else
+                                        <span class="text-gray-400 text-xs">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-2.5 text-right">
+                                    <span class="inline-flex items-center gap-1 font-medium {{ (int)$product->current_stock <= 0 ? 'text-red-600' : ((int)$product->current_stock <= (int)$product->stock_min ? 'text-amber-600' : 'text-green-700') }}">
+                                        <span class="material-symbols-outlined text-sm">inventory_2</span>
+                                        {{ (int)$product->current_stock }}
+                                    </span>
+                                </td>
+                                <td class="px-3 py-2.5 text-right text-gray-700 font-mono">{{ number_format($product->average_cost ?? 0, 2) }}</td>
+                                <td class="px-3 py-2.5 text-right text-gray-700 font-mono">{{ number_format($product->total_value ?? 0, 2) }}</td>
+                                <td class="px-3 py-2.5 text-center">
+                                    <button type="button" wire:click="selectProductFromList({{ $product->id }})"
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
+                                        <span class="material-symbols-outlined text-sm">finance_chip</span>
+                                        Ver Kardex
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="px-4 py-12 text-center bg-gray-50/50">
+                                    <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">search_off</span>
+                                    <p class="text-gray-500">No se encontraron productos</p>
+                                    <p class="text-sm text-gray-400 mt-1">Ajusta la búsqueda para ver el kardex</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-2">
+                <div class="text-xs text-gray-500">
+                    Mostrando {{ $products->firstItem() ?? 0 }} a {{ $products->lastItem() ?? 0 }} de {{ $products->total() }} productos
+                </div>
+                <div>
+                    {{ $products->links() }}
+                </div>
+            </div>
             @endif
         </div>
     </x-ui.card>
