@@ -14,7 +14,26 @@ class WorkOrderIndex extends Component
 
     public $statusFilter = '';
     public $search = '';
-    public $viewMode = 'table';
+    public $serviceTypeFilter = '';
+    public $dayFilter = '';
+    public $technicianFilter = '';
+    public $priorityFilter = '';
+    public $viewMode = 'cards'; // 'cards' | 'table'
+
+    protected $queryString = [
+        'statusFilter' => ['except' => ''],
+        'search' => ['except' => ''],
+        'serviceTypeFilter' => ['except' => ''],
+        'dayFilter' => ['except' => ''],
+        'technicianFilter' => ['except' => ''],
+        'priorityFilter' => ['except' => ''],
+        'viewMode' => ['except' => 'cards'],
+    ];
+
+    public function setViewMode($mode)
+    {
+        $this->viewMode = $mode;
+    }
 
     public $confirmingAction = null;
     public $confirmingOrderId = null;
@@ -42,17 +61,13 @@ class WorkOrderIndex extends Component
         }
     }
 
-    public function updatedViewMode($value)
-    {
-        if ($value === 'planner') {
-            $this->dispatch('planner-activated');
-        }
-    }
-
     public function updatedSelectAll($value)
     {
         if ($value) {
-            $this->selectedOrders = $this->getFilteredQuery()->pluck('id')->toArray();
+            $this->selectedOrders = $this->getFilteredQuery()
+                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->pluck('id')
+                ->toArray();
         } else {
             $this->selectedOrders = [];
         }
@@ -65,19 +80,35 @@ class WorkOrderIndex extends Component
 
     protected function getFilteredQuery()
     {
-        $user = Auth::user();
         $query = WorkOrder::query();
 
-        if ($user->can('view all work orders')) {
-            // todas
-        } elseif ($user->can('view own work_orders')) {
-            $query->whereHas('ticket', fn($q) => $q->where('created_by', $user->id)->orWhere('resolved_by', $user->id));
-        } else {
+        if (!$this->applyPermissionScope($query)) {
             return null;
         }
 
-        if ($this->statusFilter) {
+        if ($this->statusFilter === 'unassigned') {
+            $query->whereNull('technician_id');
+        } elseif ($this->statusFilter) {
             $query->where('status', $this->statusFilter);
+        } else {
+            // Por defecto: solo OTs activas (no mostrar completadas/canceladas)
+            $query->whereIn('status', ['pending', 'in_progress', 'paused']);
+        }
+        if ($this->serviceTypeFilter) {
+            $query->where('service_type', $this->serviceTypeFilter);
+        }
+        if ($this->dayFilter === 'today') {
+            $query->whereDate('scheduled_date', now()->toDateString());
+        } elseif ($this->dayFilter === 'tomorrow') {
+            $query->whereDate('scheduled_date', now()->addDay()->toDateString());
+        } elseif ($this->dayFilter === 'week') {
+            $query->whereBetween('scheduled_date', [now()->startOfWeek(), now()->endOfWeek()]);
+        }
+        if ($this->technicianFilter) {
+            $query->where('technician_id', $this->technicianFilter);
+        }
+        if ($this->priorityFilter) {
+            $query->whereHas('ticket', fn($t) => $t->where('priority', $this->priorityFilter));
         }
         if ($this->search) {
             $query->where(function ($q) {
@@ -88,6 +119,54 @@ class WorkOrderIndex extends Component
         }
 
         return $query;
+    }
+
+    protected function applyPermissionScope($query): bool
+    {
+        $user = Auth::user();
+
+        if ($user->can('view all work orders')) {
+            return true;
+        }
+
+        if ($user->can('view own work_orders')) {
+            $query->whereHas('ticket', fn($q) => $q->where('created_by', $user->id)->orWhere('resolved_by', $user->id));
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function getKpis(): array
+    {
+        $base = WorkOrder::query();
+        if (!$this->applyPermissionScope($base)) {
+            return ['pending' => 0, 'in_progress' => 0, 'unassigned' => 0, 'total' => 0, 'completed' => 0];
+        }
+
+        return [
+            'pending' => (clone $base)->where('status', 'pending')->count(),
+            'in_progress' => (clone $base)->where('status', 'in_progress')->count(),
+            'unassigned' => (clone $base)->whereNull('technician_id')->whereNotIn('status', ['completed', 'cancelled'])->count(),
+            'total' => (clone $base)->whereIn('status', ['pending', 'in_progress', 'paused'])->count(),
+            'completed' => (clone $base)->where('status', 'completed')->count(),
+        ];
+    }
+
+    protected function getServiceTypes(): array
+    {
+        $base = WorkOrder::query();
+        if (!$this->applyPermissionScope($base)) {
+            return [];
+        }
+
+        return $base->select('service_type')
+            ->whereNotNull('service_type')
+            ->where('service_type', '!=', '')
+            ->distinct()
+            ->orderBy('service_type')
+            ->pluck('service_type')
+            ->toArray();
     }
 
     protected function getListeners()
@@ -115,8 +194,39 @@ class WorkOrderIndex extends Component
         $this->dispatch('show-toast', type: 'success', message: "OT {$wo->code} aceptada. Ahora podés asignarla.");
     }
 
+    public function assignOrder($otId)
+    {
+        $wo = WorkOrder::findOrFail($otId);
+
+        if (in_array($wo->status, ['completed', 'cancelled'])) {
+            $this->dispatch('show-toast', type: 'error', message: 'No se puede asignar una OT finalizada.');
+            return;
+        }
+
+        // Pre-cargar los datos ya asignados para poder cambiarlos sin perderlos de vista
+        $this->selectedOrders = [$wo->id];
+        $this->assignTechnicianId = (string) ($wo->technician_id ?? '');
+        $this->assignAuxiliarId = (string) ($wo->auxiliar_technician_id ?? '');
+        $this->assignVehicleId = (string) ($wo->vehicle_id ?? '');
+        $this->scheduledDate = $wo->scheduled_date?->format('Y-m-d') ?? '';
+        $this->notes = $wo->notes ?? '';
+        $this->showAssignModal = true;
+    }
+
+    public function closeAssignModal()
+    {
+        $this->showAssignModal = false;
+        $this->selectedOrders = [];
+        $this->assignTechnicianId = '';
+        $this->assignAuxiliarId = '';
+        $this->assignVehicleId = '';
+        $this->scheduledDate = '';
+        $this->notes = '';
+    }
+
     public function assignFromDrag($otId, $technicianId)
-    {        $wo = WorkOrder::with('technician')->findOrFail($otId);
+    {
+        $wo = WorkOrder::with('technician')->findOrFail($otId);
 
         if ($technicianId && $wo->auxiliar_technician_id && (int) $technicianId === (int) $wo->auxiliar_technician_id) {
             $this->dispatch('show-toast', type: 'error', message: 'El técnico no puede ser el mismo que el auxiliar.');
@@ -189,6 +299,8 @@ class WorkOrderIndex extends Component
         $this->scheduledDate = '';
         $this->notes = '';
         $this->assignVehicleId = '';
+        $this->assignTechnicianId = '';
+        $this->assignAuxiliarId = '';
 
         if ($skipped > 0 && $count === 0) {
             $msg = 'Todas las OT ya tenían técnico. Ninguna fue modificada.';
@@ -272,6 +384,8 @@ class WorkOrderIndex extends Component
             Auth::setUser($user);
         }
 
+        $kpis = $this->getKpis();
+        $serviceTypes = $this->getServiceTypes();
         $query = $this->getFilteredQuery();
 
         if ($query === null) {
@@ -279,11 +393,8 @@ class WorkOrderIndex extends Component
             $encargados = collect();
             $tecnicos = collect();
             $vehiculos = collect();
-            $technicians = collect();
-            $unassigned = collect();
-            $byTechnician = collect();
             return view('livewire.work-orders.work-order-index', compact(
-                'orders', 'encargados', 'tecnicos', 'vehiculos', 'technicians', 'unassigned', 'byTechnician'
+                'orders', 'encargados', 'tecnicos', 'vehiculos', 'kpis', 'serviceTypes'
             ))->layout('components.layouts.app');
         }
 
@@ -291,34 +402,15 @@ class WorkOrderIndex extends Component
         $tecnicos = User::role('technician')->orderBy('name')->get(['id', 'name']);
         $vehiculos = \App\Models\Vehiculo::where('estado', 'activo')->orderBy('placa')->get(['id', 'placa', 'marca', 'modelo']);
 
-        if ($this->viewMode === 'table') {
-            $orders = $query->with(['technician', 'auxiliarTechnician', 'vehicle', 'client', 'ticket', 'zone'])
-                ->orderBy('created_at', 'desc')->paginate(50);
+        $orders = $query->with(['technician', 'auxiliarTechnician', 'vehicle', 'client', 'ticket', 'zone'])
+            ->orderBy('created_at', 'desc')->paginate(50);
 
-            $alreadyAssigned = !empty($this->selectedOrders)
-                ? WorkOrder::whereIn('id', $this->selectedOrders)->whereNotNull('technician_id')->count()
-                : 0;
-
-            return view('livewire.work-orders.work-order-index', compact(
-                'orders', 'encargados', 'tecnicos', 'vehiculos', 'alreadyAssigned'
-            ))->layout('components.layouts.app');
-        }
-
-        // Planner view
-        $allOrders = $query->with(['technician', 'auxiliarTechnician', 'client', 'zone'])
-            ->orderBy('scheduled_date')->get();
-
-        $technicians = $encargados;
-        $unassigned = $allOrders->whereNull('technician_id');
-        $byTechnician = collect();
-        foreach ($technicians as $tech) {
-            $byTechnician[$tech->id] = $allOrders->where('technician_id', $tech->id);
-        }
-
-        $maxLoad = $technicians->map(fn($t) => $byTechnician[$t->id]->count())->max() ?: 1;
+        $alreadyAssigned = !empty($this->selectedOrders)
+            ? WorkOrder::whereIn('id', $this->selectedOrders)->whereNotNull('technician_id')->count()
+            : 0;
 
         return view('livewire.work-orders.work-order-index', compact(
-            'encargados', 'tecnicos', 'vehiculos', 'technicians', 'unassigned', 'byTechnician', 'maxLoad'
+            'orders', 'encargados', 'tecnicos', 'vehiculos', 'alreadyAssigned', 'kpis', 'serviceTypes'
         ))->layout('components.layouts.app');
     }
 }

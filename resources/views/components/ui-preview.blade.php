@@ -492,5 +492,87 @@
             <x-ui.button variant="danger" icon="delete_sweep">Limpiar</x-ui.button>
         </x-slot:footer>
     </x-ui.card>
+
+    {{-- Cards de OT (prototipo v2 - limpia) --}}
+    <x-ui.card title="Cards de OT (prototipo v2)" subtitle="Versión compacta: solo lo esencial; el detalle se abre al hacer clic" icon="engineering">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {{-- Pendiente --}}
+            <a href="#" class="block rounded-xl border border-gray-200 bg-white p-4 hover:border-blue-300 hover:shadow-md transition-all group">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-mono font-bold text-xs text-blue-700">OT-CT-0001</span>
+                    <x-ui.badge variant="warning">Pendiente</x-ui.badge>
+                </div>
+                <p class="text-sm font-medium text-gray-800 truncate">Juan Martínez</p>
+                <div class="flex items-center gap-1 text-xs text-gray-500 mt-1.5">
+                    <span class="material-symbols-outlined text-sm">location_on</span>
+                    La Palma
+                </div>
+                <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-medium">Instalación</span>
+                    <span class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 group-hover:text-blue-600 transition">Ver
+                        <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                    </span>
+                </div>
+            </a>
+
+            {{-- En progreso --}}
+            <a href="#" class="block rounded-xl border border-gray-200 border-l-4 border-l-blue-400 bg-white p-4 hover:border-blue-300 hover:shadow-md transition-all group">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-mono font-bold text-xs text-blue-700">OT-SAC-0042</span>
+                    <x-ui.badge variant="info">En progreso</x-ui.badge>
+                </div>
+                <p class="text-sm font-medium text-gray-800 truncate">María López</p>
+                <div class="flex items-center gap-1 text-xs text-gray-500 mt-1.5">
+                    <span class="material-symbols-outlined text-sm">location_on</span>
+                    Amayo
+                </div>
+                <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-medium">Traslado</span>
+                    <span class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 group-hover:text-blue-600 transition">Ver
+                        <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                    </span>
+                </div>
+            </a>
+
+            {{-- Sin asignar + SLA en riesgo --}}
+            <a href="#" class="block rounded-xl border border-gray-200 bg-white p-4 hover:border-red-300 hover:shadow-md transition-all group">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-mono font-bold text-xs text-gray-600">OT-OT-0088</span>
+                    <x-ui.badge variant="neutral">Sin asignar</x-ui.badge>
+                </div>
+                <p class="text-sm font-medium text-gray-800 truncate">Pedro Rivas</p>
+                <div class="flex items-center gap-1 text-xs text-gray-500 mt-1.5">
+                    <span class="material-symbols-outlined text-sm">location_on</span>
+                    Aguilares
+                </div>
+                <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 font-medium">Soporte</span>
+                    <span class="inline-flex items-center gap-0.5 text-[10px] text-red-500 font-medium">
+                        <span class="material-symbols-outlined text-xs">warning</span> SLA
+                    </span>
+                </div>
+            </a>
+
+            {{-- Completada --}}
+            <a href="#" class="block rounded-xl border border-gray-200 bg-gray-50/60 p-4 hover:border-gray-300 transition-all group opacity-70">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-mono font-bold text-xs text-gray-500">OT-CT-0012</span>
+                    <x-ui.badge variant="success">Completada</x-ui.badge>
+                </div>
+                <p class="text-sm font-medium text-gray-600 truncate">Ana Flores</p>
+                <div class="flex items-center gap-1 text-xs text-gray-400 mt-1.5">
+                    <span class="material-symbols-outlined text-sm">location_on</span>
+                    La Palma
+                </div>
+                <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 font-medium">Reconexión</span>
+                    <span class="inline-flex items-center gap-0.5 text-[10px] text-gray-400">Ver
+                        <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                    </span>
+                </div>
+            </a>
+        </div>
+        <p class="text-xs text-gray-400 mt-4">Compacta: código, estado, cliente, zona y tipo. Técnico, vehículo, SLA y acciones se ven al abrir el detalle.</p>
+    </x-ui.card>
 </div>
 @endsection
