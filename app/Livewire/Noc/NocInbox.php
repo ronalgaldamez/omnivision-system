@@ -13,12 +13,23 @@ class NocInbox extends Component
 {
     public $activeTab = 'pending';
     public $tickets;
+    public $search = '';
+    public $priorityFilter = '';
+    public $viewMode = 'cards'; // 'cards' | 'table'
+
+    protected $queryString = [
+        'activeTab' => ['except' => 'pending'],
+        'search' => ['except' => ''],
+        'priorityFilter' => ['except' => ''],
+        'viewMode' => ['except' => 'cards'],
+    ];
 
     public $showDetailModal = false;
     public $selectedTicket = null;
 
     public $confirmingAction = null;
     public $confirmingTicketId = null;
+    public $createReason = '';
 
     public function mount()
     {
@@ -41,6 +52,11 @@ class NocInbox extends Component
         $this->loadTickets();
     }
 
+    public function setViewMode($mode)
+    {
+        $this->viewMode = $mode;
+    }
+
     public function loadTickets()
     {
         $query = Ticket::where('requires_noc', true)->with('client', 'createdBy');
@@ -57,9 +73,31 @@ class NocInbox extends Component
                 break;
         }
 
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->whereHas('client', fn($c) => $c->where('name', 'like', '%' . $this->search . '%'))
+                    ->orWhere('ticket_code', 'like', '%' . $this->search . '%');
+            });
+        }
+        if ($this->priorityFilter) {
+            $query->where('priority', $this->priorityFilter);
+        }
+
         $this->tickets = $query->orderByRaw("CASE priority WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 WHEN 'P4' THEN 4 ELSE 5 END ASC")
             ->orderBy('created_at', 'desc')
             ->get();
+    }
+
+    protected function getKpis(): array
+    {
+        $base = Ticket::where('requires_noc', true);
+
+        return [
+            'pending' => (clone $base)->whereNull('l2_started_at')->whereNotIn('status', ['resolved', 'cancelled'])->count(),
+            'in_progress' => (clone $base)->whereNotNull('l2_started_at')->whereNull('l2_ended_at')->count(),
+            'completed' => (clone $base)->whereNotNull('l2_ended_at')->count(),
+            'with_ot' => (clone $base)->whereHas('workOrder')->count(),
+        ];
     }
 
     public function viewDetail($ticketId)
@@ -91,6 +129,7 @@ class NocInbox extends Component
     {
         $this->confirmingAction = 'create_ot';
         $this->confirmingTicketId = $ticketId;
+        $this->createReason = '';
     }
 
     public function promptAccept($ticketId)
@@ -136,9 +175,16 @@ class NocInbox extends Component
 
     public function createWorkOrder($ticketId)
     {
+        if (empty(trim($this->createReason))) {
+            $this->dispatch('show-toast', type: 'error', message: 'Debés escribir el motivo de la creación de la OT.');
+            return;
+        }
+
         $ticket = Ticket::with('client')->find($ticketId);
         if ($ticket) {
-            app(WorkOrderService::class)->createFromTicket($ticket);
+            app(WorkOrderService::class)->createFromTicket($ticket, [
+                'notes' => 'Motivo NOC: ' . trim($this->createReason),
+            ]);
 
             $ticket->status = 'in_progress';
             $ticket->l2_ended_at = now();
@@ -146,6 +192,7 @@ class NocInbox extends Component
             $ticket->resolved_by = $ticket->resolved_by ?? Auth::id();
             $ticket->save();
         }
+        $this->createReason = '';
         $this->loadTickets();
         $this->closeModal();
     }
@@ -158,6 +205,7 @@ class NocInbox extends Component
 
     public function render()
     {
-        return view('livewire.noc.noc-inbox')->layout('components.layouts.app');
+        $kpis = $this->getKpis();
+        return view('livewire.noc.noc-inbox', compact('kpis'))->layout('components.layouts.app');
     }
 }

@@ -1,44 +1,192 @@
 <div class="max-w-7xl mx-auto" wire:poll.15s="loadTickets">
     <x-ui.card icon="dns" title="Bandeja NOC" subtitle="Gestión de tickets que requieren intervención del NOC">
-        {{-- Tabs --}}
-        <div class="border-b border-gray-200 -mx-6 px-6">
-            <nav class="flex gap-1" role="tablist">
-                @php
-                    $tabLabels = ['pending' => 'Pendientes', 'in_progress' => 'En curso', 'completed' => 'Completados'];
-                    $tabIcons = ['pending' => 'hourglass_empty', 'in_progress' => 'engineering', 'completed' => 'check_circle'];
-                    $baseQuery = \App\Models\Ticket::where('requires_noc', true);
-                    $tabCounts = [
-                        'pending' => (clone $baseQuery)->whereNull('l2_started_at')->whereNotIn('status', ['resolved', 'cancelled'])->count(),
-                        'in_progress' => (clone $baseQuery)->whereNotNull('l2_started_at')->whereNull('l2_ended_at')->count(),
-                        'completed' => (clone $baseQuery)->whereNotNull('l2_ended_at')->count(),
-                    ];
-                @endphp
-                @foreach (['pending', 'in_progress', 'completed'] as $tab)
-                    <button wire:click="setActiveTab('{{ $tab }}')" role="tab"
-                        class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition -mb-px
-                        {{ $activeTab === $tab ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                        <span class="material-symbols-outlined text-base">{{ $tabIcons[$tab] }}</span>
-                        {{ $tabLabels[$tab] }}
-                        <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-medium
-                            {{ $activeTab === $tab ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500' }}">
-                            {{ $tabCounts[$tab] }}
-                        </span>
+        <x-slot:headerActions>
+            <div class="flex items-center gap-2">
+                <div class="flex items-center bg-gray-100 rounded-lg p-1">
+                    <button wire:click="setViewMode('cards')"
+                        class="px-3 py-1.5 text-xs font-medium rounded-md transition flex items-center gap-1.5
+                        {{ $viewMode === 'cards' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700' }}">
+                        <span class="material-symbols-outlined text-sm">grid_view</span>
+                        <span class="hidden sm:inline">Cards</span>
                     </button>
-                @endforeach
-            </nav>
-        </div>
+                    <button wire:click="setViewMode('table')"
+                        class="px-3 py-1.5 text-xs font-medium rounded-md transition flex items-center gap-1.5
+                        {{ $viewMode === 'table' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700' }}">
+                        <span class="material-symbols-outlined text-sm">table_rows</span>
+                        <span class="hidden sm:inline">Tabla</span>
+                    </button>
+                </div>
+            </div>
+        </x-slot:headerActions>
 
-        <div class="mt-5">
+        <div class="p-6 space-y-5">
+            {{-- KPIs --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <button wire:click="$set('activeTab', 'pending')"
+                    class="flex items-center gap-3 w-full rounded-xl border border-gray-200 bg-white p-4 text-left hover:shadow-sm transition-all
+                    {{ $activeTab === 'pending' ? 'ring-2 ring-blue-200 border-blue-300' : 'hover:border-blue-200' }}">
+                    <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-xl">hourglass_empty</span>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xl font-bold text-gray-900 leading-none">{{ $kpis['pending'] }}</p>
+                        <p class="text-xs font-medium text-gray-500 mt-1">Pendientes</p>
+                    </div>
+                </button>
+
+                <button wire:click="$set('activeTab', 'in_progress')"
+                    class="flex items-center gap-3 w-full rounded-xl border border-gray-200 bg-white p-4 text-left hover:shadow-sm transition-all
+                    {{ $activeTab === 'in_progress' ? 'ring-2 ring-sky-200 border-sky-300' : 'hover:border-sky-200' }}">
+                    <div class="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-xl">engineering</span>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xl font-bold text-gray-900 leading-none">{{ $kpis['in_progress'] }}</p>
+                        <p class="text-xs font-medium text-gray-500 mt-1">En curso</p>
+                    </div>
+                </button>
+
+                <button wire:click="$set('activeTab', 'completed')"
+                    class="flex items-center gap-3 w-full rounded-xl border border-gray-200 bg-white p-4 text-left hover:shadow-sm transition-all
+                    {{ $activeTab === 'completed' ? 'ring-2 ring-green-200 border-green-300' : 'hover:border-green-200' }}">
+                    <div class="w-10 h-10 rounded-lg bg-green-50 text-green-600 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-xl">check_circle</span>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xl font-bold text-gray-900 leading-none">{{ $kpis['completed'] }}</p>
+                        <p class="text-xs font-medium text-gray-500 mt-1">Completados</p>
+                    </div>
+                </button>
+
+                <div class="flex items-center gap-3 w-full rounded-xl border border-gray-200 bg-white p-4 text-left">
+                    <div class="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-xl">engineering</span>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xl font-bold text-gray-900 leading-none">{{ $kpis['with_ot'] }}</p>
+                        <p class="text-xs font-medium text-gray-500 mt-1">Con OT</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Filtros --}}
+            <div class="flex flex-wrap items-end gap-3">
+                <x-ui.input type="text" wire:model.live="search" icon="search" label="Buscar" placeholder="Cliente o código de ticket..." class="flex-1 min-w-[200px]" />
+                <x-ui.select wire:model.live="priorityFilter" label="Prioridad" icon="flag" class="w-32">
+                    <option value="">Todas</option>
+                    <option value="P1">P1 · Crítica</option>
+                    <option value="P2">P2 · Alta</option>
+                    <option value="P3">P3 · Media</option>
+                    <option value="P4">P4 · Baja</option>
+                </x-ui.select>
+                @if($search || $priorityFilter)
+                    <button wire:click="$set('search', ''); $set('priorityFilter', '')"
+                        class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                        <span class="material-symbols-outlined text-sm">filter_alt_off</span>
+                        Limpiar filtros
+                    </button>
+                @endif
+            </div>
+
+            {{-- Tabs --}}
+            <div class="border-b border-gray-200">
+                <nav class="flex gap-1" role="tablist">
+                    @php
+                        $tabLabels = ['pending' => 'Pendientes', 'in_progress' => 'En curso', 'completed' => 'Completados'];
+                        $tabIcons = ['pending' => 'hourglass_empty', 'in_progress' => 'engineering', 'completed' => 'check_circle'];
+                        $baseQuery = \App\Models\Ticket::where('requires_noc', true);
+                        $tabCounts = [
+                            'pending' => (clone $baseQuery)->whereNull('l2_started_at')->whereNotIn('status', ['resolved', 'cancelled'])->count(),
+                            'in_progress' => (clone $baseQuery)->whereNotNull('l2_started_at')->whereNull('l2_ended_at')->count(),
+                            'completed' => (clone $baseQuery)->whereNotNull('l2_ended_at')->count(),
+                        ];
+                    @endphp
+                    @foreach (['pending', 'in_progress', 'completed'] as $tab)
+                        <button wire:click="setActiveTab('{{ $tab }}')" role="tab"
+                            class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition -mb-px
+                            {{ $activeTab === $tab ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                            <span class="material-symbols-outlined text-base">{{ $tabIcons[$tab] }}</span>
+                            {{ $tabLabels[$tab] }}
+                            <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-medium
+                                {{ $activeTab === $tab ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500' }}">
+                                {{ $tabCounts[$tab] }}
+                            </span>
+                        </button>
+                    @endforeach
+                </nav>
+            </div>
+
+            {{-- VISTA CARDS --}}
+            @if($viewMode === 'cards')
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                @forelse($tickets as $ticket)
+                @php $ticketPrio = $ticket->priority; @endphp
+                <div class="rounded-xl border overflow-hidden hover:shadow-md transition-all
+                    {{ $ticketPrio === 'P1' ? 'border-red-400 ring-2 ring-red-100 bg-red-50/30 hover:border-red-500' : 'border-gray-200 bg-white hover:border-blue-300' }}">
+                    <button wire:click="viewDetail({{ $ticket->id }})" class="block w-full p-4 text-left group">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span class="font-mono font-bold text-xs text-gray-700">{{ $ticket->ticket_code ?? '—' }}</span>
+                                @php $pVariant = match($ticketPrio) { 'P1' => 'danger', 'P2' => 'warning', 'P3' => 'info', default => 'neutral' }; @endphp
+                                @if($ticketPrio)
+                                    <x-ui.badge variant="{{ $pVariant }}">{{ $ticketPrio }}</x-ui.badge>
+                                @endif
+                            </div>
+                            <span class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 group-hover:text-blue-600 transition">Ver
+                                <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                            </span>
+                        </div>
+                        <p class="text-sm font-medium text-gray-800 truncate">{{ $ticket->client?->name ?? '—' }}</p>
+                        <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ Str::limit($ticket->description, 80) }}</p>
+                        <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium">{{ $ticket->service_type }}</span>
+                            @if($activeTab === 'pending')
+                                <span class="text-[10px] text-amber-600 font-medium font-mono">
+                                    @if($ticket->escalated_at){{ \App\Services\TimelineService::formatDuration($ticket->escalated_at->diffInSeconds(now())) }}@endif
+                                </span>
+                            @elseif($activeTab === 'in_progress')
+                                <span class="text-[10px] text-blue-600 font-medium font-mono">
+                                    @if($ticket->l2_started_at){{ \App\Services\TimelineService::formatDuration($ticket->l2_started_at->diffInSeconds(now())) }}@endif
+                                </span>
+                            @endif
+                        </div>
+                    </button>
+                    @if($activeTab === 'pending')
+                    <div class="px-4 py-2.5 bg-gray-50/50 border-t border-gray-100">
+                        <x-ui.button variant="primary" size="sm" icon="play_arrow" class="w-full" wire:click="promptAccept({{ $ticket->id }})">Aceptar</x-ui.button>
+                    </div>
+                    @elseif($activeTab === 'in_progress')
+                    <div class="px-4 py-2.5 bg-gray-50/50 border-t border-gray-100 flex items-center gap-2">
+                        <x-ui.button variant="success" size="sm" icon="check_circle" class="flex-1" wire:click="promptResolveRemote({{ $ticket->id }})">Resolver</x-ui.button>
+                        <x-ui.button variant="primary" size="sm" icon="engineering" class="flex-1" wire:click="promptCreateWorkOrder({{ $ticket->id }})">Crear OT</x-ui.button>
+                    </div>
+                    @elseif($activeTab === 'completed')
+                    <div class="px-4 py-2.5 bg-gray-50/50 border-t border-gray-100">
+                        <x-ui.button variant="secondary" size="sm" icon="account_tree" class="w-full" href="{{ route('sla.ticket-timeline', $ticket->id) }}">Ver Timeline</x-ui.button>
+                    </div>
+                    @endif
+                </div>
+                @empty
+                <div class="col-span-full rounded-xl border border-dashed border-gray-200 py-12 text-center bg-gray-50/50">
+                    <span class="material-symbols-outlined text-gray-300 text-4xl mb-2 block">inbox</span>
+                    <p class="text-gray-500">
+                        @if($activeTab === 'pending') No hay tickets pendientes
+                        @elseif($activeTab === 'in_progress') No hay tickets en curso
+                        @else No hay tickets completados @endif
+                    </p>
+                </div>
+                @endforelse
+            </div>
+            @else
+            {{-- VISTA TABLA --}}
             <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200">
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">Código</th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">ID</th>
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">Cliente</th>
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">Servicio</th>
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">Prioridad</th>
-                            <th class="px-4 py-3 text-left text-gray-600 font-medium">Origen</th>
                             <th class="px-4 py-3 text-left text-gray-600 font-medium">Descripción</th>
                             @if($activeTab === 'pending')
                                 <th class="px-4 py-3 text-center text-gray-600 font-medium">Espera</th>
@@ -52,79 +200,47 @@
                         @forelse($tickets as $ticket)
                             <tr class="hover:bg-gray-50/80 transition">
                                 <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $ticket->ticket_code ?? '—' }}</td>
-                                <td class="px-4 py-3 font-mono text-xs text-gray-700">#{{ $ticket->id }}</td>
                                 <td class="px-4 py-3 text-gray-800 max-w-[150px] truncate" title="{{ $ticket->client?->name }}">{{ $ticket->client?->name ?? '—' }}</td>
-                                <td class="px-4 py-3">
-                                    <x-ui.badge variant="neutral">{{ $ticket->service_type }}</x-ui.badge>
-                                </td>
+                                <td class="px-4 py-3"><x-ui.badge variant="neutral">{{ $ticket->service_type }}</x-ui.badge></td>
                                 <td class="px-4 py-3">
                                     @if($ticket->priority)
-                                        <x-ui.badge :variant="match($ticket->priority) { 'P1' => 'danger', 'P2' => 'warning', 'P3' => 'info', default => 'neutral' }">
-                                            {{ $ticket->priority }}
-                                        </x-ui.badge>
+                                        <x-ui.badge :variant="match($ticket->priority) { 'P1' => 'danger', 'P2' => 'warning', 'P3' => 'info', default => 'neutral' }">{{ $ticket->priority }}</x-ui.badge>
                                     @else
                                         <span class="text-gray-400">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-gray-700">{{ $ticket->origin ?? '—' }}</td>
-                                <td class="px-4 py-3 text-gray-600 max-w-[200px] truncate" title="{{ $ticket->description }}">
-                                    {{ Str::limit($ticket->description, 60) }}
-                                </td>
+                                <td class="px-4 py-3 text-gray-600 max-w-[200px] truncate" title="{{ $ticket->description }}">{{ Str::limit($ticket->description, 60) }}</td>
                                 @if($activeTab === 'pending')
                                     <td class="px-4 py-3 text-center font-mono text-sm text-amber-600 font-medium">
-                                        @if($ticket->escalated_at)
-                                            @php $wait = $ticket->escalated_at->diffInSeconds(now()); @endphp
-                                            {{ \App\Services\TimelineService::formatDuration($wait) }}
-                                        @else
-                                            <span class="text-gray-400">—</span>
-                                        @endif
+                                        @if($ticket->escalated_at){{ \App\Services\TimelineService::formatDuration($ticket->escalated_at->diffInSeconds(now())) }}@else<span class="text-gray-400">—</span>@endif
                                     </td>
                                 @elseif($activeTab === 'in_progress')
                                     <td class="px-4 py-3 text-center font-mono text-sm text-blue-600 font-medium">
-                                        @if($ticket->l2_started_at)
-                                            @php $active = $ticket->l2_started_at->diffInSeconds(now()); @endphp
-                                            {{ \App\Services\TimelineService::formatDuration($active) }}
-                                        @else
-                                            <span class="text-gray-400">—</span>
-                                        @endif
+                                        @if($ticket->l2_started_at){{ \App\Services\TimelineService::formatDuration($ticket->l2_started_at->diffInSeconds(now())) }}@else<span class="text-gray-400">—</span>@endif
                                     </td>
                                 @endif
                                 <td class="px-4 py-3 text-center">
                                     <div class="flex items-center justify-center gap-2">
-                                        <x-ui.button variant="secondary" icon="visibility" size="sm" wire:click="viewDetail({{ $ticket->id }})">
-                                            Ver
-                                        </x-ui.button>
+                                        <x-ui.button variant="secondary" icon="visibility" size="sm" wire:click="viewDetail({{ $ticket->id }})">Ver</x-ui.button>
                                         @if($activeTab === 'pending')
-                                            <x-ui.button variant="primary" icon="play_arrow" size="sm" wire:click="promptAccept({{ $ticket->id }})">
-                                                Aceptar
-                                            </x-ui.button>
+                                            <x-ui.button variant="primary" icon="play_arrow" size="sm" wire:click="promptAccept({{ $ticket->id }})">Aceptar</x-ui.button>
                                         @elseif($activeTab === 'in_progress')
-                                            <x-ui.button variant="success" icon="check_circle" size="sm" wire:click="promptResolveRemote({{ $ticket->id }})">
-                                                Resolver
-                                            </x-ui.button>
-                                            <x-ui.button variant="primary" icon="engineering" size="sm" wire:click="promptCreateWorkOrder({{ $ticket->id }})">
-                                                Crear OT
-                                            </x-ui.button>
+                                            <x-ui.button variant="success" icon="check_circle" size="sm" wire:click="promptResolveRemote({{ $ticket->id }})">Resolver</x-ui.button>
+                                            <x-ui.button variant="primary" icon="engineering" size="sm" wire:click="promptCreateWorkOrder({{ $ticket->id }})">Crear OT</x-ui.button>
                                         @elseif($activeTab === 'completed')
-                                            <x-ui.button variant="secondary" icon="account_tree" size="sm" href="{{ route('sla.ticket-timeline', $ticket->id) }}">
-                                                Timeline
-                                            </x-ui.button>
+                                            <x-ui.button variant="secondary" icon="account_tree" size="sm" href="{{ route('sla.ticket-timeline', $ticket->id) }}">Timeline</x-ui.button>
                                         @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ $activeTab === 'completed' ? 9 : 10 }}" class="px-4 py-12 text-center bg-gray-50/50">
-                                    <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">inbox</span>
+                                <td colspan="{{ $activeTab === 'completed' ? 7 : 8 }}" class="px-4 py-12 text-center bg-gray-50/50">
+                                    <span class="material-symbols-outlined text-gray-300 text-4xl mb-2 block">inbox</span>
                                     <p class="text-gray-500">
-                                        @if($activeTab === 'pending')
-                                            No hay tickets pendientes
-                                        @elseif($activeTab === 'in_progress')
-                                            No hay tickets en curso
-                                        @else
-                                            No hay tickets completados
-                                        @endif
+                                        @if($activeTab === 'pending') No hay tickets pendientes
+                                        @elseif($activeTab === 'in_progress') No hay tickets en curso
+                                        @else No hay tickets completados @endif
                                     </p>
                                 </td>
                             </tr>
@@ -132,6 +248,7 @@
                     </tbody>
                 </table>
             </div>
+            @endif
         </div>
     </x-ui.card>
 
@@ -238,9 +355,25 @@
                                 ¿Aceptar el ticket #{{ $confirmingTicketId }} para atenderlo en NOC?
                             @endif
                         </p>
+
+                        @if($confirmingAction === 'create_ot')
+                            <div class="mt-4 text-left">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Motivo de la creación de la OT *</label>
+                                <textarea wire:model="createReason" rows="3"
+                                    class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"
+                                    placeholder="Ej: El problema no puede resolverse de forma remota y requiere visita en campo..."></textarea>
+                                <p class="text-[10px] text-gray-400 mt-1">Esta razón quedará registrada en las notas de la OT.</p>
+                            </div>
+                        @endif
                     </div>
                     <x-slot:footer>
-                        <x-ui.button variant="primary" wire:click="executeConfirmedAction">Sí, continuar</x-ui.button>
+                        @if($confirmingAction === 'create_ot')
+                            <x-ui.button variant="primary" icon="engineering" wire:click="executeConfirmedAction">Sí, crear OT</x-ui.button>
+                        @elseif($confirmingAction === 'resolve')
+                            <x-ui.button variant="success" icon="check_circle" wire:click="executeConfirmedAction">Sí, resolver</x-ui.button>
+                        @else
+                            <x-ui.button variant="primary" icon="play_arrow" wire:click="executeConfirmedAction">Sí, aceptar</x-ui.button>
+                        @endif
                         <x-ui.button variant="secondary" @click="open = false" wire:click="cancelConfirmation">Cancelar</x-ui.button>
                     </x-slot:footer>
                 </x-ui.card>
