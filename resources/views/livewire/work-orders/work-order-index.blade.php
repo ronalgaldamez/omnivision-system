@@ -95,6 +95,15 @@
                             <td class="px-4 py-3 text-center text-xs text-gray-700">{{ $order->scheduled_date?->format('d/m/Y') ?? '—' }}</td>
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-1">
+                                    @if($order->status === 'pending' && !$order->accepted_at)
+                                        <button wire:click="acceptOrder({{ $order->id }})" class="p-1.5 text-cyan-600 hover:bg-cyan-50 rounded-lg transition" title="Aceptar OT (iniciar asignación)">
+                                            <span class="material-symbols-outlined text-lg">play_arrow</span>
+                                        </button>
+                                    @elseif($order->accepted_at)
+                                        <span class="p-1.5 text-cyan-500" title="Aceptada {{ $order->accepted_at->format('H:i') }}">
+                                            <span class="material-symbols-outlined text-lg">check_circle</span>
+                                        </span>
+                                    @endif
                                     <a href="{{ route('work-orders.show', $order->id) }}" class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition" title="Ver">
                                         <span class="material-symbols-outlined text-lg">visibility</span>
                                     </a>

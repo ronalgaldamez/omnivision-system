@@ -48,6 +48,11 @@
                                 <tr class="hover:bg-gray-50/50 transition {{ $isRemoved ? 'bg-red-50 opacity-60' : '' }}">
                                     <td class="px-4 py-3 text-gray-800">
                                         {{ $item->product?->name }}
+                                        @if($item->is_inherited)
+                                            <span class="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium ml-1">
+                                                <span class="material-symbols-outlined text-xs">archive</span> Heredado
+                                            </span>
+                                        @endif
                                         @if($isRemoved)<span class="text-xs text-red-600 ml-1 font-medium">(quitado)</span>@endif
                                     </td>
                                     <td class="px-4 py-3 text-center font-mono font-semibold {{ $globalStock > 0 ? 'text-green-700' : 'text-gray-400' }}">
@@ -55,7 +60,9 @@
                                     </td>
                                     <td class="px-4 py-3 text-center font-mono font-medium text-gray-600">{{ $item->quantity_requested }}</td>
                                     <td class="px-4 py-3 text-center">
-                                        @if($isRemoved)
+                                        @if($item->is_inherited)
+                                            <span class="text-xs text-blue-700 font-medium">Ya en inventario del técnico</span>
+                                        @elseif($isRemoved)
                                             <span class="text-xs text-red-600 font-medium">Eliminado</span>
                                         @else
                                             <input type="number" wire:model="branchAssignments.{{ $item->id }}.quantity" min="0"
@@ -64,7 +71,7 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-3">
-                                        @if(!$isRemoved)
+                                        @if(!$isRemoved && !$item->is_inherited)
                                             <div class="w-full">
                                                 <x-forms.label class="sr-only">Sucursal de origen</x-forms.label>
                                                 <select wire:model.live="branchAssignments.{{ $item->id }}.source_branch_id"
@@ -79,6 +86,8 @@
                                                     @endforeach
                                                 </select>
                                             </div>
+                                        @elseif($item->is_inherited)
+                                            <span class="text-xs text-blue-700 font-medium">No aplica</span>
                                         @else
                                             <span class="text-xs text-gray-500">—</span>
                                         @endif
@@ -86,21 +95,21 @@
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-between gap-1">
                                             <div>
-                                            @if($selectedBranchId && !$isRemoved)
+                                            @if($selectedBranchId && !$isRemoved && !$item->is_inherited)
                                                 <span class="text-sm font-mono font-medium {{ $stockInBranch > 0 ? 'text-green-700' : 'text-red-600' }}">{{ $stockInBranch }}</span>
                                                 <span class="text-xs text-gray-500">disp.</span>
-                                            @elseif(!$isRemoved)
+                                            @elseif(!$isRemoved && !$item->is_inherited)
                                                 <span class="text-sm text-gray-400">—</span>
                                             @endif
                                             </div>
-                                            @if(!$isRemoved)
+                                            @if(!$isRemoved && !$item->is_inherited)
                                                 <button type="button" wire:click="openSubstituteModal({{ $item->id }})" class="p-1 text-blue-500 hover:bg-blue-50 rounded transition" title="Cambiar producto">
                                                     <span class="material-symbols-outlined text-lg">swap_horiz</span>
                                                 </button>
                                                 <button type="button" wire:click="removeItem({{ $item->id }})" class="p-1 text-red-500 hover:bg-red-50 rounded transition" title="Quitar producto">
                                                     <span class="material-symbols-outlined text-lg">remove_circle</span>
                                                 </button>
-                                            @else
+                                            @elseif(!$item->is_inherited)
                                                 <button type="button" wire:click="restoreItem({{ $item->id }})" class="p-1 text-blue-500 hover:bg-blue-50 rounded transition" title="Restaurar producto">
                                                     <span class="material-symbols-outlined text-lg">undo</span>
                                                 </button>

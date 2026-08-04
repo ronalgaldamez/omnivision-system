@@ -276,16 +276,12 @@ class RequisitionForm extends Component
                 'product_id' => $product->id,
                 'quantity_requested' => $item['quantity'],
                 'quantity_used' => 0,
+                'is_inherited' => $isInherited,
             ]);
 
-            if ($isInherited) {
-                $inv = TechnicianInventory::firstOrNew([
-                    'technician_id' => Auth::id(),
-                    'product_id' => $product->id,
-                ]);
-                $inv->quantity_in_hand = ($inv->quantity_in_hand ?? 0) + $item['quantity'];
-                $inv->save();
-            }
+            // El stock heredado ya está en el inventario del técnico (quantity_in_hand).
+            // NO se vuelve a sumar aquí para no duplicarlo; el despacho de bodega solo
+            // agrega los ítems nuevos (is_inherited = false).
         }
 
         $this->dispatch('show-toast', type: 'success', message: 'Requisición enviada a bodega para aprobación.');

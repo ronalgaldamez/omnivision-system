@@ -14,11 +14,13 @@ class RequisitionItem extends Model
         'product_id',
         'quantity_requested',
         'quantity_used',
+        'is_inherited',
     ];
 
     protected $casts = [
         'quantity_requested' => 'decimal:2',
         'quantity_used' => 'decimal:2',
+        'is_inherited' => 'boolean',
     ];
 
     public function requisition(): BelongsTo

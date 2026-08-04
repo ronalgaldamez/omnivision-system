@@ -140,6 +140,10 @@ class RequisitionBodegaIndex extends Component
                 $item = $requisition->items->firstWhere('id', $itemId);
                 if (!$item) continue;
 
+                // Los ítems heredados ya están en el inventario del técnico:
+                // solo se registran en la requisición, no se despachan de bodega.
+                if ($item->is_inherited) continue;
+
                 $product = Product::find($assign['product_id']);
                 $qty = (int) ($assign['quantity'] ?? 0);
 
@@ -175,10 +179,12 @@ class RequisitionBodegaIndex extends Component
                     'branch_id' => $assign['source_branch_id'] ?: null,
                 ]);
 
-                TechnicianInventory::updateOrCreate(
-                    ['technician_id' => $requisition->technician_id, 'product_id' => $assign['product_id']],
-                    ['quantity_in_hand' => DB::raw('COALESCE(quantity_in_hand, 0) + ' . $qty)]
-                );
+                $inventory = TechnicianInventory::firstOrNew([
+                    'technician_id' => $requisition->technician_id,
+                    'product_id' => $assign['product_id'],
+                ]);
+                $inventory->quantity_in_hand = ($inventory->quantity_in_hand ?? 0) + $qty;
+                $inventory->save();
 
                 $deviceQuery = Device::where('product_id', $assign['product_id'])
                     ->whereNull('technician_id')

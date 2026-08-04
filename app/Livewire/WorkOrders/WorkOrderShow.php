@@ -166,12 +166,14 @@ public function completeWorkOrder()
     $this->order->completed_date = now();
     $this->order->save();
 
-    // Cerrar el ticket asociado
+    // Cerrar el ticket asociado y evaluar su SLA con el cierre real
     if ($this->order->ticket) {
-        $this->order->ticket->update([
+        $ticket = $this->order->ticket;
+        $ticket->update([
             'status' => 'resolved',
             'resolved_at' => now(),
         ]);
+        app(\App\Services\SlaService::class)->evaluateSla($ticket->fresh());
     }
 
     $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Orden completada y ticket cerrado.']);

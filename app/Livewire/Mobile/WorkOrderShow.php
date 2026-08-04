@@ -461,7 +461,7 @@ class WorkOrderShow extends Component
         $this->eligibleWorkOrders = WorkOrder::where('technician_id', $userId)
             ->whereIn('status', ['pending', 'in_progress'])
             ->whereDoesntHave('requisitions', function ($q) {
-                $q->where('status', 'open');
+                $q->whereIn('status', ['open', 'approved']);
             })
             ->with('client')
             ->get()
@@ -480,11 +480,12 @@ class WorkOrderShow extends Component
     public function linkSelectedWorkOrders()
     {
         $openRequisition = Requisition::where('technician_id', Auth::id())
-            ->where('status', 'open')
+            ->whereIn('status', ['open', 'approved'])
+            ->latest('id')
             ->first();
 
         if (!$openRequisition) {
-            $this->dispatch('show-toast', type: 'error', message: 'No tienes una requisición abierta.');
+            $this->dispatch('show-toast', type: 'error', message: 'No tienes una requisición activa (abierta o aprobada).');
             return;
         }
 
@@ -678,12 +679,14 @@ class WorkOrderShow extends Component
         $this->workOrder->accumulated_seconds = $totalSeconds;
         $this->workOrder->save();
 
-        // Cerrar el ticket asociado
+        // Cerrar el ticket asociado y evaluar su SLA con el cierre real
         if ($this->workOrder->ticket) {
-            $this->workOrder->ticket->update([
+            $ticket = $this->workOrder->ticket;
+            $ticket->update([
                 'status' => 'resolved',
                 'resolved_at' => now(),
             ]);
+            app(\App\Services\SlaService::class)->evaluateSla($ticket->fresh());
         }
 
         $this->canEditTech = false;

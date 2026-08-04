@@ -192,13 +192,31 @@ class TimelineService
             // --- Supervisor: SIEMPRE aparece cuando hay OT ---
             $supervisorSub = [];
 
-            if ($wo->assigned_at) {
-                // Hubo asignación: mostrar espera + completado
+            if ($wo->accepted_at) {
+                // Patrón NOC: Espera (tiempo muerto hasta aceptar) + Asignación (hasta asignar técnico)
+                if ($wo->accepted_at->gt($wo->created_at)) {
+                    $waitAccept = $wo->created_at->diffInSeconds($wo->accepted_at);
+                    $supervisorSub[] = $this->makeSubSegment('Espera', $wo->created_at, $wo->accepted_at, $waitAccept, true, true);
+                }
+
+                if ($wo->assigned_at && $wo->assigned_at->gt($wo->accepted_at)) {
+                    $assignTime = $wo->accepted_at->diffInSeconds($wo->assigned_at);
+                    $supervisorSub[] = $this->makeSubSegment('Asignación', $wo->accepted_at, $wo->assigned_at, $assignTime, true, true);
+                } elseif ($wo->assigned_at) {
+                    $supervisorSub[] = $this->makeSubSegment('Asignado a técnico', $wo->assigned_at, null, 0, false, true);
+                } else {
+                    $pendSecs = $wo->accepted_at->diffInSeconds($now);
+                    $supervisorSub[] = $this->makeSubSegment('Pendiente de asignación', $wo->accepted_at, null, $pendSecs, true, false);
+                }
+            } elseif ($wo->assigned_at) {
+                // Hubo asignación sin aceptación previa: el tiempo relevante es cuánto tardó en asignar
                 if ($wo->assigned_at->gt($wo->created_at)) {
                     $waitAssign = $wo->created_at->diffInSeconds($wo->assigned_at);
                     $supervisorSub[] = $this->makeSubSegment('Espera de asignación', $wo->created_at, $wo->assigned_at, $waitAssign, true, true);
+                } else {
+                    // Asignación inmediata: solo el marcador de cuándo se asignó
+                    $supervisorSub[] = $this->makeSubSegment('Asignado a técnico', $wo->assigned_at, null, 0, false, true);
                 }
-                $supervisorSub[] = $this->makeSubSegment('Asignado a técnico', $wo->assigned_at, null, 0, false, true);
             } else {
                 // Aún sin asignar
                 $waitSecs = $wo->created_at->diffInSeconds($now);
@@ -341,38 +359,42 @@ class TimelineService
         }
 
         // Supervisor
-        if ($workOrder->assigned_at && $workOrder->assigned_at->gt($workOrder->created_at)) {
+        $supSub = [];
+
+        if ($workOrder->accepted_at) {
+            // Patrón NOC: Espera (tiempo muerto hasta aceptar) + Asignación (hasta asignar técnico)
+            if ($workOrder->accepted_at->gt($workOrder->created_at)) {
+                $waitAccept = $workOrder->created_at->diffInSeconds($workOrder->accepted_at);
+                $supSub[] = $this->makeSubSegment('Espera', $workOrder->created_at, $workOrder->accepted_at, $waitAccept, true, true);
+            }
+
+            if ($workOrder->assigned_at && $workOrder->assigned_at->gt($workOrder->accepted_at)) {
+                $assignTime = $workOrder->accepted_at->diffInSeconds($workOrder->assigned_at);
+                $supSub[] = $this->makeSubSegment('Asignación', $workOrder->accepted_at, $workOrder->assigned_at, $assignTime, true, true);
+            } else {
+                $pendSecs = $workOrder->accepted_at->diffInSeconds($now);
+                $supSub[] = $this->makeSubSegment('Pendiente de asignación', $workOrder->accepted_at, null, $pendSecs, true, false);
+            }
+        } elseif ($workOrder->assigned_at && $workOrder->assigned_at->gt($workOrder->created_at)) {
             $waitAssign = $workOrder->created_at->diffInSeconds($workOrder->assigned_at);
+            $supSub[] = $this->makeSubSegment('Espera de asignación', $workOrder->created_at, $workOrder->assigned_at, $waitAssign, true, true);
+        } elseif (!$workOrder->assigned_at && $responsibleSupervisor) {
+            $waitSecs = $workOrder->created_at->diffInSeconds($now);
+            $supSub[] = $this->makeSubSegment('Pendiente de asignación', $workOrder->created_at, null, $waitSecs, true, false);
+        }
+
+        if (!empty($supSub)) {
+            $totalSupervisor = array_sum(array_column($supSub, 'durationSeconds'));
             $areas[] = $this->makeArea(
                 key: 'supervisor',
                 label: 'Supervisor (Asignación)',
                 responsible: $responsibleSupervisor ?? $workOrder->createdBy?->name,
                 icon: 'supervisor_account',
                 color: 'cyan',
-                totalSeconds: $waitAssign,
-                subSegments: [
-                    $this->makeSubSegment('Espera de asignación', $workOrder->created_at, $workOrder->assigned_at, $waitAssign, true, true),
-                ],
-                isActive: false,
-                isCompleted: true,
-                createdByName: $workOrder->createdBy?->name,
-                responsibleLabel: 'Responsable de asignar:',
-            );
-        } elseif (!$workOrder->assigned_at && $responsibleSupervisor) {
-            // Supervisor responsable pero aún no ha asignado
-            $waitSecs = $workOrder->created_at->diffInSeconds($now);
-            $areas[] = $this->makeArea(
-                key: 'supervisor',
-                label: 'Supervisor (Asignación)',
-                responsible: $responsibleSupervisor,
-                icon: 'supervisor_account',
-                color: 'cyan',
-                totalSeconds: $waitSecs,
-                subSegments: [
-                    $this->makeSubSegment('Pendiente de asignación', $workOrder->created_at, null, $waitSecs, true, false),
-                ],
-                isActive: true,
-                isCompleted: false,
+                totalSeconds: $totalSupervisor,
+                subSegments: $supSub,
+                isActive: !$workOrder->assigned_at && !$isCompleted,
+                isCompleted: $workOrder->assigned_at !== null,
                 createdByName: $workOrder->createdBy?->name,
                 responsibleLabel: 'Responsable de asignar:',
             );
@@ -480,7 +502,7 @@ class TimelineService
         string $label,
         ?Carbon $start,
         ?Carbon $end,
-        int $durationSeconds,
+        int|float $durationSeconds,
         bool $isActive,
         bool $isCompleted,
     ): array {
@@ -488,16 +510,16 @@ class TimelineService
             'label' => $label,
             'start' => $start,
             'end' => $end,
-            'durationSeconds' => $durationSeconds,
+            'durationSeconds' => (int) $durationSeconds,
             'durationFormatted' => $this->formatDuration($durationSeconds),
             'isActive' => $isActive,
             'isCompleted' => $isCompleted,
         ];
     }
 
-    public static function formatDuration(int $seconds): string
+    public static function formatDuration(int|float $seconds): string
     {
-        $abs = abs($seconds);
+        $abs = abs((int) $seconds);
         if ($abs < 60) return "{$abs}s";
         if ($abs < 3600) {
             $m = intdiv($abs, 60);
