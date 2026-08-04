@@ -221,13 +221,18 @@
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-1">
                                     @if($order->status === 'pending' && !$order->accepted_at)
-                                        <button wire:click="acceptOrder({{ $order->id }})" class="p-1.5 text-cyan-600 hover:bg-cyan-50 rounded-lg transition" title="Aceptar OT (iniciar asignación)">
+                                        <button wire:click="promptAcceptOrder({{ $order->id }})" class="p-1.5 text-cyan-600 hover:bg-cyan-50 rounded-lg transition" title="Aceptar OT (iniciar asignación)">
                                             <span class="material-symbols-outlined text-lg">play_arrow</span>
                                         </button>
                                     @elseif($order->accepted_at)
                                         <span class="p-1.5 text-cyan-500" title="Aceptada {{ $order->accepted_at->format('H:i') }}">
                                             <span class="material-symbols-outlined text-lg">check_circle</span>
                                         </span>
+                                    @endif
+                                    @if($order->technician_id)
+                                        <button wire:click="promptUnassign({{ $order->id }})" class="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition" title="Desvincular técnico">
+                                            <span class="material-symbols-outlined text-lg">person_off</span>
+                                        </button>
                                     @endif
                                     <a href="{{ route('work-orders.show', $order->id) }}" class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition" title="Ver">
                                         <span class="material-symbols-outlined text-lg">visibility</span>
@@ -333,14 +338,25 @@
                     <div class="px-4 py-2.5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
                         <div class="flex items-center gap-1">
                             @if($order->status === 'pending' && !$order->accepted_at)
-                                <button wire:click="acceptOrder({{ $order->id }})" class="p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg transition" title="Aceptar OT">
+                                <button wire:click="promptAcceptOrder({{ $order->id }})" class="p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg transition" title="Aceptar OT">
                                     <span class="material-symbols-outlined text-sm">play_arrow</span>
                                 </button>
+                            @elseif($order->accepted_at)
+                                <span class="p-1.5 text-cyan-500" title="Aceptada {{ $order->accepted_at->format('H:i') }}">
+                                    <span class="material-symbols-outlined text-sm">check_circle</span>
+                                </span>
                             @endif
+                            @if($order->accepted_at)
                             <button wire:click="assignOrder({{ $order->id }})" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
                                 <span class="material-symbols-outlined text-sm">person_add</span>
                                 Asignar
                             </button>
+                            @endif
+                            @if($order->technician_id)
+                            <button wire:click="promptUnassign({{ $order->id }})" class="p-1.5 text-orange-600 hover:bg-orange-100 rounded-lg transition" title="Desvincular técnico">
+                                <span class="material-symbols-outlined text-sm">person_off</span>
+                            </button>
+                            @endif
                             <a href="{{ route('work-orders.edit', $order->id) }}" class="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition" title="Editar OT">
                                 <span class="material-symbols-outlined text-sm">edit</span>
                             </a>
@@ -485,14 +501,28 @@
         <div class="relative mx-auto p-5 w-full max-w-md">
             <x-ui.card>
                 <div class="p-6 text-center">
-                    <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 mb-4">
-                        <span class="material-symbols-outlined text-blue-600 text-2xl">help</span>
+                    <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full {{ $confirmingAction === 'accept' ? 'bg-cyan-100' : ($confirmingAction === 'unassign' ? 'bg-orange-100' : 'bg-blue-100') }} mb-4">
+                        <span class="material-symbols-outlined text-2xl {{ $confirmingAction === 'accept' ? 'text-cyan-600' : ($confirmingAction === 'unassign' ? 'text-orange-600' : 'text-blue-600') }}">{{ $confirmingAction === 'accept' ? 'play_arrow' : ($confirmingAction === 'unassign' ? 'person_off' : 'help') }}</span>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900">Confirmar eliminación</h3>
-                    <p class="text-sm text-gray-600 mt-2">¿Estás seguro de que deseas eliminar la orden #{{ $confirmingOrderId }}?</p>
+                    @if($confirmingAction === 'accept')
+                        <h3 class="text-lg font-semibold text-gray-900">Confirmar aceptación</h3>
+                        <p class="text-sm text-gray-600 mt-2">¿Aceptar la OT #{{ $confirmingOrderId }}? Una vez aceptada podrás asignarla a un técnico.</p>
+                    @elseif($confirmingAction === 'unassign')
+                        <h3 class="text-lg font-semibold text-gray-900">Desvincular técnico</h3>
+                        <p class="text-sm text-gray-600 mt-2">¿Desvincular el técnico de la OT #{{ $confirmingOrderId }}? Se quitarán técnico, auxiliar y vehículo. La OT quedará libre para reasignar.</p>
+                    @else
+                        <h3 class="text-lg font-semibold text-gray-900">Confirmar eliminación</h3>
+                        <p class="text-sm text-gray-600 mt-2">¿Estás seguro de que deseas eliminar la orden #{{ $confirmingOrderId }}?</p>
+                    @endif
                 </div>
                 <x-slot:footer>
-                    <x-ui.button variant="danger" wire:click="executeConfirmedAction">Sí, eliminar</x-ui.button>
+                    @if($confirmingAction === 'accept')
+                        <x-ui.button variant="primary" icon="play_arrow" wire:click="executeConfirmedAction">Sí, aceptar</x-ui.button>
+                    @elseif($confirmingAction === 'unassign')
+                        <x-ui.button variant="warning" icon="person_off" wire:click="executeConfirmedAction">Sí, desvincular</x-ui.button>
+                    @else
+                        <x-ui.button variant="danger" wire:click="executeConfirmedAction">Sí, eliminar</x-ui.button>
+                    @endif
                     <x-ui.button variant="secondary" @click="open = false" wire:click="cancelConfirmation">Cancelar</x-ui.button>
                 </x-slot:footer>
             </x-ui.card>

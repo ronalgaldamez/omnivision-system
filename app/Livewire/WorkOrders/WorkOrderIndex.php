@@ -194,12 +194,34 @@ class WorkOrderIndex extends Component
         $this->dispatch('show-toast', type: 'success', message: "OT {$wo->code} aceptada. Ahora podés asignarla.");
     }
 
+    public function promptAcceptOrder($otId)
+    {
+        $wo = WorkOrder::findOrFail($otId);
+
+        if ($wo->status !== 'pending') {
+            $this->dispatch('show-toast', type: 'error', message: 'Solo se pueden aceptar OT pendientes.');
+            return;
+        }
+        if ($wo->accepted_at) {
+            $this->dispatch('show-toast', type: 'info', message: 'Esta OT ya fue aceptada.');
+            return;
+        }
+
+        $this->confirmingAction = 'accept';
+        $this->confirmingOrderId = $otId;
+    }
+
     public function assignOrder($otId)
     {
         $wo = WorkOrder::findOrFail($otId);
 
         if (in_array($wo->status, ['completed', 'cancelled'])) {
             $this->dispatch('show-toast', type: 'error', message: 'No se puede asignar una OT finalizada.');
+            return;
+        }
+
+        if (!$wo->accepted_at) {
+            $this->dispatch('show-toast', type: 'error', message: 'Primero debés aceptar la OT antes de asignarla.');
             return;
         }
 
@@ -252,6 +274,13 @@ class WorkOrderIndex extends Component
             return;
         }
 
+        // Restricción: las OTs deben estar aceptadas para poder asignarlas
+        $unaccepted = WorkOrder::whereIn('id', $this->selectedOrders)->whereNull('accepted_at')->count();
+        if ($unaccepted > 0) {
+            $this->dispatch('show-toast', type: 'error', message: "{$unaccepted} OT seleccionada(s) aún no han sido aceptadas. Aceptá primero.");
+            return;
+        }
+
         if (!$this->assignTechnicianId && !$this->assignAuxiliarId && !$this->assignVehicleId && !$this->scheduledDate && !$this->notes) {
             $this->dispatch('show-toast', type: 'error', message: 'Completá al menos un campo para asignar.');
             return;
@@ -267,6 +296,14 @@ class WorkOrderIndex extends Component
             $data['technician_id'] = $this->assignTechnicianId;
             $data['assigned_at'] = now();
             $data['assigned_by'] = auth()->id();
+            // Al reasignar a un técnico nuevo, se desvincula el auxiliar y vehículo
+            // del técnico anterior (a menos que se elija uno nuevo).
+            if (!$this->assignAuxiliarId) {
+                $data['auxiliar_technician_id'] = null;
+            }
+            if (!$this->assignVehicleId) {
+                $data['vehicle_id'] = null;
+            }
         }
         if ($this->assignAuxiliarId) {
             $data['auxiliar_technician_id'] = $this->assignAuxiliarId;
@@ -311,6 +348,33 @@ class WorkOrderIndex extends Component
         }
         $this->dispatch('show-toast', type: 'success', message: $msg);
     }
+    public function promptUnassign($otId)
+    {
+        $wo = WorkOrder::findOrFail($otId);
+
+        if (!$wo->technician_id) {
+            $this->dispatch('show-toast', type: 'info', message: 'Esta OT no tiene técnico asignado.');
+            return;
+        }
+
+        $this->confirmingAction = 'unassign';
+        $this->confirmingOrderId = $otId;
+    }
+
+    public function unassignTechnician($otId)
+    {
+        $wo = WorkOrder::findOrFail($otId);
+
+        $wo->update([
+            'technician_id' => null,
+            'auxiliar_technician_id' => null,
+            'vehicle_id' => null,
+            'assigned_at' => null,
+            'assigned_by' => null,
+        ]);
+
+        $this->dispatch('show-toast', type: 'success', message: "OT {$wo->code} desvinculada. Quedó libre para reasignar.");
+    }
 
     public function promptDelete($id)
     {
@@ -334,6 +398,10 @@ class WorkOrderIndex extends Component
     {
         if ($this->confirmingAction === 'delete') {
             $this->delete($this->confirmingOrderId);
+        } elseif ($this->confirmingAction === 'accept') {
+            $this->acceptOrder($this->confirmingOrderId);
+        } elseif ($this->confirmingAction === 'unassign') {
+            $this->unassignTechnician($this->confirmingOrderId);
         }
         $this->confirmingAction = null;
         $this->confirmingOrderId = null;
