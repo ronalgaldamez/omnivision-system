@@ -28,6 +28,12 @@
                     <span class="material-symbols-outlined text-base align-middle mr-1">extension</span>
                     Módulos
                 </button>
+                <button @click="activeTab = 'identidad'; window.location.hash = '#identidad'"
+                    :class="activeTab === 'identidad' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                    class="px-4 py-3 text-sm font-medium border-b-2 transition">
+                    <span class="material-symbols-outlined text-base align-middle mr-1">branding_watermark</span>
+                    Identidad
+                </button>
             </nav>
         </div>
 
@@ -275,6 +281,97 @@
                         </label>
                     </div>
                     @endforeach
+                </div>
+            </div>
+
+            {{-- Identidad / Logos --}}
+            <div x-show="activeTab === 'identidad'" x-cloak>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {{-- Logo global --}}
+                    <div>
+                        <div class="flex items-center gap-2 px-1 mb-3">
+                            <span class="material-symbols-outlined text-gray-500 text-lg">inventory_2</span>
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Logo global</h3>
+                        </div>
+                        <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 space-y-3">
+                            <p class="text-xs text-gray-500">Se muestra en el menú lateral y en la pantalla de inicio de sesión, en todo el sistema.</p>
+                            <div class="flex items-center justify-center bg-white rounded-lg border border-gray-200 px-4 py-6 min-h-[96px]">
+                                @if($globalLogoPath)
+                                    <img src="{{ asset('storage/' . $globalLogoPath) }}?v={{ $globalLogoVersion }}"
+                                        alt="Logo global" class="max-h-16 max-w-[200px] object-contain">
+                                @else
+                                    <span class="text-xs text-gray-400 flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined text-lg">image_not_supported</span>
+                                        Sin logo configurado
+                                    </span>
+                                @endif
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <label class="inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition cursor-pointer bg-blue-600 text-white hover:bg-blue-700 shadow-sm px-4 py-2 text-xs">
+                                    <span class="material-symbols-outlined text-base">upload</span>
+                                    Subir logo
+                                    <input type="file" wire:model="globalLogoUpload" accept="image/png,image/jpeg,image/svg+xml,image/webp" class="hidden">
+                                </label>
+                                @if($globalLogoUpload)
+                                    <span class="text-xs text-gray-500">{{ $globalLogoUpload->getClientOriginalName() }}</span>
+                                @endif
+                                @if($globalLogoPath)
+                                    <x-ui.button variant="danger" size="sm" icon="delete" wire:click="removeGlobalLogo">Quitar</x-ui.button>
+                                @endif
+                            </div>
+                            @error('globalLogoUpload')
+                                <p class="text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                            @if($globalLogoUpload)
+                                <div class="pt-1">
+                                    <x-ui.button variant="primary" size="sm" icon="save" wire:click="uploadGlobalLogo">Guardar logo</x-ui.button>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Logo en reportes --}}
+                    <div>
+                        <div class="flex items-center gap-2 px-1 mb-3">
+                            <span class="material-symbols-outlined text-gray-500 text-lg">description</span>
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Logo en reportes</h3>
+                        </div>
+                        <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 space-y-3">
+                            <p class="text-xs text-gray-500">Se incluye en los reportes generados (por ejemplo, en el PDF del Kardex).</p>
+                            <div class="flex items-center justify-center bg-white rounded-lg border border-gray-200 px-4 py-6 min-h-[96px]">
+                                @if($reportesLogoPath)
+                                    <img src="{{ asset('storage/' . $reportesLogoPath) }}?v={{ $reportesLogoVersion }}"
+                                        alt="Logo de reportes" class="max-h-16 max-w-[200px] object-contain">
+                                @else
+                                    <span class="text-xs text-gray-400 flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined text-lg">image_not_supported</span>
+                                        Sin logo configurado
+                                    </span>
+                                @endif
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <label class="inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition cursor-pointer bg-blue-600 text-white hover:bg-blue-700 shadow-sm px-4 py-2 text-xs">
+                                    <span class="material-symbols-outlined text-base">upload</span>
+                                    Subir logo
+                                    <input type="file" wire:model="reportesLogoUpload" accept="image/png,image/jpeg,image/svg+xml,image/webp" class="hidden">
+                                </label>
+                                @if($reportesLogoUpload)
+                                    <span class="text-xs text-gray-500">{{ $reportesLogoUpload->getClientOriginalName() }}</span>
+                                @endif
+                                @if($reportesLogoPath)
+                                    <x-ui.button variant="danger" size="sm" icon="delete" wire:click="removeReportesLogo">Quitar</x-ui.button>
+                                @endif
+                            </div>
+                            @error('reportesLogoUpload')
+                                <p class="text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                            @if($reportesLogoUpload)
+                                <div class="pt-1">
+                                    <x-ui.button variant="primary" size="sm" icon="save" wire:click="uploadReportesLogo">Guardar logo</x-ui.button>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

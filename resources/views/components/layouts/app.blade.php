@@ -76,13 +76,20 @@
             <aside :class="sidebarOpen ? 'w-64' : 'w-0'"
                 class="bg-white border-r border-gray-200/80 flex flex-col transition-all duration-300 overflow-hidden z-40 h-full sticky top-0">
 
-                <div class="h-14 flex items-center gap-2 px-4 border-b border-gray-100 flex-shrink-0">
-                    <a href="{{ route('dashboard') }}" class="flex items-center gap-2">
-                        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-                            <span class="material-symbols-outlined text-white text-xl">inventory</span>
-                        </div>
-                        <span x-show="sidebarOpen" class="font-semibold text-gray-700 text-sm whitespace-nowrap">Kardex
-                            System</span>
+                <div class="h-14 flex items-center justify-center px-4 border-b border-gray-100 flex-shrink-0">
+                    @php($systemLogo = setting('logo_global'))
+                    @php($systemLogoVersion = setting('logo_global_version'))
+                    <a href="{{ route('dashboard') }}" class="flex items-center">
+                        @if($systemLogo)
+                            <img src="{{ asset('storage/' . $systemLogo) }}?v={{ $systemLogoVersion }}"
+                                alt="Logo" class="h-9 w-auto object-contain max-w-[150px]">
+                        @else
+                            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                                <span class="material-symbols-outlined text-white text-xl">inventory</span>
+                            </div>
+                            <span x-show="sidebarOpen" class="font-semibold text-gray-700 text-sm whitespace-nowrap">Kardex
+                                System</span>
+                        @endif
                     </a>
                 </div>
 
@@ -400,7 +407,7 @@
                             class="text-gray-500 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition">
                             <span class="material-symbols-outlined">menu</span>
                         </button>
-                        <span class="font-semibold text-gray-700 text-sm hidden sm:block">Kardex System</span>
+                        <span class="font-semibold text-gray-700 text-sm hidden sm:block">{{ page_title_from_route() }}</span>
                     </div>
 
                     <div class="flex items-center gap-3">
