@@ -120,49 +120,74 @@
             @if($viewMode === 'cards')
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 @forelse($tickets as $ticket)
-                @php $ticketPrio = $ticket->priority; @endphp
+                @php
+                    $ticketPrio = $ticket->priority;
+                    $prioBadge = match ($ticketPrio) {
+                        'P1' => 'bg-red-600 text-white',
+                        'P2' => 'bg-orange-500 text-white',
+                        'P3' => 'bg-blue-100 text-blue-700',
+                        'P4' => 'bg-gray-100 text-gray-600',
+                        default => 'bg-gray-100 text-gray-500',
+                    };
+                    $statusBadge = match($ticket->status) { 'pending' => 'warning', 'in_progress' => 'info', 'resolved' => 'success', default => 'neutral' };
+                @endphp
                 <div class="rounded-xl border overflow-hidden hover:shadow-md transition-all
-                    {{ $ticketPrio === 'P1' ? 'border-red-400 ring-2 ring-red-100 bg-red-50/30 hover:border-red-500' : 'border-gray-200 bg-white hover:border-blue-300' }}">
+                    {{ $ticketPrio === 'P1' ? 'border-red-400 ring-2 ring-red-100 bg-red-50/30 hover:border-red-500' : ($ticketPrio === 'P2' ? 'border-orange-300 bg-orange-50/20 hover:border-orange-400' : 'border-gray-200 bg-white hover:border-blue-300') }}">
                     <button wire:click="viewDetail({{ $ticket->id }})" class="block w-full p-4 text-left group">
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-1.5 min-w-0">
-                                <span class="font-mono font-bold text-xs text-gray-700">{{ $ticket->ticket_code ?? '—' }}</span>
-                                @php $pVariant = match($ticketPrio) { 'P1' => 'danger', 'P2' => 'warning', 'P3' => 'info', default => 'neutral' }; @endphp
+                                <span class="font-mono font-bold text-xs text-blue-700">{{ $ticket->ticket_code ?? '—' }}</span>
                                 @if($ticketPrio)
-                                    <x-ui.badge variant="{{ $pVariant }}">{{ $ticketPrio }}</x-ui.badge>
+                                    <span class="text-[10px] px-1.5 py-0.5 rounded font-bold {{ $prioBadge }}">{{ $ticketPrio }}</span>
                                 @endif
                             </div>
-                            <span class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 group-hover:text-blue-600 transition">Ver
-                                <span class="material-symbols-outlined text-xs">arrow_forward</span>
-                            </span>
+                            <x-ui.badge variant="{{ $statusBadge }}">{{ ucfirst(str_replace('_', ' ', $ticket->status)) }}</x-ui.badge>
                         </div>
                         <p class="text-sm font-medium text-gray-800 truncate">{{ $ticket->client?->name ?? '—' }}</p>
                         <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ Str::limit($ticket->description, 80) }}</p>
                         <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
                             <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium">{{ $ticket->service_type }}</span>
-                            @if($activeTab === 'pending')
-                                <span class="text-[10px] text-amber-600 font-medium font-mono">
-                                    @if($ticket->escalated_at){{ \App\Services\TimelineService::formatDuration($ticket->escalated_at->diffInSeconds(now())) }}@endif
-                                </span>
-                            @elseif($activeTab === 'in_progress')
-                                <span class="text-[10px] text-blue-600 font-medium font-mono">
-                                    @if($ticket->l2_started_at){{ \App\Services\TimelineService::formatDuration($ticket->l2_started_at->diffInSeconds(now())) }}@endif
-                                </span>
-                            @endif
+                            <span class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 group-hover:text-blue-600 transition">Ver
+                                <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                            </span>
                         </div>
                     </button>
                     @if($activeTab === 'pending')
-                    <div class="px-4 py-2.5 bg-gray-50/50 border-t border-gray-100">
-                        <x-ui.button variant="primary" size="sm" icon="play_arrow" class="w-full" wire:click="promptAccept({{ $ticket->id }})">Aceptar</x-ui.button>
+                    <div class="px-4 py-2.5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
+                        <div class="flex items-center gap-1">
+                            <button wire:click="promptAccept({{ $ticket->id }})" class="p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg transition" title="Aceptar ticket">
+                                <span class="material-symbols-outlined text-sm">play_arrow</span>
+                            </button>
+                            <a href="{{ route('sla.ticket-timeline', $ticket->id) }}" class="p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg transition" title="Ver Timeline SLA">
+                                <span class="material-symbols-outlined text-sm">account_tree</span>
+                            </a>
+                        </div>
+                        @if($ticket->escalated_at)
+                            <span class="text-[10px] text-amber-600 font-medium font-mono">{{ \App\Services\TimelineService::formatDuration($ticket->escalated_at->diffInSeconds(now())) }}</span>
+                        @endif
                     </div>
                     @elseif($activeTab === 'in_progress')
-                    <div class="px-4 py-2.5 bg-gray-50/50 border-t border-gray-100 flex items-center gap-2">
-                        <x-ui.button variant="success" size="sm" icon="check_circle" class="flex-1" wire:click="promptResolveRemote({{ $ticket->id }})">Resolver</x-ui.button>
-                        <x-ui.button variant="primary" size="sm" icon="engineering" class="flex-1" wire:click="promptCreateWorkOrder({{ $ticket->id }})">Crear OT</x-ui.button>
+                    <div class="px-4 py-2.5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
+                        <div class="flex items-center gap-1">
+                            <button wire:click="promptResolveRemote({{ $ticket->id }})" class="p-1.5 text-green-600 hover:bg-green-100 rounded-lg transition" title="Resolver ticket">
+                                <span class="material-symbols-outlined text-sm">check_circle</span>
+                            </button>
+                            <button wire:click="promptCreateWorkOrder({{ $ticket->id }})" class="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition" title="Crear OT">
+                                <span class="material-symbols-outlined text-sm">engineering</span>
+                            </button>
+                            <a href="{{ route('sla.ticket-timeline', $ticket->id) }}" class="p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg transition" title="Ver Timeline SLA">
+                                <span class="material-symbols-outlined text-sm">account_tree</span>
+                            </a>
+                        </div>
+                        @if($ticket->l2_started_at)
+                            <span class="text-[10px] text-blue-600 font-medium font-mono">{{ \App\Services\TimelineService::formatDuration($ticket->l2_started_at->diffInSeconds(now())) }}</span>
+                        @endif
                     </div>
                     @elseif($activeTab === 'completed')
-                    <div class="px-4 py-2.5 bg-gray-50/50 border-t border-gray-100">
-                        <x-ui.button variant="secondary" size="sm" icon="account_tree" class="w-full" href="{{ route('sla.ticket-timeline', $ticket->id) }}">Ver Timeline</x-ui.button>
+                    <div class="px-4 py-2.5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-end">
+                        <a href="{{ route('sla.ticket-timeline', $ticket->id) }}" class="p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg transition" title="Ver Timeline SLA">
+                            <span class="material-symbols-outlined text-sm">account_tree</span>
+                        </a>
                     </div>
                     @endif
                 </div>

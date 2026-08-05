@@ -59,6 +59,7 @@ class NocPanel extends Component
     {
         $this->showDetailModal = false;
         $this->selectedTicket = null;
+        $this->js("history.replaceState(null, '', window.location.pathname + window.location.hash)");
     }
 
     // Métodos que solo PREPARAN la acción (no la ejecutan aún)

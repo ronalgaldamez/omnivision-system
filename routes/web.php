@@ -83,6 +83,9 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
+    // ========== NOTIFICACIONES ==========
+    Route::get('/notifications', \App\Livewire\NotificationsIndex::class)->name('notifications.index');
+
     // ========== TECHNICIANS MOBILE ==========
     Route::prefix('mobile/technician')->middleware(['auth'])->group(function () {
         Route::get('/work-orders', \App\Livewire\Mobile\WorkOrderList::class)

@@ -201,6 +201,7 @@ class NocInbox extends Component
     {
         $this->showDetailModal = false;
         $this->selectedTicket = null;
+        $this->js("history.replaceState(null, '', window.location.pathname + window.location.hash)");
     }
 
     public function render()
