@@ -259,7 +259,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // ========== SLA TIMELINES ==========
-    Route::middleware(['auth'])->group(function () {
+    Route::middleware(['auth', 'can:view sla timelines'])->group(function () {
         Route::get('/sla/tickets/{id}/timeline', \App\Livewire\Sla\TicketTimeline::class)->name('sla.ticket-timeline');
         Route::get('/sla/work-orders/{id}/timeline', \App\Livewire\Sla\WorkOrderTimeline::class)->name('sla.work-order-timeline');
     });

@@ -117,6 +117,7 @@ enum PermissionEnum: string
     case EditSlaGoals           = 'edit sla goals';
     case DeleteSlaGoals         = 'delete sla goals';
     case ViewSlaDashboard       = 'view sla dashboard';
+    case ViewSlaTimelines       = 'view sla timelines';
 
     // ─── Override de toggles en ticket ───
     case ManageRequiresNocToggle     = 'manage_requires_noc_toggle';
@@ -308,6 +309,7 @@ enum PermissionEnum: string
             self::EditSlaGoals,
             self::DeleteSlaGoals,
             self::ViewSlaDashboard,
+            self::ViewSlaTimelines,
         ];
     }
 

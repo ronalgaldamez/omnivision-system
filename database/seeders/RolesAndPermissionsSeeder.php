@@ -115,6 +115,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // SLA
             PermissionEnum::ViewSlaGoals,
             PermissionEnum::ViewSlaDashboard,
+            PermissionEnum::ViewSlaTimelines,
 
             // Dashboard
             PermissionEnum::ViewDashboard,
@@ -172,6 +173,7 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::ViewNewTicketMenu,
             PermissionEnum::ViewAllTicketsMenu,
             PermissionEnum::ViewNocPanelMenu,
+            PermissionEnum::ViewSlaTimelines,
 
             PermissionEnum::ViewDashboard,
             PermissionEnum::ViewCatalog,
@@ -193,6 +195,8 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::ViewRequisitions,
             PermissionEnum::CreateRequisitions,
             PermissionEnum::ViewRequisitionsMenu,
+
+            PermissionEnum::ViewSlaTimelines,
 
             PermissionEnum::ViewDashboard,
             PermissionEnum::ViewTechnicianDashboard,
@@ -240,7 +244,7 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::EditWorkOrders,
             PermissionEnum::ViewNewTicketMenu,
             PermissionEnum::ViewAllTicketsMenu,
-            PermissionEnum::ViewSlaDashboard,
+            PermissionEnum::ViewSlaTimelines,
             PermissionEnum::ViewDashboard,
         ]);
 
@@ -250,6 +254,7 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::AccessContractsInbox,
             PermissionEnum::ViewContractsPanelMenu,
             PermissionEnum::AccessAllBranches,
+            PermissionEnum::ViewSlaTimelines,
         ]);
 
         // ── NOC ──
@@ -258,6 +263,7 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::ViewPendingNocTickets,
             PermissionEnum::ViewResolutions,
             PermissionEnum::ViewNocPanelMenu,
+            PermissionEnum::ViewSlaTimelines,
 
             PermissionEnum::AccessSupport,
             PermissionEnum::ViewAnyTickets,
@@ -325,6 +331,7 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::CaptureCoordinates,
             PermissionEnum::AssignSupervisorsToZones,
             PermissionEnum::ViewSlaDashboard,
+            PermissionEnum::ViewSlaTimelines,
         ]);
 
         // ── Sales Rep / Vendedor ──
@@ -355,6 +362,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Dashboard
             PermissionEnum::ViewDashboard,
             PermissionEnum::ViewSlaDashboard,
+            PermissionEnum::ViewSlaTimelines,
         ]);
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
