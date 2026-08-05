@@ -130,14 +130,6 @@
 
                 </form>
 
-                {{-- Enlace a registro --}}
-                <div class="mt-5 pt-5 border-t border-white/10 text-center">
-                    <span class="text-xs text-white/40">¿No tienes cuenta?</span>
-                    <a href="{{ route('register') }}" class="text-xs text-blue-300 hover:text-blue-200 font-medium ml-1 transition">
-                        Regístrate
-                    </a>
-                </div>
-
                 {{-- Error de sesión --}}
                 @if(session('error'))
                     <div class="mt-4 flex items-center gap-2 text-sm text-red-300 bg-red-500/10 border border-red-400/20 px-4 py-3 rounded-lg">

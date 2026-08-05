@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Auth\Login;
-use App\Livewire\Auth\Register;
 use App\Http\Controllers\Auth\LogoutController;
 
 // Ruta raíz redirige a login
@@ -13,7 +12,6 @@ Route::get('/', function () {
 // Guest routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', Login::class)->name('login');
-    Route::get('/register', Register::class)->name('register');
 });
 
 // Protected routes
