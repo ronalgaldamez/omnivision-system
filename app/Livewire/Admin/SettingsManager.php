@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use App\Models\Setting;
 use App\Models\ServiceType;
 use App\Models\ServiceRule;
@@ -10,6 +11,8 @@ use App\Models\KnowledgeBaseArticle;
 
 class SettingsManager extends Component
 {
+    use WithFileUploads;
+
     // ========== PROPIEDADES EXISTENTES ==========
     public $otRequired = false;
     public $invoiceRequiredForDevices = false;
@@ -17,6 +20,14 @@ class SettingsManager extends Component
     public $documentTypeList = [];
     public $modules = [];
     public $nocPollingInterval = 30;
+
+    // ========== PROPIEDADES DE LOGOS ==========
+    public $globalLogoPath = '';
+    public $globalLogoVersion = '';
+    public $reportesLogoPath = '';
+    public $reportesLogoVersion = '';
+    public $globalLogoUpload;
+    public $reportesLogoUpload;
 
     // ========== PROPIEDADES DE TIPOS DE SERVICIO ==========
     public $serviceTypes;
@@ -67,6 +78,8 @@ class SettingsManager extends Component
         'kbCategory' => 'nullable|string|max:100',
         'selectedKbServiceTypes' => 'array',
         'selectedKbServiceTypes.*' => 'exists:service_types,id',
+        'globalLogoUpload' => 'nullable|mimes:png,jpg,jpeg,svg,webp|max:2048',
+        'reportesLogoUpload' => 'nullable|mimes:png,jpg,jpeg,svg,webp|max:2048',
     ];
 
     public function mount()
@@ -88,6 +101,12 @@ class SettingsManager extends Component
         }
 
         $this->nocPollingInterval = (int) Setting::get('noc_polling_interval', 30);
+
+        // Cargar logos configurados
+        $this->globalLogoPath = (string) Setting::get('logo_global', '');
+        $this->globalLogoVersion = (string) Setting::get('logo_global_version', '');
+        $this->reportesLogoPath = (string) Setting::get('logo_reportes', '');
+        $this->reportesLogoVersion = (string) Setting::get('logo_reportes_version', '');
 
         // Cargar tipos de servicio y artículos
         $this->loadServiceTypes();
@@ -460,6 +479,84 @@ class SettingsManager extends Component
 
         $this->showServiceRules = false;
         $this->dispatch('show-toast', type: 'success', message: 'Reglas guardadas.');
+    }
+
+    // ========== MÉTODOS PARA LOGOS ==========
+
+    public function uploadGlobalLogo()
+    {
+        $this->validate(['globalLogoUpload' => 'required|mimes:png,jpg,jpeg,svg,webp|max:2048']);
+        $this->persistLogo('global', $this->globalLogoUpload);
+        $this->globalLogoUpload = null;
+    }
+
+    public function uploadReportesLogo()
+    {
+        $this->validate(['reportesLogoUpload' => 'required|mimes:png,jpg,jpeg,svg,webp|max:2048']);
+        $this->persistLogo('reportes', $this->reportesLogoUpload);
+        $this->reportesLogoUpload = null;
+    }
+
+    private function persistLogo($slug, $file)
+    {
+        $ext = strtolower($file->getClientOriginalExtension()) ?: 'png';
+        $newPath = 'logos/' . $slug . '.' . $ext;
+
+        $oldPath = Setting::get('logo_' . $slug);
+        if ($oldPath && $oldPath !== $newPath) {
+            \Storage::disk('public')->delete($oldPath);
+        }
+
+        $file->storeAs('logos', basename($newPath), 'public');
+
+        $version = now()->timestamp;
+        Setting::set('logo_' . $slug, $newPath);
+        Setting::set('logo_' . $slug . '_version', (string) $version);
+
+        if ($slug === 'global') {
+            $this->globalLogoPath = $newPath;
+            $this->globalLogoVersion = (string) $version;
+            $message = 'Logo global actualizado.';
+        } else {
+            $this->reportesLogoPath = $newPath;
+            $this->reportesLogoVersion = (string) $version;
+            $message = 'Logo de reportes actualizado.';
+        }
+
+        $this->dispatch('show-toast', type: 'success', message: $message);
+    }
+
+    public function removeGlobalLogo()
+    {
+        $this->deleteLogo('global');
+    }
+
+    public function removeReportesLogo()
+    {
+        $this->deleteLogo('reportes');
+    }
+
+    private function deleteLogo($slug)
+    {
+        $oldPath = Setting::get('logo_' . $slug);
+        if ($oldPath) {
+            \Storage::disk('public')->delete($oldPath);
+        }
+
+        Setting::set('logo_' . $slug, '');
+        Setting::set('logo_' . $slug . '_version', '');
+
+        if ($slug === 'global') {
+            $this->globalLogoPath = '';
+            $this->globalLogoVersion = '';
+            $message = 'Logo global eliminado.';
+        } else {
+            $this->reportesLogoPath = '';
+            $this->reportesLogoVersion = '';
+            $message = 'Logo de reportes eliminado.';
+        }
+
+        $this->dispatch('show-toast', type: 'success', message: $message);
     }
 
     public function render()

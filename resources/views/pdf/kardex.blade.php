@@ -31,10 +31,25 @@
 </head>
 <body>
     <div class="header">
-        <div>
-            <div class="brand">OMNIVISIÓN</div>
-            <div class="sub">Sistema de Control de Inventario</div>
-        </div>
+        @php
+            $reportLogoPath = setting('logo_reportes');
+            $reportLogoData = null;
+            if ($reportLogoPath) {
+                $full = storage_path('app/public/' . $reportLogoPath);
+                if (file_exists($full)) {
+                    $mime = mime_content_type($full) ?: 'image/png';
+                    $reportLogoData = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($full));
+                }
+            }
+        @endphp
+        @if($reportLogoData)
+            <img src="{{ $reportLogoData }}" style="max-height:48px;max-width:200px;">
+        @else
+            <div>
+                <div class="brand">OMNIVISIÓN</div>
+                <div class="sub">Sistema de Control de Inventario</div>
+            </div>
+        @endif
         <div class="title">
             <h1>TARJETA DE CONTROL DE INVENTARIO (KARDEX)</h1>
             <p>Método: Costo Promedio Ponderado</p>
