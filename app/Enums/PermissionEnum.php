@@ -57,6 +57,7 @@ enum PermissionEnum: string
     case ViewRequisitions       = 'view requisitions';
     case CreateRequisitions     = 'create requisitions';
     case AdjustRequisitions     = 'adjust requisitions';
+    case ApproveRequisitions    = 'approve requisitions';
     case ViewLowStock           = 'view low stock';
 
     // ─── Submenús Técnicos ───
@@ -212,6 +213,7 @@ enum PermissionEnum: string
             self::ViewRequisitions,
             self::CreateRequisitions,
             self::AdjustRequisitions,
+            self::ApproveRequisitions,
             self::ViewLowStock,
             self::ViewReturnsMenu,
             self::ViewRegisterReturnMenu,

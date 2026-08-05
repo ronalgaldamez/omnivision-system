@@ -53,4 +53,9 @@ class Requisition extends Model
     {
         return $this->hasMany(RequisitionItem::class);
     }
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(RequisitionLog::class)->orderBy('created_at');
+    }
 }

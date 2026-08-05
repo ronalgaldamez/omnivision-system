@@ -64,6 +64,6 @@
         @endif
     </div>
 
-    {{-- Polling cada 30s --}}
-    <div wire:poll.{{ $pollingInterval }}s="updateCount" class="hidden"></div>
+    {{-- Actualización en tiempo real vía Reverb (sin polling) --}}
+    <div x-data @refresh-noc-badge.window="$wire.refreshBadge()" class="hidden"></div>
 </div>

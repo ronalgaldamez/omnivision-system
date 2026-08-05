@@ -89,6 +89,7 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::ViewWorkOrdersMenu,
             PermissionEnum::ViewMapOtMenu,
             PermissionEnum::ViewRequisitionsMenu,
+            PermissionEnum::ApproveRequisitions,
 
             // Reportes
             PermissionEnum::AccessReports,
@@ -161,6 +162,7 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::ViewWorkOrdersMenu,
             PermissionEnum::ViewMapOtMenu,
             PermissionEnum::ViewRequisitionsMenu,
+            PermissionEnum::ApproveRequisitions,
 
             PermissionEnum::AccessReports,
             PermissionEnum::ViewReports,
@@ -306,6 +308,7 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::ViewRequisitions,
             PermissionEnum::CreateRequisitions,
             PermissionEnum::AdjustRequisitions,
+            PermissionEnum::ApproveRequisitions,
             PermissionEnum::ViewRequisitionsMenu,
 
             PermissionEnum::ViewTechnicianReturns,
