@@ -19,7 +19,7 @@ window.apexChart = function (id, type, height, series, categories, labels, color
 
             const options = {
                 chart: {
-                    type: isDonut ? 'donut' : type,
+                    type: isDonut ? 'donut' : (isRadial ? 'radialBar' : type),
                     height: height,
                     toolbar: { show: false },
                     fontFamily: 'DM Sans, sans-serif',
