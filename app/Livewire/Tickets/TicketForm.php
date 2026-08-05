@@ -682,13 +682,10 @@ class TicketForm extends Component
 
     private function resetTicketFields()
     {
+        // Solo se limpia lo que depende del cliente. El tipo de servicio y sus
+        // switches (NOC / Crear OT / Contrato) se mantienen: son del ticket, no del cliente.
         $this->description = '';
-        $this->service_type_id = '';
-        $this->priority = '';
         $this->origin = '';
-        $this->requires_noc = false;
-        $this->create_ot = false;
-        $this->requires_contract = false;
         $this->zone_id = '';
         $this->plan_id = '';
         $this->availablePlans = [];
