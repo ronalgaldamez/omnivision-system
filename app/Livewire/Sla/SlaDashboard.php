@@ -5,6 +5,7 @@ namespace App\Livewire\Sla;
 use Livewire\Component;
 use App\Models\Ticket;
 use App\Services\SlaService;
+use App\Services\ChartDataService;
 use Illuminate\Support\Facades\Auth;
 
 class SlaDashboard extends Component
@@ -23,6 +24,10 @@ class SlaDashboard extends Component
         $atRiskTickets = $slaService->getAtRiskTickets(30);
         $overdueTickets = $slaService->getOverdueTickets();
 
+        $charts = app(ChartDataService::class);
+        $slaCompliance = $charts->slaCompliance();
+        $monthlySla = $charts->monthlySlaTickets(6);
+
         $tickets = Ticket::with('client', 'createdBy', 'slaGoal')
             ->whereNotNull('sla_goal_id')
             ->when($this->filterPriority, fn($q) => $q->where('priority', $this->filterPriority))
@@ -34,7 +39,7 @@ class SlaDashboard extends Component
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return view('livewire.sla.sla-dashboard', compact('stats', 'atRiskTickets', 'overdueTickets', 'tickets'))
+        return view('livewire.sla.sla-dashboard', compact('stats', 'atRiskTickets', 'overdueTickets', 'tickets', 'slaCompliance', 'monthlySla'))
             ->layout('components.layouts.app');
     }
 }

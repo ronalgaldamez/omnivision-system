@@ -44,6 +44,11 @@ class User extends Authenticatable
         return $this->hasMany(Requisition::class, 'technician_id');
     }
 
+    public function technicianReturns()
+    {
+        return $this->hasMany(TechnicianReturn::class, 'user_id');
+    }
+
     public function supervisedZones()
     {
         return $this->belongsToMany(Zone::class, 'supervisor_zone');

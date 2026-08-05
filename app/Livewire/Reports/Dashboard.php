@@ -8,9 +8,10 @@ use App\Models\Requisition;
 use App\Models\WorkOrder;
 use App\Models\Movement;
 use App\Models\Ticket;
-use App\Models\Client;
 use App\Services\SlaService;
 use App\Services\DashboardKpiService;
+use App\Services\ChartDataService;
+use App\Services\WorkOrderService;
 use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends Component
@@ -27,7 +28,7 @@ class Dashboard extends Component
 
         $pendingRequisitionsCount = null;
         if ($user->can('view requisitions')) {
-            $pendingRequisitionsCount = Requisition::where('status', 'open')->count();
+            $pendingRequisitionsCount = Requisition::where('status', 'pending')->count();
         }
 
         $activeWorkOrdersCount = null;
@@ -40,46 +41,6 @@ class Dashboard extends Component
         if ($user->can('view movements')) {
             $todayMovementsCount = Movement::whereDate('created_at', today())->count();
             $recentMovements = Movement::with('product', 'user')->latest()->limit(5)->get();
-        }
-
-        $myTickets = null;
-        $totalMyTickets = null;
-        $pendingMyTickets = null;
-        $resolvedMyTickets = null;
-        if ($user->can('view own tickets')) {
-            $myTickets = Ticket::where('created_by', $user->id)->latest()->limit(5)->get();
-            $totalMyTickets = Ticket::where('created_by', $user->id)->count();
-            $pendingMyTickets = Ticket::where('created_by', $user->id)->where('status', 'pending')->count();
-            $resolvedMyTickets = Ticket::where('created_by', $user->id)->where('status', 'resolved')->count();
-        }
-
-        $pendingNocTickets = null;
-        $pendingNocCount = null;
-        if ($user->can('view pending noc tickets')) {
-            $pendingNocTickets = Ticket::where('requires_noc', true)
-                ->where('status', 'pending')
-                ->latest()
-                ->get();
-            $pendingNocCount = $pendingNocTickets->count();
-        }
-
-        $recentClients = null;
-        if ($user->can('view clients')) {
-            $recentClients = Client::latest()->limit(5)->get();
-        }
-
-        $resolvedToday = null;
-        if ($user->can('view resolutions')) {
-            $resolvedToday = Ticket::where('resolved_by', $user->id)
-                ->whereDate('resolved_at', today())
-                ->count();
-        }
-
-        $relatedWorkOrders = null;
-        if ($user->can('view own work_orders')) {
-            $relatedWorkOrders = WorkOrder::whereHas('ticket', function ($q) use ($user) {
-                $q->where('created_by', $user->id);
-            })->latest()->limit(5)->get();
         }
 
         // ========== NUEVOS KPI ==========
@@ -127,13 +88,59 @@ class Dashboard extends Component
             $completedWorkOrders = WorkOrder::where('status', 'completed')->count();
         }
 
+        // ========== GRÁFICOS (ApexCharts) ==========
+        $charts = app(ChartDataService::class);
+
+        $monthlyMovements = null;
+        $monthlyWorkOrders = null;
+        $ticketsByStatus = null;
+        $ticketsByPriority = null;
+        $devicesChart = null;
+        $workOrdersChart = null;
+        $instalacionesComparison = null;
+        $newClientsChart = null;
+        $purchasesChart = null;
+
+
+
+        if ($user->can('view movements')) {
+            $monthlyMovements = $charts->monthlyMovements(12);
+        }
+
+        if ($user->can('view work_orders')) {
+            $monthlyWorkOrders = $charts->monthlyWorkOrders(6);
+            $instalacionesComparison = $charts->monthlyComparison(WorkOrder::class, ['service_type' => 'instalacion']);
+            $workOrdersChart = $charts->workOrdersByStatus();
+        }
+
+
+
+        if ($user->can('view any tickets') || $user->can('view own tickets')) {
+            $ticketsScope = $user->can('view any tickets') ? null : $user->id;
+            $ticketsByStatus = $charts->ticketsByStatus($ticketsScope);
+            $ticketsByPriority = $charts->ticketsByPriority($ticketsScope);
+        }
+
+        if ($user->can('access_inventory')) {
+            $devicesChart = $charts->devicesByStatus();
+        }
+
+        if ($user->can('view clients')) {
+            $newClientsChart = $charts->newClientsMonthly(6);
+        }
+
+        if ($user->can('view purchases')) {
+            $purchasesChart = $charts->purchasesMonthly(6);
+        }
+
+
         // ========== DATOS ESPECÍFICOS PARA TÉCNICO ==========
         $techPendingRequisitionsCount = null;
         $techActiveWorkOrdersCount = null;
         $techRecentRequisitions = null;
         if ($user->can('view technician dashboard')) {
             $techPendingRequisitionsCount = Requisition::where('technician_id', $user->id)
-                ->where('status', 'open')
+                ->whereIn('status', ['open', 'approved'])
                 ->count();
             $techActiveWorkOrdersCount = WorkOrder::where('technician_id', $user->id)
                 ->whereIn('status', ['pending', 'in_progress'])
@@ -151,15 +158,6 @@ class Dashboard extends Component
             'activeWorkOrdersCount',
             'todayMovementsCount',
             'recentMovements',
-            'myTickets',
-            'totalMyTickets',
-            'pendingMyTickets',
-            'resolvedMyTickets',
-            'pendingNocTickets',
-            'pendingNocCount',
-            'recentClients',
-            'resolvedToday',
-            'relatedWorkOrders',
             'techPendingRequisitionsCount',
             'techActiveWorkOrdersCount',
             'techRecentRequisitions',
@@ -174,8 +172,18 @@ class Dashboard extends Component
             'newClientsToday',
             'newClientsThisMonth',
             'pendingWorkOrders',
-            'completedWorkOrders'
+            'completedWorkOrders',
+            'monthlyMovements',
+            'monthlyWorkOrders',
+            'ticketsByStatus',
+            'ticketsByPriority',
+            'devicesChart',
+            'workOrdersChart',
+            'instalacionesComparison',
+            'newClientsChart',
+            'purchasesChart'
         ))->layout('components.layouts.app');
+
     }
 
     // Métodos auxiliares (sin cambios)
@@ -197,12 +205,7 @@ class Dashboard extends Component
     {
         $ticket = Ticket::with('client')->find($ticketId);
         if ($ticket && auth()->user()->can('create work_orders')) {
-            $workOrder = WorkOrder::create([
-                'ticket_id' => $ticket->id,
-                'client_id' => $ticket->client_id,
-                'status' => 'pending',
-                'notes' => $ticket->description,
-            ]);
+            $workOrder = app(WorkOrderService::class)->createFromTicket($ticket);
             $ticket->status = 'in_progress';
             $ticket->save();
             app(SlaService::class)->evaluateSla($ticket);

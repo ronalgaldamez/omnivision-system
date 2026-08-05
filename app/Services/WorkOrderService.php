@@ -48,6 +48,7 @@ class WorkOrderService
     /**
      * Crea una WorkOrder a partir de un Ticket.
      * Es el ÚNICO punto de creación de OTs en todo el sistema.
+     * Incluye guard anti-duplicado: si el ticket ya tiene OT, retorna la existente.
      *
      * @param Ticket $ticket
      * @param array $extra Datos adicionales para mergear (ej: started_at, status override)
@@ -55,6 +56,12 @@ class WorkOrderService
      */
     public function createFromTicket(Ticket $ticket, array $extra = []): WorkOrder
     {
+        // Guard anti-duplicado central (protege SAC, NOC, Contratos y cualquier flujo futuro)
+        $existing = WorkOrder::where('ticket_id', $ticket->id)->first();
+        if ($existing) {
+            return $existing;
+        }
+
         $client = $ticket->client;
 
         $data = array_merge([
@@ -68,6 +75,7 @@ class WorkOrderService
             'latitude'     => $client?->latitude,
             'longitude'    => $client?->longitude,
             'status'       => 'pending',
+            'sla_started_at' => now(),
             'created_by'   => Auth::id(),
         ], $extra);
 
@@ -87,6 +95,14 @@ class WorkOrderService
      */
     public function createFromContract(Contract $contract, array $extra = []): WorkOrder
     {
+        // Guard anti-duplicado: si el ticket vinculado ya tiene OT, retorna la existente
+        if ($contract->ticket_id) {
+            $existing = WorkOrder::where('ticket_id', $contract->ticket_id)->first();
+            if ($existing) {
+                return $existing;
+            }
+        }
+
         $data = array_merge([
             'client_id'    => $contract->client_id,
             'description'  => 'Contrato #' . $contract->id . ' - Seguimiento',
@@ -96,6 +112,7 @@ class WorkOrderService
             'latitude'     => $contract->latitude,
             'longitude'    => $contract->longitude,
             'status'       => 'pending',
+            'sla_started_at' => now(),
             'created_by'   => Auth::id(),
         ], $extra);
 
