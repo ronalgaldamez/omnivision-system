@@ -16,6 +16,7 @@ class WorkOrderForm extends Component
     public $orderId;
     public $ticket_id;
     public $technician_id = null;
+    public $auxiliar_technician_id = null;
     public $client_id;
     public $latitude;
     public $longitude;
@@ -41,6 +42,23 @@ class WorkOrderForm extends Component
     public $canAssign = false;
     public $technicianSearch = '';
     public $technicianResults = [];
+    public $auxiliarSearch = '';
+    public $auxiliarResults = [];
+    public $canChangeClient = true;
+
+    // Vehículo
+    public $vehicle_id = null;
+    public $vehicleSearch = '';
+    public $vehicleResults = [];
+    public $showVehicleModal = false;
+    public $vehicleList = [];
+    public $acceptedAt = null;
+
+    // Modal de listado completo de técnicos/auxiliares (patrón /purchases/create)
+    public $showTechnicianModal = false;
+    public $technicianList = [];
+    public $showAuxiliarModal = false;
+    public $auxiliarList = [];
 
     // Nuevos campos para OT puras
     public $service_type_id = '';
@@ -76,6 +94,9 @@ class WorkOrderForm extends Component
             $rules['technician_id'] = 'nullable|integer|exists:users,id';
         }
 
+        $rules['auxiliar_technician_id'] = 'nullable|integer|exists:users,id';
+        $rules['vehicle_id'] = 'nullable|integer|exists:vehiculos,id';
+
         return $rules;
     }
 
@@ -84,9 +105,10 @@ class WorkOrderForm extends Component
         $user = Auth::user();
         $this->canAssign = $user->can('assign technicians');
         $this->canEditNocAndService = !$id && !$ticket_id;
-
         $this->isPureOT = !$id && !$ticket_id;
         $this->ticket_id = $ticket_id;
+        // En edición solo el admin puede cambiar el cliente (para evitar cambios por error)
+        $this->canChangeClient = !$id || $user->can('access_admin');
 
         if ($id) {
             // Edición de OT existente
@@ -106,6 +128,15 @@ class WorkOrderForm extends Component
             if ($order->technician) {
                 $this->technicianSearch = $order->technician->name;
             }
+            $this->auxiliar_technician_id = $order->auxiliar_technician_id;
+            if ($order->auxiliarTechnician) {
+                $this->auxiliarSearch = $order->auxiliarTechnician->name;
+            }
+            $this->vehicle_id = $order->vehicle_id;
+            if ($order->vehicle) {
+                $this->vehicleSearch = $order->vehicle->placa . ' · ' . $order->vehicle->marca;
+            }
+            $this->acceptedAt = $order->accepted_at;
             $this->wifi_name = $order->wifi_name;
             $this->wifi_password = $order->wifi_password;
             $this->profile_name = $order->profile_name;
@@ -157,7 +188,7 @@ class WorkOrderForm extends Component
     public function updatedTechnicianSearch()
     {
         if (strlen($this->technicianSearch) >= 2) {
-            $this->technicianResults = User::role('technician')
+            $this->technicianResults = User::role('technician')->encargados()
                 ->where('name', 'like', '%' . $this->technicianSearch . '%')
                 ->orderBy('name')
                 ->limit(10)
@@ -174,7 +205,139 @@ class WorkOrderForm extends Component
             $this->technician_id = (int) $technician->id;
             $this->technicianSearch = $technician->name;
             $this->technicianResults = [];
+            // Si el auxiliar quedó igual al técnico, limpiarlo
+            if ($this->auxiliar_technician_id === $this->technician_id) {
+                $this->auxiliar_technician_id = null;
+                $this->auxiliarSearch = '';
+            }
+            // Pre-cargar el vehículo de la asignación activa del encargado (editable)
+            $asignacion = \App\Models\Asignacion::where('encargado_id', $id)->where('is_active', true)->first();
+            if ($asignacion?->vehicle_id) {
+                $this->vehicle_id = $asignacion->vehicle_id;
+                $veh = \App\Models\Vehiculo::find($asignacion->vehicle_id);
+                $this->vehicleSearch = $veh ? $veh->placa . ' · ' . $veh->marca : '';
+            }
         }
+    }
+
+    public function getTechnicianLoadProperty(): int
+    {
+        if (!$this->technician_id) return 0;
+        return \App\Models\WorkOrder::where('technician_id', $this->technician_id)
+            ->whereIn('status', ['pending', 'in_progress', 'paused'])
+            ->count();
+    }
+
+    // ─── Vehículo ───
+
+    public function updatedVehicleSearch()
+    {
+        if (strlen($this->vehicleSearch) >= 1) {
+            $this->vehicleResults = \App\Models\Vehiculo::where('estado', 'activo')
+                ->where(function ($q) {
+                    $q->where('placa', 'like', '%' . $this->vehicleSearch . '%')
+                        ->orWhere('marca', 'like', '%' . $this->vehicleSearch . '%')
+                        ->orWhere('modelo', 'like', '%' . $this->vehicleSearch . '%');
+                })
+                ->orderBy('placa')
+                ->limit(10)
+                ->get();
+        } else {
+            $this->vehicleResults = [];
+        }
+    }
+
+    public function selectVehicle($id)
+    {
+        $veh = \App\Models\Vehiculo::find($id);
+        if ($veh) {
+            $this->vehicle_id = (int) $veh->id;
+            $this->vehicleSearch = $veh->placa . ' · ' . $veh->marca;
+            $this->vehicleResults = [];
+        }
+    }
+
+    public function openVehicleModal()
+    {
+        $this->vehicleList = \App\Models\Vehiculo::where('estado', 'activo')->orderBy('placa')->get(['id', 'placa', 'marca', 'modelo']);
+        $this->showVehicleModal = true;
+    }
+
+    public function closeVehicleModal()
+    {
+        $this->showVehicleModal = false;
+    }
+
+    public function clearVehicle()
+    {
+        $this->vehicle_id = null;
+        $this->vehicleSearch = '';
+        $this->vehicleResults = [];
+    }
+
+    public function openTechnicianModal()
+    {
+        $this->technicianList = User::role('technician')->encargados()->orderBy('name')->get(['id', 'name', 'tech_role']);
+        $this->showTechnicianModal = true;
+    }
+
+    public function closeTechnicianModal()
+    {
+        $this->showTechnicianModal = false;
+    }
+
+    public function clearTechnician()
+    {
+        $this->technician_id = null;
+        $this->technicianSearch = '';
+        $this->technicianResults = [];
+    }
+
+    public function updatedAuxiliarSearch()
+    {
+        if (strlen($this->auxiliarSearch) >= 2) {
+            $this->auxiliarResults = User::role('technician')
+                ->where('tech_role', 'auxiliar')
+                ->where('id', '!=', $this->technician_id ?: 0)
+                ->where('name', 'like', '%' . $this->auxiliarSearch . '%')
+                ->orderBy('name')
+                ->limit(10)
+                ->get();
+        } else {
+            $this->auxiliarResults = [];
+        }
+    }
+
+    public function selectAuxiliar($id)
+    {
+        $technician = User::find($id);
+        if ($technician) {
+            $this->auxiliar_technician_id = (int) $technician->id;
+            $this->auxiliarSearch = $technician->name;
+            $this->auxiliarResults = [];
+        }
+    }
+
+    public function openAuxiliarModal()
+    {
+        $this->auxiliarList = User::role('technician')
+            ->where('tech_role', 'auxiliar')
+            ->where('id', '!=', $this->technician_id ?: 0)
+            ->orderBy('name')
+            ->get(['id', 'name', 'tech_role']);
+        $this->showAuxiliarModal = true;
+    }
+
+    public function closeAuxiliarModal()
+    {
+        $this->showAuxiliarModal = false;
+    }
+
+    public function clearAuxiliar()
+    {
+        $this->auxiliar_technician_id = null;
+        $this->auxiliarSearch = '';
+        $this->auxiliarResults = [];
     }
 
     public function updatedClientSearch()
@@ -261,8 +424,15 @@ class WorkOrderForm extends Component
         $serviceType = ServiceType::find($this->service_type_id);
         $serviceName = $serviceType ? $serviceType->name : '';
 
+        if ($this->auxiliar_technician_id && $this->auxiliar_technician_id === $this->technician_id) {
+            $this->dispatch('show-toast', type: 'error', message: 'El auxiliar no puede ser el mismo técnico.');
+            return;
+        }
+
         $orderData = [
             'technician_id' => $this->technician_id,
+            'auxiliar_technician_id' => $this->auxiliar_technician_id,
+            'vehicle_id' => $this->vehicle_id,
             'client_id' => $this->client_id,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,

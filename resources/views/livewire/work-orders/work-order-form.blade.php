@@ -59,6 +59,11 @@
                     <h2 class="text-md font-semibold text-gray-800 flex items-center gap-2">
                         <span class="material-symbols-outlined text-gray-500">assignment_ind</span>
                         Asignación
+                        @if($orderId && $acceptedAt)
+                            <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Aceptada {{ $acceptedAt->format('H:i') }}</span>
+                        @elseif($orderId)
+                            <span class="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Pendiente de aceptación</span>
+                        @endif
                     </h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         @if($canAssign)
@@ -67,32 +72,173 @@
                                     <span class="material-symbols-outlined text-gray-400 text-base">engineering</span>
                                     Técnico *
                                 </label>
-                                <div class="relative">
-                                    <input type="text" wire:model.live.debounce.300ms="technicianSearch"
-                                        placeholder="Buscar técnico por nombre..."
+                                @if($technician_id)
+                                <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-gray-200 bg-white">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span class="material-symbols-outlined text-gray-400 flex-shrink-0">engineering</span>
+                                        <span class="text-sm font-medium text-gray-800 truncate">{{ $technicianSearch }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 flex-shrink-0">
+                                        <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-medium">Principal</span>
+                                        @if($this->technicianLoad > 0)
+                                            <span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-medium" title="OTs activas asignadas">{{ $this->technicianLoad }} OTs</span>
+                                        @endif
+                                        <button type="button" wire:click="openTechnicianModal"
+                                            class="px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition">Cambiar</button>
+                                        <button type="button" wire:click="clearTechnician"
+                                            class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition" title="Quitar técnico">
+                                            <span class="material-symbols-outlined text-lg">close</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                @else
+                                <div class="flex gap-2" x-data="{ focused: false }">
+                                    <div class="relative flex-1">
+                                        <input type="text" wire:model.live.debounce.300ms="technicianSearch"
+                                            @focus="focused = true" @blur="setTimeout(() => focused = false, 200)"
+                                            placeholder="Buscar técnico por nombre..."
+                                            class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                        @if(count($technicianResults) > 0)
+                                            <ul x-show="focused" x-transition
+                                                class="absolute z-30 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-60 overflow-auto divide-y divide-gray-100 ring-1 ring-black/5">
+                                                @foreach($technicianResults as $tech)
+                                                    <li wire:click="selectTechnician({{ $tech->id }})"
+                                                        class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
+                                                        <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ $tech->name }}</span>
+                                                        <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Principal</span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        @endif
+                                    </div>
+                                    <button type="button" wire:click="openTechnicianModal"
+                                        class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm whitespace-nowrap"
+                                        title="Ver todos los técnicos">
+                                        <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                                        <span class="hidden sm:inline">Ver todos</span>
+                                    </button>
+                                </div>
+                                @endif
+                                @error('technician_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-gray-400 text-base">handyman</span>
+                                    Auxiliar
+                                </label>
+                                @if($auxiliar_technician_id)
+                                <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-gray-200 bg-white">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span class="material-symbols-outlined text-gray-400 flex-shrink-0">handyman</span>
+                                        <span class="text-sm font-medium text-gray-800 truncate">{{ $auxiliarSearch }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 flex-shrink-0">
+                                        <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium">Auxiliar</span>
+                                        <button type="button" wire:click="openAuxiliarModal"
+                                            class="px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition">Cambiar</button>
+                                        <button type="button" wire:click="clearAuxiliar"
+                                            class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition" title="Quitar auxiliar">
+                                            <span class="material-symbols-outlined text-lg">close</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                @else
+                                <div class="flex gap-2" x-data="{ focused: false }">
+                                    <div class="relative flex-1">
+                                        <input type="text" wire:model.live.debounce.300ms="auxiliarSearch"
+                                            @focus="focused = true" @blur="setTimeout(() => focused = false, 200)"
+                                            placeholder="Buscar auxiliar por nombre..."
+                                            class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                        @if(count($auxiliarResults) > 0)
+                                            <ul x-show="focused" x-transition
+                                                class="absolute z-30 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-60 overflow-auto divide-y divide-gray-100 ring-1 ring-black/5">
+                                                @foreach($auxiliarResults as $tech)
+                                                    <li wire:click="selectAuxiliar({{ $tech->id }})"
+                                                        class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
+                                                        <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ $tech->name }}</span>
+                                                        <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Auxiliar</span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        @endif
+                                    </div>
+                                    <button type="button" wire:click="openAuxiliarModal"
+                                        class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm whitespace-nowrap"
+                                        title="Ver todos los auxiliares">
+                                        <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                                        <span class="hidden sm:inline">Ver todos</span>
+                                    </button>
+                                </div>
+                                @endif
+                                @error('auxiliar_technician_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                            </div>
+                        @endif
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-base">directions_car</span>
+                                Vehículo
+                                @if($vehicle_id)
+                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium">Asignado</span>
+                                @endif
+                            </label>
+                            @if($vehicle_id)
+                            <div class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border border-gray-200 bg-white">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="material-symbols-outlined text-gray-400">directions_car</span>
+                                    <span class="text-sm font-medium text-gray-800 truncate">{{ $vehicleSearch }}</span>
+                                </div>
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <button type="button" wire:click="openVehicleModal"
+                                        class="px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition">Cambiar</button>
+                                    <button type="button" wire:click="clearVehicle"
+                                        class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition" title="Quitar vehículo">
+                                        <span class="material-symbols-outlined text-lg">close</span>
+                                    </button>
+                                </div>
+                            </div>
+                            @else
+                            <div class="flex gap-2" x-data="{ focused: false }">
+                                <div class="relative flex-1">
+                                    <input type="text" wire:model.live.debounce.300ms="vehicleSearch"
+                                        @focus="focused = true" @blur="setTimeout(() => focused = false, 200)"
+                                        placeholder="Buscar por placa o marca..."
                                         class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
                                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
-                                    @if(!empty($technicianResults) && !$technician_id)
-                                        <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
-                                            @foreach($technicianResults as $tech)
-                                                <li wire:click="selectTechnician({{ $tech->id }})"
-                                                    class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between">
-                                                    <span class="font-medium text-gray-800">{{ $tech->name }}</span>
-                                                    <span class="text-xs text-gray-500">(ID: {{ $tech->id }})</span>
+                                    @if(count($vehicleResults) > 0)
+                                        <ul x-show="focused" x-transition
+                                            class="absolute z-30 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-60 overflow-auto divide-y divide-gray-100 ring-1 ring-black/5">
+                                            @foreach($vehicleResults as $veh)
+                                                <li wire:click="selectVehicle({{ $veh->id }})"
+                                                    class="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition text-sm flex items-center justify-between group">
+                                                    <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ $veh->placa }} · {{ $veh->marca }}</span>
+                                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ $veh->modelo }}</span>
                                                 </li>
                                             @endforeach
                                         </ul>
                                     @endif
                                 </div>
-                                @error('technician_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                                <button type="button" wire:click="openVehicleModal"
+                                    class="inline-flex items-center gap-1 px-3 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm whitespace-nowrap"
+                                    title="Ver todos los vehículos">
+                                    <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                                    <span class="hidden sm:inline">Ver todos</span>
+                                </button>
                             </div>
-                        @endif
+                            @endif
+                            <p class="text-[10px] text-gray-400 mt-1">Se sugiere el vehículo del encargado al elegir el técnico. Podés cambiarlo.</p>
+                            @error('vehicle_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
 
-                        <div>
+                        <div class="{{ $canAssign ? 'md:col-span-2' : '' }}">
                             <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-base">person</span>
                                 Cliente *
                             </label>
+                            @if($canChangeClient)
                             <div class="flex gap-2">
                                 <div class="relative flex-1">
                                     <input type="text" wire:model.live.debounce.300ms="clientSearch"
@@ -113,6 +259,16 @@
                                 </div>
                                 <x-ui.button variant="success" icon="person_add" wire:click="openClientModal">Nuevo</x-ui.button>
                             </div>
+                            @else
+                            <div class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm">
+                                <span class="material-symbols-outlined text-gray-400">person</span>
+                                <span class="text-gray-700 font-medium">{{ $selectedClient?->name ?? 'No especificado' }}</span>
+                                @if($selectedClient?->phone)
+                                    <span class="text-xs text-gray-400">{{ $selectedClient->phone }}</span>
+                                @endif
+                                <span class="ml-auto px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-[10px] font-medium">Solo admin puede cambiar</span>
+                            </div>
+                            @endif
                             @error('client_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                         </div>
                     </div>
@@ -356,6 +512,32 @@
                     @error('notes') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
+                {{-- ========== RESUMEN DE ASIGNACIÓN EN VIVO ========== --}}
+                <div class="bg-white rounded-xl border border-gray-200 p-4">
+                    <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-gray-500">assignment_turned_in</span>
+                        Resumen de la asignación
+                    </h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 text-sm">
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-500">Técnico</p>
+                            <p class="font-medium text-gray-800 truncate">{{ $technicianSearch ?: '—' }}</p>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-500">Auxiliar</p>
+                            <p class="font-medium text-gray-800 truncate">{{ $auxiliarSearch ?: '—' }}</p>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-500">Vehículo</p>
+                            <p class="font-medium text-gray-800 truncate">{{ $vehicleSearch ?: '—' }}</p>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-500">Fecha programada</p>
+                            <p class="font-medium text-gray-800">{{ $scheduled_date ?: '—' }}</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex justify-end gap-3 pt-2">
                     <x-ui.button variant="ghost" href="{{ route('work-orders.index') }}">Cancelar</x-ui.button>
                     <x-ui.button type="submit" variant="primary" icon="save">Guardar</x-ui.button>
@@ -378,6 +560,108 @@
                     </x-slot:headerActions>
                     <div class="p-5">
                         <livewire:clients.client-form :key="$modalKey" />
+                    </div>
+                </x-ui.card>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal listado de técnicos (principales) --}}
+    @if($showTechnicianModal)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+            <div class="relative mx-auto p-5 w-full max-w-lg">
+                <x-ui.card>
+                    <x-slot:headerActions>
+                        <button type="button" wire:click="closeTechnicianModal"
+                            class="text-gray-400 hover:text-gray-600 transition">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </x-slot:headerActions>
+                    <div class="p-5">
+                        <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                            <span class="material-symbols-outlined text-gray-500">engineering</span>
+                            Técnicos (principales)
+                        </h3>
+                        <div class="space-y-1 max-h-80 overflow-y-auto">
+                            @forelse($technicianList as $tech)
+                                <button type="button" wire:click="selectTechnician({{ $tech->id }}); closeTechnicianModal()"
+                                    class="w-full text-left px-4 py-2.5 rounded-lg hover:bg-blue-50 transition text-sm flex items-center justify-between group">
+                                    <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ $tech->name }}</span>
+                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Principal</span>
+                                </button>
+                            @empty
+                                <p class="text-sm text-gray-400 text-center py-6">No hay técnicos registrados</p>
+                            @endforelse
+                        </div>
+                    </div>
+                </x-ui.card>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal listado de auxiliares --}}
+    @if($showAuxiliarModal)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+            <div class="relative mx-auto p-5 w-full max-w-lg">
+                <x-ui.card>
+                    <x-slot:headerActions>
+                        <button type="button" wire:click="closeAuxiliarModal"
+                            class="text-gray-400 hover:text-gray-600 transition">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </x-slot:headerActions>
+                    <div class="p-5">
+                        <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                            <span class="material-symbols-outlined text-gray-500">handyman</span>
+                            Auxiliares
+                        </h3>
+                        <div class="space-y-1 max-h-80 overflow-y-auto">
+                            @forelse($auxiliarList as $tech)
+                                <button type="button" wire:click="selectAuxiliar({{ $tech->id }}); closeAuxiliarModal()"
+                                    class="w-full text-left px-4 py-2.5 rounded-lg hover:bg-blue-50 transition text-sm flex items-center justify-between group">
+                                    <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ $tech->name }}</span>
+                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Auxiliar</span>
+                                </button>
+                            @empty
+                                <p class="text-sm text-gray-400 text-center py-6">No hay auxiliares registrados</p>
+                            @endforelse
+                        </div>
+                    </div>
+                </x-ui.card>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal listado de vehículos --}}
+    @if($showVehicleModal)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+            <div class="relative mx-auto p-5 w-full max-w-lg">
+                <x-ui.card>
+                    <x-slot:headerActions>
+                        <button type="button" wire:click="closeVehicleModal"
+                            class="text-gray-400 hover:text-gray-600 transition">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </x-slot:headerActions>
+                    <div class="p-5">
+                        <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                            <span class="material-symbols-outlined text-gray-500">directions_car</span>
+                            Vehículos (activos)
+                        </h3>
+                        <div class="space-y-1 max-h-80 overflow-y-auto">
+                            @forelse($vehicleList as $veh)
+                                <button type="button" wire:click="selectVehicle({{ $veh->id }}); closeVehicleModal()"
+                                    class="w-full text-left px-4 py-2.5 rounded-lg hover:bg-blue-50 transition text-sm flex items-center justify-between group">
+                                    <span class="font-medium text-gray-800 group-hover:text-blue-700">{{ $veh->placa }} · {{ $veh->marca }}</span>
+                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ $veh->modelo }}</span>
+                                </button>
+                            @empty
+                                <p class="text-sm text-gray-400 text-center py-6">No hay vehículos activos registrados</p>
+                            @endforelse
+                        </div>
                     </div>
                 </x-ui.card>
             </div>
