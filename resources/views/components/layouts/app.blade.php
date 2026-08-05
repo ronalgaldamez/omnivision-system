@@ -532,8 +532,10 @@
         @endif
     </script>
     <script>
+        @php($soundSilenced = auth()->check() && \App\Models\Setting::get('user_notif_sound_' . auth()->id(), 'enabled') === 'silenced')
         document.addEventListener('livewire:initialized', () => {
             const audio = new Audio('{{ asset('sounds/notification.mp3') }}');
+            window.notifSoundSilenced = {{ $soundSilenced ? 'true' : 'false' }};
             function unlockAudio() {
                 audio.play().then(() => {
                     audio.pause();
@@ -544,9 +546,15 @@
             }
             document.addEventListener('click', unlockAudio);
             document.addEventListener('pointerdown', unlockAudio);
-            function playNotificationSound() { audio.play().catch(err => console.log('Audio bloqueado:', err)); }
+            function playNotificationSound() {
+                if (window.notifSoundSilenced) return;
+                audio.play().catch(err => console.log('Audio bloqueado:', err));
+            }
             Livewire.on('new-noc-ticket', playNotificationSound);
             window.addEventListener('play-notification-sound', playNotificationSound);
+            Livewire.on('notif-sound-setting-changed', () => {
+                window.notifSoundSilenced = !window.notifSoundSilenced;
+            });
         });
     </script>
 </body>
