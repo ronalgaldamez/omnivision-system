@@ -211,6 +211,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', \App\Livewire\Admin\Roles\RoleForm::class)->name('admin.roles.create');
         Route::get('/{id}/edit', \App\Livewire\Admin\Roles\RoleForm::class)->name('admin.roles.edit');
     });
+    Route::prefix('admin/changelog')->middleware(['auth', 'can:access_admin'])->group(function () {
+        Route::get('/', \App\Livewire\Admin\ChangelogManager::class)->name('admin.changelog.index');
+    });
     Route::prefix('admin/settings')->middleware(['auth', 'can:access_admin'])->group(function () {
         Route::get('/', \App\Livewire\Admin\SettingsManager::class)->name('admin.settings');
     });
