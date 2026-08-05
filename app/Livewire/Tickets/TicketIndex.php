@@ -16,6 +16,16 @@ class TicketIndex extends Component
     public $activeTab = 'all';
     public $statusFilter = '';
     public $search = '';
+    public $priorityFilter = '';
+    public $viewMode = 'cards'; // 'cards' | 'table'
+
+    protected $queryString = [
+        'activeTab' => ['except' => 'all'],
+        'statusFilter' => ['except' => ''],
+        'search' => ['except' => ''],
+        'priorityFilter' => ['except' => ''],
+        'viewMode' => ['except' => 'cards'],
+    ];
 
     public $showDetailModal = false;
     public $selectedTicket = null;
@@ -28,6 +38,28 @@ class TicketIndex extends Component
     {
         $this->activeTab = $tab;
         $this->resetPage();
+    }
+
+    public function setViewMode($mode)
+    {
+        $this->viewMode = $mode;
+    }
+
+    protected function getKpis(): array
+    {
+        $base = Ticket::query();
+        $user = Auth::user();
+
+        if (!$user->can('view any tickets') && $user->can('view own tickets')) {
+            $base->where('created_by', $user->id);
+        }
+
+        return [
+            'active' => (clone $base)->whereIn('status', ['pending', 'open', 'in_progress'])->count(),
+            'open' => (clone $base)->whereIn('status', ['pending', 'open'])->count(),
+            'in_progress' => (clone $base)->where('status', 'in_progress')->count(),
+            'resolved' => (clone $base)->whereIn('status', ['resolved', 'closed'])->count(),
+        ];
     }
 
     public function render()
@@ -52,6 +84,12 @@ class TicketIndex extends Component
 
         if ($this->statusFilter) {
             $query->where('status', $this->statusFilter);
+        } else {
+            // Por defecto: solo tickets activos (ocultar resueltos/cerrados/cancelados)
+            $query->whereIn('status', ['pending', 'open', 'in_progress']);
+        }
+        if ($this->priorityFilter) {
+            $query->where('priority', $this->priorityFilter);
         }
         if ($this->search) {
             $query->where(function ($q) {
@@ -62,7 +100,8 @@ class TicketIndex extends Component
         }
 
         $tickets = $query->orderBy('created_at', 'desc')->paginate(15);
-        return view('livewire.tickets.ticket-index', compact('tickets'))->layout('components.layouts.app');
+        $kpis = $this->getKpis();
+        return view('livewire.tickets.ticket-index', compact('tickets', 'kpis'))->layout('components.layouts.app');
     }
 
     public function viewDetail($ticketId)
