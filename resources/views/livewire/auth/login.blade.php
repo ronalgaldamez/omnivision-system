@@ -24,8 +24,8 @@
 
                 {{-- Campo Email --}}
                 <x-forms.group name="email" label="Correo electrónico">
-                    <x-ui.input type="email" wire:model="email" icon="alternate_email"
-                        placeholder="ejemplo@correo.com" required />
+                    <x-ui.input type="email" wire:model="email" icon="alternate_email" placeholder="ejemplo@correo.com"
+                        required />
                 </x-forms.group>
 
                 {{-- Campo Contraseña (toggle Alpine) --}}
