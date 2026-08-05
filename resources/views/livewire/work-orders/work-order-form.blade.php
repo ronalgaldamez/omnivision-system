@@ -65,8 +65,13 @@
                             <span class="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Pendiente de aceptación</span>
                         @endif
                     </h2>
+                    @if($orderId && !$acceptedAt)
+                        <x-ui.alert variant="warning" title="OT no aceptada">
+                            <p>Esta OT aún no ha sido aceptada. Aceptala desde el listado de órdenes para poder asignar técnico, auxiliar y vehículo.</p>
+                        </x-ui.alert>
+                    @endif
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        @if($canAssign)
+                        @if($canAssign && (!$orderId || $acceptedAt))
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                                     <span class="material-symbols-outlined text-gray-400 text-base">engineering</span>
@@ -177,6 +182,7 @@
                             </div>
                         @endif
 
+                        @if(!$orderId || $acceptedAt)
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-gray-400 text-base">directions_car</span>
@@ -232,6 +238,7 @@
                             <p class="text-[10px] text-gray-400 mt-1">Se sugiere el vehículo del encargado al elegir el técnico. Podés cambiarlo.</p>
                             @error('vehicle_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                         </div>
+                        @endif
 
                         <div class="{{ $canAssign ? 'md:col-span-2' : '' }}">
                             <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
