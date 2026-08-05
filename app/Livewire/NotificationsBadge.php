@@ -27,7 +27,6 @@ class NotificationsBadge extends Component
 
             // Si la cuenta aumentó y no es la carga inicial, notificar
             if ($newCount > $this->pendingNocTickets && $this->pendingNocTickets > 0) {
-                $this->dispatch('new-noc-ticket');  // ← evento para el sonido
                 $this->dispatch('show-toast', type: 'info', message: 'Nuevo ticket requiere atención del NOC.');
             }
 

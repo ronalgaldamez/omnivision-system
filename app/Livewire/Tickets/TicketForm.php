@@ -977,6 +977,7 @@ class TicketForm extends Component
                 app(TicketService::class)->createWorkOrder($ticket);
             } elseif ($this->requires_noc) {
                 $this->dispatch('ticket-created-for-noc');
+                \App\Events\TicketRequiresNoc::dispatch($ticket->ticket_code);
                 $this->dispatch('show-toast', type: 'info', message: 'Nuevo ticket requiere atención del NOC.');
             }
 
@@ -1057,6 +1058,7 @@ class TicketForm extends Component
         session()->forget('ticket_draft');
 
         $this->dispatch('ticket-created-for-noc');
+        \App\Events\TicketRequiresNoc::dispatch($ticket->ticket_code);
         session()->flash('message', 'Ticket generado y escalado a NOC correctamente.');
 
         return redirect()->route('tickets.index');

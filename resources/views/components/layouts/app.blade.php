@@ -126,7 +126,7 @@
                                 @can('access_inventory')<a href="{{ route('devices.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">settings_ethernet</span> Dispositivos</a>@endcan
-                                @can('access_inventory')<a href="{{ route('bodega.requisitions.index') }}"
+                                @can('approve requisitions')<a href="{{ route('bodega.requisitions.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">inventory</span> Bodega</a>@endcan
                             </div>
@@ -419,6 +419,10 @@
                             <livewire:notifications-badge />
                         @endif
 
+                        @if(Auth::user()->hasRole('technician'))
+                            <livewire:technician-notifications-badge />
+                        @endif
+
                         <div x-data="{ open: false }" class="relative">
                             <button @click="open = !open"
                                 class="flex items-center gap-2 text-xs text-gray-500 bg-gray-50/80 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition">
@@ -497,12 +501,52 @@
     @livewireScripts
     @vite(['resources/js/app.js'])
     @stack('scripts')
+
+    {{-- ========== NOTIFICACIONES EN TIEMPO REAL (Laravel Reverb + Echo) ========== --}}
+    <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.min.js"></script>
+    <script>
+        window.Echo = new Echo({
+            broadcaster: 'reverb',
+            key: '{{ config('reverb.apps.apps.0.key') }}',
+            wsHost: window.location.hostname,
+            wsPort: {{ config('reverb.apps.apps.0.options.port', 8080) }},
+            forceTLS: false,
+            enabledTransports: ['ws', 'wss'],
+        });
+
+        @if(Auth::check())
+        window.Echo.private('App.Models.User.' + {{ auth()->user()->id }})
+            .notification((notification) => {
+                window.dispatchEvent(new CustomEvent('refresh-notifications'));
+                window.dispatchEvent(new CustomEvent('play-notification-sound'));
+            });
+        @endif
+
+        @if(Auth::check() && Auth::user()->can('access noc panel'))
+        window.Echo.channel('noc.tickets')
+            .listen('.ticket.requires.noc', (e) => {
+                window.dispatchEvent(new CustomEvent('refresh-noc-badge'));
+                window.dispatchEvent(new CustomEvent('play-notification-sound'));
+            });
+        @endif
+    </script>
     <script>
         document.addEventListener('livewire:initialized', () => {
             const audio = new Audio('{{ asset('sounds/notification.mp3') }}');
-            function unlockAudio() { audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => { }); document.removeEventListener('click', unlockAudio); }
-            document.addEventListener('click', unlockAudio, { once: true });
-            Livewire.on('new-noc-ticket', () => { audio.play().catch(err => console.log('Audio bloqueado:', err)); });
+            function unlockAudio() {
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    document.removeEventListener('click', unlockAudio);
+                    document.removeEventListener('pointerdown', unlockAudio);
+                }).catch(() => { });
+            }
+            document.addEventListener('click', unlockAudio);
+            document.addEventListener('pointerdown', unlockAudio);
+            function playNotificationSound() { audio.play().catch(err => console.log('Audio bloqueado:', err)); }
+            Livewire.on('new-noc-ticket', playNotificationSound);
+            window.addEventListener('play-notification-sound', playNotificationSound);
         });
     </script>
 </body>

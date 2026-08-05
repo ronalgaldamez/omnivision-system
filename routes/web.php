@@ -136,7 +136,7 @@ Route::middleware(['auth'])->group(function () {
 
     // ========== BODEGA ==========
     Route::prefix('bodega')->middleware(['auth'])->group(function () {
-        Route::get('/requisitions', \App\Livewire\Bodega\RequisitionBodegaIndex::class)->name('bodega.requisitions.index');
+        Route::get('/requisitions', \App\Livewire\Bodega\RequisitionBodegaIndex::class)->middleware('can:approve requisitions')->name('bodega.requisitions.index');
         Route::get('/shipments', \App\Livewire\Bodega\DistributionIndex::class)->name('bodega.shipments.index');
         Route::get('/shipments/create', \App\Livewire\Bodega\DistributionCreate::class)->name('bodega.shipments.create');
         Route::get('/shipments/{id}', \App\Livewire\Bodega\DistributionShow::class)->name('bodega.shipments.show');
