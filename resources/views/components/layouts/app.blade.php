@@ -29,7 +29,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.1/dist/apexcharts.min.js"></script>
+    <script src="{{ asset('js/apexcharts.min.js') }}"></script>
 
     <style>
         body {
@@ -204,7 +204,7 @@
                     @endif
 
                     {{-- REPORTES --}}
-                    @if(module_active('reports') && auth()->user()->can('access_reports'))
+                    @if(module_active('reports') && (auth()->user()->can('access_reports') || auth()->user()->can('view performance reports')))
                         <div x-data="{ open: false }">
                             <button @click="open = !open"
                                 class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50/80 transition text-sm font-medium">
@@ -226,6 +226,10 @@
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                         class="material-symbols-outlined text-base">handyman</span> Rendimiento
                                 técnicos</a>@endcan
+                                @can('view performance reports')<a href="{{ route('reports.performance') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                        class="material-symbols-outlined text-base">leaderboard</span> Rendimiento
+                                    global</a>@endcan
                             </div>
                         </div>
                     @endif

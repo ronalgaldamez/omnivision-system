@@ -25,7 +25,7 @@
                                 <span class="font-mono text-sm font-semibold text-gray-700">#{{ $req->id }}</span>
                                 <span class="text-xs text-gray-500 ml-2">{{ $req->created_at->format('d/m/Y') }}</span>
                                 @php
-                                    $statusMap = ['closed' => ['Cerrada', 'success'], 'heredada' => ['Heredada', 'warning'], 'open' => ['Abierta', 'success'], 'pending' => ['Pendiente', 'warning'], 'approved' => ['Aprobada', 'info'], 'rejected' => ['Rechazada', 'danger']];
+                                    $statusMap = ['closed' => ['Cerrada', 'success'], 'heredada' => ['Heredada', 'warning'], 'pending' => ['Pendiente', 'warning'], 'approved' => ['Activa', 'success'], 'rejected' => ['Rechazada', 'danger']];
                                     $s = $statusMap[$req->status] ?? [$req->status, 'neutral'];
                                 @endphp
                                 <x-ui.badge :variant="$s[1]">{{ $s[0] }}</x-ui.badge>

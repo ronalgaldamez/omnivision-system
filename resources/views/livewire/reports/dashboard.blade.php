@@ -85,7 +85,7 @@
                     @if ($instalacionesComparison)
                         <div class="mb-4">
                             <x-ui.alert variant="info" icon="trending_up"
-                                title="Instalaciones este mes vs mes anterior">
+                                title="Instalaciones completadas este mes vs mes anterior">
                                 <span class="font-bold text-gray-800">{{ $instalacionesComparison['current'] }}</span>
                                 instalaciones este mes
                                 ({{ $instalacionesComparison['previous'] }} el mes pasado)

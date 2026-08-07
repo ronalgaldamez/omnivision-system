@@ -133,7 +133,7 @@ class WorkOrderShow extends Component
         $this->loadAvailableProducts();
 
         $this->technicianHasOpenRequisition = Requisition::where('technician_id', Auth::id())
-            ->whereIn('status', ['open', 'pending', 'approved'])
+            ->whereIn('status', ['pending', 'approved'])
             ->exists();
 
         // Recuperar borrador de la sesión si existe
@@ -408,7 +408,7 @@ class WorkOrderShow extends Component
     protected function checkOpenRequisition()
     {
         $this->hasOpenRequisition = $this->workOrder->requisitions()
-            ->whereIn('status', ['open', 'pending', 'approved'])
+            ->whereIn('status', ['pending', 'approved'])
             ->exists();
         $this->hasApprovedRequisition = $this->workOrder->requisitions()
             ->whereIn('status', ['approved'])
@@ -431,7 +431,7 @@ class WorkOrderShow extends Component
         }
 
         $this->availableProducts = RequisitionItem::whereHas('requisition', function ($q) {
-            $q->whereIn('status', ['open', 'approved'])
+            $q->whereIn('status', ['approved'])
               ->whereHas('workOrders', fn($w) => $w->where('work_order_id', $this->workOrder->id));
         })
             ->with('product')
@@ -461,7 +461,7 @@ class WorkOrderShow extends Component
         $this->eligibleWorkOrders = WorkOrder::where('technician_id', $userId)
             ->whereIn('status', ['pending', 'in_progress'])
             ->whereDoesntHave('requisitions', function ($q) {
-                $q->whereIn('status', ['open', 'approved']);
+                $q->whereIn('status', ['approved']);
             })
             ->with('client')
             ->get()
@@ -480,7 +480,7 @@ class WorkOrderShow extends Component
     public function linkSelectedWorkOrders()
     {
         $openRequisition = Requisition::where('technician_id', Auth::id())
-            ->whereIn('status', ['open', 'approved'])
+            ->whereIn('status', ['approved'])
             ->latest('id')
             ->first();
 

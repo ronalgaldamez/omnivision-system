@@ -14,7 +14,7 @@ class RequisitionIndex extends Component
     {
         $user = Auth::user();
         $openRequisitions = Requisition::where('technician_id', $user->id)
-            ->whereIn('status', ['open', 'approved'])
+            ->where('status', 'approved')
             ->get();
 
         if ($openRequisitions->isEmpty()) {

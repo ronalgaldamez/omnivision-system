@@ -335,7 +335,7 @@
                                     <div>
                                         <p class="text-xs text-gray-500">Material</p>
                                         <p class="text-sm text-gray-800">
-                                            @if($previewWorkOrder->requisitions()->where('status', 'open')->exists())
+                                            @if($previewWorkOrder->requisitions()->whereIn('status', ['pending', 'approved'])->exists())
                                                 <span class="text-green-600">Asignado</span>
                                             @else
                                                 <span class="text-red-500">Sin asignar</span>

@@ -94,6 +94,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Reportes
             PermissionEnum::AccessReports,
             PermissionEnum::ViewReports,
+            PermissionEnum::ViewPerformanceReports,
             PermissionEnum::ViewLowStock,
             PermissionEnum::ViewLowStockMenu,
             PermissionEnum::ViewMovementsReportMenu,
@@ -210,6 +211,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $accountant->syncPermissions([
             PermissionEnum::AccessReports,
             PermissionEnum::ViewReports,
+            PermissionEnum::ViewPerformanceReports,
             PermissionEnum::ViewProducts,
             PermissionEnum::ViewMovements,
             PermissionEnum::ViewKardex,
@@ -288,6 +290,7 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::ViewDashboard,
             PermissionEnum::ViewMovements,
             PermissionEnum::ViewLowStock,
+            PermissionEnum::ViewPerformanceReports,
             PermissionEnum::ViewRequisitions,
         ]);
 
@@ -316,6 +319,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             PermissionEnum::AccessReports,
             PermissionEnum::ViewReports,
+            PermissionEnum::ViewPerformanceReports,
             PermissionEnum::ViewLowStock,
             PermissionEnum::ViewLowStockMenu,
             PermissionEnum::ViewMovementsReportMenu,
@@ -364,6 +368,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Dashboard
             PermissionEnum::ViewDashboard,
+            PermissionEnum::ViewPerformanceReports,
             PermissionEnum::ViewSlaDashboard,
             PermissionEnum::ViewSlaTimelines,
         ]);

@@ -13,7 +13,7 @@
                 <p class="text-sm text-gray-500">
                     {{ $requisition->created_at->format('d/m/Y') }} — Estado:
                     @php
-                        $statusMap = ['open' => ['Abierta', 'success'], 'heredada' => ['Heredada', 'warning'], 'closed' => ['Cerrada', 'neutral'], 'pending' => ['Pendiente', 'warning'], 'approved' => ['Aprobada', 'info'], 'rejected' => ['Rechazada', 'danger']];
+                        $statusMap = ['heredada' => ['Heredada', 'warning'], 'closed' => ['Cerrada', 'neutral'], 'pending' => ['Pendiente', 'warning'], 'approved' => ['Activa', 'success'], 'rejected' => ['Rechazada', 'danger']];
                         $s = $statusMap[$requisition->status] ?? [$requisition->status, 'neutral'];
                     @endphp
                     <x-ui.badge :variant="$s[1]">{{ $s[0] }}</x-ui.badge>
@@ -112,7 +112,7 @@
                     <h3 class="text-md font-semibold text-gray-800">
                         Material de {{ $selectedWo->code ?? 'OT-' . $selectedWo->id }}
                     </h3>
-                    @if($requisition->status === 'open')
+                    @if($requisition->status === 'approved')
                         <x-ui.button variant="warning" icon="edit" wire:click="openEditModal" size="sm">
                             Ajustar
                         </x-ui.button>
@@ -194,7 +194,7 @@
     </x-ui.card>
 
     {{-- Edit Modal --}}
-    @if($showEditModal && $requisition->status === 'open')
+    @if($showEditModal && $requisition->status === 'approved')
         <div x-data="{ open: true }" x-show="open" x-cloak
             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
             style="display: none;">

@@ -109,7 +109,7 @@ class Dashboard extends Component
 
         if ($user->can('view work_orders')) {
             $monthlyWorkOrders = $charts->monthlyWorkOrders(6);
-            $instalacionesComparison = $charts->monthlyComparison(WorkOrder::class, ['service_type' => 'instalacion']);
+            $instalacionesComparison = $charts->monthlyComparison(WorkOrder::class, ['service_type' => 'instalacion'], 'completed_date');
             $workOrdersChart = $charts->workOrdersByStatus();
         }
 
@@ -140,7 +140,7 @@ class Dashboard extends Component
         $techRecentRequisitions = null;
         if ($user->can('view technician dashboard')) {
             $techPendingRequisitionsCount = Requisition::where('technician_id', $user->id)
-                ->whereIn('status', ['open', 'approved'])
+                ->where('status', 'approved')
                 ->count();
             $techActiveWorkOrdersCount = WorkOrder::where('technician_id', $user->id)
                 ->whereIn('status', ['pending', 'in_progress'])
