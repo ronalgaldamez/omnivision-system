@@ -348,6 +348,9 @@
                                 @can('view_roles_menu')<a href="{{ route('admin.roles.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">security</span> Roles y Permisos</a>@endcan
+                                @can('access_admin')<a href="{{ route('admin.changelog.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">new_releases</span> Actualizaciones</a>@endcan
                                 <div class="border-t border-gray-100 my-1"></div>
                                 <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">Estructura</div>
                                 @can('access_admin')<a href="{{ route('admin.branches.index') }}"
@@ -414,6 +417,8 @@
                         @if(is_null(auth()->user()->branch_id))
                             <livewire:admin.branch-switcher />
                         @endif
+
+                        <livewire:changelog-badge />
 
                         @if(Auth::user()->can('access noc panel'))
                             <livewire:notifications-badge />
