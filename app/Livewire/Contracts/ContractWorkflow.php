@@ -974,6 +974,7 @@ class ContractWorkflow extends Component
         if ($this->ticket_id) {
             Ticket::where('id', $this->ticket_id)->update([
                 'contracts_ended_at' => now(),
+                'status' => 'in_progress',
             ]);
         }
 

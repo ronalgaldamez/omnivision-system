@@ -236,4 +236,30 @@
             @endif
         </div>
     </div>
+
+    {{-- ========== GRÁFICOS SLA ========== --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 p-4">
+            <x-charts.apex type="radial" title="Cumplimiento general"
+                height="280"
+                :series="[(float) $stats['overallPercentage']]"
+                :labels="['Cumplimiento']" />
+        </div>
+
+        @if(array_sum($slaCompliance['series']) > 0)
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 p-4">
+                <x-charts.apex type="donut" title="Distribución de cumplimiento" subtitle="Cumplidas vs No cumplidas vs Pendientes"
+                    height="280"
+                    :labels="$slaCompliance['labels']"
+                    :series="$slaCompliance['series']" />
+            </div>
+        @endif
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200/80 p-4">
+            <x-charts.apex type="area" title="Tickets con SLA por mes" subtitle="Últimos 6 meses"
+                height="280"
+                :categories="$monthlySla['labels']"
+                :series="[['name' => 'Tickets', 'data' => $monthlySla['series']]]" />
+        </div>
+    </div>
 </div>

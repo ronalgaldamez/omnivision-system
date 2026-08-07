@@ -97,6 +97,7 @@ class WorkOrderList extends Component
             'latitude' => $client->latitude,
             'longitude' => $client->longitude,
             'status' => 'in_progress',
+            'sla_started_at' => now(),
             'scheduled_date' => now()->format('Y-m-d'),
             'notes' => $this->newDescription,
             'description' => $this->newDescription,
