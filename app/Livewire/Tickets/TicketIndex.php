@@ -50,8 +50,12 @@ class TicketIndex extends Component
         $base = Ticket::query();
         $user = Auth::user();
 
-        if (!$user->can('view any tickets') && $user->can('view own tickets')) {
+        if ($user->can('view any tickets')) {
+            // global
+        } elseif ($user->can('view own tickets')) {
             $base->where('created_by', $user->id);
+        } else {
+            $base->whereKey(0);
         }
 
         return [
@@ -73,7 +77,8 @@ class TicketIndex extends Component
             $query->where('created_by', $user->id);
         } else {
             $tickets = Ticket::query()->whereKey(0)->paginate(15);
-            return view('livewire.tickets.ticket-index', compact('tickets'))->layout('components.layouts.app');
+            $kpis = $this->getKpis();
+            return view('livewire.tickets.ticket-index', compact('tickets', 'kpis'))->layout('components.layouts.app');
         }
 
         if ($this->activeTab === 'ot') {

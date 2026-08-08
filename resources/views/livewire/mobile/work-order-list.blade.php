@@ -29,9 +29,36 @@
             </div>
 
             <div class="space-y-4">
+                @php
+                    $chipFilters = [
+                        ['value' => 'pending,in_progress,paused', 'label' => 'Activas', 'icon' => 'apps', 'active' => 'bg-blue-600 text-white border-blue-600', 'idle' => 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'],
+                        ['value' => 'in_progress', 'label' => 'En progreso', 'icon' => 'autorenew', 'active' => 'bg-blue-600 text-white border-blue-600', 'idle' => 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'],
+                        ['value' => 'pending', 'label' => 'Pendientes', 'icon' => 'schedule', 'active' => 'bg-amber-500 text-white border-amber-500', 'idle' => 'bg-white text-gray-600 border-gray-200 hover:border-amber-300'],
+                        ['value' => 'paused', 'label' => 'Pausadas', 'icon' => 'pause_circle', 'active' => 'bg-gray-600 text-white border-gray-600', 'idle' => 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'],
+                        ['value' => 'completed', 'label' => 'Completadas', 'icon' => 'check_circle', 'active' => 'bg-emerald-600 text-white border-emerald-600', 'idle' => 'bg-white text-gray-600 border-gray-200 hover:border-emerald-300'],
+                    ];
+                    $chipCounts = [
+                        'pending,in_progress,paused' => $statusCounts['pending'] + $statusCounts['in_progress'] + $statusCounts['paused'],
+                        'in_progress' => $statusCounts['in_progress'],
+                        'pending' => $statusCounts['pending'],
+                        'paused' => $statusCounts['paused'],
+                        'completed' => $statusCounts['completed'],
+                    ];
+                @endphp
+                <div class="flex flex-wrap gap-2">
+                    @foreach ($chipFilters as $chip)
+                        <button type="button" wire:click="$set('statusFilter', '{{ $chip['value'] }}')"
+                            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-semibold transition {{ $statusFilter === $chip['value'] ? $chip['active'] : $chip['idle'] }}">
+                            <span class="material-symbols-outlined text-sm">{{ $chip['icon'] }}</span>
+                            {{ $chip['label'] }}
+                            <span class="opacity-80 font-bold">{{ $chipCounts[$chip['value']] }}</span>
+                        </button>
+                    @endforeach
+                </div>
+
                 @forelse($orders as $order)
                     <a href="{{ route('mobile.work-orders.show', $order->id) }}" 
-                       class="block bg-white rounded-xl border border-gray-200/80 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 group">
+                       class="block bg-white rounded-xl border border-gray-200/80 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 group {{ $order->status === 'in_progress' ? 'border-l-4 border-l-blue-500' : '' }}">
                         <div class="p-5">
                             <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
                                 <div class="flex items-center gap-2 flex-wrap">
