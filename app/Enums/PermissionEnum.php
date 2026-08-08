@@ -69,6 +69,7 @@ enum PermissionEnum: string
     // ─── Módulo Reportes ───
     case AccessReports          = 'access_reports';
     case ViewReports            = 'view reports';
+    case ViewPerformanceReports = 'view performance reports';
 
     // ─── Submenús Reportes ───
     case ViewMovementsReportMenu = 'view_movements_report_menu';
@@ -230,6 +231,7 @@ enum PermissionEnum: string
         return [
             self::AccessReports,
             self::ViewReports,
+            self::ViewPerformanceReports,
             self::ViewMovementsReportMenu,
             self::ViewTechnicianPerformanceMenu,
         ];

@@ -67,14 +67,14 @@ class WorkOrderShow extends Component
         $this->checkAnotherInProgress();
 
         $this->technicianHasOpenRequisition = Requisition::where('technician_id', Auth::id())
-            ->whereIn('status', ['open', 'pending', 'approved'])
+            ->whereIn('status', ['pending', 'approved'])
             ->exists();
     }
 
     protected function checkOpenRequisition()
     {
         $this->hasOpenRequisition = $this->order->requisitions()
-            ->whereIn('status', ['open', 'pending', 'approved'])
+            ->whereIn('status', ['pending', 'approved'])
             ->exists();
     }
 
@@ -94,7 +94,7 @@ class WorkOrderShow extends Component
         }
 
         $this->availableProducts = RequisitionItem::whereHas('requisition', function ($q) {
-            $q->whereIn('status', ['open', 'approved'])
+            $q->whereIn('status', ['approved'])
               ->whereHas('workOrders', fn($w) => $w->where('work_order_id', $this->order->id));
         })
             ->with('product')
@@ -326,7 +326,7 @@ public function completeWorkOrder()
         $this->eligibleWorkOrders = WorkOrder::where('technician_id', $userId)
             ->whereIn('status', ['pending', 'in_progress'])
             ->whereDoesntHave('requisitions', function ($q) {
-                $q->where('status', 'open');
+                $q->whereIn('status', ['pending', 'approved']);
             })
             ->with('client')
             ->get()
@@ -350,7 +350,7 @@ public function completeWorkOrder()
     public function linkSelectedWorkOrders()
     {
         $openRequisition = Requisition::where('technician_id', Auth::id())
-            ->where('status', 'open')
+            ->where('status', 'approved')
             ->first();
 
         if (!$openRequisition) {

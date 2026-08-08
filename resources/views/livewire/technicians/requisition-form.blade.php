@@ -2,6 +2,16 @@
     <x-ui.card icon="inventory_2" title="Nueva Requisición de Material" subtitle="Solicitud de material para órdenes de trabajo asignadas">
         <form wire:submit.prevent="promptSave" class="space-y-6">
 
+            @if($errors->any())
+                <x-ui.alert variant="danger" title="Revisá estos campos para poder guardar">
+                    <ul class="space-y-0.5">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </x-ui.alert>
+            @endif
+
             {{-- Selección de Órdenes de Trabajo --}}
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
@@ -30,6 +40,12 @@
                     @endforeach
                 </div>
                 @error('selectedWorkOrders') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                @if(count($workOrders))
+                    <p class="mt-2 text-xs text-gray-400 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">info</span>
+                        Solo se muestran OTs sin requisición activa. Si una OT ya está en una requisición aprobada, agregá el material con "Ajustar" en esa requisición.
+                    </p>
+                @endif
             </div>
 
             {{-- Inventario actual del técnico --}}
@@ -53,19 +69,26 @@
                     Material solicitado
                 </h2>
 
+                @if(!count($items))
+                    <x-ui.alert variant="warning" class="mb-4">
+                        Agregá al menos un producto para poder guardar la requisición.
+                    </x-ui.alert>
+                @endif
+
                 <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Producto</label>
                             <div class="flex gap-2">
                                 <div class="relative flex-1">
-                                    <x-ui.input type="text" wire:model.live.debounce.300ms="currentProductSearch"
-                                        placeholder="Buscar por nombre o SKU..." icon="search" />
+                                    <x-ui.input type="text" wire:model.live.debounce.500ms="currentProductSearch"
+                                        placeholder="Buscar por nombre o SKU..." icon="search"
+                                        :error="$errors->first('currentProductId')" />
                                     @if(count($productResults))
                                         <ul class="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-auto divide-y divide-gray-100">
                                             @foreach($productResults as $product)
                                                 @php $stockQty = $technicianStock[$product->id]['quantity'] ?? 0; @endphp
-                                                <li wire:click="selectProduct({{ $product->id }})"
+                                                <li wire:key="prod-res-{{ $product->id }}" wire:click="selectProduct({{ $product->id }})"
                                                     class="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm flex items-center justify-between gap-2">
                                                     <span>{{ $product->name }} ({{ $product->sku }})</span>
                                                     @if($stockQty > 0)
@@ -80,10 +103,22 @@
                                     <span class="hidden sm:inline">Ver todos</span>
                                 </x-ui.button>
                             </div>
+                            @if($currentProductId)
+                                <div class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 rounded-lg text-xs font-medium">
+                                    <span class="material-symbols-outlined text-sm">check_circle</span>
+                                    Seleccionado: {{ $currentProductSearch }}
+                                </div>
+                            @elseif(strlen($currentProductSearch) > 0)
+                                <p class="mt-2 text-xs text-gray-400 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">touch_app</span>
+                                    Hacé clic en un resultado de la lista para seleccionar el producto.
+                                </p>
+                            @endif
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Cantidad</label>
-                            <x-ui.input type="number" step="any" wire:model="currentQuantity" min="0" />
+                            <x-ui.input type="number" step="any" wire:model="currentQuantity" min="0"
+                                :error="$errors->first('currentQuantity')" />
                             @if($currentProductId && isset($technicianStock[$currentProductId]))
                                 <p class="text-xs text-amber-600 mt-1 flex items-center gap-1">
                                     <span class="material-symbols-outlined text-sm">inventory</span>
@@ -335,7 +370,7 @@
                                     <div>
                                         <p class="text-xs text-gray-500">Material</p>
                                         <p class="text-sm text-gray-800">
-                                            @if($previewWorkOrder->requisitions()->where('status', 'open')->exists())
+                                            @if($previewWorkOrder->requisitions()->whereIn('status', ['pending', 'approved'])->exists())
                                                 <span class="text-green-600">Asignado</span>
                                             @else
                                                 <span class="text-red-500">Sin asignar</span>

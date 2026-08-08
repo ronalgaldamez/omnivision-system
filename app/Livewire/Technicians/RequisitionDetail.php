@@ -67,7 +67,7 @@ class RequisitionDetail extends Component
 
     public function openEditModal()
     {
-        if ($this->requisition->status !== 'open') {
+        if ($this->requisition->status !== 'approved') {
             $this->dispatch('show-toast', type: 'error', message: 'Solo se puede ajustar la requisición activa.');
             return;
         }
@@ -91,7 +91,7 @@ class RequisitionDetail extends Component
 
     public function saveEditModal()
     {
-        if ($this->requisition->status !== 'open') {
+        if ($this->requisition->status !== 'approved') {
             $this->dispatch('show-toast', type: 'error', message: 'Solo se puede ajustar la requisición activa.');
             return;
         }
@@ -186,7 +186,7 @@ class RequisitionDetail extends Component
         $this->unlinkedWorkOrders = WorkOrder::where('technician_id', $this->requisition->technician_id)
             ->whereIn('status', ['pending', 'in_progress'])
             ->whereDoesntHave('requisitions', function ($q) {
-                $q->whereIn('status', ['open', 'pending', 'approved']);
+                $q->whereIn('status', ['pending', 'approved']);
             })
             ->with('client')
             ->get();

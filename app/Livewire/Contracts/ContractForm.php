@@ -171,7 +171,6 @@ class ContractForm extends Component
                     'contracts_ended_at' => now(),
                     'status' => 'in_progress',
                 ]);
-                app(\App\Services\SlaService::class)->evaluateSla($ticket);
             }
 
             session()->flash('message', 'Contrato #' . $contract->id . ' creado correctamente.');

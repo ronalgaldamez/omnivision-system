@@ -115,7 +115,7 @@
                                             {{ $order->vehicle->placa }}
                                         </span>
                                     @endif
-                                    @if($order->requisitions()->where('status', 'open')->exists())
+                                    @if($order->requisitions()->whereIn('status', ['pending', 'approved'])->exists())
                                         <span class="inline-flex items-center gap-1 text-xs text-green-600">
                                             <span class="material-symbols-outlined text-sm">inventory_2</span>
                                             Material asignado

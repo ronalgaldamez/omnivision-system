@@ -1,0 +1,34 @@
+# ============================================================
+# Reverb WebSocket Server - unidad systemd (Linux / VPS)
+# ============================================================
+# Instalacion (ajusta rutas y usuario a tu servidor):
+#
+#   sudo cp scripts/reverb.service /etc/systemd/system/reverb.service
+#   sudo nano /etc/systemd/system/reverb.service   # ajusta User/WorkingDirectory/ExecStart
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now reverb
+#
+# Comandos utiles:
+#   sudo systemctl status reverb      # estado
+#   sudo journalctl -u reverb -f      # logs en vivo
+#
+# Nota para produccion con HTTPS: en .env usa REVERB_SCHEME=https
+# y proxi el puerto 8080 en nginx (location /app + Upgrade headers).
+
+[Unit]
+Description=Laravel Reverb WebSocket Server
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/omnivision-system
+ExecStart=/usr/bin/php /var/www/omnivision-system/artisan reverb:start
+Restart=always
+RestartSec=5
+Environment=APP_ENV=production
+
+[Install]
+WantedBy=multi-user.target

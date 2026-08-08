@@ -163,6 +163,10 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/reports/movements', \App\Livewire\Reports\MovementsReport::class)->name('reports.movements');
             Route::get('/reports/technicians', \App\Livewire\Reports\TechnicianPerformance::class)->name('reports.technicians');
         });
+
+        Route::middleware('can:view performance reports')->group(function () {
+            Route::get('/reports/performance', \App\Livewire\Reports\PerformanceReport::class)->name('reports.performance');
+        });
     }
     
     // ========== CLIENTS ==========

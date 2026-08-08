@@ -42,7 +42,7 @@ class RequisitionForm extends Component
         return [
             'selectedWorkOrders' => $otRequired ? 'required|array|min:1' : 'nullable|array',
             'selectedWorkOrders.*' => ['exists:work_orders,id', function ($attribute, $value, $fail) {
-                if (\App\Models\WorkOrder::whereHas('requisitions', fn($q) => $q->where('status', 'open'))
+                if (\App\Models\WorkOrder::whereHas('requisitions', fn($q) => $q->where('status', 'pending'))
                     ->where('id', $value)
                     ->exists()
                 ) {
@@ -172,6 +172,11 @@ class RequisitionForm extends Component
         $this->validate([
             'currentProductId' => 'required|exists:products,id',
             'currentQuantity' => 'required|numeric|min:0.01',
+        ], [
+            'currentProductId.required' => 'Seleccioná un producto antes de agregar.',
+            'currentProductId.exists' => 'El producto seleccionado no existe.',
+            'currentQuantity.required' => 'Indicá la cantidad a solicitar.',
+            'currentQuantity.min' => 'La cantidad debe ser mayor a 0.',
         ]);
 
         $product = Product::find($this->currentProductId);
@@ -255,7 +260,7 @@ class RequisitionForm extends Component
     public function save()
     {
         \App\Models\Requisition::where('technician_id', Auth::id())
-            ->where('status', 'open')
+            ->where('status', 'approved')
             ->update(['status' => 'heredada']);
 
         $requisition = Requisition::create([
@@ -292,8 +297,7 @@ class RequisitionForm extends Component
     {
         $workOrders = WorkOrder::where('technician_id', Auth::id())
             ->whereIn('status', ['pending', 'in_progress'])
-            ->whereDoesntHave('requisitions', fn($q) => $q->whereIn('status', ['open', 'pending']))
-            ->whereDoesntHave('requisitions', fn($q) => $q->where('status', 'approved')->where('technician_id', Auth::id()))
+            ->whereDoesntHave('requisitions', fn($q) => $q->where('status', 'pending'))
             ->with('client')
             ->get();
 
