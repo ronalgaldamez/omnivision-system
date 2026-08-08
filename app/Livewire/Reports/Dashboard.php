@@ -208,7 +208,6 @@ class Dashboard extends Component
             $workOrder = app(WorkOrderService::class)->createFromTicket($ticket);
             $ticket->status = 'in_progress';
             $ticket->save();
-            app(SlaService::class)->evaluateSla($ticket);
             session()->flash('message', 'OT creada a partir del ticket.');
         }
         return redirect()->route('work-orders.index');

@@ -127,7 +127,6 @@ class NocPanel extends Component
             $ticket->resolved_by = $ticket->resolved_by ?? Auth::id();
             $ticket->save();
 
-            app(SlaService::class)->evaluateSla($ticket);
             session()->flash('message', 'OT creada a partir del ticket.');
         }
         $this->mount();

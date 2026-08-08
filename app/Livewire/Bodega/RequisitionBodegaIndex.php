@@ -356,7 +356,7 @@ class RequisitionBodegaIndex extends Component
             if ($technician = $requisition->technician) {
                 $notification = new RequisitionStatusNotification($requisition, 'approved');
                 $technician->notify($notification);
-                broadcastNow(new BroadcastNotificationCreated($notification, $technician));
+                broadcast(new BroadcastNotificationCreated($notification, $technician));
             }
 
             $this->dispatch('show-toast', type: 'success', message: 'Requisición #' . $requisition->id . ' aprobada.');
@@ -395,7 +395,7 @@ class RequisitionBodegaIndex extends Component
         if ($technician = $this->selectedRequisition->technician) {
             $notification = new RequisitionStatusNotification($this->selectedRequisition, 'rejected', $this->rejectionReason);
             $technician->notify($notification);
-            broadcastNow(new BroadcastNotificationCreated($notification, $technician));
+            broadcast(new BroadcastNotificationCreated($notification, $technician));
         }
 
         $this->dispatch('show-toast', type: 'info', message: 'Requisición #' . $this->selectedRequisition->id . ' rechazada.');
