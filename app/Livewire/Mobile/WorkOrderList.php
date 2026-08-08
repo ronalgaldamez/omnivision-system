@@ -38,7 +38,24 @@ class WorkOrderList extends Component
             ->orderBy('scheduled_date', 'asc')
             ->paginate(10);
 
-        return view('livewire.mobile.work-order-list', compact('orders'))->layout('components.layouts.app');
+        $counts = WorkOrder::where('technician_id', Auth::id())
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $statusCounts = [
+            'pending' => (int) ($counts['pending'] ?? 0),
+            'in_progress' => (int) ($counts['in_progress'] ?? 0),
+            'paused' => (int) ($counts['paused'] ?? 0),
+            'completed' => (int) ($counts['completed'] ?? 0),
+        ];
+
+        return view('livewire.mobile.work-order-list', compact('orders', 'statusCounts'))->layout('components.layouts.app');
+    }
+
+    public function updatedStatusFilter()
+    {
+        $this->resetPage();
     }
 
     // Abrir modal de creación rápida

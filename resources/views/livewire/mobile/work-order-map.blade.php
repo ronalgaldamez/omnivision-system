@@ -4,7 +4,7 @@
     </x-ui.card>
 
     <script>
-        document.addEventListener('livewire:load', function () {
+        document.addEventListener('livewire:initialized', function () {
             var map = L.map('map').setView([13.6929, -89.2182], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }).addTo(map);
 
@@ -13,7 +13,7 @@
                 if (order.latitude && order.longitude) {
                     var marker = L.marker([order.latitude, order.longitude]).addTo(map);
                     marker.bindPopup(`
-                        <strong>#{{ order . id }}</strong><br>
+                        <strong>#${order.id}</strong><br>
                         Cliente: ${order.client_name}<br>
                         Dirección: ${order.client_address || 'N/A'}<br>
                         <a href="/mobile/technician/work-orders/${order.id}">Ver detalle</a>
