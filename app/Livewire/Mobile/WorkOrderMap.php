@@ -10,7 +10,7 @@ class WorkOrderMap extends Component
 {
     public function render()
     {
-        $workOrders = WorkOrder::with('client')
+        $workOrders = WorkOrder::with(['client', 'ticket'])
             ->where('technician_id', Auth::id())
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
@@ -18,8 +18,11 @@ class WorkOrderMap extends Component
             ->map(function ($wo) {
                 return [
                     'id' => $wo->id,
+                    'code' => $wo->code ?? ('OT-' . $wo->id),
                     'latitude' => $wo->latitude,
                     'longitude' => $wo->longitude,
+                    'status' => $wo->status,
+                    'priority' => $wo->ticket?->priority ?? '—',
                     'client_name' => $wo->client?->name ?? 'Sin cliente',
                     'client_address' => $wo->client?->address ?? '',
                 ];
