@@ -959,7 +959,7 @@ class TicketForm extends Component
 
             app(SlaService::class)->assignSlaToTicket($ticket);
             if (in_array($ticket->status, ['resolved', 'closed'])) {
-                app(SlaService::class)->evaluateSla($ticket);
+                app(SlaService::class)->evaluateSla($ticket->fresh());
             }
 
             session()->flash('message', 'Ticket actualizado correctamente.');
