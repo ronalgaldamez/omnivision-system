@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Clients;
 
 use Livewire\Component;
 use App\Models\Client;
+use App\Models\Contract;
 use App\Models\WorkOrder;
 
 class ClientShow extends Component
@@ -11,6 +12,7 @@ class ClientShow extends Component
     public $client;
     public $tickets;
     public $completedWorkOrders;
+    public $contracts;
 
     public function mount($id)
     {
@@ -25,6 +27,10 @@ class ClientShow extends Component
             ->where('status', 'completed')
             ->with('ticket')
             ->orderBy('completed_date', 'desc')
+            ->get();
+        $this->contracts = Contract::where('client_id', $id)
+            ->with('plan', 'zone')
+            ->orderBy('created_at', 'desc')
             ->get();
     }
 

@@ -47,14 +47,24 @@ class ContractIndex extends Component
 
         $result = app(ContractDeliveryService::class)->send($contract);
 
-        if ($result['channel'] === 'whatsapp') {
+        $sentAny = $result['email'] || $result['whatsapp'];
+
+        if ($result['whatsapp']) {
             $this->sentWhatsAppLink = app(ContractDeliveryService::class)->whatsAppShareUrl($contract);
-            $this->dispatch('show-toast', type: 'success', message: 'Contrato listo. Compartilo por WhatsApp.');
-        } elseif ($result['channel'] === 'email') {
+        }
+
+        if ($result['email'] && $result['whatsapp']) {
+            $this->dispatch('show-toast', type: 'success', message: 'Contrato enviado por correo y enlace de WhatsApp generado.');
+        } elseif ($result['email']) {
             $this->dispatch('show-toast', type: 'success', message: 'Contrato enviado por correo y activado.');
-            $this->confirmingSend = null;
+        } elseif ($result['whatsapp']) {
+            $this->dispatch('show-toast', type: 'success', message: 'Contrato listo. Compartilo por WhatsApp.');
         } else {
-            $this->dispatch('show-toast', type: 'success', message: 'Contrato activado sin envío (cliente sin preferencia).');
+            $this->dispatch('show-toast', type: 'success', message: 'Contrato activado sin envío (cliente sin canales seleccionados).');
+            $this->confirmingSend = null;
+        }
+
+        if (!$result['whatsapp']) {
             $this->confirmingSend = null;
         }
     }

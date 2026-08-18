@@ -48,6 +48,13 @@
                             <td class="px-4 py-3 text-gray-600 text-xs">{{ $contract->contract_date?->format('d/m/Y') ?? '—' }}</td>
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-2">
+                                    @if($contract->hasPdf())
+                                        <a href="{{ route('contracts.pdf-preview', $contract->id) }}" target="_blank"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
+                                            <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+                                            Ver PDF
+                                        </a>
+                                    @endif
                                     <button wire:click="createWorkOrder({{ $contract->id }})"
                                         class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition">
                                         <span class="material-symbols-outlined text-sm">engineering</span>
@@ -105,15 +112,18 @@
                         @else
                             <div class="mt-3 bg-gray-50 rounded-lg p-3 text-left text-sm space-y-1">
                                 <p><span class="text-gray-500">Cliente:</span> <span class="font-medium">{{ $sendContract?->client?->name ?? '—' }}</span></p>
-                                <p><span class="text-gray-500">Preferencia de envío:</span>
-                                    @php $pref = $sendContract?->client?->contact_preference ?? 'ninguno'; @endphp
-                                    <span class="font-medium">{{ ucfirst($pref) }}</span>
+                                <p><span class="text-gray-500">Canales de envío:</span>
+                                    @php
+                                        $channels = $sendContract?->client?->contact_channels ?? [];
+                                        $channelsLabel = $channels ? implode(' + ', array_map('ucfirst', $channels)) : 'Ninguno';
+                                    @endphp
+                                    <span class="font-medium">{{ $channelsLabel }}</span>
                                 </p>
                                 <p><span class="text-gray-500">Correo:</span> <span class="font-medium">{{ $sendContract?->client?->email ?? '—' }}</span></p>
                                 <p><span class="text-gray-500">WhatsApp:</span> <span class="font-medium">{{ $sendContract?->client?->phone ?? '—' }}</span></p>
                             </div>
                             <p class="text-xs text-gray-400 mt-3">
-                                Se enviará por {{ $pref === 'email' ? 'correo electrónico con el PDF adjunto' : ($pref === 'whatsapp' ? 'WhatsApp' : 'ninguno (quedará activo sin envío)') }}.
+                                Se enviará por {{ $channels ? implode(' y ', array_map(fn($c) => $c === 'email' ? 'correo electrónico con el PDF adjunto' : 'WhatsApp', $channels)) : 'ninguno (quedará activo sin envío)' }}.
                             </p>
                         @endif
                     </div>

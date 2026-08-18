@@ -386,9 +386,65 @@ class ContractWorkflow extends Component
             }
             $this->step = 4;
         } elseif ($this->step === 4) {
+            // Validar que la firma no esté en blanco (canvas vacío).
+            $hasValidSignature = $this->signature_link
+                || ($this->client_signature_data && $this->isRealSignature($this->client_signature_data));
+
+            if (!$hasValidSignature) {
+                $this->dispatch('show-toast', type: 'error', message: 'Debe capturar la firma del cliente (no puede estar en blanco).');
+                return;
+            }
+
             // Cuando se completa la firma, ir a preview
             $this->step = 5;
         }
+    }
+
+    /**
+     * Verifica que un data URL de firma contenga trazos reales y no sea una imagen en blanco.
+     */
+    private function isRealSignature(string $dataUrl): bool
+    {
+        $pos = strpos($dataUrl, 'base64,');
+        if ($pos === false) {
+            return false;
+        }
+
+        $raw = base64_decode(substr($dataUrl, $pos + 7));
+        if ($raw === false || strlen($raw) < 200) {
+            return false;
+        }
+
+        $image = @imagecreatefromstring($raw);
+        if ($image === false) {
+            return false;
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+        if ($width < 2 || $height < 2) {
+            imagedestroy($image);
+            return false;
+        }
+
+        // Contar píxeles no blancos para detectar un canvas vacío
+        $hasInk = false;
+        $sampleStep = max(1, (int) ceil(($width * $height) / 5000));
+        for ($y = 0; $y < $height && !$hasInk; $y += $sampleStep) {
+            for ($x = 0; $x < $width; $x += $sampleStep) {
+                $rgb = imagecolorat($image, $x, $y);
+                $r = ($rgb >> 16) & 0xFF;
+                $g = ($rgb >> 8) & 0xFF;
+                $b = $rgb & 0xFF;
+                if ($r < 245 || $g < 245 || $b < 245) {
+                    $hasInk = true;
+                    break;
+                }
+            }
+        }
+
+        imagedestroy($image);
+        return $hasInk;
     }
 
     public function previousStep()

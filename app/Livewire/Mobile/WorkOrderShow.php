@@ -61,6 +61,7 @@ class WorkOrderShow extends Component
     public $technology = '';
     public $modem_serial = '';
     public $installation_cost = '';
+    public $payment_date = '';
 
     // Verificación de instalación
     public $mufa_has_space = null;
@@ -140,6 +141,7 @@ class WorkOrderShow extends Component
         $this->technology = $contract->technology ?? '';
         $this->modem_serial = $contract->modem_serial ?? '';
         $this->installation_cost = $contract->installation_cost ?? '';
+        $this->payment_date = $draft['payment_date'] ?? $contract->payment_date ?? '';
 
         $client = $this->workOrder->client;
         $this->latitude = $draft['latitude'] ?? $this->workOrder->latitude ?? $client->latitude ?? null;
@@ -270,6 +272,12 @@ class WorkOrderShow extends Component
             'drop_distance' => $this->drop_distance,
             'verification_price' => $this->verification_price,
             'customer_accepts_cost' => $this->customer_accepts_cost,
+            'access_type' => $this->access_type,
+            'speed' => $this->speed,
+            'technology' => $this->technology,
+            'modem_serial' => $this->modem_serial,
+            'installation_cost' => $this->installation_cost,
+            'payment_date' => $this->payment_date,
         ]);
 
         $this->updateDraftStatus();
@@ -354,6 +362,7 @@ class WorkOrderShow extends Component
                 'technology' => $this->technology,
                 'modem_serial' => $this->modem_serial,
                 'installation_cost' => $this->installation_cost ?: null,
+                'payment_date' => $this->payment_date ?: null,
             ]);
         }
 
@@ -448,6 +457,13 @@ class WorkOrderShow extends Component
 
     protected function checkOpenRequisition()
     {
+        // En una OT de verificación no se pide requisición de productos.
+        if ($this->isVerificationOt()) {
+            $this->hasOpenRequisition = false;
+            $this->hasApprovedRequisition = false;
+            return;
+        }
+
         $this->hasOpenRequisition = $this->workOrder->requisitions()
             ->whereIn('status', ['pending', 'approved'])
             ->exists();

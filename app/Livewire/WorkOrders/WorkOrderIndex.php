@@ -444,6 +444,38 @@ class WorkOrderIndex extends Component
         return $orders;
     }
 
+    public function promptQuickNote($orderId)
+    {
+        $this->confirmingAction = 'quick_note';
+        $this->confirmingOrderId = $orderId;
+        $this->notes = WorkOrder::find($orderId)?->notes ?? '';
+    }
+
+    public function saveQuickNote()
+    {
+        if (empty(trim($this->notes))) {
+            $this->dispatch('show-toast', type: 'error', message: 'La nota no puede estar vacía.');
+            return;
+        }
+
+        $order = WorkOrder::find($this->confirmingOrderId);
+        if ($order) {
+            $order->update(['notes' => trim($this->notes)]);
+            $this->dispatch('show-toast', type: 'success', message: 'Nota guardada en la OT ' . $order->code . '.');
+        }
+
+        $this->confirmingAction = null;
+        $this->confirmingOrderId = null;
+        $this->notes = '';
+    }
+
+    public function cancelQuickNote()
+    {
+        $this->confirmingAction = null;
+        $this->confirmingOrderId = null;
+        $this->notes = '';
+    }
+
     public function render()
     {
         $user = Auth::user();

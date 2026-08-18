@@ -26,6 +26,7 @@ class Contract extends Model
         'sent_at',
         'contract_terms',
         'contract_date',
+        'payment_date',
         'created_by',
         'contract_type',
         'service_contracted',
@@ -133,5 +134,10 @@ class Contract extends Model
     public function isReadyToFinalize(): bool
     {
         return $this->hasRequiredDocuments() && $this->isFullySigned();
+    }
+
+    public function hasPdf(): bool
+    {
+        return app(\App\Services\ContractPdfService::class)->hasPdf($this);
     }
 }

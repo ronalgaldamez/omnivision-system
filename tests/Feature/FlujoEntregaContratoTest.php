@@ -18,7 +18,7 @@ class FlujoEntregaContratoTest extends TestCase
         $client = Client::factory()->create(array_merge([
             'email' => 'cliente@test.com',
             'phone' => '7000-0000',
-            'contact_preference' => 'email',
+            'contact_channels' => ['email'],
         ], $clientData));
 
         $contract = Contract::create(array_merge([
@@ -40,8 +40,8 @@ class FlujoEntregaContratoTest extends TestCase
 
         $contract->refresh();
 
-        $this->assertSame('email', $result['channel']);
-        $this->assertTrue($result['sent']);
+        $this->assertTrue($result['email']);
+        $this->assertFalse($result['whatsapp']);
         $this->assertSame('active', $contract->status);
         $this->assertNotNull($contract->sent_at);
     }
@@ -51,7 +51,7 @@ class FlujoEntregaContratoTest extends TestCase
         [$client, $contract] = $this->makeContract([
             'email' => null,
             'phone' => '7000-0000',
-            'contact_preference' => 'whatsapp',
+            'contact_channels' => ['whatsapp'],
         ]);
 
         $service = new ContractDeliveryService(app(ContractPdfService::class));
@@ -59,8 +59,8 @@ class FlujoEntregaContratoTest extends TestCase
 
         $contract->refresh();
 
-        $this->assertSame('whatsapp', $result['channel']);
-        $this->assertTrue($result['sent']);
+        $this->assertFalse($result['email']);
+        $this->assertTrue($result['whatsapp']);
         $this->assertSame('active', $contract->status);
 
         $shareUrl = $service->whatsAppShareUrl($contract);
@@ -68,12 +68,10 @@ class FlujoEntregaContratoTest extends TestCase
         $this->assertStringContainsString('wa.me/', $shareUrl);
     }
 
-    public function test_sin_preferencia_activa_sin_enviar()
+    public function test_envio_por_ambos_canales()
     {
         [$client, $contract] = $this->makeContract([
-            'email' => null,
-            'phone' => '7000-0000',
-            'contact_preference' => 'ninguno',
+            'contact_channels' => ['email', 'whatsapp'],
         ]);
 
         $service = new ContractDeliveryService(app(ContractPdfService::class));
@@ -81,8 +79,26 @@ class FlujoEntregaContratoTest extends TestCase
 
         $contract->refresh();
 
-        $this->assertSame('ninguno', $result['channel']);
-        $this->assertFalse($result['sent']);
+        $this->assertTrue($result['email']);
+        $this->assertTrue($result['whatsapp']);
+        $this->assertSame('active', $contract->status);
+    }
+
+    public function test_sin_canales_activa_sin_enviar()
+    {
+        [$client, $contract] = $this->makeContract([
+            'email' => null,
+            'phone' => '7000-0000',
+            'contact_channels' => [],
+        ]);
+
+        $service = new ContractDeliveryService(app(ContractPdfService::class));
+        $result = $service->send($contract);
+
+        $contract->refresh();
+
+        $this->assertFalse($result['email']);
+        $this->assertFalse($result['whatsapp']);
         $this->assertSame('active', $contract->status);
     }
 }

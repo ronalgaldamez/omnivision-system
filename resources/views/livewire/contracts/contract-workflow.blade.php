@@ -1562,9 +1562,6 @@
                     <x-ui.button variant="primary" icon="download" wire:click="downloadPdf">
                         Descargar PDF
                     </x-ui.button>
-                    <x-ui.button variant="success" icon="check" wire:click="finalize">
-                        Finalizar
-                    </x-ui.button>
                 </div>
             </div>
         @endif

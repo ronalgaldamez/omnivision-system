@@ -17,7 +17,8 @@ class ContractDeliveryService
     public function __construct(private ContractPdfService $pdfService) {}
 
     /**
-     * Envía el contrato por el canal preferido del cliente y lo marca como activo.
+     * Envía el contrato por los canales elegidos por el cliente y lo marca como activo.
+     * Puede enviar por email Y generar enlace de WhatsApp a la vez.
      */
     public function send(Contract $contract): array
     {
@@ -26,20 +27,17 @@ class ContractDeliveryService
         }
 
         $client = $contract->client;
-        $preference = $client?->contact_preference ?? 'ninguno';
-        $result = ['channel' => $preference, 'sent' => false];
+        $channels = $client?->contact_channels ?? [];
+        $sentByEmail = false;
+        $sentByWhatsApp = false;
 
-        switch ($preference) {
-            case 'email':
-                if ($client?->email) {
-                    Mail::to($client->email)->send(new ContractMail($contract));
-                    $result['sent'] = true;
-                }
-                break;
+        if (in_array('email', $channels) && $client?->email) {
+            Mail::to($client->email)->send(new ContractMail($contract));
+            $sentByEmail = true;
+        }
 
-            case 'whatsapp':
-                $result['sent'] = true;
-                break;
+        if (in_array('whatsapp', $channels)) {
+            $sentByWhatsApp = true;
         }
 
         $contract->update([
@@ -48,7 +46,10 @@ class ContractDeliveryService
             'sent_at' => now(),
         ]);
 
-        return $result;
+        return [
+            'email' => $sentByEmail,
+            'whatsapp' => $sentByWhatsApp,
+        ];
     }
 
     /**

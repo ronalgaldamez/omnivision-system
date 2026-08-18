@@ -66,6 +66,7 @@ class WorkOrderForm extends Component
     public $isPureOT = false;
     public $technicalDataLoaded = false;
     public $canEditNocAndService = false; // ← NUEVO
+    public $canEditStatus = false; // Solo admin puede cambiar el estado de la OT
 
     protected function rules()
     {
@@ -109,6 +110,8 @@ class WorkOrderForm extends Component
         $this->ticket_id = $ticket_id;
         // En edición solo el admin puede cambiar el cliente (para evitar cambios por error)
         $this->canChangeClient = !$id || $user->can('access_admin');
+        // Solo admin/branch_admin modifica el estado; el supervisor lo ve en modo lectura
+        $this->canEditStatus = $user->can('access_admin');
 
         if ($id) {
             // Edición de OT existente

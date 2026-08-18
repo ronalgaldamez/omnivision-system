@@ -555,6 +555,15 @@
                                 step="0.01" min="0" placeholder="0.00"
                                 class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
                         </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">Fecha de pago
+                                <span class="text-[9px] text-green-500">(consultá a la sucursal)</span>
+                            </label>
+                            <input type="text" wire:model.live="payment_date"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                placeholder="Ej: cada 15 de cada mes"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                        </div>
                     </div>
                 </div>
             @endif
@@ -689,7 +698,9 @@
     @if (!in_array($workOrder->status, ['completed', 'cancelled']))
         <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
             <div class="max-w-2xl mx-auto px-4 py-3 space-y-2.5">
-                @if ($workOrder->status === 'pending' && $hasApprovedRequisition && !$hasAnotherInProgress)
+                @if ($this->isVerificationOt() && $workOrder->status === 'pending' && !$hasAnotherInProgress)
+                    <x-ui.button wire:click="promptStartWorkOrder" variant="warning" icon="play_arrow" class="w-full">Iniciar OT</x-ui.button>
+                @elseif ($workOrder->status === 'pending' && $hasApprovedRequisition && !$hasAnotherInProgress)
                     <x-ui.button wire:click="promptStartWorkOrder" variant="warning" icon="play_arrow" class="w-full">Iniciar OT</x-ui.button>
                 @elseif($workOrder->status === 'pending' && $hasOpenRequisition && !$hasApprovedRequisition)
                     <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
