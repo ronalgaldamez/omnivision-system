@@ -18,7 +18,7 @@ class TicketTimeline extends Component
         $this->ticket = Ticket::with([
             'client', 'createdBy', 'resolvedBy', 'slaGoal',
             'zone.supervisors', 'zone.parent.supervisors', 'zone.parent.parent.supervisors',
-            'workOrder.technician', 'workOrder.createdBy', 'workOrder.pauses',
+            'workOrders.technician', 'workOrders.createdBy', 'workOrders.assignedBy', 'workOrders.pauses',
         ])->findOrFail($id);
 
         if (Auth::user()->cannot('view sla dashboard')) {
@@ -34,7 +34,7 @@ class TicketTimeline extends Component
         $this->ticket = Ticket::with([
             'client', 'createdBy', 'resolvedBy', 'slaGoal',
             'zone.supervisors', 'zone.parent.supervisors', 'zone.parent.parent.supervisors',
-            'workOrder.technician', 'workOrder.createdBy', 'workOrder.pauses',
+            'workOrders.technician', 'workOrders.createdBy', 'workOrders.assignedBy', 'workOrders.pauses',
         ])->find($this->ticket->id);
 
         $this->timeline = app(TimelineService::class)->buildFromTicket($this->ticket);

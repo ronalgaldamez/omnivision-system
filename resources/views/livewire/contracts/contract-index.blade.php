@@ -37,17 +37,30 @@
                             <td class="px-4 py-3 text-gray-700">{{ $contract->plan?->name ?? '—' }}</td>
                             <td class="px-4 py-3 text-gray-700">{{ $contract->zone?->name ?? '—' }}</td>
                             <td class="px-4 py-3 text-center">
-                                <x-ui.badge :variant="match($contract->status) { 'active' => 'success', 'suspended' => 'warning', 'cancelled' => 'danger', default => 'neutral' }">
-                                    {{ ucfirst($contract->status) }}
-                                </x-ui.badge>
+                                @if($contract->status === 'ready_to_send')
+                                    <x-ui.badge variant="info" icon="send">Listo para enviar</x-ui.badge>
+                                @else
+                                    <x-ui.badge :variant="match($contract->status) { 'active' => 'success', 'suspended' => 'warning', 'cancelled' => 'danger', default => 'neutral' }">
+                                        {{ ucfirst($contract->status) }}
+                                    </x-ui.badge>
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-gray-600 text-xs">{{ $contract->contract_date?->format('d/m/Y') ?? '—' }}</td>
                             <td class="px-4 py-3 text-center">
-                                <button wire:click="createWorkOrder({{ $contract->id }})"
-                                    class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition">
-                                    <span class="material-symbols-outlined text-sm">engineering</span>
-                                    Crear OT
-                                </button>
+                                <div class="flex items-center justify-center gap-2">
+                                    <button wire:click="createWorkOrder({{ $contract->id }})"
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition">
+                                        <span class="material-symbols-outlined text-sm">engineering</span>
+                                        Crear OT
+                                    </button>
+                                    @if($contract->status === 'ready_to_send')
+                                        <button wire:click="promptSend({{ $contract->id }})"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition">
+                                            <span class="material-symbols-outlined text-sm">send</span>
+                                            Revisar y enviar
+                                        </button>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -63,6 +76,61 @@
             </table>
         </div>
     </x-ui.card>
+
+    {{-- Modal: Revisar y enviar contrato --}}
+    @if($confirmingSend)
+        @php $sendContract = $contracts->firstWhere('id', $confirmingSend); @endphp
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <x-ui.card overflow="visible">
+                    <div class="text-center">
+                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 mb-4">
+                            <span class="material-symbols-outlined text-green-600 text-2xl">send</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Revisar y enviar contrato</h3>
+                        <p class="text-sm text-gray-600 mt-2">
+                            El contrato <strong>{{ $sendContract?->contract_digital_code }}</strong> está listo para enviarse al cliente.
+                        </p>
+                        @if($sentWhatsAppLink)
+                            <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-left space-y-2">
+                                <p class="text-xs text-green-700 font-medium">Enlace generado. Enviáselo al cliente por WhatsApp:</p>
+                                <a href="{{ $sentWhatsAppLink }}" target="_blank"
+                                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition w-full justify-center">
+                                    <span class="material-symbols-outlined text-sm">chat</span>
+                                    Abrir WhatsApp
+                                </a>
+                            </div>
+                        @else
+                            <div class="mt-3 bg-gray-50 rounded-lg p-3 text-left text-sm space-y-1">
+                                <p><span class="text-gray-500">Cliente:</span> <span class="font-medium">{{ $sendContract?->client?->name ?? '—' }}</span></p>
+                                <p><span class="text-gray-500">Preferencia de envío:</span>
+                                    @php $pref = $sendContract?->client?->contact_preference ?? 'ninguno'; @endphp
+                                    <span class="font-medium">{{ ucfirst($pref) }}</span>
+                                </p>
+                                <p><span class="text-gray-500">Correo:</span> <span class="font-medium">{{ $sendContract?->client?->email ?? '—' }}</span></p>
+                                <p><span class="text-gray-500">WhatsApp:</span> <span class="font-medium">{{ $sendContract?->client?->phone ?? '—' }}</span></p>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-3">
+                                Se enviará por {{ $pref === 'email' ? 'correo electrónico con el PDF adjunto' : ($pref === 'whatsapp' ? 'WhatsApp' : 'ninguno (quedará activo sin envío)') }}.
+                            </p>
+                        @endif
+                    </div>
+                    <x-slot:footer>
+                        @if($sentWhatsAppLink)
+                            <x-ui.button variant="primary" wire:click="cancelSend">Listo</x-ui.button>
+                        @else
+                            <x-ui.button variant="success" icon="send" wire:click="sendContract({{ $confirmingSend }})">
+                                Enviar y activar
+                            </x-ui.button>
+                            <x-ui.button variant="secondary" wire:click="cancelSend">Cancelar</x-ui.button>
+                        @endif
+                    </x-slot:footer>
+                </x-ui.card>
+            </div>
+        </div>
+    @endif
 
     <div x-data="{ toast: null, toastType: null, toastMessage: '' }"
          x-on:show-toast.window="toast = true; toastType = $event.detail.type; toastMessage = $event.detail.message; setTimeout(() => toast = false, 3500)"

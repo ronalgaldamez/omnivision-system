@@ -17,6 +17,7 @@ class ClientForm extends Component
     public $phone = '';
     public $address = '';
     public $notes = '';
+    public $contact_preference = 'ninguno';
 
     // === DATOS DEL CLIENTE ===
     public $zone_id = '';
@@ -43,6 +44,7 @@ class ClientForm extends Component
             'document_type' => 'nullable|string|max:50|required_with:document_number',
             'document_number' => ['nullable', 'string', 'max:50'],
             'email' => 'nullable|email|max:255',
+            'contact_preference' => 'required|in:ninguno,email,whatsapp',
             'phone' => 'required|string|max:9',
             'address' => 'required|string',
             'departamento_id' => 'required',
@@ -84,6 +86,7 @@ class ClientForm extends Component
             $this->branch_id = $draft['branch_id'] ?? '';
             $this->notes = $draft['notes'] ?? '';
             $this->phones = $draft['phones'] ?? [];
+            $this->contact_preference = $draft['contact_preference'] ?? 'ninguno';
         }
 
         if ($this->departamento_id)
@@ -110,6 +113,7 @@ class ClientForm extends Component
         $this->document_type = $client->document_type ? strtoupper($client->document_type) : null;
         $this->document_number = $client->document_number;
         $this->email = $client->email;
+        $this->contact_preference = $client->contact_preference ?? 'ninguno';
         $this->phone = $client->phone;
         $this->address = $client->address;
         $this->departamento = $client->departamento ?? '';
@@ -210,7 +214,8 @@ class ClientForm extends Component
             'distrito_id',
             'zone_id',
             'branch_id',
-            'notes'
+            'notes',
+            'contact_preference',
         ];
         if (in_array($property, $draftFields) || str_starts_with($property, 'phones')) {
             session()->put('client_modal_draft', [
@@ -230,7 +235,20 @@ class ClientForm extends Component
                 'branch_id' => $this->branch_id,
                 'notes' => $this->notes,
                 'phones' => $this->phones,
+                'contact_preference' => $this->contact_preference,
             ]);
+        }
+    }
+
+    /**
+     * Si el cliente marca "email" pero no hay correo, lo advertimos; y viceversa:
+     * si hay correo y no se eligió preferencia, se mantiene como está.
+     */
+    public function updatedContactPreference($value)
+    {
+        if ($value === 'email' && empty(trim($this->email))) {
+            $this->dispatch('show-toast', type: 'warning', message: 'Para recibir por correo, ingresá primero un email.');
+            $this->contact_preference = 'ninguno';
         }
     }
 
@@ -295,6 +313,7 @@ class ClientForm extends Component
             'document_type' => $this->document_type ? strtoupper($this->document_type) : null,
             'document_number' => $this->document_number,
             'email' => $this->email,
+            'contact_preference' => $this->contact_preference,
             'phone' => $this->phone,
             'address' => $this->address,
             'departamento' => $this->departamento ?: null,

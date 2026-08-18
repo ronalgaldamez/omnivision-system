@@ -23,6 +23,7 @@ class Contract extends Model
         'longitude',
         'signed_pdf_path',
         'signed_at',
+        'sent_at',
         'contract_terms',
         'contract_date',
         'created_by',
@@ -43,6 +44,7 @@ class Contract extends Model
             'price' => 'decimal:2',
             'contract_date' => 'date',
             'signed_at' => 'datetime',
+            'sent_at' => 'datetime',
         ];
     }
 

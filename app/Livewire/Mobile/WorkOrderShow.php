@@ -11,6 +11,8 @@ use App\Models\TechnicianInventory;
 use App\Models\WorkOrderMaterial;
 use App\Models\ServiceRule;
 use App\Models\PlanRule;
+use App\Services\VerificationPricingService;
+use App\Services\VerificationPromotionService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
@@ -20,6 +22,8 @@ class WorkOrderShow extends Component
     public $workOrder;
     public $confirmingAction = null;
     public $confirmingMessage = '';
+    public $promptingRejection = false;
+    public $rejectionReason = '';
     public $hasOpenRequisition = false;
 
     public $hasApprovedRequisition = false;
@@ -62,46 +66,23 @@ class WorkOrderShow extends Component
     public $mufa_has_space = null;
     public $drop_distance = null;
     public $verification_price = null;
+    public $customer_accepts_cost = null;
 
     public function getVerificationRulesProperty(): array
     {
         $ticket = $this->workOrder->ticket;
-        if (!$ticket || $ticket->service_type !== 'verificacion_instalacion') return [];
+        if (!$this->isVerificationOt() || !$ticket) return [];
 
-        // Primero buscar en plan_rules (más específicas: plan + zona)
-        $contract = $ticket->contract;
-        if ($contract && $contract->plan_id && $contract->zone_id) {
-            $freeDist = PlanRule::getEffectiveRule($contract->plan_id, $contract->zone_id, $contract->term_months ?? 12, 'free_distance');
-            $pricePer = PlanRule::getEffectiveRule($contract->plan_id, $contract->zone_id, $contract->term_months ?? 12, 'price_per_meter');
-
-            if ($freeDist || $pricePer) {
-                return [
-                    'free_distance' => (int)($freeDist['meters'] ?? 150),
-                    'price_per_meter' => (float)($pricePer['amount'] ?? 5),
-                ];
-            }
-        }
-
-        // Fallback: service_rules (global por tipo de servicio)
-        $st = \App\Models\ServiceType::where('name', 'verificacion_instalacion')->first();
-        if (!$st) return [];
-        $freeDist = ServiceRule::getRule($st->id, 'free_distance', ['meters' => 150]);
-        $pricePer = ServiceRule::getRule($st->id, 'price_per_meter', ['amount' => 5]);
-        return [
-            'free_distance' => $freeDist['meters'] ?? 150,
-            'price_per_meter' => $pricePer['amount'] ?? 5,
-        ];
+        return app(VerificationPricingService::class)->rulesFor($ticket);
     }
 
-    public function getSuggestedVerificationPrice(): float
+    public function getSuggestedVerificationPriceProperty(): float
     {
         $rules = $this->verificationRules;
         if (!$rules || !$this->drop_distance) return 0;
-        $meters = (float) $this->drop_distance;
-        $free = (int) $rules['free_distance'];
-        $price = (float) $rules['price_per_meter'];
-        if ($meters <= $free) return 0;
-        return ($meters - $free) * $price;
+
+        return app(VerificationPricingService::class)
+            ->suggestedPrice((float) $this->drop_distance, $rules);
     }
 
     // Búsqueda de dispositivo
@@ -151,6 +132,7 @@ class WorkOrderShow extends Component
         $this->mufa_has_space = $draft['mufa_has_space'] ?? $this->workOrder->mufa_has_space;
         $this->drop_distance = $draft['drop_distance'] ?? $this->workOrder->drop_distance;
         $this->verification_price = $draft['verification_price'] ?? $this->workOrder->verification_price;
+        $this->customer_accepts_cost = $draft['customer_accepts_cost'] ?? $this->workOrder->customer_accepts_cost;
 
         $contract = $this->workOrder->ticket?->contract;
         $this->access_type = $contract->access_type ?? '';
@@ -218,13 +200,39 @@ class WorkOrderShow extends Component
             ($this->mufa ?? '') !== ($this->workOrder->mufa ?? '') ||
             ($this->installation_date ?? '') !== ($this->workOrder->installation_date?->format('Y-m-d') ?? '') ||
             ($this->latitude ?? null) != ($this->workOrder->latitude ?? null) ||
-            ($this->longitude ?? null) != ($this->workOrder->longitude ?? null)
+            ($this->longitude ?? null) != ($this->workOrder->longitude ?? null) ||
+            ($this->mufa_has_space ?? null) != ($this->workOrder->mufa_has_space ?? null) ||
+            ($this->drop_distance ?? null) != ($this->workOrder->drop_distance ?? null) ||
+            ($this->verification_price ?? null) != ($this->workOrder->verification_price ?? null) ||
+            ($this->customer_accepts_cost ?? null) != ($this->workOrder->customer_accepts_cost ?? null)
         );
+    }
+
+    /**
+     * Indica si la OT es de verificación de instalación (no requiere datos de router).
+     * Se evalúa sobre el service_type de la OT, no del ticket: una OT de instalación
+     * vinculada a un ticket de verificación debe pedir los datos del router.
+     */
+    public function isVerificationOt(): bool
+    {
+        return $this->workOrder?->service_type === 'verificacion_instalacion';
     }
 
     private function checkTechnicalDataComplete()
     {
         $wo = $this->workOrder;
+
+        // OT de verificación: solo requiere la evaluación de mufa/distancia (y coordenadas).
+        if ($this->isVerificationOt()) {
+            $this->technicalDataComplete = (
+                !is_null($wo->mufa_has_space) &&
+                !is_null($wo->drop_distance) &&
+                !is_null($wo->latitude) &&
+                !is_null($wo->longitude)
+            );
+            return;
+        }
+
         $this->technicalDataComplete = (
             !empty($wo->wifi_name) &&
             !empty($wo->wifi_password) &&
@@ -258,6 +266,10 @@ class WorkOrderShow extends Component
             'installation_date' => $this->installation_date,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
+            'mufa_has_space' => $this->mufa_has_space,
+            'drop_distance' => $this->drop_distance,
+            'verification_price' => $this->verification_price,
+            'customer_accepts_cost' => $this->customer_accepts_cost,
         ]);
 
         $this->updateDraftStatus();
@@ -270,18 +282,36 @@ class WorkOrderShow extends Component
         }
 
         try {
-            $this->validate([
-                'wifi_name' => 'required|string|max:255',
-                'wifi_password' => 'required|string|max:255',
-                'profile_name' => 'required|string|max:255',
-                'profile_password' => 'required|string|max:255',
-                'mac' => ['required', 'string', 'max:17', 'regex:/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/'],
-                'pon' => 'required|string|max:255',
-                'mufa' => 'required|string|max:255',
-                'installation_date' => 'required|date',
-                'latitude' => 'required|numeric|between:-90,90',
-                'longitude' => 'required|numeric|between:-180,180',
-            ]);
+            if ($this->isVerificationOt()) {
+                $freeDistance = (int) ($this->verificationRules['free_distance'] ?? 150);
+                $hasExcess = (float) ($this->drop_distance ?? 0) > $freeDistance;
+
+                $rules = [
+                    'mufa_has_space' => 'required|in:0,1',
+                    'drop_distance' => 'required|numeric|min:0',
+                    'verification_price' => 'nullable|numeric|min:0',
+                    'latitude' => 'nullable|numeric|between:-90,90',
+                    'longitude' => 'nullable|numeric|between:-180,180',
+                ];
+
+                if ($hasExcess) {
+                    $rules['customer_accepts_cost'] = 'required|in:0,1';
+                }
+            } else {
+                $rules = [
+                    'wifi_name' => 'required|string|max:255',
+                    'wifi_password' => 'required|string|max:255',
+                    'profile_name' => 'required|string|max:255',
+                    'profile_password' => 'required|string|max:255',
+                    'mac' => ['required', 'string', 'max:17', 'regex:/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/'],
+                    'pon' => 'required|string|max:255',
+                    'mufa' => 'required|string|max:255',
+                    'installation_date' => 'required|date',
+                    'latitude' => 'required|numeric|between:-90,90',
+                    'longitude' => 'required|numeric|between:-180,180',
+                ];
+            }
+            $this->validate($rules);
         } catch (ValidationException $e) {
             foreach ($e->errors() as $field => $messages) {
                 foreach ($messages as $message) {
@@ -291,18 +321,29 @@ class WorkOrderShow extends Component
             throw $e;
         }
 
-        $this->workOrder->update([
-            'wifi_name' => $this->wifi_name,
-            'wifi_password' => $this->wifi_password,
-            'profile_name' => $this->profile_name,
-            'profile_password' => $this->profile_password,
-            'mac' => $this->mac,
-            'pon' => $this->pon,
-            'mufa' => $this->mufa,
-            'installation_date' => $this->installation_date,
-            'latitude' => $this->latitude,
-            'longitude' => $this->longitude,
-        ]);
+        if ($this->isVerificationOt()) {
+            $this->workOrder->update([
+                'mufa_has_space' => $this->mufa_has_space,
+                'drop_distance' => $this->drop_distance,
+                'verification_price' => $this->verification_price ?: null,
+                'customer_accepts_cost' => $this->customer_accepts_cost,
+                'latitude' => $this->latitude,
+                'longitude' => $this->longitude,
+            ]);
+        } else {
+            $this->workOrder->update([
+                'wifi_name' => $this->wifi_name,
+                'wifi_password' => $this->wifi_password,
+                'profile_name' => $this->profile_name,
+                'profile_password' => $this->profile_password,
+                'mac' => $this->mac,
+                'pon' => $this->pon,
+                'mufa' => $this->mufa,
+                'installation_date' => $this->installation_date,
+                'latitude' => $this->latitude,
+                'longitude' => $this->longitude,
+            ]);
+        }
 
         // Sincronizar datos técnicos al contrato asociado
         $contract = $this->workOrder->ticket?->contract;
@@ -554,6 +595,127 @@ class WorkOrderShow extends Component
         $this->confirmingMessage = '¿Reanudar esta orden? El tiempo continuará registrándose desde ahora.';
     }
 
+    public function promptApproveVerification()
+    {
+        $ticket = $this->workOrder->ticket;
+        if (!$ticket || $ticket->service_type !== 'verificacion_instalacion') {
+            $this->dispatch('show-toast', type: 'error', message: 'Esta OT no es de verificación de instalación.');
+            return;
+        }
+        if ($this->workOrder->status !== 'in_progress') {
+            $this->dispatch('show-toast', type: 'error', message: 'La OT debe estar en progreso para aprobar la verificación.');
+            return;
+        }
+        if ($ticket->promotion_status) {
+            $this->dispatch('show-toast', type: 'error', message: 'La verificación ya fue procesada.');
+            return;
+        }
+        if (is_null($this->workOrder->mufa_has_space) && is_null($this->workOrder->drop_distance)) {
+            $this->dispatch('show-toast', type: 'error', message: 'Completá y guardá la verificación (mufa y distancia) antes de aprobar.');
+            return;
+        }
+
+        // Si la distancia excede la franja gratis, el cliente debe haber aceptado el costo.
+        $freeDistance = (int) ($this->verificationRules['free_distance'] ?? 150);
+        $hasExcess = (float) ($this->workOrder->drop_distance ?? 0) > $freeDistance;
+
+        if ($hasExcess && !$this->workOrder->customer_accepts_cost) {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe aceptar el costo adicional para poder aprobar la verificación.');
+            return;
+        }
+
+        $this->confirmingAction = 'approve_verification';
+        $this->confirmingMessage = '¿Aprobar la verificación y continuar a la fase de contratación? Se generará el contrato automáticamente.';
+    }
+
+    public function approveVerification()
+    {
+        if (!Auth::user()->can('complete work_orders')) {
+            $this->dispatch('show-toast', type: 'error', message: 'No tienes permiso para aprobar la verificación.');
+            return;
+        }
+        if ($this->workOrder->status === 'completed') {
+            $this->dispatch('show-toast', type: 'error', message: 'Esta orden ya está completada.');
+            return;
+        }
+
+        $price = (float) ($this->verification_price !== '' && $this->verification_price !== null
+            ? $this->verification_price
+            : $this->suggestedVerificationPrice);
+
+        $contract = app(VerificationPromotionService::class)->approve($this->workOrder->fresh(['ticket']), $price);
+
+        $this->workOrder->refresh();
+        $this->canEditTech = false;
+        $this->isEditing = false;
+        $this->updateTimers();
+        $this->loadPauses();
+
+        $this->dispatch('show-toast', type: 'success', message: 'Verificación aprobada. Contrato ' . ($contract->contract_digital_code ?? '') . ' generado para contratación.');
+        $this->dispatch('$refresh');
+    }
+
+    public function promptRejectVerification()
+    {
+        $ticket = $this->workOrder->ticket;
+        if (!$ticket || $ticket->service_type !== 'verificacion_instalacion') {
+            $this->dispatch('show-toast', type: 'error', message: 'Esta OT no es de verificación de instalación.');
+            return;
+        }
+        if ($this->workOrder->status !== 'in_progress') {
+            $this->dispatch('show-toast', type: 'error', message: 'La OT debe estar en progreso para rechazar la verificación.');
+            return;
+        }
+        if ($ticket->promotion_status) {
+            $this->dispatch('show-toast', type: 'error', message: 'La verificación ya fue procesada.');
+            return;
+        }
+
+        // Precargar motivo: si hay excedente y el cliente no aceptó el costo, sugerir ese motivo.
+        $freeDistance = (int) ($this->verificationRules['free_distance'] ?? 150);
+        $hasExcess = (float) ($this->workOrder->drop_distance ?? 0) > $freeDistance;
+
+        $this->rejectionReason = $hasExcess && !$this->workOrder->customer_accepts_cost
+            ? 'Cliente no aceptó el costo adicional.'
+            : '';
+        $this->promptingRejection = true;
+    }
+
+    public function rejectVerification()
+    {
+        if (!Auth::user()->can('complete work_orders')) {
+            $this->dispatch('show-toast', type: 'error', message: 'No tienes permiso para rechazar la verificación.');
+            return;
+        }
+        if (empty(trim($this->rejectionReason))) {
+            $this->dispatch('show-toast', type: 'error', message: 'Debés escribir el motivo del rechazo.');
+            return;
+        }
+        if ($this->workOrder->status === 'completed') {
+            $this->dispatch('show-toast', type: 'error', message: 'Esta orden ya está completada.');
+            return;
+        }
+
+        app(VerificationPromotionService::class)->reject($this->workOrder->fresh(['ticket']), trim($this->rejectionReason));
+
+        $this->workOrder->refresh();
+        $this->canEditTech = false;
+        $this->isEditing = false;
+        $this->promptingRejection = false;
+        $this->rejectionReason = '';
+        $this->updateTimers();
+        $this->loadPauses();
+
+        $this->dispatch('show-toast', type: 'success', message: 'Verificación rechazada y ticket cerrado.');
+        $this->dispatch('$refresh');
+    }
+
+    public function cancelRejection()
+    {
+        $this->promptingRejection = false;
+        $this->rejectionReason = '';
+    }
+
     public function executeConfirmedAction()
     {
         switch ($this->confirmingAction) {
@@ -568,6 +730,9 @@ class WorkOrderShow extends Component
                 break;
             case 'resume':
                 $this->resumeWorkOrder();
+                break;
+            case 'approve_verification':
+                $this->approveVerification();
                 break;
         }
         $this->confirmingAction = null;
@@ -669,6 +834,12 @@ class WorkOrderShow extends Component
         if ($this->workOrder->status === 'completed')
             return;
 
+        // Una OT de verificación no se cierra directamente: debe pasar por aprobar/rechazar.
+        if ($this->isVerificationOt() && !$this->workOrder->ticket?->promotion_status) {
+            $this->dispatch('show-toast', type: 'error', message: 'Completá la verificación aprobándola o rechazándola desde la OT.');
+            return;
+        }
+
         $totalSeconds = $this->workOrder->accumulated_seconds;
         if ($this->workOrder->started_at) {
             $totalSeconds += $this->workOrder->started_at->diffInSeconds(now());
@@ -678,6 +849,23 @@ class WorkOrderShow extends Component
         $this->workOrder->completed_date = now();
         $this->workOrder->accumulated_seconds = $totalSeconds;
         $this->workOrder->save();
+
+        // Si es la OT de instalación, el contrato queda completo y listo para
+        // que el agente lo revise y lo envíe al cliente.
+        if ($this->workOrder->service_type === 'instalacion') {
+            $contract = $this->workOrder->ticket?->contract;
+            if ($contract && $contract->status !== 'active') {
+                $contract->update([
+                    'status' => 'ready_to_send',
+                    'signed_at' => $contract->signed_at ?? now(),
+                ]);
+                try {
+                    \App\Events\TicketPromotedToContract::dispatch($this->workOrder->ticket?->ticket_code);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Broadcast de contrato listo omitido: ' . $e->getMessage());
+                }
+            }
+        }
 
         // Cerrar el ticket asociado y evaluar su SLA con el cierre real
         if ($this->workOrder->ticket) {

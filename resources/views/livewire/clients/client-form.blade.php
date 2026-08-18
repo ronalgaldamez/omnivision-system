@@ -68,6 +68,35 @@
     <x-ui.input type="email" wire:model.live="email" name="email" icon="alternate_email" label="Correo electrónico"
         placeholder="correo@ejemplo.com" />
 
+    {{-- Preferencia de contacto para envíos --}}
+    <div class="pb-5 border-b border-gray-100">
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-gray-500 text-sm">send</span>
+            Envío de facturas y contrato
+        </label>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition
+                {{ $contact_preference === 'email' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                <input type="radio" wire:model.live="contact_preference" value="email" class="accent-blue-600">
+                <span class="material-symbols-outlined text-blue-600 text-lg">alternate_email</span>
+                <span class="text-sm text-gray-700">Por correo</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition
+                {{ $contact_preference === 'whatsapp' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                <input type="radio" wire:model.live="contact_preference" value="whatsapp" class="accent-green-600">
+                <span class="material-symbols-outlined text-green-600 text-lg">chat</span>
+                <span class="text-sm text-gray-700">WhatsApp</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition
+                {{ $contact_preference === 'ninguno' ? 'border-gray-400 bg-gray-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                <input type="radio" wire:model.live="contact_preference" value="ninguno" class="accent-gray-500">
+                <span class="material-symbols-outlined text-gray-500 text-lg">block</span>
+                <span class="text-sm text-gray-700">No deseo</span>
+            </label>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">No es obligatorio. Solo se enviarán facturas, contrato y promociones por el canal elegido.</p>
+    </div>
+
     {{-- Departamento, Municipio, Distrito --}}
     <div class="pb-5 border-b border-gray-100">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">

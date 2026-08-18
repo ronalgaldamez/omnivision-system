@@ -38,6 +38,11 @@ class Ticket extends Model
         'contracts_escalated_at',
         'contracts_started_at',
         'contracts_ended_at',
+        // Promoción de verificación en campo
+        'promotion_status',
+        'promoted_at',
+        'rejection_reason',
+        'contract_price_snapshot',
         // SLA
         'sla_goal_id',
         'sla_deadline_at',
@@ -54,6 +59,8 @@ class Ticket extends Model
         'contracts_escalated_at' => 'datetime',
         'contracts_started_at'  => 'datetime',
         'contracts_ended_at'    => 'datetime',
+        'promoted_at'           => 'datetime',
+        'contract_price_snapshot' => 'decimal:2',
         'resolved_at'   => 'datetime',
         'cancelled_at'  => 'datetime',
         'requires_noc'          => 'boolean',
@@ -82,6 +89,11 @@ class Ticket extends Model
     public function workOrder()
     {
         return $this->hasOne(WorkOrder::class);
+    }
+
+    public function workOrders()
+    {
+        return $this->hasMany(WorkOrder::class);
     }
 
     public function contract()

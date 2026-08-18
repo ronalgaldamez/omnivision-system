@@ -83,7 +83,12 @@
                                 <td class="px-4 py-3 font-mono text-xs text-gray-700">#{{ $ticket->id }}</td>
                                 <td class="px-4 py-3 text-gray-800 max-w-[150px] truncate" title="{{ $ticket->client?->name }}">{{ $ticket->client?->name ?? '—' }}</td>
                                 <td class="px-4 py-3">
-                                    <x-ui.badge variant="neutral">{{ $ticket->service_type }}</x-ui.badge>
+                                    <div class="flex items-center gap-2">
+                                        <x-ui.badge variant="neutral">{{ $ticket->service_type }}</x-ui.badge>
+                                        @if($ticket->promotion_status === 'promoted')
+                                            <x-ui.badge variant="info" icon="verified">Verificación aprobada</x-ui.badge>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3">
                                     @if($ticket->priority)
