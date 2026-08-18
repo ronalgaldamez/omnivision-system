@@ -345,6 +345,35 @@
                                 </div>
                             @endif
                         </div>
+
+                        {{-- Canales de envío del cliente --}}
+                        <div class="mt-4 pt-3 border-t border-gray-200">
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-gray-500 text-sm">send</span>
+                                Envío de facturas y contrato
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <button type="button" wire:click="toggleChannel('email')"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition text-left
+                                    {{ in_array('email', $client_contact_channels) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                                    <span class="material-symbols-outlined text-lg {{ in_array('email', $client_contact_channels) ? 'text-blue-600' : 'text-gray-400' }}">{{ in_array('email', $client_contact_channels) ? 'check_circle' : 'alternate_email' }}</span>
+                                    <span class="text-sm text-gray-700">Por correo</span>
+                                </button>
+                                <button type="button" wire:click="toggleChannel('whatsapp')"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition text-left
+                                    {{ in_array('whatsapp', $client_contact_channels) ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                                    <span class="material-symbols-outlined text-lg {{ in_array('whatsapp', $client_contact_channels) ? 'text-green-600' : 'text-gray-400' }}">{{ in_array('whatsapp', $client_contact_channels) ? 'check_circle' : 'chat' }}</span>
+                                    <span class="text-sm text-gray-700">WhatsApp</span>
+                                </button>
+                                <button type="button" wire:click="setNoChannel"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition text-left
+                                    {{ empty($client_contact_channels) ? 'border-gray-400 bg-gray-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                                    <span class="material-symbols-outlined text-lg {{ empty($client_contact_channels) ? 'text-gray-600' : 'text-gray-400' }}">{{ empty($client_contact_channels) ? 'check_circle' : 'block' }}</span>
+                                    <span class="text-sm text-gray-700">No deseo</span>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">Si el cliente acepta, se le enviarán facturas, contrato y promociones por los canales elegidos. Aplica también a clientes existentes.</p>
+                        </div>
                     </div>
                 @endif
             </div>
