@@ -62,6 +62,7 @@ class WorkOrderShow extends Component
     public $modem_serial = '';
     public $installation_cost = '';
     public $payment_date = '';
+    public $extra_tvs = 0;
 
     // Verificación de instalación
     public $mufa_has_space = null;
@@ -79,11 +80,18 @@ class WorkOrderShow extends Component
 
     public function getSuggestedVerificationPriceProperty(): float
     {
-        $rules = $this->verificationRules;
-        if (!$rules || !$this->drop_distance) return 0;
+        $ticket = $this->workOrder->ticket;
+        $drop = (float) $this->drop_distance;
+        if (!$ticket) return 0;
 
-        return app(VerificationPricingService::class)
-            ->suggestedPrice((float) $this->drop_distance, $rules);
+        $service = app(VerificationPricingService::class);
+
+        // Costo de instalación según la tarifa por zona + campañas (instalación gratis)
+        if ($this->isVerificationOt()) {
+            return $service->suggestedInstallCostFor($ticket, $drop);
+        }
+
+        return 0;
     }
 
     // Búsqueda de dispositivo
@@ -142,6 +150,7 @@ class WorkOrderShow extends Component
         $this->modem_serial = $contract->modem_serial ?? '';
         $this->installation_cost = $contract->installation_cost ?? '';
         $this->payment_date = $draft['payment_date'] ?? $contract->payment_date ?? '';
+        $this->extra_tvs = $draft['extra_tvs'] ?? $contract->extra_tvs ?? 0;
 
         $client = $this->workOrder->client;
         $this->latitude = $draft['latitude'] ?? $this->workOrder->latitude ?? $client->latitude ?? null;
@@ -278,6 +287,7 @@ class WorkOrderShow extends Component
             'modem_serial' => $this->modem_serial,
             'installation_cost' => $this->installation_cost,
             'payment_date' => $this->payment_date,
+            'extra_tvs' => $this->extra_tvs,
         ]);
 
         $this->updateDraftStatus();
@@ -356,6 +366,8 @@ class WorkOrderShow extends Component
         // Sincronizar datos técnicos al contrato asociado
         $contract = $this->workOrder->ticket?->contract;
         if ($contract) {
+            $extraTvs = max(0, (int) $this->extra_tvs);
+
             $contract->update([
                 'access_type' => $this->access_type,
                 'speed' => $this->speed,
@@ -363,7 +375,13 @@ class WorkOrderShow extends Component
                 'modem_serial' => $this->modem_serial,
                 'installation_cost' => $this->installation_cost ?: null,
                 'payment_date' => $this->payment_date ?: null,
+                'extra_tvs' => $extraTvs,
+                'tv_install_fee' => $extraTvs * 6,
+                'monthly_extra_fee' => $extraTvs * 1,
             ]);
+
+            // Sincronizar cobros de TV extra (técnico puede registrar en campo)
+            $this->syncContractTvCharges($contract, $extraTvs);
         }
 
         $client = $this->workOrder->client;
@@ -997,6 +1015,41 @@ class WorkOrderShow extends Component
             'Otros' => 'Otros',
         ];
         return $map[$ticket->origin] ?? $ticket->origin ?? 'Desconocido';
+    }
+
+    /**
+     * Sincroniza los cobros de TV extra en el contrato desde la instalación en campo.
+     */
+    protected function syncContractTvCharges(\App\Models\Contract $contract, int $count): void
+    {
+        $contract->charges()->where('type', 'extra_tv')->delete();
+
+        if ($count <= 0) {
+            return;
+        }
+
+        if ($contract->tv_install_fee > 0) {
+            $contract->charges()->create([
+                'client_id' => $contract->client_id,
+                'type' => 'extra_tv',
+                'description' => "Instalación de TV extra x{$count}",
+                'amount' => $contract->tv_install_fee,
+                'is_recurring' => false,
+                'quantity' => $count,
+            ]);
+        }
+
+        if ($contract->monthly_extra_fee > 0) {
+            $contract->charges()->create([
+                'client_id' => $contract->client_id,
+                'type' => 'extra_tv',
+                'description' => "Recargo mensual TV extra x{$count}",
+                'amount' => $contract->monthly_extra_fee,
+                'is_recurring' => true,
+                'recurring_period' => 'monthly',
+                'quantity' => $count,
+            ]);
+        }
     }
 
     public function render()
