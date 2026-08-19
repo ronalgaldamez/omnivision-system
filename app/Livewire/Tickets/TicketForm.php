@@ -34,6 +34,7 @@ class TicketForm extends Component
     public $clientSearch = '';
     public $clientSearchResults = [];
     public $selectedClient = null;
+    public array $client_contact_channels = [];
     public $showClientModal = false;
     public $modalKey = '';
     public $confirmingSave = false;
@@ -123,6 +124,7 @@ class TicketForm extends Component
             $this->plan_id = $ticket->plan_id;
             $this->clientSearch = $ticket->client->name;
             $this->selectedClient = $ticket->client;
+            $this->client_contact_channels = $ticket->client->contact_channels ?? [];
 
             $serviceType = ServiceType::where('name', $ticket->service_type)->first();
             $this->service_type_id = $serviceType ? $serviceType->id : '';
@@ -165,6 +167,7 @@ class TicketForm extends Component
                         if ($client) {
                             $this->selectedClient = $client;
                             $this->clientSearch = $client->name;
+                            $this->client_contact_channels = $client->contact_channels ?? [];
                         }
                     }
                     $serviceType = ServiceType::where('name', $ticket->service_type)->first();
@@ -219,6 +222,7 @@ class TicketForm extends Component
                 $client = Client::with('branch', 'zone')->find($draft['client_id']);
                 if ($client) {
                     $this->selectedClient = $client;
+                    $this->client_contact_channels = $client->contact_channels ?? [];
                     $this->loadAvailableZones();
                 }
             }
@@ -479,6 +483,7 @@ class TicketForm extends Component
         $this->selectedClient = $client;
         $this->clientSearch = $name . ($phone ? ' (' . $phone . ')' : '');
         $this->clientSearchResults = [];
+        $this->client_contact_channels = $client->contact_channels ?? [];
 
         // Copiar zona y plan desde el cliente
         $this->loadAvailableZones();
@@ -652,6 +657,7 @@ class TicketForm extends Component
         $this->selectedClient = $client;
         $this->clientSearch = $name . ($phone ? ' (' . $phone . ')' : '');
         $this->clientSearchResults = [];
+        $this->client_contact_channels = $client->contact_channels ?? [];
 
         $this->loadAvailableZones();
         if ($client->zone_id) {
@@ -678,6 +684,44 @@ class TicketForm extends Component
         $this->closeClientModal();
 
         $this->dispatch('show-toast', type: 'success', message: 'Cliente creado y seleccionado correctamente.');
+    }
+
+    /**
+     * Alterna un canal de envío (email/whatsapp) para el cliente del ticket.
+     */
+    public function toggleChannel(string $channel)
+    {
+        if (in_array($channel, $this->client_contact_channels)) {
+            $this->client_contact_channels = array_values(array_diff($this->client_contact_channels, [$channel]));
+            return;
+        }
+
+        $this->client_contact_channels = array_values(array_unique(array_merge($this->client_contact_channels, [$channel])));
+
+        if ($channel === 'email' && $this->selectedClient && empty(trim($this->selectedClient->email ?? ''))) {
+            $this->dispatch('show-toast', type: 'warning', message: 'El cliente no tiene correo registrado. Agregálo para recibir por ese medio.');
+            $this->client_contact_channels = array_values(array_diff($this->client_contact_channels, ['email']));
+        }
+    }
+
+    /**
+     * Marca "No deseo": limpia todos los canales.
+     */
+    public function setNoChannel()
+    {
+        $this->client_contact_channels = [];
+    }
+
+    /**
+     * Persiste los canales de contacto en el cliente del ticket.
+     */
+    public function persistClientChannels()
+    {
+        if ($this->client_id) {
+            Client::where('id', $this->client_id)->update([
+                'contact_channels' => $this->client_contact_channels ?: null,
+            ]);
+        }
     }
 
     private function resetTicketFields()
@@ -937,6 +981,9 @@ class TicketForm extends Component
 
     public function save()
     {
+        // Persistir los canales de contacto elegidos en el ticket al cliente
+        $this->persistClientChannels();
+
         $serviceType = ServiceType::find($this->service_type_id);
         $serviceName = $serviceType ? $serviceType->name : '';
 
@@ -959,7 +1006,7 @@ class TicketForm extends Component
 
             app(SlaService::class)->assignSlaToTicket($ticket);
             if (in_array($ticket->status, ['resolved', 'closed'])) {
-                app(SlaService::class)->evaluateSla($ticket);
+                app(SlaService::class)->evaluateSla($ticket->fresh());
             }
 
             session()->flash('message', 'Ticket actualizado correctamente.');
@@ -977,7 +1024,11 @@ class TicketForm extends Component
                 app(TicketService::class)->createWorkOrder($ticket);
             } elseif ($this->requires_noc) {
                 $this->dispatch('ticket-created-for-noc');
-                \App\Events\TicketRequiresNoc::dispatch($ticket->ticket_code);
+                try {
+                    \App\Events\TicketRequiresNoc::dispatch($ticket->ticket_code);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Broadcast NOC omitido: ' . $e->getMessage());
+                }
                 $this->dispatch('show-toast', type: 'info', message: 'Nuevo ticket requiere atención del NOC.');
             }
 
@@ -1058,7 +1109,11 @@ class TicketForm extends Component
         session()->forget('ticket_draft');
 
         $this->dispatch('ticket-created-for-noc');
-        \App\Events\TicketRequiresNoc::dispatch($ticket->ticket_code);
+        try {
+            \App\Events\TicketRequiresNoc::dispatch($ticket->ticket_code);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Broadcast NOC omitido: ' . $e->getMessage());
+        }
         session()->flash('message', 'Ticket generado y escalado a NOC correctamente.');
 
         return redirect()->route('tickets.index');

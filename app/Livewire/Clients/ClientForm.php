@@ -17,6 +17,7 @@ class ClientForm extends Component
     public $phone = '';
     public $address = '';
     public $notes = '';
+    public array $contact_channels = [];
 
     // === DATOS DEL CLIENTE ===
     public $zone_id = '';
@@ -43,6 +44,8 @@ class ClientForm extends Component
             'document_type' => 'nullable|string|max:50|required_with:document_number',
             'document_number' => ['nullable', 'string', 'max:50'],
             'email' => 'nullable|email|max:255',
+            'contact_channels' => 'nullable|array',
+            'contact_channels.*' => 'in:email,whatsapp',
             'phone' => 'required|string|max:9',
             'address' => 'required|string',
             'departamento_id' => 'required',
@@ -84,6 +87,7 @@ class ClientForm extends Component
             $this->branch_id = $draft['branch_id'] ?? '';
             $this->notes = $draft['notes'] ?? '';
             $this->phones = $draft['phones'] ?? [];
+            $this->contact_channels = $draft['contact_channels'] ?? [];
         }
 
         if ($this->departamento_id)
@@ -110,6 +114,7 @@ class ClientForm extends Component
         $this->document_type = $client->document_type ? strtoupper($client->document_type) : null;
         $this->document_number = $client->document_number;
         $this->email = $client->email;
+        $this->contact_channels = $client->contact_channels ?? [];
         $this->phone = $client->phone;
         $this->address = $client->address;
         $this->departamento = $client->departamento ?? '';
@@ -210,7 +215,8 @@ class ClientForm extends Component
             'distrito_id',
             'zone_id',
             'branch_id',
-            'notes'
+            'notes',
+            'contact_channels',
         ];
         if (in_array($property, $draftFields) || str_starts_with($property, 'phones')) {
             session()->put('client_modal_draft', [
@@ -230,8 +236,35 @@ class ClientForm extends Component
                 'branch_id' => $this->branch_id,
                 'notes' => $this->notes,
                 'phones' => $this->phones,
+                'contact_channels' => $this->contact_channels,
             ]);
         }
+    }
+
+    /**
+     * Alterna un canal (email/whatsapp). Al marcar uno, se desactiva "No deseo".
+     */
+    public function toggleChannel(string $channel)
+    {
+        if (in_array($channel, $this->contact_channels)) {
+            $this->contact_channels = array_values(array_diff($this->contact_channels, [$channel]));
+            return;
+        }
+
+        $this->contact_channels = array_values(array_unique(array_merge($this->contact_channels, [$channel])));
+
+        if ($channel === 'email' && empty(trim($this->email))) {
+            $this->dispatch('show-toast', type: 'warning', message: 'Para recibir por correo, ingresá primero un email.');
+            $this->contact_channels = array_values(array_diff($this->contact_channels, ['email']));
+        }
+    }
+
+    /**
+     * Marca "No deseo": limpia todos los canales.
+     */
+    public function setNoChannel()
+    {
+        $this->contact_channels = [];
     }
 
     private function loadDocumentTypes(): array
@@ -295,6 +328,7 @@ class ClientForm extends Component
             'document_type' => $this->document_type ? strtoupper($this->document_type) : null,
             'document_number' => $this->document_number,
             'email' => $this->email,
+            'contact_channels' => $this->contact_channels ?: null,
             'phone' => $this->phone,
             'address' => $this->address,
             'departamento' => $this->departamento ?: null,

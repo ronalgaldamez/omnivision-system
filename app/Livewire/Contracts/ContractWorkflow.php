@@ -81,6 +81,7 @@ class ContractWorkflow extends Component
     public $effective_price = 0;
     public $availablePlans = [];
     public $availableZones = [];
+    public $installation_cost = null;
 
     // ─── Datos comerciales del contrato ───
     public $contract_type = 'nuevo';
@@ -264,6 +265,25 @@ class ContractWorkflow extends Component
                 $this->contract_id = $existingContract->id;
                 $this->contractDigitalCode = $existingContract->contract_digital_code;
             }
+
+            // ─── Ticket promovido desde verificación en campo ───
+            // El contrato ya fue generado automáticamente por el técnico con el precio
+            // de instalación congelado (contract_price_snapshot). Se precarga para que
+            // el agente de contratos solo complete lo que falta.
+            if ($ticket->promotion_status === 'promoted') {
+                $this->service_type = $existingContract?->service_type ?? 'instalacion';
+                $this->installation_cost = $ticket->contract_price_snapshot
+                    ?? $existingContract?->installation_cost
+                    ?? null;
+
+                if (!$this->plan_id && $existingContract?->plan_id) {
+                    $this->plan_id = $existingContract->plan_id;
+                }
+                if ($existingContract?->price) {
+                    $this->price = $existingContract->price;
+                    $this->effective_price = (float) $existingContract->price;
+                }
+            }
         }
 
         $this->contract_terms = $this->getDefaultTerms();
@@ -366,9 +386,65 @@ class ContractWorkflow extends Component
             }
             $this->step = 4;
         } elseif ($this->step === 4) {
+            // Validar que la firma no esté en blanco (canvas vacío).
+            $hasValidSignature = $this->signature_link
+                || ($this->client_signature_data && $this->isRealSignature($this->client_signature_data));
+
+            if (!$hasValidSignature) {
+                $this->dispatch('show-toast', type: 'error', message: 'Debe capturar la firma del cliente (no puede estar en blanco).');
+                return;
+            }
+
             // Cuando se completa la firma, ir a preview
             $this->step = 5;
         }
+    }
+
+    /**
+     * Verifica que un data URL de firma contenga trazos reales y no sea una imagen en blanco.
+     */
+    private function isRealSignature(string $dataUrl): bool
+    {
+        $pos = strpos($dataUrl, 'base64,');
+        if ($pos === false) {
+            return false;
+        }
+
+        $raw = base64_decode(substr($dataUrl, $pos + 7));
+        if ($raw === false || strlen($raw) < 200) {
+            return false;
+        }
+
+        $image = @imagecreatefromstring($raw);
+        if ($image === false) {
+            return false;
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+        if ($width < 2 || $height < 2) {
+            imagedestroy($image);
+            return false;
+        }
+
+        // Contar píxeles no blancos para detectar un canvas vacío
+        $hasInk = false;
+        $sampleStep = max(1, (int) ceil(($width * $height) / 5000));
+        for ($y = 0; $y < $height && !$hasInk; $y += $sampleStep) {
+            for ($x = 0; $x < $width; $x += $sampleStep) {
+                $rgb = imagecolorat($image, $x, $y);
+                $r = ($rgb >> 16) & 0xFF;
+                $g = ($rgb >> 8) & 0xFF;
+                $b = $rgb & 0xFF;
+                if ($r < 245 || $g < 245 || $b < 245) {
+                    $hasInk = true;
+                    break;
+                }
+            }
+        }
+
+        imagedestroy($image);
+        return $hasInk;
     }
 
     public function previousStep()
@@ -893,7 +969,7 @@ class ContractWorkflow extends Component
             'installation_address' => $this->installation_address,
         ]);
 
-        $contract = Contract::create([
+        $contractData = [
             'client_id' => $this->client_id,
             'ticket_id' => $this->ticket_id,
             'plan_id' => $this->plan_id ?: null,
@@ -911,7 +987,16 @@ class ContractWorkflow extends Component
             'service_contracted' => $this->deriveServiceContracted(),
             'term_months' => $this->term_months,
             'benefit' => $this->benefit,
-        ]);
+        ];
+
+        // Si el contrato ya fue pre-generado (ticket promovido desde verificación),
+        // se actualiza en lugar de crear un duplicado.
+        if ($this->contract_id) {
+            $contract = Contract::find($this->contract_id);
+            $contract->update($contractData);
+        } else {
+            $contract = Contract::create($contractData);
+        }
 
         $this->contract_id = $contract->id;
         $this->contractDigitalCode = $contract->contract_digital_code;
@@ -978,9 +1063,12 @@ class ContractWorkflow extends Component
             ]);
         }
 
-        // Crear la OT de instalación (la asigna el supervisor). Si el ticket ya tiene una, se reutiliza.
+        // Crear la OT de instalación (la asigna el supervisor). Solo se reutiliza
+        // si ya existe una OT del mismo service_type (no la de verificación).
         if ($this->ticket_id) {
-            $workOrder = WorkOrder::where('ticket_id', $this->ticket_id)->first();
+            $workOrder = WorkOrder::where('ticket_id', $this->ticket_id)
+                ->where('service_type', $contract->service_type)
+                ->first();
 
             if (!$workOrder) {
                 $ticket = Ticket::find($this->ticket_id);

@@ -19,8 +19,8 @@ class TimelineService
         $now = now();
 
         // El padre está completo solo cuando el ticket se resolvió Y no hay OT activa
-        $hasActiveWorkOrder = $ticket->workOrder
-            && !in_array($ticket->workOrder->status, ['completed', 'cancelled']);
+        $hasActiveWorkOrder = $ticket->workOrders
+            ->contains(fn ($wo) => !in_array($wo->status, ['completed', 'cancelled']));
         $isCancelled = $ticket->status === 'cancelled';
         $isResolved = ($ticket->resolved_at !== null && !$hasActiveWorkOrder) || $isCancelled;
         $endTime = $isResolved ? ($ticket->resolved_at ?? $ticket->cancelled_at ?? $now) : $now;
@@ -175,10 +175,15 @@ class TimelineService
         }
 
         // ==========================================
-        // ÁREA: OT / Supervisor + Técnico
+        // ÁREAS: OT / Supervisor + Técnico (una por OT)
         // ==========================================
-        if ($ticket->workOrder) {
-            $wo = $ticket->workOrder;
+        $workOrders = $ticket->workOrders;
+        $pausesSeconds = 0;
+        $woCount = $workOrders->count();
+
+        foreach ($workOrders as $index => $wo) {
+            $phaseLabel = ucfirst(str_replace('_', ' ', $wo->service_type ?? ''));
+            $phaseSuffix = $woCount > 1 ? " · Fase " . ($index + 1) : '';
 
             // Determinar supervisor responsable de la zona (con herencia)
             $responsibleSupervisor = null;
@@ -225,9 +230,9 @@ class TimelineService
 
             $totalSupervisor = array_sum(array_column($supervisorSub, 'durationSeconds'));
             $areas[] = $this->makeArea(
-                key: 'supervisor',
-                label: 'Supervisor (Asignación)',
-                responsible: $responsibleSupervisor ?? $wo->assignedBy?->name,
+                key: 'supervisor_' . $index,
+                label: 'Supervisor' . ($phaseLabel ? " · $phaseLabel" : '') . $phaseSuffix,
+                responsible: $wo->assignedBy?->name ?? $responsibleSupervisor,
                 icon: 'supervisor_account',
                 color: 'cyan',
                 totalSeconds: $totalSupervisor,
@@ -269,8 +274,8 @@ class TimelineService
             if (!empty($techSub)) {
                 $totalTech = $workTechSeconds;
                 $areas[] = $this->makeArea(
-                    key: 'technician',
-                    label: 'Técnico en Campo',
+                    key: 'technician_' . $index,
+                    label: 'Técnico en Campo' . ($phaseLabel ? " · $phaseLabel" : '') . $phaseSuffix,
                     responsible: $wo->technician?->name,
                     icon: 'handyman',
                     color: 'orange',
@@ -283,7 +288,6 @@ class TimelineService
             }
 
             // Pausas
-            $pausesSeconds = 0;
             if ($wo->pauses->isNotEmpty()) {
                 foreach ($wo->pauses as $pause) {
                     if ($pause->paused_at && $pause->resumed_at) {
@@ -334,6 +338,7 @@ class TimelineService
             'pausesFormatted' => ($pausesSeconds ?? 0) > 0 ? $this->formatDuration($pausesSeconds) : null,
             'ticket' => $ticket,
             'workOrder' => $ticket->workOrder,
+            'workOrders' => $workOrders,
         ];
     }
 

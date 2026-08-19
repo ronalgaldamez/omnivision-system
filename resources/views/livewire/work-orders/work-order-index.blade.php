@@ -329,7 +329,7 @@
                             @else
                                 <span></span>
                             @endif
-                            <span class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 group-hover:text-blue-600 transition">Ver
+                            <span class="inline-flex items-center gap-0.5 text-[10px] font-semibold text-green-600 group-hover:text-green-700 transition">Ver
                                 <span class="material-symbols-outlined text-xs">arrow_forward</span>
                             </span>
                         </div>
@@ -355,6 +355,10 @@
                             @if($order->technician_id)
                             <button wire:click="promptUnassign({{ $order->id }})" class="p-1.5 text-orange-600 hover:bg-orange-100 rounded-lg transition" title="Desvincular técnico">
                                 <span class="material-symbols-outlined text-sm">person_off</span>
+                            </button>
+                            <button wire:click="promptQuickNote({{ $order->id }})" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition" title="Añadir nota a la OT">
+                                <span class="material-symbols-outlined text-sm">sticky_note_2</span>
+                                Nota
                             </button>
                             @endif
                             <a href="{{ route('work-orders.edit', $order->id) }}" class="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition" title="Editar OT">
@@ -494,7 +498,7 @@
     </div>
     @endif
 
-    @if($confirmingAction)
+    @if($confirmingAction && $confirmingAction !== 'quick_note')
     <div x-data="{ open: true }" x-show="open" x-cloak
         class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
         style="display: none;">
@@ -524,6 +528,30 @@
                         <x-ui.button variant="danger" wire:click="executeConfirmedAction">Sí, eliminar</x-ui.button>
                     @endif
                     <x-ui.button variant="secondary" @click="open = false" wire:click="cancelConfirmation">Cancelar</x-ui.button>
+                </x-slot:footer>
+            </x-ui.card>
+        </div>
+    </div>
+    @endif
+
+    {{-- Modal: Nota rápida de OT --}}
+    @if($confirmingAction === 'quick_note')
+    <div x-data="{ open: true }" x-show="open" x-cloak
+        class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+        style="display: none;">
+        <div class="relative mx-auto p-5 w-full max-w-md">
+            <x-ui.card>
+                <div class="p-6">
+                    <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-amber-100 mb-4">
+                        <span class="material-symbols-outlined text-2xl text-amber-600">sticky_note_2</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 text-center">Nota de OT</h3>
+                    <p class="text-sm text-gray-600 mt-2 text-center">Añadí una instrucción o nota para la OT #{{ $confirmingOrderId }}.</p>
+                    <textarea wire:model="notes" rows="4" class="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Instrucciones para el técnico..."></textarea>
+                </div>
+                <x-slot:footer>
+                    <x-ui.button variant="primary" icon="save" wire:click="saveQuickNote">Guardar nota</x-ui.button>
+                    <x-ui.button variant="secondary" @click="open = false" wire:click="cancelQuickNote">Cancelar</x-ui.button>
                 </x-slot:footer>
             </x-ui.card>
         </div>

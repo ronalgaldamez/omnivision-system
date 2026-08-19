@@ -23,8 +23,10 @@ class Contract extends Model
         'longitude',
         'signed_pdf_path',
         'signed_at',
+        'sent_at',
         'contract_terms',
         'contract_date',
+        'payment_date',
         'created_by',
         'contract_type',
         'service_contracted',
@@ -43,6 +45,7 @@ class Contract extends Model
             'price' => 'decimal:2',
             'contract_date' => 'date',
             'signed_at' => 'datetime',
+            'sent_at' => 'datetime',
         ];
     }
 
@@ -131,5 +134,10 @@ class Contract extends Model
     public function isReadyToFinalize(): bool
     {
         return $this->hasRequiredDocuments() && $this->isFullySigned();
+    }
+
+    public function hasPdf(): bool
+    {
+        return app(\App\Services\ContractPdfService::class)->hasPdf($this);
     }
 }

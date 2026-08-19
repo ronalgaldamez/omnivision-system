@@ -12,6 +12,7 @@ class Client extends Model
     protected $fillable = [
         'name', 'phone', 'address', 'service',
         'document_type', 'document_number', 'email',
+        'contact_channels',
         'nit', 'nrc', 'dui_expedition_date', 'dui_expedition_place',
         'nationality', 'marital_status', 'spouse_name',
         'occupation', 'workplace', 'position', 'monthly_income',
@@ -46,6 +47,7 @@ class Client extends Model
         'coordinates_approved' => 'boolean',
         'signature_token_expires_at' => 'datetime',
         'uploaded_docs' => 'array',
+        'contact_channels' => 'array',
     ];
 
     public function tickets()

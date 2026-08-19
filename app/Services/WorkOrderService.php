@@ -95,9 +95,13 @@ class WorkOrderService
      */
     public function createFromContract(Contract $contract, array $extra = []): WorkOrder
     {
-        // Guard anti-duplicado: si el ticket vinculado ya tiene OT, retorna la existente
+        // Guard anti-duplicado por tipo de servicio: si el ticket ya tiene una OT
+        // del MISMO service_type (ej. instalacion), se reutiliza. Permite que un
+        // ticket tenga OTs de fases distintas (verificación + instalación).
         if ($contract->ticket_id) {
-            $existing = WorkOrder::where('ticket_id', $contract->ticket_id)->first();
+            $existing = WorkOrder::where('ticket_id', $contract->ticket_id)
+                ->where('service_type', $contract->service_type)
+                ->first();
             if ($existing) {
                 return $existing;
             }

@@ -540,6 +540,14 @@
                 window.dispatchEvent(new CustomEvent('play-notification-sound'));
             });
         @endif
+
+        @if(Auth::check() && Auth::user()->can('access_contracts_inbox'))
+        window.Echo.channel('contracts.tickets')
+            .listen('.ticket.promoted.contract', (e) => {
+                window.dispatchEvent(new CustomEvent('refresh-notifications'));
+                window.dispatchEvent(new CustomEvent('play-notification-sound'));
+            });
+        @endif
     </script>
     <script>
         @php($soundSilenced = auth()->check() && \App\Models\Setting::get('user_notif_sound_' . auth()->id(), 'enabled') === 'silenced')

@@ -28,7 +28,7 @@ class WorkOrderFactory extends Factory
             'notes' => fake()->sentence(),
             'service_type' => fake()->randomElement(['internet', 'cable', 'internet_cable']),
             'description' => fake()->paragraph(),
-            'code' => fake()->unique()->lexify('OT-#####'),
+            'code' => fake()->unique()->lexify('OT-?????'),
             'started_at' => null,
             'sla_started_at' => null,
             'accumulated_seconds' => 0,

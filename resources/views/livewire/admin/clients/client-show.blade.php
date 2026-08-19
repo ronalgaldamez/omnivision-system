@@ -21,6 +21,11 @@
                     class="px-4 py-3 text-sm font-medium border-b-2 transition">
                     Servicios
                 </button>
+                <button @click="tab = 'contracts'"
+                    :class="tab === 'contracts' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                    class="px-4 py-3 text-sm font-medium border-b-2 transition">
+                    Contratos
+                </button>
                 <button @click="tab = 'history'"
                     :class="tab === 'history' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
                     class="px-4 py-3 text-sm font-medium border-b-2 transition">
@@ -211,7 +216,57 @@
             @endif
         </div>
 
-        {{-- Pestaña 3: Historial --}}
+        {{-- Pestaña 3: Contratos --}}
+        <div x-show="tab === 'contracts'" x-cloak>
+            @if($contracts->isEmpty())
+                <p class="text-gray-500 text-center py-8">No hay contratos registrados para este cliente.</p>
+            @else
+                <div class="overflow-x-auto rounded-lg border border-gray-200">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200">
+                                <th class="px-4 py-3 text-left text-gray-600 font-medium">Contrato</th>
+                                <th class="px-4 py-3 text-left text-gray-600 font-medium">Plan</th>
+                                <th class="px-4 py-3 text-center text-gray-600 font-medium">Estado</th>
+                                <th class="px-4 py-3 text-left text-gray-600 font-medium">Fecha</th>
+                                <th class="px-4 py-3 text-center text-gray-600 font-medium">PDF</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach($contracts as $contract)
+                                <tr class="hover:bg-gray-50/80 transition">
+                                    <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $contract->contract_digital_code }}</td>
+                                    <td class="px-4 py-3 text-gray-700">{{ $contract->plan?->name ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        @if($contract->status === 'active')
+                                            <x-ui.badge variant="success">Activo</x-ui.badge>
+                                        @elseif($contract->status === 'ready_to_send')
+                                            <x-ui.badge variant="info">Listo para enviar</x-ui.badge>
+                                        @else
+                                            <x-ui.badge variant="neutral">{{ ucfirst($contract->status) }}</x-ui.badge>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600 text-xs">{{ $contract->contract_date?->format('d/m/Y') ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        @if($contract->hasPdf())
+                                            <a href="{{ route('contracts.pdf-preview', $contract->id) }}" target="_blank"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
+                                                <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+                                                Ver PDF
+                                            </a>
+                                        @else
+                                            <span class="text-gray-400 text-xs">Sin PDF</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+
+        {{-- Pestaña 4: Historial --}}
         <div x-show="tab === 'history'" x-cloak>
             @if($tickets->isEmpty())
                 <p class="text-gray-500 text-center py-8">No hay tickets registrados para este cliente.</p>

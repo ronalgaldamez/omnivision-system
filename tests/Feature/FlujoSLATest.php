@@ -132,4 +132,39 @@ class FlujoSLATest extends TestCase
         $this->assertCount(1, $atRisk);
         $this->assertCount(1, $overdue);
     }
+
+    public function test_ticket_sin_resolucion_no_se_evalua_sla()
+    {
+        $cliente = Client::factory()->create();
+        $usuario = User::factory()->create();
+
+        SlaGoal::factory()->create([
+            'priority' => 'high',
+            'service_type_id' => null,
+            'minutes' => 60,
+            'is_active' => true,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'client_id' => $cliente->id,
+            'created_by' => $usuario->id,
+            'priority' => 'high',
+            'status' => 'open',
+            'created_at' => Carbon::now()->subHours(2),
+        ]);
+
+        $slaService = new SlaService();
+        $slaService->assignSlaToTicket($ticket);
+
+        $ticket->refresh();
+
+        $this->assertNotNull($ticket->sla_deadline_at);
+
+        // Ticket sigue abierto, sin resolved_at ni l2_ended_at
+        $slaService->evaluateSla($ticket);
+        $ticket->refresh();
+
+        $this->assertNull($ticket->sla_met);
+        $this->assertNull($ticket->sla_evaluated_at);
+    }
 }

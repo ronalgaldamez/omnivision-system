@@ -477,11 +477,17 @@
                                             ' !!}
         </div>
 
-        <!-- ======== FECHA DE PAGO ======== -->
+        <!-- ======== FECHA DE PAGO Y FECHA DE CREACIÓN ======== -->
         <div style="margin-top:18px;">
-            <p style="margin:4px 0; font-weight:700; text-align:right;">Fecha de pago</p>
-            <p style="margin:4px 0;">
-                Fecha: Chalatenango a los <span class="placeholder">______</span> días del mes de
+            <div style="text-align:right;">
+                <p style="margin:0 0 2px 0; font-size:10pt;">{{ $contract->payment_date ?: '_________________' }}</p>
+                <p style="margin:0 0 4px 0; font-size:10pt;">_______________</p>
+                <p style="margin:0 0 12px 0; font-weight:700; font-size:10pt;">Fecha de pago</p>
+            </div>
+
+            <p style="margin:4px 0; font-weight:700; font-size:10pt;">Fecha de creación del contrato:</p>
+            <p style="margin:0; font-size:10pt;">
+                Chalatenango a los <span class="placeholder">______</span> días del mes de
                 <span class="placeholder">_________________</span> año
                 <span class="placeholder">_________</span>
             </p>

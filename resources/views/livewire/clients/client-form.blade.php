@@ -68,6 +68,35 @@
     <x-ui.input type="email" wire:model.live="email" name="email" icon="alternate_email" label="Correo electrónico"
         placeholder="correo@ejemplo.com" />
 
+    {{-- Canales de contacto para envíos --}}
+    <div class="pb-5 border-b border-gray-100">
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-gray-500 text-sm">send</span>
+            Envío de facturas y contrato
+        </label>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button type="button" wire:click="toggleChannel('email')"
+                class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition text-left
+                {{ in_array('email', $contact_channels) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                <span class="material-symbols-outlined text-lg {{ in_array('email', $contact_channels) ? 'text-blue-600' : 'text-gray-400' }}">{{ in_array('email', $contact_channels) ? 'check_circle' : 'alternate_email' }}</span>
+                <span class="text-sm text-gray-700">Por correo</span>
+            </button>
+            <button type="button" wire:click="toggleChannel('whatsapp')"
+                class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition text-left
+                {{ in_array('whatsapp', $contact_channels) ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                <span class="material-symbols-outlined text-lg {{ in_array('whatsapp', $contact_channels) ? 'text-green-600' : 'text-gray-400' }}">{{ in_array('whatsapp', $contact_channels) ? 'check_circle' : 'chat' }}</span>
+                <span class="text-sm text-gray-700">WhatsApp</span>
+            </button>
+            <button type="button" wire:click="setNoChannel"
+                class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition text-left
+                {{ empty($contact_channels) ? 'border-gray-400 bg-gray-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                <span class="material-symbols-outlined text-lg {{ empty($contact_channels) ? 'text-gray-600' : 'text-gray-400' }}">{{ empty($contact_channels) ? 'check_circle' : 'block' }}</span>
+                <span class="text-sm text-gray-700">No deseo</span>
+            </button>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">No es obligatorio. Podés elegir uno o ambos canales. Si elegís "No deseo", no se enviarán documentos.</p>
+    </div>
+
     {{-- Departamento, Municipio, Distrito --}}
     <div class="pb-5 border-b border-gray-100">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">

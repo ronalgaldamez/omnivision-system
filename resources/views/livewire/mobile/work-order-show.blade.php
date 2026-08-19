@@ -238,7 +238,8 @@
         </div>
 
         <form wire:submit.prevent="saveTechnicalData" class="space-y-4">
-            @if ($canEditTech && $isEditing)
+            @php $isVerificationOt = $this->isVerificationOt(); @endphp
+            @if (!$isVerificationOt && $canEditTech && $isEditing)
                 <div>
                     <label class="block text-[11px] font-medium text-gray-500 mb-1 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-gray-400 text-sm">settings_ethernet</span>
@@ -271,6 +272,7 @@
             @endif
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                @if(!$isVerificationOt)
                 <div>
                     <label class="block text-[11px] font-medium text-gray-500 mb-1 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-gray-400 text-sm">person</span>Nombre de perfil *
@@ -370,9 +372,12 @@
                         class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition">
                     @error('installation_date')<span class="text-[11px] text-red-500">{{ $message }}</span>@enderror
                 </div>
+                @endif
                 <div>
                     <label class="block text-[11px] font-medium text-gray-500 mb-1 flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>Latitud *
+                        <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>Latitud
+                        @if($isVerificationOt)<span class="text-[10px] text-gray-400 font-normal">(opcional, recomendado)</span>@endif
+                    </label>
                     </label>
                     <input type="text" wire:model.live="latitude"
                         x-on:input="$el.value = formatLat($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
@@ -383,7 +388,9 @@
                 </div>
                 <div>
                     <label class="block text-[11px] font-medium text-gray-500 mb-1 flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>Longitud *
+                        <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>Longitud
+                        @if($isVerificationOt)<span class="text-[10px] text-gray-400 font-normal">(opcional, recomendado)</span>@endif
+                    </label>
                     </label>
                     <input type="text" wire:model.live="longitude"
                         x-on:input="$el.value = formatLng($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
@@ -419,9 +426,34 @@
                 @endif
             </div>
 
-            @if ($workOrder->ticket?->service_type === 'verificacion_instalacion')
-                @php $vr = $this->verificationRules; @endphp
+            @if ($this->isVerificationOt())
+                @php
+                    $vr = $this->verificationRules;
+                    $promo = $workOrder->ticket?->promotion_status;
+                @endphp
                 <div class="border-t border-gray-100 pt-3">
+                    @if ($promo === 'promoted')
+                        <div class="flex items-center gap-2 p-3 bg-green-50 rounded-xl border border-green-200 mb-3">
+                            <span class="material-symbols-outlined text-green-600 text-lg">verified</span>
+                            <div>
+                                <p class="text-xs font-semibold text-green-800">Verificación aprobada y promovida a contratación</p>
+                                <p class="text-[10px] text-green-600">
+                                    Contrato: {{ $workOrder->ticket?->contract?->contract_digital_code ?? 'generado' }}
+                                    @if ($workOrder->ticket?->contract_price_snapshot !== null)
+                                        · Costo de instalación: ${{ number_format($workOrder->ticket->contract_price_snapshot, 2) }}
+                                    @endif
+                                </p>
+                            </div>
+                        </div>
+                    @elseif ($promo === 'rejected')
+                        <div class="flex items-center gap-2 p-3 bg-red-50 rounded-xl border border-red-200 mb-3">
+                            <span class="material-symbols-outlined text-red-600 text-lg">block</span>
+                            <div>
+                                <p class="text-xs font-semibold text-red-800">Verificación no procede</p>
+                                <p class="text-[10px] text-red-600">{{ $workOrder->ticket?->rejection_reason ?? 'Sin motivo registrado.' }}</p>
+                            </div>
+                        </div>
+                    @endif
                     <label class="block text-[11px] font-medium text-green-600 mb-2 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-green-600 text-sm">verified</span>
                         Verificación de instalación
@@ -460,6 +492,23 @@
                                 step="0.01" min="0" placeholder="0.00"
                                 class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
                         </div>
+                        @if($drop_distance !== null && $vr && (float) $drop_distance > (int) $vr['free_distance'])
+                        <div class="col-span-2">
+                            <label class="block text-[10px] text-gray-400 mb-0.5">¿El cliente acepta el costo adicional?
+                                <span class="text-[9px] text-red-500">(excede {{ $vr['free_distance'] }}m gratis)</span>
+                            </label>
+                            <select wire:model.live="customer_accepts_cost"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                                <option value="">Seleccionar</option>
+                                <option value="1">Sí, acepta pagar</option>
+                                <option value="0">No acepta</option>
+                            </select>
+                            @if($customer_accepts_cost === '0')
+                            <p class="text-[10px] text-red-500 mt-1">Si no acepta, se cerrará el ticket como no factible con ese motivo.</p>
+                            @endif
+                        </div>
+                        @endif
                     </div>
                 </div>
             @endif
@@ -504,6 +553,15 @@
                             <input type="number" wire:model.live="installation_cost"
                                 {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
                                 step="0.01" min="0" placeholder="0.00"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">Fecha de pago
+                                <span class="text-[9px] text-green-500">(consultá a la sucursal)</span>
+                            </label>
+                            <input type="text" wire:model.live="payment_date"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                placeholder="Ej: cada 15 de cada mes"
                                 class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
                         </div>
                     </div>
@@ -640,7 +698,9 @@
     @if (!in_array($workOrder->status, ['completed', 'cancelled']))
         <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
             <div class="max-w-2xl mx-auto px-4 py-3 space-y-2.5">
-                @if ($workOrder->status === 'pending' && $hasApprovedRequisition && !$hasAnotherInProgress)
+                @if ($this->isVerificationOt() && $workOrder->status === 'pending' && !$hasAnotherInProgress)
+                    <x-ui.button wire:click="promptStartWorkOrder" variant="warning" icon="play_arrow" class="w-full">Iniciar OT</x-ui.button>
+                @elseif ($workOrder->status === 'pending' && $hasApprovedRequisition && !$hasAnotherInProgress)
                     <x-ui.button wire:click="promptStartWorkOrder" variant="warning" icon="play_arrow" class="w-full">Iniciar OT</x-ui.button>
                 @elseif($workOrder->status === 'pending' && $hasOpenRequisition && !$hasApprovedRequisition)
                     <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
@@ -681,15 +741,19 @@
                 @endif
 
                 @if ($workOrder->status === 'in_progress')
+                    @php $isVerificationOt = $this->isVerificationOt(); @endphp
                     <div class="flex gap-2">
                         <x-ui.button wire:click="promptPauseWorkOrder" variant="secondary" icon="pause" class="flex-1">Pausar</x-ui.button>
-                        @if (auth()->user()->can('complete work_orders') && $canEditTech && !$isEditing && $technicalDataComplete)
+                        @if ($isVerificationOt && !$workOrder->ticket?->promotion_status && auth()->user()->can('complete work_orders') && $canEditTech && !$isEditing)
+                            <x-ui.button wire:click="promptApproveVerification" variant="success" icon="verified" class="flex-1">Aprobar y continuar</x-ui.button>
+                            <x-ui.button wire:click="promptRejectVerification" variant="danger" icon="block" class="flex-1">No procede</x-ui.button>
+                        @elseif (!$isVerificationOt && auth()->user()->can('complete work_orders') && $canEditTech && !$isEditing && $technicalDataComplete)
                             <x-ui.button wire:click="promptCompleteWorkOrder" variant="success" icon="check_circle" class="flex-1">Completar trabajo</x-ui.button>
-                        @elseif(auth()->user()->can('complete work_orders') && $canEditTech && !$isEditing && !$technicalDataComplete)
+                        @elseif (!$isVerificationOt && auth()->user()->can('complete work_orders') && $canEditTech && !$isEditing && !$technicalDataComplete)
                             <x-ui.button variant="success" icon="lock" class="flex-1" disabled>Completar trabajo</x-ui.button>
                         @endif
                     </div>
-                    @if (auth()->user()->can('complete work_orders') && $canEditTech && !$isEditing && !$technicalDataComplete)
+                    @if (!$isVerificationOt && auth()->user()->can('complete work_orders') && $canEditTech && !$isEditing && !$technicalDataComplete)
                         <div class="flex items-start gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
                             <span class="material-symbols-outlined text-amber-600">info</span>
                             <div>
@@ -723,6 +787,32 @@
                     <x-slot:footer>
                         <x-ui.button variant="primary" wire:click="executeConfirmedAction">Sí, continuar</x-ui.button>
                         <x-ui.button variant="secondary" @click="open = false" wire:click="cancelConfirmation">Cancelar</x-ui.button>
+                    </x-slot:footer>
+                </x-ui.card>
+            </div>
+        </div>
+    @endif
+
+    {{-- ═══════════════ MODAL DE RECHAZO DE VERIFICACIÓN ═══════════════ --}}
+    @if ($promptingRejection)
+        <div x-data="{ open: true }" x-show="open" x-cloak
+            class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center"
+            style="display: none;">
+            <div class="relative mx-auto p-5 w-full max-w-md">
+                <x-ui.card>
+                    <div class="p-6 text-center">
+                        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 mb-4">
+                            <span class="material-symbols-outlined text-red-600 text-2xl">block</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Rechazar verificación</h3>
+                        <p class="text-sm text-gray-600 mt-2">El ticket se cerrará como verificación no factible. Escribí el motivo:</p>
+                        <textarea wire:model="rejectionReason" rows="3"
+                            class="mt-3 w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400"
+                            placeholder="Ej: excede metros gratis y el cliente no acepta el cobro"></textarea>
+                    </div>
+                    <x-slot:footer>
+                        <x-ui.button variant="danger" wire:click="rejectVerification">Rechazar y cerrar</x-ui.button>
+                        <x-ui.button variant="secondary" wire:click="cancelRejection">Cancelar</x-ui.button>
                     </x-slot:footer>
                 </x-ui.card>
             </div>

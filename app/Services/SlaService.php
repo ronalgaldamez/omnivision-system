@@ -46,7 +46,13 @@ class SlaService
             return;
         }
 
-        $resolvedAt = $ticket->resolved_at ?? $ticket->l2_ended_at ?? now();
+        // No evaluar aún si el ticket no tiene un momento real de resolución,
+        // evitando comparar contra now() y distorsionar las métricas.
+        if (!$ticket->resolved_at && !$ticket->l2_ended_at) {
+            return;
+        }
+
+        $resolvedAt = $ticket->resolved_at ?? $ticket->l2_ended_at;
         $slaMet = $resolvedAt <= $ticket->sla_deadline_at;
 
         $ticket->update([
