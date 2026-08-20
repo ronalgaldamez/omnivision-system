@@ -564,6 +564,18 @@
                                 placeholder="Ej: cada 15 de cada mes"
                                 class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
                         </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">TVs extra (otras pantallas)
+                                <span class="text-[9px] text-green-500">(+$1/mes y +$6 c/u)</span>
+                            </label>
+                            <input type="number" wire:model.live="extra_tvs"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                min="0" max="10" placeholder="0"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                            @if($extra_tvs > 0)
+                                <p class="text-[9px] text-gray-400 mt-1">Se registrará +${{ number_format($extra_tvs, 0) }} mensual y ${{ number_format($extra_tvs * 6, 0) }} de instalación.</p>
+                            @endif
+                        </div>
                     </div>
                 </div>
             @endif

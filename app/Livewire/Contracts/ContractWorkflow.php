@@ -83,6 +83,19 @@ class ContractWorkflow extends Component
     public $availableZones = [];
     public $installation_cost = null;
 
+    // --- Promociones (meses gratis / doble velocidad) ---
+    public $promo_free_months = 0;
+    public $promo_pay_months = 0;
+    public $promo_total_months = 0;
+    public $promo_double_speed = false;
+    public $promo_display_speed = '';
+    public $promo_original_speed = '';
+
+    // ─── TV extra ───
+    public $extra_tvs = 0;
+    public $tv_install_fee = 0;
+    public $monthly_extra_fee = 0;
+
     // ─── Datos comerciales del contrato ───
     public $contract_type = 'nuevo';
     public $term_months = 24;
@@ -252,6 +265,7 @@ class ContractWorkflow extends Component
             }
 
             $this->recalculateBenefits();
+            $this->refreshPromotions();
 
             // Cargar la firma del cliente si ya existe (portal o enlace único de firma)
             if ($client->client_signature_data) {
@@ -568,6 +582,7 @@ class ContractWorkflow extends Component
         $this->loadAvailableBenefits();
         $this->selectedBenefits = array_keys($this->availableBenefits);
         $this->benefit = $this->getAppliedBenefits();
+        $this->refreshPromotions();
 
         // Persistir el plan en el ticket para que no se pierda al recargar la página
         if ($this->ticket_id) {
@@ -581,12 +596,60 @@ class ContractWorkflow extends Component
         $this->_cachedZone = null;
         $this->updateEffectivePrice();
         $this->refreshBenefitsFromAvailable();
+        $this->refreshPromotions();
     }
 
     public function updatedTermMonths($value)
     {
         $this->benefitManuallySet = false;
         $this->refreshBenefitsFromAvailable();
+        $this->refreshPromotions();
+    }
+
+    /**
+     * Recalcula las promociones (meses gratis y doble velocidad) según plan+zona+plazo.
+     */
+    public function refreshPromotions(): void
+    {
+        $promo = app(\App\Services\PromotionService::class);
+        $planId = $this->plan_id ?: null;
+        $zoneId = $this->zone_id ?: null;
+        $term = (int) $this->term_months;
+
+        $free = $promo->freeMonths($planId, $zoneId, $term);
+        $this->promo_free_months = $free['free'];
+        $this->promo_pay_months = $free['pay'];
+        $this->promo_total_months = $free['total'];
+
+        $speed = $promo->effectiveSpeed($planId, $zoneId, $term);
+        $this->promo_double_speed = $speed['doubled'];
+        $this->promo_original_speed = $speed['original_text'];
+        $this->promo_display_speed = $speed['effective'] > 0
+            ? $speed['effective'] . ' Mbps' . ($speed['doubled'] ? ' (doble)' : '')
+            : $speed['original_text'];
+    }
+
+    /**
+     * Al cambiar la cantidad de TVs extra, recalcula los cargos:
+     * - $6 de instalación por TV (cargo único)
+     * - $1 mensual recurrente por TV
+     */
+    public function updatedExtraTvs($value)
+    {
+        $count = max(0, (int) $value);
+        $this->extra_tvs = $count;
+        $this->tv_install_fee = $count * 6;
+        $this->monthly_extra_fee = $count * 1;
+    }
+
+    public function getMonthlyTotal(): float
+    {
+        return (float) ($this->price ?? 0) + (float) $this->monthly_extra_fee;
+    }
+
+    public function getInstallTotal(): float
+    {
+        return (float) ($this->installation_cost ?? 0) + (float) $this->tv_install_fee;
     }
 
     private function refreshBenefitsFromAvailable(): void
@@ -987,6 +1050,9 @@ class ContractWorkflow extends Component
             'service_contracted' => $this->deriveServiceContracted(),
             'term_months' => $this->term_months,
             'benefit' => $this->benefit,
+            'extra_tvs' => $this->extra_tvs,
+            'tv_install_fee' => $this->tv_install_fee,
+            'monthly_extra_fee' => $this->monthly_extra_fee,
         ];
 
         // Si el contrato ya fue pre-generado (ticket promovido desde verificación),
@@ -1000,6 +1066,9 @@ class ContractWorkflow extends Component
 
         $this->contract_id = $contract->id;
         $this->contractDigitalCode = $contract->contract_digital_code;
+
+        // Registrar cobros de TVs extra (cargo único + recargo mensual recurrente)
+        $this->syncTvExtraCharges($contract);
 
         // Guardar documentos subidos por el agente
         foreach ($this->uploadedDocuments as $type => $doc) {
@@ -1090,6 +1159,46 @@ class ContractWorkflow extends Component
         $this->step = 5;
         session()->forget($this->draftKey());
         $this->dispatch('show-toast', type: 'success', message: 'Contrato #' . $contract->contract_digital_code . ' creado correctamente.');
+    }
+
+    /**
+     * Sincroniza los cobros de TVs extra del contrato.
+     * - Cargo único de instalación ($6 por TV) -> no recurrente.
+     * - Recargo mensual (+$1 por TV) -> recurrente mensual.
+     */
+    protected function syncTvExtraCharges(Contract $contract): void
+    {
+        // Limpiar cobros previos de TV extra para evitar duplicados al re-finalizar
+        $contract->charges()->where('type', 'extra_tv')->delete();
+
+        $count = max(0, (int) $this->extra_tvs);
+        if ($count <= 0) {
+            return;
+        }
+
+        if ($this->tv_install_fee > 0) {
+            $contract->charges()->create([
+                'client_id' => $contract->client_id,
+                'type' => 'extra_tv',
+                'description' => "Instalación de TV extra x{$count}",
+                'amount' => $this->tv_install_fee,
+                'is_recurring' => false,
+                'recurring_period' => null,
+                'quantity' => $count,
+            ]);
+        }
+
+        if ($this->monthly_extra_fee > 0) {
+            $contract->charges()->create([
+                'client_id' => $contract->client_id,
+                'type' => 'extra_tv',
+                'description' => "Recargo mensual TV extra x{$count}",
+                'amount' => $this->monthly_extra_fee,
+                'is_recurring' => true,
+                'recurring_period' => 'monthly',
+                'quantity' => $count,
+            ]);
+        }
     }
 
     public function downloadPdf()

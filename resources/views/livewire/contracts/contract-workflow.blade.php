@@ -716,7 +716,62 @@
                             <x-ui.input type="number" wire:model="price" icon="attach_money"
                                 label="Precio a facturar" step="0.01" min="0" placeholder="0.00" />
                         </div>
+
+                        {{-- TV extra: equipo adicional para otra pantalla --}}
+                        <div class="mt-3 border-t border-gray-100 pt-3">
+                            <label class="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-gray-500 text-sm">live_tv</span>
+                                TVs extra (otras pantallas)
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <x-ui.input type="number" wire:model.live="extra_tvs" icon="tv"
+                                        label="Cantidad de TVs extra" min="0" max="10" placeholder="0" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Cargo instalación (único)</label>
+                                    <p class="px-3 py-2.5 bg-gray-50 rounded-lg border border-gray-200 text-sm font-medium text-gray-800">
+                                        ${{ number_format($this->getInstallTotal(), 2) }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Cuota mensual total</label>
+                                    <p class="px-3 py-2.5 bg-blue-50 rounded-lg border border-blue-200 text-sm font-bold text-blue-800">
+                                        ${{ number_format($this->getMonthlyTotal(), 2) }}
+                                    </p>
+                                </div>
+                            </div>
+                            @if($extra_tvs > 0)
+                                <p class="text-[11px] text-gray-400 mt-2">
+                                    +$1 mensual por cada TV extra y +$6 de instalación por cada TV. Se registrará para la facturación recurrente.
+                                </p>
+                            @endif
+                        </div>
                     </div>
+
+                    {{-- Promociones automáticas (meses gratis / doble velocidad) --}}
+                    @if($promo_free_months > 0 || $promo_double_speed)
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="material-symbols-outlined text-purple-600 text-sm">local_activity</span>
+                                <span class="text-xs font-semibold text-purple-800 uppercase tracking-wide">Promociones aplicadas</span>
+                            </div>
+                            <ul class="space-y-1 text-sm text-purple-800">
+                                @if($promo_free_months > 0)
+                                    <li class="flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-purple-600 text-base">calendar_month</span>
+                                        Pagando {{ $promo_pay_months }} meses se te regalan {{ $promo_free_months }}.
+                                    </li>
+                                @endif
+                                @if($promo_double_speed)
+                                    <li class="flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-purple-600 text-base">speed</span>
+                                        Doble velocidad: {{ $promo_original_speed }} → {{ $promo_display_speed }}
+                                    </li>
+                                @endif
+                            </ul>
+                        </div>
+                    @endif
 
                     {{-- Beneficios interactivos --}}
                     @if (count($availableBenefits) > 0)

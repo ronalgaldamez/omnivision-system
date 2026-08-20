@@ -37,6 +37,9 @@ class Contract extends Model
         'term_months',
         'installation_cost',
         'benefit',
+        'extra_tvs',
+        'tv_install_fee',
+        'monthly_extra_fee',
     ];
 
     protected function casts(): array
@@ -46,6 +49,9 @@ class Contract extends Model
             'contract_date' => 'date',
             'signed_at' => 'datetime',
             'sent_at' => 'datetime',
+            'extra_tvs' => 'integer',
+            'tv_install_fee' => 'decimal:2',
+            'monthly_extra_fee' => 'decimal:2',
         ];
     }
 
@@ -108,6 +114,11 @@ class Contract extends Model
         return $this->hasMany(ContractSignature::class);
     }
 
+    public function charges(): HasMany
+    {
+        return $this->hasMany(ContractCharge::class);
+    }
+
     // ─── Utilidades ───
 
     public function serviceTypeName(): string
@@ -139,5 +150,21 @@ class Contract extends Model
     public function hasPdf(): bool
     {
         return app(\App\Services\ContractPdfService::class)->hasPdf($this);
+    }
+
+    /**
+     * Cuota mensual total = precio del plan + recargo recurrente (ej. +$1 por TV extra).
+     */
+    public function monthlyTotal(): float
+    {
+        return (float) $this->price + (float) $this->monthly_extra_fee;
+    }
+
+    /**
+     * Cargo único total de instalación = costo de instalación + cargo por TVs extra.
+     */
+    public function installFeeTotal(): float
+    {
+        return (float) ($this->installation_cost ?? 0) + (float) $this->tv_install_fee;
     }
 }

@@ -27,11 +27,17 @@
                     <span class="material-symbols-outlined text-base align-text-bottom me-1">history</span>
                     Historial
                 </button>
-                <button wire:click="setTab('rules')"
+                <button wire:click="setTab('install_fees')"
                     class="px-4 py-3 text-sm font-medium border-b-2 transition -mb-px
-                    {{ $activeTab === 'rules' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
-                    <span class="material-symbols-outlined text-base align-text-bottom me-1">tune</span>
-                    Reglas
+                    {{ $activeTab === 'install_fees' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
+                    <span class="material-symbols-outlined text-base align-text-bottom me-1">handyman</span>
+                    Tarifas instalación
+                </button>
+                <button wire:click="setTab('campaigns')"
+                    class="px-4 py-3 text-sm font-medium border-b-2 transition -mb-px
+                    {{ $activeTab === 'campaigns' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
+                    <span class="material-symbols-outlined text-base align-text-bottom me-1">campaign</span>
+                    Promos y reglas
                 </button>
             </nav>
         </div>
@@ -53,9 +59,13 @@
             <div class="space-y-4">
                 @livewire('admin.plans.plan-history', key('plan-history'))
             </div>
-            @elseif($activeTab === 'rules')
-            <div class="space-y-4 px-6 py-4">
-                @livewire('admin.plans.plan-rule-manager', key('rule-manager'))
+            @elseif($activeTab === 'install_fees')
+            <div class="space-y-4">
+                @livewire('admin.plans.install-fee-manager', key('install-fee-manager'))
+            </div>
+            @elseif($activeTab === 'campaigns')
+            <div class="space-y-4">
+                @livewire('admin.plans.campaign-manager', key('campaign-manager'))
             </div>
             @endif
         </div>
