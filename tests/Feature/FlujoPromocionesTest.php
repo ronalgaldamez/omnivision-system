@@ -21,6 +21,7 @@ class FlujoPromocionesTest extends TestCase
         Campaign::create([
             'name' => 'Meses gratis cable',
             'type' => 'discount_months',
+            'category' => 'contract_rule',
             'zone_id' => $zona->id,
             'config' => ['min_pay' => 12, 'free' => 2],
             'starts_at' => now()->subDay(),
@@ -44,6 +45,7 @@ class FlujoPromocionesTest extends TestCase
         Campaign::create([
             'name' => 'Meses gratis cable 24',
             'type' => 'discount_months',
+            'category' => 'contract_rule',
             'zone_id' => $zona->id,
             'config' => ['min_pay' => 24, 'free' => 4],
             'starts_at' => now()->subDay(),
@@ -66,6 +68,7 @@ class FlujoPromocionesTest extends TestCase
         Campaign::create([
             'name' => 'Doble velocidad',
             'type' => 'double_speed',
+            'category' => 'contract_rule',
             'zone_id' => $zona->id,
             'config' => ['enabled' => true],
             'starts_at' => now()->subDay(),
@@ -99,8 +102,8 @@ class FlujoPromocionesTest extends TestCase
         $zona = Zone::factory()->create();
 
         // Dos campañas: una de 12 (regala 2), otra de 24 (regala 4)
-        Campaign::create(['name' => 'Cable 12', 'type' => 'discount_months', 'service' => 'cable', 'zone_id' => $zona->id, 'config' => ['min_pay' => 12, 'free' => 2], 'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(), 'is_active' => true]);
-        Campaign::create(['name' => 'Cable 24', 'type' => 'discount_months', 'service' => 'cable', 'zone_id' => $zona->id, 'config' => ['min_pay' => 24, 'free' => 4], 'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(), 'is_active' => true]);
+        Campaign::create(['name' => 'Cable 12', 'type' => 'discount_months', 'category' => 'contract_rule', 'service' => 'cable', 'zone_id' => $zona->id, 'config' => ['min_pay' => 12, 'free' => 2], 'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(), 'is_active' => true]);
+        Campaign::create(['name' => 'Cable 24', 'type' => 'discount_months', 'category' => 'contract_rule', 'service' => 'cable', 'zone_id' => $zona->id, 'config' => ['min_pay' => 24, 'free' => 4], 'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(), 'is_active' => true]);
 
         $service = new PromotionService();
 
@@ -120,7 +123,7 @@ class FlujoPromocionesTest extends TestCase
     public function test_meses_gratis_no_aplica_a_internet_ni_combo()
     {
         $zona = Zone::factory()->create();
-        Campaign::create(['name' => 'Meses', 'type' => 'discount_months', 'service' => 'cable', 'zone_id' => $zona->id, 'config' => ['min_pay' => 12, 'free' => 2], 'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(), 'is_active' => true]);
+        Campaign::create(['name' => 'Meses', 'type' => 'discount_months', 'category' => 'contract_rule', 'service' => 'cable', 'zone_id' => $zona->id, 'config' => ['min_pay' => 12, 'free' => 2], 'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(), 'is_active' => true]);
 
         $service = new PromotionService();
 
@@ -136,7 +139,7 @@ class FlujoPromocionesTest extends TestCase
     public function test_doble_velocidad_no_aplica_a_cable_solo()
     {
         $zona = Zone::factory()->create();
-        Campaign::create(['name' => 'Doble', 'type' => 'double_speed', 'service' => 'internet_cable', 'zone_id' => $zona->id, 'config' => ['enabled' => true], 'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(), 'is_active' => true]);
+        Campaign::create(['name' => 'Doble', 'type' => 'double_speed', 'category' => 'contract_rule', 'service' => 'internet_cable', 'zone_id' => $zona->id, 'config' => ['enabled' => true], 'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(), 'is_active' => true]);
 
         $service = new PromotionService();
 

@@ -136,7 +136,25 @@ class VerificationPricingService
     public function freeInstallationApplies(Ticket $ticket, float $dropDistance): bool
     {
         $zoneId = $ticket->contract?->zone_id ?? $ticket->zone_id;
-        $campaign = \App\Models\Campaign::activeOfType('free_installation', $zoneId);
+
+        // La instalación gratis es una PROMOCIÓN temporal (mes festivo), no regla de contrato.
+        $campaign = \App\Models\Campaign::where('type', 'free_installation')
+            ->where('category', 'promotion')
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+            })
+            ->where(function ($q) use ($zoneId) {
+                $q->whereNull('zone_id');
+                if ($zoneId) {
+                    $q->orWhere('zone_id', $zoneId);
+                }
+            })
+            ->first();
+
         if (!$campaign) {
             return false;
         }

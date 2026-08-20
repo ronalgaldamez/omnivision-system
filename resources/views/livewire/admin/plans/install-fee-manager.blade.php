@@ -189,12 +189,27 @@
                         @endif
                     </div>
 
-                    {{-- Servicio --}}
-                    <x-ui.select wire:model="service_type" label="Servicio" icon="tv">
-                        <option value="internet">Internet</option>
-                        <option value="cable">Cable</option>
-                        <option value="combo">Cable + Internet</option>
-                    </x-ui.select>
+                    {{-- Servicios a los que aplica la tarifa --}}
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-gray-500 text-sm">tv</span>
+                            Servicios
+                        </label>
+                        <div class="flex flex-wrap gap-3">
+                            @foreach([
+                                'internet' => 'Internet',
+                                'cable' => 'Cable',
+                                'internet_cable' => 'Cable + Internet',
+                            ] as $val => $label)
+                                <label class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition
+                                    {{ in_array($val, $services) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                                    <input type="checkbox" wire:model="services" value="{{ $val }}" class="accent-blue-600">
+                                    <span class="text-sm text-gray-700">{{ $label }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Marcá uno o varios. Se creará una tarifa por cada servicio marcado.</p>
+                    </div>
 
                     <div class="grid grid-cols-3 gap-3">
                         <x-ui.input type="number" wire:model="covered_meters" label="Metros cubiertos" icon="straighten" min="1" placeholder="150" />

@@ -12,7 +12,7 @@ class InstallFeeManager extends Component
     public $showModal = false;
     public $editingId = null;
     public $zone_id = null;
-    public $service_type = 'internet';
+    public $services = [];
     public $covered_meters = 150;
     public $fee = 25;
     public $excess_per_50m = 5;
@@ -99,14 +99,14 @@ class InstallFeeManager extends Component
             $rule = InstallFeeRule::find($id);
             $this->editingId = $rule->id;
             $this->zone_id = $rule->zone_id;
-            $this->service_type = $rule->service_type;
+            $this->services = [$rule->service_type];
             $this->covered_meters = $rule->covered_meters;
             $this->fee = $rule->fee;
             $this->excess_per_50m = $rule->excess_per_50m;
             $this->is_active = $rule->is_active;
         } else {
             $this->reset(['editingId', 'zone_id']);
-            $this->service_type = 'internet';
+            $this->services = [];
             $this->covered_meters = 150;
             $this->fee = 25;
             $this->excess_per_50m = 5;
@@ -124,42 +124,50 @@ class InstallFeeManager extends Component
     public function save()
     {
         $this->validate([
-            'service_type' => 'required|in:internet,cable,combo',
+            'services' => 'required|array|min:1',
+            'services.*' => 'in:internet,cable,internet_cable',
             'covered_meters' => 'required|integer|min:1',
             'fee' => 'required|numeric|min:0',
             'excess_per_50m' => 'required|numeric|min:0',
         ]);
 
-        $data = [
+        $services = array_values(array_unique($this->services));
+
+        // Verificar duplicados: misma zona + servicio
+        $zonaLabel = $this->zone_id ? \App\Models\Zone::find($this->zone_id)?->name : 'Global';
+        foreach ($services as $service) {
+            $duplicate = InstallFeeRule::where('service_type', $service)
+                ->where('zone_id', $this->zone_id ?: null)
+                ->when($this->editingId && in_array($service, $this->services), fn($q) => $q->where('id', '!=', $this->editingId))
+                ->exists();
+
+            if ($duplicate) {
+                $this->dispatch('show-toast', type: 'error', message: "Ya existe una tarifa de '{$service}' para la zona '{$zonaLabel}'. Editá la existente en vez de crear una nueva.");
+                return;
+            }
+        }
+
+        $base = [
             'zone_id' => $this->zone_id ?: null,
-            'service_type' => $this->service_type,
             'covered_meters' => $this->covered_meters,
             'fee' => $this->fee,
             'excess_per_50m' => $this->excess_per_50m,
             'is_active' => $this->is_active,
         ];
 
-        // Evitar duplicados: misma zona + mismo servicio
-        $duplicate = InstallFeeRule::where('service_type', $this->service_type)
-            ->where('zone_id', $this->zone_id ?: null)
-            ->when($this->editingId, fn($q) => $q->where('id', '!=', $this->editingId))
-            ->exists();
-
-        if ($duplicate) {
-            $zonaLabel = $this->zone_id ? \App\Models\Zone::find($this->zone_id)?->name : 'Global';
-            $this->dispatch('show-toast', type: 'error', message: "Ya existe una tarifa de {$this->service_type} para la zona '{$zonaLabel}'. Editá la existente en vez de crear una nueva.");
-            return;
-        }
-
         if ($this->editingId) {
-            InstallFeeRule::find($this->editingId)->update($data);
+            $rule = InstallFeeRule::find($this->editingId);
+            $rule->update(array_merge($base, ['service_type' => $services[0]]));
         } else {
-            InstallFeeRule::create($data);
+            // Crear una tarifa por cada servicio marcado
+            foreach ($services as $service) {
+                InstallFeeRule::create(array_merge($base, ['service_type' => $service]));
+            }
         }
 
         $this->closeModal();
         $this->loadRules();
-        $this->dispatch('show-toast', type: 'success', message: 'Tarifa de instalación guardada.');
+        $this->dispatch('show-toast', type: 'success', message: 'Tarifa(s) de instalación guardada(s).');
     }
 
     public function toggleActive($id)

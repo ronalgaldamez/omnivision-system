@@ -13,7 +13,8 @@ class CampaignManager extends Component
     public $editingId = null;
     public $name = '';
     public $type = 'free_installation';
-    public $service = 'all';
+    public $category = 'promotion';
+    public $services = [];
     public $zone_id = null;
     public $zoneSearch = '';
     public $ruleExpandedZones = [];
@@ -30,14 +31,18 @@ class CampaignManager extends Component
     public $confirmingId = null;
     public $confirmMessage = '';
 
-    public function mount()
+    public function mount(string $category = 'promotion')
     {
+        $this->category = $category;
         $this->loadCampaigns();
     }
 
     public function loadCampaigns()
     {
-        $this->campaigns = Campaign::with('zone')->orderByDesc('starts_at')->get();
+        $this->campaigns = Campaign::with('zone')
+            ->where('category', $this->category)
+            ->orderByDesc('starts_at')
+            ->get();
     }
 
     public function openModal($id = null)
@@ -47,7 +52,8 @@ class CampaignManager extends Component
             $this->editingId = $c->id;
             $this->name = $c->name;
             $this->type = $c->type;
-            $this->service = $c->service ?? 'all';
+            $this->category = $c->category ?? 'promotion';
+            $this->services = $c->service && $c->service !== 'all' ? [$c->service] : [];
             $this->zone_id = $c->zone_id;
             $this->starts_at = $c->starts_at?->format('Y-m-d') ?? '';
             $this->ends_at = $c->ends_at?->format('Y-m-d') ?? '';
@@ -58,8 +64,8 @@ class CampaignManager extends Component
         } else {
             $this->reset(['editingId', 'zone_id']);
             $this->name = '';
-            $this->type = 'free_installation';
-            $this->service = 'all';
+            $this->type = $this->category === 'contract_rule' ? 'discount_months' : 'free_installation';
+            $this->services = [];
             $this->starts_at = '';
             $this->ends_at = '';
             $this->is_active = true;
@@ -97,11 +103,28 @@ class CampaignManager extends Component
         $this->cfg_free = '';
         $this->cfg_enabled = true;
 
-        // Sugerir servicio según el tipo (mensual gratis=Cable, doble velocidad=Internet)
-        $this->service = match ($value) {
-            'discount_months' => 'cable',
-            'double_speed' => 'internet',
-            default => 'all',
+        // Sugerir servicios según el tipo y la categoría
+        $allowed = $this->allowedServices($value);
+        if ($this->category === 'contract_rule') {
+            $this->services = array_intersect($this->services, $allowed);
+        } else {
+            // En promociones solo se mantienen los servicios válidos del tipo
+            $this->services = array_intersect($this->services, $allowed);
+        }
+    }
+
+    /**
+     * Servicios que aplican según el tipo de promoción/regla.
+     * doble_speed: internet + combo (no cable). Mes TV: cable. Mes Internet: internet. Instalación: todos.
+     */
+    public function allowedServices(string $type): array
+    {
+        return match ($type) {
+            'discount_months' => $this->category === 'contract_rule' ? ['cable'] : ['cable'],
+            'double_speed' => ['internet', 'internet_cable'],
+            'free_tv_month' => ['cable'],
+            'free_internet_month' => ['internet'],
+            default => ['internet', 'cable', 'internet_cable'],
         };
     }
 
@@ -140,12 +163,15 @@ class CampaignManager extends Component
             'type' => 'required|string|max:50',
         ]);
 
-        $isContractRule = in_array($this->type, ['discount_months', 'double_speed']);
+        $isContractRule = $this->category === 'contract_rule';
 
-        $data = [
+        // Servicios a crear (si ninguno marcado -> 'all' = todos)
+        $services = !empty($this->services) ? array_values(array_unique($this->services)) : ['all'];
+
+        $base = [
             'name' => $this->name,
             'type' => $this->type,
-            'service' => $this->service,
+            'category' => $this->category,
             'zone_id' => $this->zone_id ?: null,
             'config' => $this->buildConfig(),
             'starts_at' => $isContractRule ? null : ($this->starts_at ? $this->starts_at . ' 00:00:00' : null),
@@ -153,15 +179,20 @@ class CampaignManager extends Component
             'is_active' => $this->is_active,
         ];
 
+        // Modo edición: actualizar solo el registro actual con su servicio
         if ($this->editingId) {
-            Campaign::find($this->editingId)->update($data);
+            $c = Campaign::find($this->editingId);
+            $c->update(array_merge($base, ['service' => $services[0]]));
         } else {
-            Campaign::create($data);
+            // Crear un registro por cada servicio marcado
+            foreach ($services as $service) {
+                Campaign::create(array_merge($base, ['service' => $service]));
+            }
         }
 
         $this->closeModal();
         $this->loadCampaigns();
-        $this->dispatch('show-toast', type: 'success', message: 'Campaña guardada.');
+        $this->dispatch('show-toast', type: 'success', message: $this->category === 'contract_rule' ? 'Regla(es) guardada(s).' : 'Promoción(es) guardada(s).');
     }
 
     public function toggleActive($id)
