@@ -1,74 +1,153 @@
 <div>
     <div class="flex items-center justify-between mb-4">
         <div>
-            <h3 class="text-sm font-semibold text-gray-700">Campañas promocionales</h3>
-            <p class="text-xs text-gray-500">Promociones temporales (ej. Mes del Padre/Madre: instalación gratis) con vigencia por fecha.</p>
+            @if($category === 'contract_rule')
+                <h3 class="text-sm font-semibold text-gray-700">Reglas de contrato</h3>
+                <p class="text-xs text-gray-500">Condiciones permanentes de la contratación (meses gratis, doble velocidad todo el contrato). Sin fechas.</p>
+            @else
+                <h3 class="text-sm font-semibold text-gray-700">Promociones</h3>
+                <p class="text-xs text-gray-500">Promociones temporales (mes festivo / premio): beneficio por un mes, con vigencia por fechas.</p>
+            @endif
         </div>
-        <x-ui.button variant="primary" icon="add_circle" wire:click="openModal">Agregar campaña</x-ui.button>
+        <x-ui.button variant="primary" icon="add_circle" wire:click="openModal">{{ $category === 'contract_rule' ? 'Agregar regla' : 'Agregar promoción' }}</x-ui.button>
     </div>
 
-    <div class="overflow-x-auto rounded-lg border border-gray-200">
-        <table class="w-full text-sm">
-            <thead class="bg-gray-50 text-gray-600">
-                <tr>
-                    <th class="text-left px-4 py-3 font-medium">Nombre</th>
-                    <th class="text-left px-4 py-3 font-medium">Tipo</th>
-                    <th class="text-left px-4 py-3 font-medium">Zona</th>
-                    <th class="text-left px-4 py-3 font-medium">Vigencia</th>
-                    <th class="text-center px-4 py-3 font-medium">Activo</th>
-                    <th class="text-right px-4 py-3 font-medium">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                @forelse($campaigns as $campaign)
-                    @php $now = now(); @endphp
-                    <tr class="hover:bg-gray-50/60 transition">
-                        <td class="px-4 py-3 text-gray-800 font-medium">{{ $campaign->name }}</td>
-                        <td class="px-4 py-3">
-                            <x-ui.badge variant="neutral">{{ ucfirst(str_replace('_', ' ', $campaign->type)) }}</x-ui.badge>
-                        </td>
-                        <td class="px-4 py-3 text-gray-700">{{ $campaign->zone?->name ?? 'Global' }}</td>
-                        <td class="px-4 py-3 text-xs text-gray-600">
-                            @if($campaign->starts_at && $campaign->ends_at)
-                                {{ $campaign->starts_at->format('d/m/Y') }} → {{ $campaign->ends_at->format('d/m/Y') }}
-                            @else
-                                <span class="text-gray-400">Sin fecha</span>
-                            @endif
-                            <br>
-                            <span class="{{ $campaign->isCurrentlyActive() ? 'text-green-600' : 'text-gray-400' }}">
-                                {{ $campaign->isCurrentlyActive() ? '● Vigente ahora' : '○ No vigente' }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-center">
-                            <button wire:click="toggleActive({{ $campaign->id }})"
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition
-                                {{ $campaign->is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200' }}">
-                                <span class="material-symbols-outlined text-sm">{{ $campaign->is_active ? 'check_circle' : 'cancel' }}</span>
-                                {{ $campaign->is_active ? 'Activa' : 'Inactiva' }}
-                            </button>
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                            <div class="flex items-center justify-end gap-1">
-                                <button wire:click="openModal({{ $campaign->id }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
-                                    <span class="material-symbols-outlined text-sm">edit</span>
-                                </button>
-                                <button wire:click="promptDelete({{ $campaign->id }})" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
-                                    <span class="material-symbols-outlined text-sm">delete</span>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
+    @if($category === 'promotion')
+        {{-- PROMOCIONES: agrupadas por nombre (campaña/evento) --}}
+        @php $groups = $campaigns->groupBy('name'); @endphp
+        @forelse($groups as $name => $groupItems)
+            @php $first = $groupItems->first(); $activeCount = $groupItems->where('is_active', true)->count(); @endphp
+            <div class="rounded-xl border border-gray-200 overflow-hidden mb-4" x-data="{ open: true }">
+                <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-amber-600">campaign</span>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">{{ $name }}</p>
+                            <p class="text-xs text-gray-500">
+                                {{ $groupItems->count() }} promo/s
+                                @if($first->starts_at) · {{ $first->starts_at->format('d/m/Y') }} → {{ $first->ends_at?->format('d/m/Y') }} @endif
+                                <span class="{{ $activeCount ? 'text-green-600' : 'text-gray-400' }}"> · {{ $activeCount ? '● Vigente' : '○ No vigente' }}</span>
+                            </p>
+                        </div>
+                    </div>
+                    <button @click="open = !open" class="text-gray-400 hover:text-gray-600">
+                        <span class="material-symbols-outlined" :class="open ? 'rotate-180' : ''">expand_more</span>
+                    </button>
+                </div>
+                <div x-show="open" x-collapse>
+                    <table class="w-full text-sm">
+                        <thead class="bg-white text-gray-500">
+                            <tr class="border-b border-gray-100">
+                                <th class="text-left px-4 py-2 font-medium text-xs">Tipo</th>
+                                <th class="text-left px-4 py-2 font-medium text-xs">Servicio</th>
+                                <th class="text-left px-4 py-2 font-medium text-xs">Zona</th>
+                                <th class="text-center px-4 py-2 font-medium text-xs">Activo</th>
+                                <th class="text-right px-4 py-2 font-medium text-xs">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach($groupItems as $campaign)
+                                <tr class="hover:bg-gray-50/60 transition">
+                                    <td class="px-4 py-2.5">
+                                        <x-ui.badge variant="neutral">{{ ucfirst(str_replace('_', ' ', $campaign->type)) }}</x-ui.badge>
+                                    </td>
+                                    <td class="px-4 py-2.5">
+                                        @if($campaign->service === 'all')
+                                            <span class="text-gray-500">Todos</span>
+                                        @else
+                                            <x-ui.badge variant="info">{{ ucfirst(str_replace('_', ' ', $campaign->service)) }}</x-ui.badge>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-2.5 text-gray-700">{{ $campaign->zone?->name ?? 'Global' }}</td>
+                                    <td class="px-4 py-2.5 text-center">
+                                        <button wire:click="toggleActive({{ $campaign->id }})"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition
+                                            {{ $campaign->is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200' }}">
+                                            <span class="material-symbols-outlined text-sm">{{ $campaign->is_active ? 'check_circle' : 'cancel' }}</span>
+                                        </button>
+                                    </td>
+                                    <td class="px-4 py-2.5 text-right">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <button wire:click="openModal({{ $campaign->id }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
+                                                <span class="material-symbols-outlined text-sm">edit</span>
+                                            </button>
+                                            <button wire:click="promptDelete({{ $campaign->id }})" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
+                                                <span class="material-symbols-outlined text-sm">delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @empty
+            <div class="rounded-xl border border-dashed border-gray-200 py-12 text-center text-gray-500">
+                <span class="material-symbols-outlined text-gray-300 text-4xl mb-2 block">campaign</span>
+                No hay promociones configuradas.
+            </div>
+        @endforelse
+    @else
+        {{-- REGLAS DE CONTRATO: tabla simple --}}
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 text-gray-600">
                     <tr>
-                        <td colspan="6" class="px-4 py-12 text-center text-gray-500">
-                            <span class="material-symbols-outlined text-gray-300 text-4xl mb-2 block">campaign</span>
-                            No hay campañas configuradas.
-                        </td>
+                        <th class="text-left px-4 py-3 font-medium">Nombre</th>
+                        <th class="text-left px-4 py-3 font-medium">Tipo</th>
+                        <th class="text-left px-4 py-3 font-medium">Servicio</th>
+                        <th class="text-left px-4 py-3 font-medium">Zona</th>
+                        <th class="text-center px-4 py-3 font-medium">Activo</th>
+                        <th class="text-right px-4 py-3 font-medium">Acciones</th>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse($campaigns as $campaign)
+                        <tr class="hover:bg-gray-50/60 transition">
+                            <td class="px-4 py-3 text-gray-800 font-medium">{{ $campaign->name }}</td>
+                            <td class="px-4 py-3">
+                                <x-ui.badge variant="neutral">{{ ucfirst(str_replace('_', ' ', $campaign->type)) }}</x-ui.badge>
+                            </td>
+                            <td class="px-4 py-3">
+                                @if($campaign->service === 'all')
+                                    <span class="text-gray-500">Todos</span>
+                                @else
+                                    <x-ui.badge variant="info">{{ ucfirst(str_replace('_', ' ', $campaign->service)) }}</x-ui.badge>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-gray-700">{{ $campaign->zone?->name ?? 'Global' }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <button wire:click="toggleActive({{ $campaign->id }})"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition
+                                    {{ $campaign->is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200' }}">
+                                    <span class="material-symbols-outlined text-sm">{{ $campaign->is_active ? 'check_circle' : 'cancel' }}</span>
+                                    {{ $campaign->is_active ? 'Activa' : 'Inactiva' }}
+                                </button>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <div class="flex items-center justify-end gap-1">
+                                    <button wire:click="openModal({{ $campaign->id }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
+                                        <span class="material-symbols-outlined text-sm">edit</span>
+                                    </button>
+                                    <button wire:click="promptDelete({{ $campaign->id }})" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
+                                        <span class="material-symbols-outlined text-sm">delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-4 py-12 text-center text-gray-500">
+                                <span class="material-symbols-outlined text-gray-300 text-4xl mb-2 block">campaign</span>
+                                No hay reglas de contrato configuradas.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    @endif
 
     {{-- Modal agregar/editar campaña --}}
     @if($showModal)
@@ -78,7 +157,7 @@
                 <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <span class="material-symbols-outlined text-amber-600">campaign</span>
-                        {{ $editingId ? 'Editar campaña' : 'Nueva campaña' }}
+                        {{ $editingId ? 'Editar' : 'Nueva' }} {{ $category === 'contract_rule' ? 'regla de contrato' : 'promoción' }}
                     </h3>
                     <button wire:click="$set('showModal', false)" class="text-gray-400 hover:text-gray-600">
                         <span class="material-symbols-outlined">close</span>
@@ -87,24 +166,40 @@
                 <div class="px-6 py-5 space-y-4">
                     <x-ui.input type="text" wire:model="name" label="Nombre" icon="badge" placeholder="Mes del Padre" required />
                     <x-ui.select wire:model.live="type" label="Tipo" icon="tune">
-                        <option value="free_installation">Instalación gratis</option>
-                        <option value="free_tv_month">Mes de TV gratis</option>
-                        <option value="double_speed">Doble velocidad</option>
-                        <option value="discount_months">Meses gratis</option>
+                        @if($category === 'contract_rule')
+                            <option value="discount_months">Meses gratis</option>
+                            <option value="double_speed">Doble velocidad</option>
+                        @else
+                            <option value="free_installation">Instalación gratis</option>
+                            <option value="free_tv_month">Mes de TV gratis</option>
+                            <option value="free_internet_month">Mes de Internet gratis</option>
+                            <option value="double_speed">Doble velocidad</option>
+                        @endif
                     </x-ui.select>
 
-                    {{-- Servicio al que aplica la promo --}}
-                    <x-ui.select wire:model="service" label="Servicio" icon="tv">
-                        <option value="all">Todos los servicios</option>
-                        <option value="internet">Internet</option>
-                        <option value="cable">Cable</option>
-                        <option value="internet_cable">Combo (Cable + Internet)</option>
-                    </x-ui.select>
-                    @if($service === 'cable' && $type === 'discount_months')
-                        <p class="text-xs text-green-600 -mt-2">Los meses gratis aplican a Cable.</p>
-                    @elseif(in_array($service, ['internet', 'internet_cable']) && $type === 'double_speed')
-                        <p class="text-xs text-green-600 -mt-2">La doble velocidad aplica a {{ $service === 'internet_cable' ? 'Combo' : 'Internet' }}.</p>
-                    @endif
+                    {{-- Servicios a los que aplica la promo/regla --}}
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-gray-500 text-sm">tv</span>
+                            Servicios
+                        </label>
+                        <div class="flex flex-wrap gap-3">
+                            @foreach([
+                                'internet' => 'Internet',
+                                'cable' => 'Cable',
+                                'internet_cable' => 'Cable + Internet',
+                            ] as $val => $label)
+                                @if(in_array($val, $this->allowedServices($type)))
+                                    <label class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition
+                                        {{ in_array($val, $services) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50' }}">
+                                        <input type="checkbox" wire:model="services" value="{{ $val }}" class="accent-blue-600">
+                                        <span class="text-sm text-gray-700">{{ $label }}</span>
+                                    </label>
+                                @endif
+                            @endforeach
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Marcá uno o varios. Se creará una promo/regla por cada servicio marcado.</p>
+                    </div>
 
                     @if($type === 'discount_months')
                         <div class="grid grid-cols-2 gap-3">
@@ -233,17 +328,17 @@
                                 class="text-xs text-red-500 hover:text-red-700 mt-1 inline-block">Limpiar selección (usar todas las zonas)</button>
                         @endif
                     </div>
-                    @if(in_array($type, ['free_installation', 'free_tv_month']))
+                    @if($category === 'promotion')
                         <div class="grid grid-cols-2 gap-3">
                             <x-ui.input type="date" wire:model="starts_at" label="Inicio" icon="calendar_month" />
                             <x-ui.input type="date" wire:model="ends_at" label="Fin" icon="event" />
                         </div>
-                        <p class="text-xs text-gray-400">Campaña temporal: solo aplica durante estas fechas (meses festivos).</p>
+                        <p class="text-xs text-gray-400">Promoción temporal: solo aplica durante estas fechas (ej. mes de independencia).</p>
                     @else
                         <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
                             <p class="text-xs text-blue-700 flex items-center gap-1">
                                 <span class="material-symbols-outlined text-sm">schedule</span>
-                                Regla de contrato permanente (aplica todo el año, sin fechas).
+                                Regla de contrato permanente (aplica todo el contrato, sin fechas).
                             </p>
                         </div>
                     @endif

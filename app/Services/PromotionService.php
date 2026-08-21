@@ -103,11 +103,13 @@ class PromotionService
 
     /**
      * Campañas activas de un tipo aplicables a la zona y al servicio del plan.
-     * Filtra por el "service" que eligió el usuario (all = aplica a todo).
+     * Filtra por el "service" que eligió el usuario (all = aplica a todo) y por categoría.
+     * Las reglas de contrato (meses gratis / doble velocidad) usan category=contract_rule.
      */
-    private function activeCampaigns(string $type, ?int $zoneId, ?string $serviceType = null)
+    private function activeCampaigns(string $type, ?int $zoneId, ?string $serviceType = null, ?string $category = 'contract_rule')
     {
         $query = Campaign::where('type', $type)->where('is_active', true)
+            ->where('category', $category)
             ->where(function ($q) {
                 $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
             })

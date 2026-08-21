@@ -16,6 +16,7 @@ class Campaign extends Model
     protected $fillable = [
         'name',
         'type',
+        'category',
         'service',
         'zone_id',
         'config',
