@@ -131,6 +131,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['can:access_contracts_inbox'])->group(function () {
         Route::get('/contratos/inbox', \App\Livewire\Contracts\ContractInbox::class)->name('contracts.inbox');
     });
+    Route::get('/contracts/payments', \App\Livewire\Contracts\ContractPayment::class)->name('contracts.payments');
 
     // ========== NOC ==========
     Route::middleware(['auth', 'can:access noc panel'])->group(function () {

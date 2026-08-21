@@ -457,63 +457,138 @@
                     <label class="block text-[11px] font-medium text-green-600 mb-2 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-green-600 text-sm">verified</span>
                         Verificación de instalación
-                        @if($vr)
-                        <span class="text-[10px] text-green-500 font-normal ml-1">
-                            (gratis ≤ {{ $vr['free_distance'] }}m, ${{ $vr['price_per_meter'] }}/m extra)
-                        </span>
-                        @endif
                     </label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] text-gray-400 mb-0.5">¿Hay espacio en mufa?</label>
-                            <select wire:model.live="mufa_has_space"
-                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
-                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
-                                <option value="">Seleccionar</option>
-                                <option value="1">Sí</option>
-                                <option value="0">No</option>
-                            </select>
-                        </div>
-                        <div>
+
+                    {{-- Paso 1: ¿Hay espacio en la mufa? --}}
+                    <div class="mb-3">
+                        <label class="block text-[10px] text-gray-400 mb-0.5">¿Hay espacio en la mufa?</label>
+                        <select wire:model.live="mufa_has_space"
+                            {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                            <option value="">Seleccionar</option>
+                            <option value="1">Sí</option>
+                            <option value="0">No</option>
+                        </select>
+                        @if($mufa_has_space === '0')
+                            <p class="text-[10px] text-red-500 mt-1">Sin espacio en mufa: la verificación no procede.</p>
+                        @endif
+                    </div>
+
+                    @if($mufa_has_space === '1')
+                        {{-- Paso 2: Distancia (la mide el técnico) --}}
+                        <div class="mb-3">
                             <label class="block text-[10px] text-gray-400 mb-0.5">Distancia (metros)</label>
                             <input type="number" wire:model.live="drop_distance"
-                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
                                 step="0.01" min="0" placeholder="0.00"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                         </div>
-                        <div>
+
+                        {{-- Paso 2.5: Recargo editable por cada 50m extra --}}
+                        <div class="mb-3">
+                            <label class="block text-[10px] text-gray-400 mb-0.5">Recargo por cada 50m extra ($)
+                                <span class="text-[9px] text-green-500">(editable)</span>
+                            </label>
+                            <input type="number" wire:model.live="precio_por_metro"
+                                step="0.01" min="0" placeholder="0.00"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                        </div>
+
+                        {{-- Paso 3: Costo (automático por regla, editable) --}}
+                        <div class="mb-3">
                             <label class="block text-[10px] text-gray-400 mb-0.5">Costo ($)
-                                @if($drop_distance)
-                                <span class="text-[9px] text-green-500">(sugerido: ${{ number_format($this->suggestedVerificationPrice, 2) }})</span>
+                                @if($drop_distance && (float) $drop_distance > 0)
+                                @php $brk = $this->verificationPriceBreakdown; @endphp
+                                <span class="text-[9px] text-green-500">(${{ number_format($brk['base'], 2) }} base @if($brk['blocks'] > 0) + ${{ number_format($brk['blocks'] * $brk['excess'], 2) }} recargo @endif = ${{ number_format($brk['total'], 2) }})</span>
                                 @endif
                             </label>
                             <input type="number" wire:model.live="verification_price"
-                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
                                 step="0.01" min="0" placeholder="0.00"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                         </div>
-                        @if($drop_distance !== null && $vr && (float) $drop_distance > (int) $vr['free_distance'])
-                        <div class="col-span-2">
-                            <label class="block text-[10px] text-gray-400 mb-0.5">¿El cliente acepta el costo adicional?
-                                <span class="text-[9px] text-red-500">(excede {{ $vr['free_distance'] }}m gratis)</span>
+
+                        {{-- N° de factura del talonario del técnico --}}
+                        <div class="mb-3">
+                            <label class="block text-[10px] text-gray-400 mb-0.5">
+                                <span class="material-symbols-outlined text-gray-400 text-[13px] align-text-bottom">receipt_long</span>
+                                N° de factura del talonario
                             </label>
+                            <input type="text" wire:model.live="invoice_number"
+                                placeholder="Ej. 000123"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                        </div>
+
+                        {{-- Paso 4: ¿El cliente acepta el costo? --}}
+                        <div class="mb-3">
+                            <label class="block text-[10px] text-gray-400 mb-0.5">¿El cliente acepta el costo?</label>
                             <select wire:model.live="customer_accepts_cost"
-                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
-                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                                 <option value="">Seleccionar</option>
-                                <option value="1">Sí, acepta pagar</option>
+                                <option value="1">Sí, acepta</option>
                                 <option value="0">No acepta</option>
                             </select>
                             @if($customer_accepts_cost === '0')
-                            <p class="text-[10px] text-red-500 mt-1">Si no acepta, se cerrará el ticket como no factible con ese motivo.</p>
+                            <p class="text-[10px] text-red-500 mt-1">El cliente no acepta: no procede con el contrato.</p>
                             @endif
                         </div>
+                    @endif
+
+                    {{-- Tarifa de instalación por zona (informativa, si hay espacio) --}}
+                    @if($mufa_has_space === '1')
+                    <div class="mt-3">
+                        @php $installFee = $this->installFeeInfo; @endphp
+                        @if($installFee)
+                            <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-sm">price_check</span>
+                                Tarifa de instalación (zona)
+                            </label>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                    <p class="text-[10px] text-gray-400">Cargo base</p>
+                                    <p class="font-mono font-bold text-gray-800">${{ number_format($installFee['fee'], 2) }}</p>
+                                    <p class="text-[10px] text-gray-400">cubre hasta {{ $installFee['covered_meters'] }} m</p>
+                                </div>
+                                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                    <p class="text-[10px] text-gray-400">Recargo</p>
+                                    <p class="font-mono font-bold text-gray-800">${{ number_format($installFee['excess_per_50m'], 2) }}</p>
+                                    <p class="text-[10px] text-gray-400">por cada 50 m extra</p>
+                                </div>
+                            </div>
                         @endif
                     </div>
+                    @endif
+
+                    {{-- TV extra: bloque independiente (solo si el cliente lo pide) --}}
+                    @if($mufa_has_space === '1')
+                    <div class="mt-3">
+                        <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-gray-400 text-sm">live_tv</span>
+                            ¿El cliente desea TV extra?
+                        </label>
+                        <select wire:model.live="desea_tv_extra"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                            <option value="">Seleccionar</option>
+                            <option value="1">Sí, desea</option>
+                            <option value="0">No desea</option>
+                        </select>
+                    </div>
+
+                    @if($desea_tv_extra === '1')
+                    <div class="mt-2">
+                        @php $tvFees = $this->tvExtraInfo; @endphp
+                        <label class="block text-[10px] text-gray-400 mb-0.5">¿Cuántas TVs extra?</label>
+                        <input type="number" wire:model.live="extra_tvs"
+                            min="0" max="10" placeholder="0"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                        @if($extra_tvs > 0)
+                            <p class="text-[10px] text-gray-500 mt-1">Se precargará en el contrato: +${{ number_format($extra_tvs * $tvFees['install_fee'], 2) }} instalación y +${{ number_format($tvFees['monthly_fee'], 2) }}/mes (fijo)</p>
+                        @endif
+                    </div>
+                    @endif
+                    @endif
                 </div>
             @endif
 
-            @if ($workOrder->ticket?->contract)
+            @if (!$isVerificationOt && $workOrder->ticket?->contract)
                 <div class="border-t border-gray-100 pt-3">
                     <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-gray-400 text-sm">description</span>
@@ -562,6 +637,13 @@
                             <input type="text" wire:model.live="payment_date"
                                 {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
                                 placeholder="Ej: cada 15 de cada mes"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-0.5">Día de pago (ej. 15)</label>
+                            <input type="number" wire:model.live="payment_day"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                min="1" max="31" placeholder="15"
                                 class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
                         </div>
                         <div>

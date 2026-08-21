@@ -16,16 +16,22 @@ class ContractCharge extends Model
         'contract_id',
         'client_id',
         'type',
+        'charge_type',
         'description',
         'amount',
+        'base_amount',
         'is_recurring',
         'recurring_period',
         'quantity',
+        'days',
+        'applied_at',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'base_amount' => 'decimal:2',
         'is_recurring' => 'boolean',
+        'applied_at' => 'datetime',
     ];
 
     public function contract(): BelongsTo

@@ -37,9 +37,14 @@ class WorkOrder extends Model
         'mufa',
         'installation_date',
         'mufa_has_space',
+        'cumple_distancia',
         'drop_distance',
+        'distancia_exceso',
+        'precio_por_metro',
         'verification_price',
+        'invoice_number',
         'customer_accepts_cost',
+        'extra_tvs',
         'assigned_at',
         'assigned_by',
         'accepted_at',
@@ -59,7 +64,9 @@ class WorkOrder extends Model
         'accepted_at' => 'datetime',
         'requires_noc' => 'boolean',
         'mufa_has_space' => 'boolean',
+        'cumple_distancia' => 'boolean',
         'customer_accepts_cost' => 'boolean',
+        'extra_tvs' => 'integer',
     ];
 
     public function technician()

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
 
 class Contract extends Model
 {
@@ -27,6 +28,7 @@ class Contract extends Model
         'contract_terms',
         'contract_date',
         'payment_date',
+        'payment_day',
         'created_by',
         'contract_type',
         'service_contracted',
@@ -50,6 +52,7 @@ class Contract extends Model
             'signed_at' => 'datetime',
             'sent_at' => 'datetime',
             'extra_tvs' => 'integer',
+            'payment_day' => 'integer',
             'tv_install_fee' => 'decimal:2',
             'monthly_extra_fee' => 'decimal:2',
         ];
@@ -166,5 +169,53 @@ class Contract extends Model
     public function installFeeTotal(): float
     {
         return (float) ($this->installation_cost ?? 0) + (float) $this->tv_install_fee;
+    }
+
+    /**
+     * Abono proporcional a pagar por los días de servicio hasta la fecha de pago.
+     * Cuota base = precio + recargo TV extra. Si el día de pago ya pasó este mes,
+     * se usa el próximo ciclo (se suma a días y se considera hasta el próximo día de pago).
+     *
+     * @return array{charge: float, days: int, payment_day: int, base: float} o null si no se puede calcular
+     */
+    public function abonoProporcional(?\Carbon\Carbon $installationDate = null): ?array
+    {
+        $paymentDay = (int) $this->payment_day;
+        if ($paymentDay < 1 || $paymentDay > 31) {
+            return null;
+        }
+
+        $base = $this->monthlyTotal();
+        if ($base <= 0) {
+            return null;
+        }
+
+        $inst = $installationDate ?? now();
+
+        // Determinar el próximo día de pago después de la instalación
+        $reference = $inst->copy();
+        $reference->day = min($paymentDay, $reference->daysInMonth);
+
+        // Si el día de pago ya pasó (o es hoy), usar el del próximo mes
+        if ($reference->lte($inst)) {
+            $reference->addMonth();
+            $reference->day = min($paymentDay, $reference->daysInMonth);
+        }
+
+        $days = $inst->diffInDays($reference);
+        if ($days <= 0) {
+            $days = max(1, $inst->copy()->endOfMonth()->diffInDays($inst));
+        }
+
+        $daysInMonth = $inst->daysInMonth;
+        $charge = round(($base / $daysInMonth) * $days, 2);
+
+        return [
+            'charge' => $charge,
+            'days' => $days,
+            'payment_day' => $paymentDay,
+            'base' => round($base, 2),
+            'days_in_month' => $daysInMonth,
+        ];
     }
 }

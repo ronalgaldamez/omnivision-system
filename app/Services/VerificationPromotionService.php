@@ -64,13 +64,20 @@ class VerificationPromotionService
         $contract = Contract::where('ticket_id', $ticket->id)->first();
         if (!$contract) {
             $client = $ticket->client;
+            $zoneId = $ticket->zone_id;
+            $extraTvs = max(0, (int) ($workOrder->extra_tvs ?? 0));
+            $fees = \App\Services\TvExtraFees::forZone($zoneId ?: null);
+
             $contract = Contract::create([
                 'client_id' => $ticket->client_id,
                 'ticket_id' => $ticket->id,
                 'plan_id' => $ticket->plan_id,
-                'zone_id' => $ticket->zone_id,
+                'zone_id' => $zoneId,
                 'service_type' => 'instalacion',
                 'installation_cost' => $price,
+                'extra_tvs' => $extraTvs,
+                'tv_install_fee' => $extraTvs * $fees['install_fee'],
+                'monthly_extra_fee' => $extraTvs > 0 ? $fees['monthly_fee'] : 0,
                 'installation_address' => $client?->installation_address ?? $client?->address,
                 'latitude' => $workOrder->latitude ?? $client?->latitude,
                 'longitude' => $workOrder->longitude ?? $client?->longitude,
@@ -78,6 +85,29 @@ class VerificationPromotionService
                 'status' => 'pending',
                 'created_by' => Auth::id(),
             ]);
+
+            // Registrar cobros de TV extra precargados (si el técnico anotó alguna)
+            if ($extraTvs > 0) {
+                $contract->charges()->create([
+                    'client_id' => $contract->client_id,
+                    'type' => 'extra_tv',
+                    'charge_type' => 'extra_tv',
+                    'description' => "Instalación de TV extra x{$extraTvs}",
+                    'amount' => $contract->tv_install_fee,
+                    'is_recurring' => false,
+                    'quantity' => $extraTvs,
+                ]);
+                $contract->charges()->create([
+                    'client_id' => $contract->client_id,
+                    'type' => 'extra_tv',
+                    'charge_type' => 'extra_tv',
+                    'description' => "Recargo mensual TV extra x{$extraTvs}",
+                    'amount' => $contract->monthly_extra_fee,
+                    'is_recurring' => true,
+                    'recurring_period' => 'monthly',
+                    'quantity' => $extraTvs,
+                ]);
+            }
         }
 
         try {

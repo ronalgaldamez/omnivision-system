@@ -26,6 +26,8 @@ class CampaignManager extends Component
     public $cfg_min_pay = '';
     public $cfg_free = '';
     public $cfg_enabled = true;
+    public $cfg_install_fee = '';
+    public $cfg_monthly_fee = '';
 
     public $confirmingAction = null;
     public $confirmingId = null;
@@ -61,6 +63,8 @@ class CampaignManager extends Component
             $this->cfg_min_pay = $c->config['min_pay'] ?? '';
             $this->cfg_free = $c->config['free'] ?? '';
             $this->cfg_enabled = $c->config['enabled'] ?? true;
+            $this->cfg_install_fee = $c->config['install_fee'] ?? '';
+            $this->cfg_monthly_fee = $c->config['monthly_fee'] ?? '';
         } else {
             $this->reset(['editingId', 'zone_id']);
             $this->name = '';
@@ -72,6 +76,8 @@ class CampaignManager extends Component
             $this->cfg_min_pay = '';
             $this->cfg_free = '';
             $this->cfg_enabled = true;
+            $this->cfg_install_fee = '';
+            $this->cfg_monthly_fee = '';
         }
         $this->showModal = true;
     }
@@ -105,10 +111,10 @@ class CampaignManager extends Component
 
         // Sugerir servicios según el tipo y la categoría
         $allowed = $this->allowedServices($value);
-        if ($this->category === 'contract_rule') {
-            $this->services = array_intersect($this->services, $allowed);
+        // TV extra es una regla única (aplica a todos) -> sin selección de servicio
+        if ($value === 'tv_extra') {
+            $this->services = [];
         } else {
-            // En promociones solo se mantienen los servicios válidos del tipo
             $this->services = array_intersect($this->services, $allowed);
         }
     }
@@ -122,6 +128,7 @@ class CampaignManager extends Component
         return match ($type) {
             'discount_months' => $this->category === 'contract_rule' ? ['cable'] : ['cable'],
             'double_speed' => ['internet', 'internet_cable'],
+            'tv_extra' => ['internet', 'cable', 'internet_cable'],
             'free_tv_month' => ['cable'],
             'free_internet_month' => ['internet'],
             default => ['internet', 'cable', 'internet_cable'],
@@ -214,6 +221,10 @@ class CampaignManager extends Component
             ],
             'double_speed' => [
                 'enabled' => $this->cfg_enabled,
+            ],
+            'tv_extra' => [
+                'install_fee' => (float) $this->cfg_install_fee,
+                'monthly_fee' => (float) $this->cfg_monthly_fee,
             ],
             default => null,
         };
