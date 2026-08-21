@@ -186,4 +186,27 @@ class FlujoVerificacionPromocionTest extends TestCase
         $this->assertSame($contract->id, $contractAgain->id);
         $this->assertSame(1, Contract::where('ticket_id', $ticket->id)->count());
     }
+
+    public function test_aprobacion_precarga_tv_extra_en_contrato()
+    {
+        // OT de verificación con 2 TVs extra anotadas por el técnico
+        [$ticket, $workOrder, $usuario] = $this->makeVerificationWorkOrder(
+            [],
+            ['extra_tvs' => 2]
+        );
+
+        $service = new VerificationPromotionService(new VerificationPricingService());
+
+        $this->actingAs($usuario);
+        $contract = $service->approve($workOrder, 100.00);
+
+        $contract->refresh();
+
+        $this->assertSame(2, $contract->extra_tvs);
+        // TV extra: instalación $6 POR TV (2*6=12), mensual FIJO +$1 (2 o 3 TVs = +$1).
+        $this->assertEquals(12.0, (float) $contract->tv_install_fee);  // 2 * 6
+        $this->assertEquals(1.0, (float) $contract->monthly_extra_fee); // FIJO +$1
+        // Se crearon los cargos de TV extra
+        $this->assertSame(2, $contract->charges()->count());
+    }
 }

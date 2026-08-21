@@ -717,6 +717,27 @@
                                 label="Precio a facturar" step="0.01" min="0" placeholder="0.00" />
                         </div>
 
+                        {{-- Día de pago del cliente --}}
+                        <div class="mt-3 border-t border-gray-100 pt-3">
+                            <label class="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-gray-500 text-sm">event_repeat</span>
+                                Día de pago del cliente
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <x-ui.input type="number" wire:model.live="payment_day" icon="calendar_today"
+                                        label="Día de pago (ej. 15)" min="1" max="31" placeholder="15" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Cuota mensual total</label>
+                                    <p class="px-3 py-2.5 bg-blue-50 rounded-lg border border-blue-200 text-sm font-bold text-blue-800">
+                                        ${{ number_format($this->getMonthlyTotal(), 2) }}
+                                    </p>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-gray-400 mt-2">Este día se usa para calcular el abono proporcional al instalar (solo se cobra por los días usados hasta esa fecha).</p>
+                        </div>
+
                         {{-- TV extra: equipo adicional para otra pantalla --}}
                         <div class="mt-3 border-t border-gray-100 pt-3">
                             <label class="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">

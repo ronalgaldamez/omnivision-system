@@ -82,6 +82,7 @@ class ContractWorkflow extends Component
     public $availablePlans = [];
     public $availableZones = [];
     public $installation_cost = null;
+    public $payment_day = '';
 
     // --- Promociones (meses gratis / doble velocidad) ---
     public $promo_free_months = 0;
@@ -638,8 +639,13 @@ class ContractWorkflow extends Component
     {
         $count = max(0, (int) $value);
         $this->extra_tvs = $count;
-        $this->tv_install_fee = $count * 6;
-        $this->monthly_extra_fee = $count * 1;
+
+        // Valores configurables por zona desde las reglas de contrato (TV extra)
+        $fees = \App\Services\TvExtraFees::forZone($this->zone_id ?: null);
+        // Cargo de instalación: $6 POR CADA TV extra.
+        $this->tv_install_fee = $count * $fees['install_fee'];
+        // Recargo mensual: FIJO (+$1) sin importar cuántas TVs extra haya.
+        $this->monthly_extra_fee = $count > 0 ? $fees['monthly_fee'] : 0;
     }
 
     public function getMonthlyTotal(): float
@@ -1053,6 +1059,7 @@ class ContractWorkflow extends Component
             'extra_tvs' => $this->extra_tvs,
             'tv_install_fee' => $this->tv_install_fee,
             'monthly_extra_fee' => $this->monthly_extra_fee,
+            'payment_day' => $this->payment_day ?: null,
         ];
 
         // Si el contrato ya fue pre-generado (ticket promovido desde verificación),

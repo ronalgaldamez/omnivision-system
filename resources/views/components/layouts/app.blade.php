@@ -283,6 +283,9 @@
                                 <a href="{{ route('contracts.create') }}" wire:navigate
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                         class="material-symbols-outlined text-base">add_circle</span> Nuevo Contrato</a>
+                                <a href="{{ route('contracts.payments') }}" wire:navigate
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                        class="material-symbols-outlined text-base">payments</span> Pagos</a>
                             </div>
                         </div>
                     @endif

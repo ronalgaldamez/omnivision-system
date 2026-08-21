@@ -15,6 +15,7 @@ use App\Services\VerificationPricingService;
 use App\Services\VerificationPromotionService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class WorkOrderShow extends Component
@@ -62,13 +63,19 @@ class WorkOrderShow extends Component
     public $modem_serial = '';
     public $installation_cost = '';
     public $payment_date = '';
+    public $payment_day = '';
     public $extra_tvs = 0;
 
     // Verificación de instalación
     public $mufa_has_space = null;
+    public $cumple_distancia = null;
     public $drop_distance = null;
+    public $distancia_exceso = null;
+    public $precio_por_metro = null;
     public $verification_price = null;
     public $customer_accepts_cost = null;
+    public $desea_tv_extra = null;
+    public $invoice_number = '';
 
     public function getVerificationRulesProperty(): array
     {
@@ -88,10 +95,79 @@ class WorkOrderShow extends Component
 
         // Costo de instalación según la tarifa por zona + campañas (instalación gratis)
         if ($this->isVerificationOt()) {
-            return $service->suggestedInstallCostFor($ticket, $drop);
+            $fee = $service->installFeeFor($ticket);
+            $covered = (int) ($fee['covered_meters'] ?? 150);
+            $base = (float) ($fee['fee'] ?? 0);
+            $excess = (float) ($this->precio_por_metro ?? $fee['excess_per_50m'] ?? 0);
+
+            // Instalación gratis por campaña si aplica y no excede los metros cubiertos
+            if ($service->freeInstallationApplies($ticket, $drop)) {
+                if ($drop <= $covered) {
+                    return 0.0;
+                }
+            }
+
+            if ($drop <= $covered) {
+                return $base;
+            }
+
+            $extraBlocks = ceil(($drop - $covered) / 50);
+            return $base + ($extraBlocks * $excess);
         }
 
         return 0;
+    }
+
+    /**
+     * Desglose del costo sugerido: base, bloques de exceso y total.
+     * Permite mostrar "base + recargo = total" al técnico sin confusión.
+     *
+     * @return array{base: float, blocks: int, excess: float, total: float}
+     */
+    public function getVerificationPriceBreakdownProperty(): array
+    {
+        $drop = (float) $this->drop_distance;
+        $service = app(VerificationPricingService::class);
+        $fee = $service->installFeeFor($this->workOrder->ticket);
+        $covered = (int) ($fee['covered_meters'] ?? 150);
+        $base = (float) ($fee['fee'] ?? 0);
+        $excess = (float) ($this->precio_por_metro ?? $fee['excess_per_50m'] ?? 0);
+
+        $blocks = $drop > $covered ? (int) ceil(($drop - $covered) / 50) : 0;
+        $total = $drop <= 0 ? 0.0 : $base + ($blocks * $excess);
+
+        return [
+            'base' => $base,
+            'blocks' => $blocks,
+            'excess' => $excess,
+            'total' => $total,
+        ];
+    }
+
+    /**
+     * Tarifa de instalación de la zona para esta verificación (base + recargo).
+     * Se muestra al técnico para que sepa cuánto corresponde cobrar.
+     */
+    public function getInstallFeeInfoProperty(): ?array
+    {
+        if (!$this->isVerificationOt()) {
+            return null;
+        }
+        $ticket = $this->workOrder->ticket;
+        if (!$ticket) {
+            return null;
+        }
+        $service = app(VerificationPricingService::class);
+        return $service->installFeeFor($ticket);
+    }
+
+    /**
+     * Valores del TV extra para la zona (instalación + mensual por TV).
+     */
+    public function getTvExtraInfoProperty(): array
+    {
+        $zoneId = $this->workOrder->ticket?->contract?->zone_id ?? $this->workOrder->ticket?->zone_id;
+        return \App\Services\TvExtraFees::forZone($zoneId);
     }
 
     // Búsqueda de dispositivo
@@ -139,9 +215,14 @@ class WorkOrderShow extends Component
         $this->installation_date = $draft['installation_date'] ?? $this->workOrder->installation_date?->format('Y-m-d');
 
         $this->mufa_has_space = $draft['mufa_has_space'] ?? $this->workOrder->mufa_has_space;
+        $this->cumple_distancia = $draft['cumple_distancia'] ?? null;
         $this->drop_distance = $draft['drop_distance'] ?? $this->workOrder->drop_distance;
+        $this->distancia_exceso = $draft['distancia_exceso'] ?? null;
         $this->verification_price = $draft['verification_price'] ?? $this->workOrder->verification_price;
+        $this->invoice_number = $draft['invoice_number'] ?? $this->workOrder->invoice_number ?? '';
+        $this->precio_por_metro = $draft['precio_por_metro'] ?? ($this->workOrder->precio_por_metro ?? ($this->verificationRules['price_per_meter'] ?? 5));
         $this->customer_accepts_cost = $draft['customer_accepts_cost'] ?? $this->workOrder->customer_accepts_cost;
+        $this->desea_tv_extra = $draft['desea_tv_extra'] ?? null;
 
         $contract = $this->workOrder->ticket?->contract;
         $this->access_type = $contract->access_type ?? '';
@@ -150,6 +231,7 @@ class WorkOrderShow extends Component
         $this->modem_serial = $contract->modem_serial ?? '';
         $this->installation_cost = $contract->installation_cost ?? '';
         $this->payment_date = $draft['payment_date'] ?? $contract->payment_date ?? '';
+        $this->payment_day = $draft['payment_day'] ?? $contract->payment_day ?? '';
         $this->extra_tvs = $draft['extra_tvs'] ?? $contract->extra_tvs ?? 0;
 
         $client = $this->workOrder->client;
@@ -278,19 +360,82 @@ class WorkOrderShow extends Component
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'mufa_has_space' => $this->mufa_has_space,
+            'cumple_distancia' => $this->cumple_distancia,
             'drop_distance' => $this->drop_distance,
+            'distancia_exceso' => $this->distancia_exceso,
+            'precio_por_metro' => $this->precio_por_metro,
             'verification_price' => $this->verification_price,
             'customer_accepts_cost' => $this->customer_accepts_cost,
+            'desea_tv_extra' => $this->desea_tv_extra,
             'access_type' => $this->access_type,
             'speed' => $this->speed,
             'technology' => $this->technology,
             'modem_serial' => $this->modem_serial,
             'installation_cost' => $this->installation_cost,
             'payment_date' => $this->payment_date,
+            'payment_day' => $this->payment_day,
             'extra_tvs' => $this->extra_tvs,
         ]);
 
         $this->updateDraftStatus();
+    }
+
+    /**
+     * Al cambiar el espacio en mufa, limpiar los pasos dependientes.
+     */
+    public function updatedMufaHasSpace($value)
+    {
+        if ($value !== '1') {
+            $this->drop_distance = null;
+            $this->verification_price = null;
+            $this->customer_accepts_cost = null;
+            $this->desea_tv_extra = null;
+        } else {
+            $this->verification_price = null;
+        }
+    }
+
+    /**
+     * Al cambiar la distancia medida por el técnico, auto-sugerir el costo
+     * según la tarifa de zona. El técnico puede ajustarlo después.
+     */
+    public function updatedDropDistance($value)
+    {
+        if ($value !== null && $value !== '' && (float) $value > 0) {
+            $this->verification_price = $this->suggestedVerificationPrice;
+        } else {
+            $this->verification_price = null;
+        }
+        $this->customer_accepts_cost = null;
+    }
+
+    /**
+     * Al cambiar el precio del recargo editable, recalcular el costo sugerido.
+     */
+    public function updatedPrecioPorMetro($value)
+    {
+        if ($this->drop_distance !== null && $this->drop_distance !== '' && (float) $this->drop_distance > 0) {
+            $this->verification_price = $this->suggestedVerificationPrice;
+        }
+    }
+
+    /**
+     * Al cambiar si el cliente acepta, limpiar la pregunta de TV extra.
+     */
+    public function updatedCustomerAcceptsCost($value)
+    {
+        $this->desea_tv_extra = null;
+        $this->extra_tvs = 0;
+    }
+
+    /**
+     * Al indicar si desea TV extra, limpiar la cantidad si dice que no.
+     */
+    public function updatedDeseaTvExtra($value)
+    {
+        if ($value !== '1') {
+            $this->extra_tvs = 0;
+        }
     }
 
     public function saveTechnicalData()
@@ -301,18 +446,16 @@ class WorkOrderShow extends Component
 
         try {
             if ($this->isVerificationOt()) {
-                $freeDistance = (int) ($this->verificationRules['free_distance'] ?? 150);
-                $hasExcess = (float) ($this->drop_distance ?? 0) > $freeDistance;
-
                 $rules = [
                     'mufa_has_space' => 'required|in:0,1',
-                    'drop_distance' => 'required|numeric|min:0',
                     'verification_price' => 'nullable|numeric|min:0',
+                    'invoice_number' => ['nullable', 'string', 'max:50', Rule::unique('work_orders', 'invoice_number')->whereNotNull('invoice_number')->ignore($this->workOrder->id)],
                     'latitude' => 'nullable|numeric|between:-90,90',
                     'longitude' => 'nullable|numeric|between:-180,180',
                 ];
 
-                if ($hasExcess) {
+                if ($this->mufa_has_space === '1') {
+                    $rules['drop_distance'] = 'required|numeric|min:0';
                     $rules['customer_accepts_cost'] = 'required|in:0,1';
                 }
             } else {
@@ -325,6 +468,7 @@ class WorkOrderShow extends Component
                     'pon' => 'required|string|max:255',
                     'mufa' => 'required|string|max:255',
                     'installation_date' => 'required|date',
+                    'invoice_number' => ['nullable', 'string', 'max:50', Rule::unique('work_orders', 'invoice_number')->whereNotNull('invoice_number')->ignore($this->workOrder->id)],
                     'latitude' => 'required|numeric|between:-90,90',
                     'longitude' => 'required|numeric|between:-180,180',
                 ];
@@ -342,9 +486,14 @@ class WorkOrderShow extends Component
         if ($this->isVerificationOt()) {
             $this->workOrder->update([
                 'mufa_has_space' => $this->mufa_has_space,
+                'cumple_distancia' => $this->cumple_distancia === null ? null : (int) $this->cumple_distancia,
                 'drop_distance' => $this->drop_distance,
+                'distancia_exceso' => $this->distancia_exceso,
+                'precio_por_metro' => $this->precio_por_metro,
                 'verification_price' => $this->verification_price ?: null,
                 'customer_accepts_cost' => $this->customer_accepts_cost,
+                'extra_tvs' => max(0, (int) $this->extra_tvs),
+                'invoice_number' => $this->invoice_number ?: null,
                 'latitude' => $this->latitude,
                 'longitude' => $this->longitude,
             ]);
@@ -360,6 +509,7 @@ class WorkOrderShow extends Component
                 'installation_date' => $this->installation_date,
                 'latitude' => $this->latitude,
                 'longitude' => $this->longitude,
+                'invoice_number' => $this->invoice_number ?: null,
             ]);
         }
 
@@ -367,6 +517,7 @@ class WorkOrderShow extends Component
         $contract = $this->workOrder->ticket?->contract;
         if ($contract) {
             $extraTvs = max(0, (int) $this->extra_tvs);
+            $fees = \App\Services\TvExtraFees::forZone($contract->zone_id ?: null);
 
             $contract->update([
                 'access_type' => $this->access_type,
@@ -375,9 +526,10 @@ class WorkOrderShow extends Component
                 'modem_serial' => $this->modem_serial,
                 'installation_cost' => $this->installation_cost ?: null,
                 'payment_date' => $this->payment_date ?: null,
+                'payment_day' => $this->payment_day ?: null,
                 'extra_tvs' => $extraTvs,
-                'tv_install_fee' => $extraTvs * 6,
-                'monthly_extra_fee' => $extraTvs * 1,
+                'tv_install_fee' => $extraTvs * ($fees['install_fee'] ?? 6),
+                'monthly_extra_fee' => $extraTvs > 0 ? ($fees['monthly_fee'] ?? 1) : 0,
             ]);
 
             // Sincronizar cobros de TV extra (técnico puede registrar en campo)
@@ -644,17 +796,17 @@ class WorkOrderShow extends Component
             $this->dispatch('show-toast', type: 'error', message: 'La verificación ya fue procesada.');
             return;
         }
-        if (is_null($this->workOrder->mufa_has_space) && is_null($this->workOrder->drop_distance)) {
-            $this->dispatch('show-toast', type: 'error', message: 'Completá y guardá la verificación (mufa y distancia) antes de aprobar.');
+        // Validar el flujo: espacio en mufa → distancia → costo → cliente acepta
+        if ($this->mufa_has_space !== '1') {
+            $this->dispatch('show-toast', type: 'error', message: 'Debe haber espacio en la mufa para aprobar la verificación.');
             return;
         }
-
-        // Si la distancia excede la franja gratis, el cliente debe haber aceptado el costo.
-        $freeDistance = (int) ($this->verificationRules['free_distance'] ?? 150);
-        $hasExcess = (float) ($this->workOrder->drop_distance ?? 0) > $freeDistance;
-
-        if ($hasExcess && !$this->workOrder->customer_accepts_cost) {
-            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe aceptar el costo adicional para poder aprobar la verificación.');
+        if (is_null($this->drop_distance) || (float) $this->drop_distance <= 0) {
+            $this->dispatch('show-toast', type: 'error', message: 'Indicá la distancia en metros medida por el técnico.');
+            return;
+        }
+        if ($this->customer_accepts_cost !== '1') {
+            $this->dispatch('show-toast', type: 'error', message: 'El cliente debe aceptar el costo para aprobar la verificación.');
             return;
         }
 

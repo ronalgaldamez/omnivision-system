@@ -53,7 +53,7 @@
                                     </td>
                                     <td class="px-4 py-2.5">
                                         @if($campaign->service === 'all')
-                                            <span class="text-gray-500">Todos</span>
+                                            <x-ui.badge variant="neutral">Todos</x-ui.badge>
                                         @else
                                             <x-ui.badge variant="info">{{ ucfirst(str_replace('_', ' ', $campaign->service)) }}</x-ui.badge>
                                         @endif
@@ -111,7 +111,7 @@
                             </td>
                             <td class="px-4 py-3">
                                 @if($campaign->service === 'all')
-                                    <span class="text-gray-500">Todos</span>
+                                    <x-ui.badge variant="neutral">Todos</x-ui.badge>
                                 @else
                                     <x-ui.badge variant="info">{{ ucfirst(str_replace('_', ' ', $campaign->service)) }}</x-ui.badge>
                                 @endif
@@ -152,7 +152,7 @@
     {{-- Modal agregar/editar campaña --}}
     @if($showModal)
     <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-        <div class="relative mx-auto p-5 w-full max-w-lg">
+        <div class="relative mx-auto p-5 w-full max-w-2xl">
             <div class="bg-white rounded-2xl shadow-xl">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -169,6 +169,7 @@
                         @if($category === 'contract_rule')
                             <option value="discount_months">Meses gratis</option>
                             <option value="double_speed">Doble velocidad</option>
+                            <option value="tv_extra">TV extra</option>
                         @else
                             <option value="free_installation">Instalación gratis</option>
                             <option value="free_tv_month">Mes de TV gratis</option>
@@ -177,7 +178,8 @@
                         @endif
                     </x-ui.select>
 
-                    {{-- Servicios a los que aplica la promo/regla --}}
+                    {{-- Servicios a los que aplica la promo/regla (excepto TV extra que es único) --}}
+                    @if($type !== 'tv_extra')
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
                             <span class="material-symbols-outlined text-gray-500 text-sm">tv</span>
@@ -200,6 +202,7 @@
                         </div>
                         <p class="text-xs text-gray-400 mt-2">Marcá uno o varios. Se creará una promo/regla por cada servicio marcado.</p>
                     </div>
+                    @endif
 
                     @if($type === 'discount_months')
                         <div class="grid grid-cols-2 gap-3">
@@ -215,6 +218,12 @@
                             </label>
                             <span class="text-sm text-gray-600">Aplicar doble velocidad</span>
                         </div>
+                    @elseif($type === 'tv_extra')
+                        <div class="grid grid-cols-2 gap-3">
+                            <x-ui.input type="number" wire:model="cfg_install_fee" label="Cargo instalación por TV ($)" icon="attach_money" step="0.01" min="0" placeholder="6" />
+                            <x-ui.input type="number" wire:model="cfg_monthly_fee" label="Recargo mensual por TV ($)" icon="calendar_month" step="0.01" min="0" placeholder="1" />
+                        </div>
+                        <p class="text-xs text-gray-400">Costo de instalar TV extra y el +$ mensual recurrente por cada TV.</p>
                     @endif
                     {{-- Zona (árbol jerárquico) --}}
                     <div>
