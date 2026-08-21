@@ -36,6 +36,7 @@ class Contract extends Model
         'speed',
         'technology',
         'modem_serial',
+        'modem_mac',
         'term_months',
         'installation_cost',
         'benefit',
@@ -53,6 +54,7 @@ class Contract extends Model
             'sent_at' => 'datetime',
             'extra_tvs' => 'integer',
             'payment_day' => 'integer',
+            'payment_date' => 'date',
             'tv_install_fee' => 'decimal:2',
             'monthly_extra_fee' => 'decimal:2',
         ];

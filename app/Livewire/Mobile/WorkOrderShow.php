@@ -65,6 +65,7 @@ class WorkOrderShow extends Component
     public $payment_date = '';
     public $payment_day = '';
     public $extra_tvs = 0;
+    public $extra_tvs_add = 0;
 
     // Verificación de instalación
     public $mufa_has_space = null;
@@ -225,14 +226,15 @@ class WorkOrderShow extends Component
         $this->desea_tv_extra = $draft['desea_tv_extra'] ?? null;
 
         $contract = $this->workOrder->ticket?->contract;
-        $this->access_type = $contract->access_type ?? '';
-        $this->speed = $contract->speed ?? '';
-        $this->technology = $contract->technology ?? '';
-        $this->modem_serial = $contract->modem_serial ?? '';
+        $this->access_type = $draft['access_type'] ?? $contract->access_type ?? '';
+        $this->speed = $draft['speed'] ?? $contract->speed ?? ($contract?->plan?->speed ?? '');
+        $this->technology = $draft['technology'] ?? $contract->technology ?? '';
+        $this->modem_serial = $draft['modem_serial'] ?? $contract->modem_serial ?? '';
         $this->installation_cost = $contract->installation_cost ?? '';
-        $this->payment_date = $draft['payment_date'] ?? $contract->payment_date ?? '';
+        $this->payment_date = $draft['payment_date'] ?? ($contract?->payment_date ? $contract->payment_date->format('Y-m-d') : '');
         $this->payment_day = $draft['payment_day'] ?? $contract->payment_day ?? '';
         $this->extra_tvs = $draft['extra_tvs'] ?? $contract->extra_tvs ?? 0;
+        $this->extra_tvs_add = $draft['extra_tvs_add'] ?? 0;
 
         $client = $this->workOrder->client;
         $this->latitude = $draft['latitude'] ?? $this->workOrder->latitude ?? $client->latitude ?? null;
@@ -311,6 +313,63 @@ class WorkOrderShow extends Component
         return $this->workOrder?->service_type === 'verificacion_instalacion';
     }
 
+    /**
+     * Si esta OT de instalación viene de un proceso previo de verificación (mismo ticket).
+     * Devuelve los datos de la OT de verificación asociada o null si no existe.
+     */
+    public function getPriorVerificationProperty(): ?array
+    {
+        if ($this->isVerificationOt()) {
+            return null;
+        }
+        $ticket = $this->workOrder->ticket;
+        if (!$ticket) {
+            return null;
+        }
+
+        $ot = \App\Models\WorkOrder::where('ticket_id', $ticket->id)
+            ->where('service_type', 'verificacion_instalacion')
+            ->first();
+
+        if (!$ot) {
+            return null;
+        }
+
+        // Desglose de la distancia de la OT de verificación (base + recargo).
+        $vbd = null;
+        try {
+            $service = app(\App\Services\VerificationPricingService::class);
+            $fee = $service->installFeeFor($ot->ticket);
+            $covered = (int) ($fee['covered_meters'] ?? 150);
+            $base = (float) ($fee['fee'] ?? 0);
+            $excessPer = (float) ($ot->precio_por_metro ?? $fee['excess_per_50m'] ?? 0);
+            $drop = (float) ($ot->drop_distance ?? 0);
+            $blocks = $drop > $covered ? (int) ceil(($drop - $covered) / 50) : 0;
+            $vbd = [
+                'distance' => $drop,
+                'covered' => $covered,
+                'base' => $base,
+                'excess_per_50m' => $excessPer,
+                'blocks' => $blocks,
+                'excess_total' => $blocks * $excessPer,
+                'subtotal' => $base + ($blocks * $excessPer),
+            ];
+        } catch (\Throwable $e) {
+            $vbd = null;
+        }
+
+        $extraTvs = (int) ($ot->extra_tvs ?? 0);
+
+        return [
+            'extra_tvs' => $extraTvs,
+            'verification_price' => (float) ($ot->verification_price ?? 0),
+            'drop_distance' => (float) ($ot->drop_distance ?? 0),
+            'tv_install_fee' => (float) $extraTvs * 6,
+            'monthly_extra_fee' => (float) $extraTvs,
+            'breakdown' => $vbd,
+        ];
+    }
+
     private function checkTechnicalDataComplete()
     {
         $wo = $this->workOrder;
@@ -375,6 +434,8 @@ class WorkOrderShow extends Component
             'payment_date' => $this->payment_date,
             'payment_day' => $this->payment_day,
             'extra_tvs' => $this->extra_tvs,
+            'extra_tvs_add' => $this->extra_tvs_add,
+            'invoice_number' => $this->invoice_number,
         ]);
 
         $this->updateDraftStatus();
@@ -516,7 +577,10 @@ class WorkOrderShow extends Component
         // Sincronizar datos técnicos al contrato asociado
         $contract = $this->workOrder->ticket?->contract;
         if ($contract) {
-            $extraTvs = max(0, (int) $this->extra_tvs);
+            // Total de TVs: si vino de verificación, precargadas + las agregadas; si no, solo las agregadas.
+            $pv = $this->priorVerification;
+            $baseTvs = $pv ? (int) $pv['extra_tvs'] : 0;
+            $extraTvs = $baseTvs + max(0, (int) $this->extra_tvs_add);
             $fees = \App\Services\TvExtraFees::forZone($contract->zone_id ?: null);
 
             $contract->update([
@@ -524,12 +588,13 @@ class WorkOrderShow extends Component
                 'speed' => $this->speed,
                 'technology' => $this->technology,
                 'modem_serial' => $this->modem_serial,
+                'modem_mac' => $this->mac,
                 'installation_cost' => $this->installation_cost ?: null,
                 'payment_date' => $this->payment_date ?: null,
                 'payment_day' => $this->payment_day ?: null,
                 'extra_tvs' => $extraTvs,
                 'tv_install_fee' => $extraTvs * ($fees['install_fee'] ?? 6),
-                'monthly_extra_fee' => $extraTvs > 0 ? ($fees['monthly_fee'] ?? 1) : 0,
+                'monthly_extra_fee' => $extraTvs * ($fees['monthly_fee'] ?? 1),
             ]);
 
             // Sincronizar cobros de TV extra (técnico puede registrar en campo)
