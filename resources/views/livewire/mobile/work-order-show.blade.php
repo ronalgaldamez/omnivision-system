@@ -493,29 +493,35 @@
                                 class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                         </div>
 
-                        {{-- Paso 3: Costo (automático por regla, editable) --}}
-                        <div class="mb-3">
-                            <label class="block text-[10px] text-gray-400 mb-0.5">Costo ($)
-                                @if($drop_distance && (float) $drop_distance > 0)
-                                @php $brk = $this->verificationPriceBreakdown; @endphp
-                                <span class="text-[9px] text-green-500">(${{ number_format($brk['base'], 2) }} base @if($brk['blocks'] > 0) + ${{ number_format($brk['blocks'] * $brk['excess'], 2) }} recargo @endif = ${{ number_format($brk['total'], 2) }})</span>
+                        {{-- Paso 3: Resumen tipo factura (solo lectura) --}}
+                        @if($drop_distance && (float) $drop_distance > 0)
+                        @php $brk = $this->verificationPriceBreakdown; @endphp
+                        <div class="rounded-xl border border-green-200 bg-white overflow-hidden mb-3">
+                            <div class="px-3 py-2 bg-green-50 border-b border-green-200 flex items-center justify-between">
+                                <span class="text-[11px] font-bold text-green-700 flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-[15px]">receipt_long</span>
+                                    Resumen de instalación
+                                </span>
+                                <span class="text-[11px] font-mono font-bold text-green-800">${{ number_format($brk['total'], 2) }}</span>
+                            </div>
+                            <div class="px-3 py-2 space-y-1.5 text-sm">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-600">Cargo base</span>
+                                    <span class="font-mono font-semibold text-gray-800">${{ number_format($brk['base'], 2) }}</span>
+                                </div>
+                                @if($brk['blocks'] > 0)
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-600">Recargo ({{ $brk['blocks'] }} × ${{ number_format($brk['excess'], 2) }})</span>
+                                    <span class="font-mono font-semibold text-gray-800">${{ number_format($brk['blocks'] * $brk['excess'], 2) }}</span>
+                                </div>
                                 @endif
-                            </label>
-                            <input type="number" wire:model.live="verification_price"
-                                step="0.01" min="0" placeholder="0.00"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                                <div class="border-t border-dashed border-green-200 pt-1.5 flex items-center justify-between">
+                                    <span class="text-[11px] font-bold text-green-700">TOTAL INSTALACIÓN</span>
+                                    <span class="text-base font-mono font-bold text-green-800">${{ number_format($brk['total'], 2) }}</span>
+                                </div>
+                            </div>
                         </div>
-
-                        {{-- N° de factura del talonario del técnico --}}
-                        <div class="mb-3">
-                            <label class="block text-[10px] text-gray-400 mb-0.5">
-                                <span class="material-symbols-outlined text-gray-400 text-[13px] align-text-bottom">receipt_long</span>
-                                N° de factura del talonario
-                            </label>
-                            <input type="text" wire:model.live="invoice_number"
-                                placeholder="Ej. 000123"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
-                        </div>
+                        @endif
 
                         {{-- Paso 4: ¿El cliente acepta el costo? --}}
                         <div class="mb-3">
@@ -528,6 +534,19 @@
                             </select>
                             @if($customer_accepts_cost === '0')
                             <p class="text-[10px] text-red-500 mt-1">El cliente no acepta: no procede con el contrato.</p>
+                            @endif
+                            @if($customer_accepts_cost === '1')
+                            {{-- N° de factura del talonario del técnico --}}
+                            <div class="mt-3">
+                                <label class="block text-[10px] text-gray-400 mb-0.5">
+                                    <span class="material-symbols-outlined text-gray-400 text-[13px] align-text-bottom">receipt_long</span>
+                                    N° de factura del talonario
+                                </label>
+                                <input type="text" wire:model.live="invoice_number"
+                                    placeholder="Ej. 000123"
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                                @error('invoice_number')<span class="text-[10px] text-red-500">{{ $message }}</span>@enderror
+                            </div>
                             @endif
                         </div>
                     @endif
@@ -557,8 +576,8 @@
                     </div>
                     @endif
 
-                    {{-- TV extra: bloque independiente (solo si el cliente lo pide) --}}
-                    @if($mufa_has_space === '1')
+                    {{-- TV extra: solo si el cliente acepta el costo --}}
+                    @if($mufa_has_space === '1' && $customer_accepts_cost === '1')
                     <div class="mt-3">
                         <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
                             <span class="material-symbols-outlined text-gray-400 text-sm">live_tv</span>
@@ -580,7 +599,23 @@
                             min="0" max="10" placeholder="0"
                             class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                         @if($extra_tvs > 0)
-                            <p class="text-[10px] text-gray-500 mt-1">Se precargará en el contrato: +${{ number_format($extra_tvs * $tvFees['install_fee'], 2) }} instalación y +${{ number_format($tvFees['monthly_fee'], 2) }}/mes (fijo)</p>
+                        <div class="mt-2 rounded-xl border border-blue-200 bg-blue-50 overflow-hidden">
+                            <div class="px-3 py-2 border-b border-blue-200 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-blue-600 text-[15px]">live_tv</span>
+                                <span class="text-[11px] font-bold text-blue-700">TVs extra precargadas</span>
+                            </div>
+                            <div class="px-3 py-2 space-y-1.5 text-sm">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-blue-800">Instalación ({{ $extra_tvs }} × ${{ number_format($tvFees['install_fee'], 2) }})</span>
+                                    <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs * $tvFees['install_fee'], 2) }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-blue-800">Mensual (fijo)</span>
+                                    <span class="font-mono font-semibold text-blue-900">+${{ number_format($tvFees['monthly_fee'], 2) }}/mes</span>
+                                </div>
+                                <p class="text-[10px] text-blue-600 pt-1 border-t border-blue-200">Se precargará en el contrato al aprobar.</p>
+                            </div>
+                        </div>
                         @endif
                     </div>
                     @endif
