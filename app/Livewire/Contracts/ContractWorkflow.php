@@ -77,12 +77,14 @@ class ContractWorkflow extends Component
     public $plan_id = '';
     public $zone_id = '';
     public $service_type;
+    public $customer_type = '';
     public $price;
     public $effective_price = 0;
     public $availablePlans = [];
     public $availableZones = [];
     public $installation_cost = null;
     public $payment_day = '';
+    public $payment_date = null;
 
     // --- Promociones (meses gratis / doble velocidad) ---
     public $promo_free_months = 0;
@@ -151,6 +153,7 @@ class ContractWorkflow extends Component
                 'latitude' => 'nullable|numeric',
                 'longitude' => 'nullable|numeric',
                 'client_nit' => 'nullable|string|max:20',
+                'customer_type' => 'required|in:residencial,pyme,corporativo',
                 'client_billing_address' => 'required|string|max:500',
             ],
             2 => [
@@ -174,6 +177,7 @@ class ContractWorkflow extends Component
 
     protected $messages = [
         'installation_address.required' => 'La dirección de instalación es obligatoria.',
+        'customer_type.required' => 'Debe seleccionar el tipo de servicio (Residencial, Pyme o Corporativo).',
         'plan_id.required' => 'Debe seleccionar un plan.',
         'price.required' => 'El precio es obligatorio.',
         'price.numeric' => 'El precio debe ser un valor numérico.',
@@ -279,6 +283,12 @@ class ContractWorkflow extends Component
             if ($existingContract) {
                 $this->contract_id = $existingContract->id;
                 $this->contractDigitalCode = $existingContract->contract_digital_code;
+                $this->payment_date = $existingContract->payment_date?->format('Y-m-d');
+                $this->payment_day = $existingContract->payment_day;
+                $this->extra_tvs = (int) ($existingContract->extra_tvs ?? 0);
+                $this->tv_install_fee = (float) ($existingContract->tv_install_fee ?? 0);
+                $this->monthly_extra_fee = (float) ($existingContract->monthly_extra_fee ?? 0);
+                $this->customer_type = $existingContract->customer_type ?? '';
             }
 
             // ─── Ticket promovido desde verificación en campo ───
@@ -316,6 +326,15 @@ class ContractWorkflow extends Component
                 $this->sales_rep_signature_data = $draft['sales_rep_signature'];
                 $this->showSalesRepSignature = true;
             }
+            if (!empty($draft['customer_type'])) {
+                $this->customer_type = $draft['customer_type'];
+            }
+            if (!empty($draft['payment_date'])) {
+                $this->payment_date = $draft['payment_date'];
+            }
+            if (!empty($draft['payment_day'])) {
+                $this->payment_day = $draft['payment_day'];
+            }
         }
 
         $this->loadClientUploadedDocs();
@@ -332,7 +351,15 @@ class ContractWorkflow extends Component
         session()->put($this->draftKey(), [
             'uploaded_documents' => $this->uploadedDocuments,
             'sales_rep_signature' => $this->sales_rep_signature_data,
+            'customer_type' => $this->customer_type,
+            'payment_date' => $this->payment_date,
+            'payment_day' => $this->payment_day,
         ]);
+    }
+
+    public function updatedCustomerType($value)
+    {
+        $this->persistDraft();
     }
 
     public function updatedLatitude($value)
@@ -566,8 +593,38 @@ class ContractWorkflow extends Component
         $this->benefit = $this->getAppliedBenefits();
     }
 
+    private function defaultInstallationCost(): ?float
+    {
+        if (!$this->ticket_id) {
+            return null;
+        }
+        $tk = \App\Models\Ticket::find($this->ticket_id);
+        if (!$tk) {
+            return null;
+        }
+        try {
+            $fee = app(\App\Services\VerificationPricingService::class)->installFeeFor($tk);
+            return (float) ($fee['fee'] ?? 0);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     private function deriveServiceContracted(): string
     {
+        // Prioridad: derivar del tipo de servicio del plan seleccionado.
+        if ($this->plan_id) {
+            $planService = \App\Models\Plan::where('id', $this->plan_id)->value('service_type');
+            if ($planService) {
+                return match ($planService) {
+                    'internet' => 'internet',
+                    'cable' => 'cable',
+                    'internet_cable' => 'cable_internet',
+                    default => $planService,
+                };
+            }
+        }
+
         return match ($this->service_type) {
             'internet' => 'internet',
             'cable' => 'cable',
@@ -608,6 +665,35 @@ class ContractWorkflow extends Component
     }
 
     /**
+     * Al seleccionar la fecha de pago en el workflow, se deriva el día del mes (payment_day).
+     */
+    public function updatedPaymentDate($value)
+    {
+        if ($value) {
+            try {
+                $date = \Illuminate\Support\Carbon::parse($value);
+                $this->payment_day = (string) $date->day;
+            } catch (\Throwable $e) {
+                // Si la fecha es inválida, no se deriva nada.
+            }
+        }
+
+        // Persistir en sesión para que no se pierda al recargar.
+        $this->persistDraft();
+
+        // Persistir la fecha y el día de pago para que no se pierdan al recargar la página.
+        if ($this->ticket_id) {
+            $contract = \App\Models\Contract::where('ticket_id', $this->ticket_id)->first();
+            if ($contract) {
+                $contract->update([
+                    'payment_date' => $this->payment_date ?: null,
+                    'payment_day' => $this->payment_day ?: null,
+                ]);
+            }
+        }
+    }
+
+    /**
      * Recalcula las promociones (meses gratis y doble velocidad) según plan+zona+plazo.
      */
     public function refreshPromotions(): void
@@ -645,7 +731,7 @@ class ContractWorkflow extends Component
         // Cargo de instalación: $6 POR CADA TV extra.
         $this->tv_install_fee = $count * $fees['install_fee'];
         // Recargo mensual: FIJO (+$1) sin importar cuántas TVs extra haya.
-        $this->monthly_extra_fee = $count > 0 ? $fees['monthly_fee'] : 0;
+        $this->monthly_extra_fee = $count * ($fees['monthly_fee'] ?? 1);
     }
 
     public function getMonthlyTotal(): float
@@ -656,6 +742,96 @@ class ContractWorkflow extends Component
     public function getInstallTotal(): float
     {
         return (float) ($this->installation_cost ?? 0) + (float) $this->tv_install_fee;
+    }
+
+    /**
+     * Vista previa del abono proporcional a cobrar al instalar, según el día de pago.
+     */
+    public function getAbonoPreviewProperty(): ?array
+    {
+        $paymentDay = (int) $this->payment_day;
+        if ($paymentDay < 1 || $paymentDay > 31) {
+            return null;
+        }
+
+        $base = $this->getMonthlyTotal();
+        if ($base <= 0) {
+            return null;
+        }
+
+        $inst = now();
+        $reference = $inst->copy();
+        $reference->day = min($paymentDay, $reference->daysInMonth);
+        if ($reference->lte($inst)) {
+            $reference->addMonth();
+            $reference->day = min($paymentDay, $reference->daysInMonth);
+        }
+        $days = $inst->diffInDays($reference);
+        if ($days <= 0) {
+            $days = max(1, $inst->copy()->endOfMonth()->diffInDays($inst));
+        }
+        $days = (int) round($days);
+        $daysInMonth = $inst->daysInMonth;
+
+        return [
+            'charge' => round(($base / $daysInMonth) * $days, 2),
+            'days' => $days,
+            'payment_day' => $paymentDay,
+            'base' => round($base, 2),
+            'days_in_month' => $daysInMonth,
+        ];
+    }
+
+    /**
+     * Desglose de la instalación por distancia de la OT de verificación asociada.
+     * Devuelve base, metros extra, recargo y la instalación desglosada para que
+     * el agente entienda el costo de instalación.
+     *
+     * @return array|null
+     */
+    public function getVerificationBreakdownProperty(): ?array
+    {
+        if (!$this->ticket_id) {
+            return null;
+        }
+        $ot = WorkOrder::where('ticket_id', $this->ticket_id)
+            ->where(function ($q) {
+                $q->where('service_type', 'verificacion_instalacion')
+                    ->orWhereNotNull('drop_distance');
+            })
+            ->first();
+
+        if (!$ot || !$ot->drop_distance) {
+            return null;
+        }
+
+        $service = app(\App\Services\VerificationPricingService::class);
+        if (!$ot->ticket) {
+            return null;
+        }
+
+        $fee = $service->installFeeFor($ot->ticket);
+        $covered = (int) ($fee['covered_meters'] ?? 150);
+        $base = (float) ($fee['fee'] ?? 0);
+        $excessPer = (float) ($ot->precio_por_metro ?? $fee['excess_per_50m'] ?? 0);
+        $drop = (float) $ot->drop_distance;
+
+        $blocks = $drop > $covered ? (int) ceil(($drop - $covered) / 50) : 0;
+        $excessTotal = $blocks * $excessPer;
+
+        // Si hay campaña de instalación gratis aplicada, el costo también es 0.
+        $manual = (float) ($ot->verification_price ?? 0);
+
+        return [
+            'distance' => $drop,
+            'covered' => $covered,
+            'base' => $base,
+            'excess_per_50m' => $excessPer,
+            'blocks' => $blocks,
+            'excess_total' => $excessTotal,
+            'manual_price' => $manual,
+            'subtotal' => $base + $excessTotal,
+        ];
     }
 
     private function refreshBenefitsFromAvailable(): void
@@ -1044,6 +1220,7 @@ class ContractWorkflow extends Component
             'plan_id' => $this->plan_id ?: null,
             'zone_id' => $this->zone_id ?: null,
             'service_type' => $this->service_type,
+            'customer_type' => $this->customer_type,
             'price' => $this->price,
             'installation_address' => $this->installation_address,
             'latitude' => $this->latitude ?: null,
@@ -1054,12 +1231,15 @@ class ContractWorkflow extends Component
             'created_by' => Auth::id(),
             'contract_type' => $this->contract_type,
             'service_contracted' => $this->deriveServiceContracted(),
+            'speed' => $this->plan_id ? (Plan::where('id', $this->plan_id)->value('speed') ?? null) : null,
+            'installation_cost' => $this->installation_cost ?: $this->defaultInstallationCost(),
             'term_months' => $this->term_months,
             'benefit' => $this->benefit,
             'extra_tvs' => $this->extra_tvs,
             'tv_install_fee' => $this->tv_install_fee,
             'monthly_extra_fee' => $this->monthly_extra_fee,
             'payment_day' => $this->payment_day ?: null,
+            'payment_date' => $this->payment_date ?: null,
         ];
 
         // Si el contrato ya fue pre-generado (ticket promovido desde verificación),

@@ -150,6 +150,14 @@
                             placeholder="-89.2182" />
                     </div>
 
+                    {{-- Tipo de servicio / tipo de cliente --}}
+                    <x-ui.select wire:model.live="customer_type" label="Tipo de servicio" icon="business">
+                        <option value="">Seleccionar tipo de servicio</option>
+                        <option value="residencial">Residencial</option>
+                        <option value="pyme">Pyme</option>
+                        <option value="corporativo">Corporativo</option>
+                    </x-ui.select>
+
                     {{-- Datos legales del contrato --}}
                     <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
                         <div class="flex items-center gap-2 mb-3">
@@ -590,14 +598,31 @@
                         <p class="text-sm text-gray-500">Seleccioná el plan y verificá el precio para la zona</p>
                     </div>
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Tipo de
-                            servicio</label>
+                            OT</label>
                         <div
                             class="bg-gray-50 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-800 capitalize">
-                            {{ str_replace('_', ' ', $service_type) }}
+                            {{ str_replace('_', ' ', $service_type ?: '—') }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Servicio
+                            contratado</label>
+                        <div
+                            class="bg-gray-50 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-800 capitalize">
+                            @php
+                                $planSvc = $this->plan_id ? (\App\Models\Plan::where('id', $this->plan_id)->value('service_type') ?? null) : null;
+                                $servCont = match ($planSvc) {
+                                    'internet' => 'Internet',
+                                    'cable' => 'Cable TV',
+                                    'internet_cable' => 'Cable TV + Internet',
+                                    default => '—',
+                                };
+                            @endphp
+                            {{ $servCont }}
                         </div>
                     </div>
 
@@ -607,7 +632,34 @@
                             <option value="{{ $z['id'] }}">{{ $z['name'] }}</option>
                         @endforeach
                     </x-ui.select>
+
                 </div>
+
+                {{-- Reglas de instalación (informativo) --}}
+                @php
+                    $installFeeInfo = null;
+                    if ($this->ticket_id) {
+                        $tk = \App\Models\Ticket::find($this->ticket_id);
+                        if ($tk) {
+                            $installFeeInfo = app(\App\Services\VerificationPricingService::class)->installFeeFor($tk);
+                        }
+                    }
+                @endphp
+                @if ($installFeeInfo && ((float) $installFeeInfo['fee'] > 0 || (float) $installFeeInfo['excess_per_50m'] > 0))
+                    <div class="mt-4 bg-sky-50 border border-sky-200 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="material-symbols-outlined text-sky-600 text-sm">straighten</span>
+                            <span class="text-xs font-semibold text-sky-700 uppercase tracking-wide">Reglas de
+                                instalación</span>
+                        </div>
+                        <p class="text-xs text-sky-800">
+                            Instalación: <strong>${{ number_format($installFeeInfo['fee'], 2) }}</strong> por los
+                            primeros {{ $installFeeInfo['covered_meters'] }} m. Recargo de
+                            <strong>${{ number_format($installFeeInfo['excess_per_50m'], 2) }}</strong> por cada 50 m
+                            adicionales. Se verificará en campo al instalar.
+                        </p>
+                    </div>
+                @endif
 
                 {{-- Catálogo de planes agrupados por tipo --}}
                 @php
@@ -695,15 +747,34 @@
 
                 {{-- Precio personalizado + Beneficios --}}
                 @if ($plan_id)
-                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                        <p class="text-sm font-medium text-amber-800 flex items-center gap-2">
+                    {{-- Datos comerciales del contrato --}}
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-symbols-outlined text-gray-600 text-sm">description</span>
+                            <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Datos del
+                                contrato</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <x-ui.select wire:model="contract_type" icon="assignment" label="Tipo de contrato">
+                                <option value="nuevo">Nuevo</option>
+                                <option value="reconexion">Reconexión</option>
+                                <option value="renovacion">Renovación</option>
+                            </x-ui.select>
+                            <x-ui.input type="number" wire:model.live="term_months" icon="calendar_month"
+                                label="Plazo (meses)" min="1" max="60" />
+                            <x-ui.input type="text" wire:model="benefit" icon="card_giftcard"
+                                label="Beneficio / Promoción" placeholder="Opcional" />
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="text-sm font-medium text-gray-700 flex items-center gap-2">
                             <span class="material-symbols-outlined text-base">info</span>
                             Precio del plan
                         </p>
                         <div class="mt-2">
                             @php $detail = $this->planPriceDetail; @endphp
                             @if ($detail)
-                                <p class="text-xs text-amber-700">
+                                <p class="text-xs text-gray-600">
                                     Precio base: <strong>${{ number_format($detail['base_price'], 2) }}</strong>
                                     @if ($detail['has_override'])
                                         → Precio efectivo:
@@ -717,49 +788,86 @@
                                 label="Precio a facturar" step="0.01" min="0" placeholder="0.00" />
                         </div>
 
-                        {{-- Día de pago del cliente --}}
-                        <div class="mt-3 border-t border-gray-100 pt-3">
-                            <label class="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-gray-500 text-sm">event_repeat</span>
-                                Día de pago del cliente
-                            </label>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <x-ui.input type="number" wire:model.live="payment_day" icon="calendar_today"
-                                        label="Día de pago (ej. 15)" min="1" max="31" placeholder="15" />
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-600 mb-1">Cuota mensual total</label>
-                                    <p class="px-3 py-2.5 bg-blue-50 rounded-lg border border-blue-200 text-sm font-bold text-blue-800">
-                                        ${{ number_format($this->getMonthlyTotal(), 2) }}
-                                    </p>
-                                </div>
-                            </div>
-                            <p class="text-[11px] text-gray-400 mt-2">Este día se usa para calcular el abono proporcional al instalar (solo se cobra por los días usados hasta esa fecha).</p>
-                        </div>
-
                         {{-- TV extra: equipo adicional para otra pantalla --}}
                         <div class="mt-3 border-t border-gray-100 pt-3">
                             <label class="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                 <span class="material-symbols-outlined text-gray-500 text-sm">live_tv</span>
                                 TVs extra (otras pantallas)
                             </label>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="grid grid-cols-1 gap-4">
                                 <div>
                                     <x-ui.input type="number" wire:model.live="extra_tvs" icon="tv"
                                         label="Cantidad de TVs extra" min="0" max="10" placeholder="0" />
                                 </div>
                                 <div>
-                                    <label class="block text-xs text-gray-600 mb-1">Cargo instalación (único)</label>
-                                    <p class="px-3 py-2.5 bg-gray-50 rounded-lg border border-gray-200 text-sm font-medium text-gray-800">
-                                        ${{ number_format($this->getInstallTotal(), 2) }}
-                                    </p>
+                                    <label class="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-gray-500 text-sm">handyman</span>
+                                        Cargo instalación (único)
+                                    </label>
+                                    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                                        <div class="space-y-2 font-mono text-[13px]">
+                                            @php $vbd = $this->verificationBreakdown; @endphp
+                                            @if($vbd)
+                                            <div class="flex items-baseline gap-2">
+                                                <span class="text-gray-600">Base ({{ $vbd['covered'] }} m)</span>
+                                                <span class="flex-1 border-b border-dotted border-gray-300"></span>
+                                                <span class="font-medium text-gray-800">${{ number_format($vbd['base'], 2) }}</span>
+                                            </div>
+                                            @if($vbd['blocks'] > 0)
+                                            <div class="flex items-baseline gap-2">
+                                                <span class="text-gray-600">{{ $vbd['distance'] }} m (+{{ $vbd['blocks'] }} × ${{ number_format($vbd['excess_per_50m'], 2) }})</span>
+                                                <span class="flex-1 border-b border-dotted border-gray-300"></span>
+                                                <span class="font-medium text-gray-800">${{ number_format($vbd['excess_total'], 2) }}</span>
+                                            </div>
+                                            @endif
+                                            @endif
+                                            @if(!$vbd && (float)($this->installation_cost ?? 0) > 0)
+                                            <div class="flex items-baseline gap-2">
+                                                <span class="text-gray-600">Instalación</span>
+                                                <span class="flex-1 border-b border-dotted border-gray-300"></span>
+                                                <span class="font-medium text-gray-800">${{ number_format((float)($this->installation_cost ?? 0), 2) }}</span>
+                                            </div>
+                                            @endif
+                                            @if((float)($this->tv_install_fee ?? 0) > 0)
+                                            <div class="flex items-baseline gap-2">
+                                                <span class="text-gray-600">TVs extra ({{ $this->extra_tvs }} × $6)</span>
+                                                <span class="flex-1 border-b border-dotted border-gray-300"></span>
+                                                <span class="font-medium text-gray-800">${{ number_format((float)$this->tv_install_fee, 2) }}</span>
+                                            </div>
+                                            @endif
+                                        </div>
+                                        <div class="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2.5 flex items-center justify-between gap-3">
+                                            <span class="text-[12px] font-bold text-green-700 tracking-wide">TOTAL INSTALACIÓN</span>
+                                            <span class="text-xl font-mono font-extrabold text-green-700 leading-none">${{ number_format($this->getInstallTotal(), 2) }}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="block text-xs text-gray-600 mb-1">Cuota mensual total</label>
-                                    <p class="px-3 py-2.5 bg-blue-50 rounded-lg border border-blue-200 text-sm font-bold text-blue-800">
-                                        ${{ number_format($this->getMonthlyTotal(), 2) }}
-                                    </p>
+                                    <label class="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-gray-500 text-sm">receipt_long</span>
+                                        Cuota mensual total
+                                    </label>
+                                    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                                        <div class="space-y-2 font-mono text-[13px]">
+                                            <div class="flex items-baseline gap-2">
+                                                <span class="text-gray-600">Plan base</span>
+                                                <span class="flex-1 border-b border-dotted border-gray-300"></span>
+                                                <span class="font-medium text-gray-800">${{ number_format((float)($this->price ?? 0), 2) }}</span>
+                                            </div>
+                                            @if((float)($this->monthly_extra_fee ?? 0) > 0)
+                                            <div class="flex items-baseline gap-2">
+                                                <span class="text-gray-600">TVs extra ({{ $this->extra_tvs }} × $1)</span>
+                                                <span class="flex-1 border-b border-dotted border-gray-300"></span>
+                                                <span class="font-medium text-gray-800">+${{ number_format((float)$this->monthly_extra_fee, 2) }}</span>
+                                            </div>
+                                            @endif
+                                        </div>
+                                        <div class="mt-3 rounded-lg bg-green-600 px-4 py-3 flex items-center justify-between gap-3">
+                                            <span class="text-[13px] font-bold text-white tracking-wide">TOTAL A PAGAR / MES</span>
+                                            <span class="text-2xl font-mono font-extrabold text-white leading-none">${{ number_format($this->getMonthlyTotal(), 2) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 </div>
                             </div>
                             @if($extra_tvs > 0)
@@ -767,7 +875,39 @@
                                     +$1 mensual por cada TV extra y +$6 de instalación por cada TV. Se registrará para la facturación recurrente.
                                 </p>
                             @endif
+
+                    {{-- Fecha de pago del cliente (independiente del plan) --}}
+                    <div class="mt-3 border-t border-gray-100 pt-3">
+                        <label class="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-gray-500 text-sm">event_repeat</span>
+                            Fecha de pago del cliente
+                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <x-ui.input type="date" wire:model.live="payment_date" icon="calendar_today"
+                                    label="Próxima fecha de pago" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">Día de pago del cliente</label>
+                                <p class="px-3 py-2.5 bg-blue-50 rounded-lg border border-blue-200 text-sm font-bold text-blue-800">
+                                    {{ $payment_day ? $payment_day . ' de cada mes' : '—' }}
+                                </p>
+                            </div>
                         </div>
+                        <p class="text-[11px] text-gray-400 mt-2">Seleccioná la fecha de pago. El día (ej. 15) se usa para calcular el abono proporcional al instalar, y se mostrará como "15 de cada mes" en el contrato.</p>
+
+                        @php $abono = $this->abonoPreview; @endphp
+                        @if ($abono)
+                        <div class="mt-3 rounded-xl border border-green-200 bg-white overflow-hidden">
+                            <div class="flex items-center justify-between gap-2 px-4 py-2.5 bg-green-50 border-b border-green-200">
+                                <span class="text-[11px] font-bold text-green-700 uppercase tracking-wide">Abono a cobrar al instalar</span>
+                                <span class="text-xl font-mono font-extrabold text-green-700">${{ number_format($abono['charge'], 2) }}</span>
+                            </div>
+                            <div class="px-4 py-2.5 font-mono text-[12px] text-gray-600">
+                                Cuota ${{ number_format($abono['base'], 2) }} ÷ {{ $abono['days_in_month'] }} días del mes × {{ $abono['days'] }} días (hasta el {{ $abono['payment_day'] }}) = <strong>${{ number_format($abono['charge'], 2) }}</strong>
+                            </div>
+                        </div>
+                        @endif
                     </div>
 
                     {{-- Promociones automáticas (meses gratis / doble velocidad) --}}
@@ -837,26 +977,6 @@
                         </div>
                     @endif
                 @endif
-
-                {{-- Datos comerciales del contrato --}}
-                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="material-symbols-outlined text-amber-600 text-sm">description</span>
-                        <span class="text-xs font-semibold text-amber-800 uppercase tracking-wide">Datos del
-                            contrato</span>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <x-ui.select wire:model="contract_type" icon="assignment" label="Tipo de contrato">
-                            <option value="nuevo">Nuevo</option>
-                            <option value="reconexion">Reconexión</option>
-                            <option value="renovacion">Renovación</option>
-                        </x-ui.select>
-                        <x-ui.input type="number" wire:model="term_months" icon="calendar_month"
-                            label="Plazo (meses)" min="1" max="60" />
-                        <x-ui.input type="text" wire:model="benefit" icon="card_giftcard"
-                            label="Beneficio / Promoción" placeholder="Opcional" />
-                    </div>
-                </div>
 
                 <div class="flex justify-between pt-4 border-t border-gray-100">
                     <x-ui.button variant="secondary" icon="arrow_back" wire:click="previousStep">

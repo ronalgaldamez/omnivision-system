@@ -203,9 +203,9 @@ class FlujoVerificacionPromocionTest extends TestCase
         $contract->refresh();
 
         $this->assertSame(2, $contract->extra_tvs);
-        // TV extra: instalación $6 POR TV (2*6=12), mensual FIJO +$1 (2 o 3 TVs = +$1).
+        // TV extra: instalación $6 POR TV (2*6=12), mensual $1 POR TV (2*1=2).
         $this->assertEquals(12.0, (float) $contract->tv_install_fee);  // 2 * 6
-        $this->assertEquals(1.0, (float) $contract->monthly_extra_fee); // FIJO +$1
+        $this->assertEquals(2.0, (float) $contract->monthly_extra_fee); // 2 * $1
         // Se crearon los cargos de TV extra
         $this->assertSame(2, $contract->charges()->count());
     }

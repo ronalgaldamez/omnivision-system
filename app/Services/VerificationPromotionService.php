@@ -77,7 +77,7 @@ class VerificationPromotionService
                 'installation_cost' => $price,
                 'extra_tvs' => $extraTvs,
                 'tv_install_fee' => $extraTvs * $fees['install_fee'],
-                'monthly_extra_fee' => $extraTvs > 0 ? $fees['monthly_fee'] : 0,
+                'monthly_extra_fee' => $extraTvs * ($fees['monthly_fee'] ?? 1),
                 'installation_address' => $client?->installation_address ?? $client?->address,
                 'latitude' => $workOrder->latitude ?? $client?->latitude,
                 'longitude' => $workOrder->longitude ?? $client?->longitude,

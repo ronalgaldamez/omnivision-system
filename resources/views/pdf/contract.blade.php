@@ -384,7 +384,7 @@
             <span style="font-weight:700;">Tipo de servicio:</span>
             <table class="checkbox-table">
                 <tr>
-                    @php $tipoServ = $contract->service_type ?? ''; @endphp
+                    @php $tipoServ = $contract->customer_type ?? ''; @endphp
                     <td><span class="checkbox-group"><span
                                 class="cb {{ $tipoServ == 'residencial' ? 'checked' : '' }}">{{ $tipoServ == 'residencial' ? 'X' : '' }}</span>
                             Residencial</span></td>
@@ -480,16 +480,35 @@
         <!-- ======== FECHA DE PAGO Y FECHA DE CREACIÓN ======== -->
         <div style="margin-top:18px;">
             <div style="text-align:right;">
-                <p style="margin:0 0 2px 0; font-size:10pt;">{{ $contract->payment_date ?: '_________________' }}</p>
+                <p style="margin:0 0 2px 0; font-size:10pt;">
+                    @if ($contract->payment_day)
+                        Día {{ $contract->payment_day }} de cada mes
+                    @elseif ($contract->payment_date)
+                        {{ $contract->payment_date->format('d/m/Y') }}
+                    @else
+                        _________________
+                    @endif
+                </p>
                 <p style="margin:0 0 4px 0; font-size:10pt;">_______________</p>
                 <p style="margin:0 0 12px 0; font-weight:700; font-size:10pt;">Fecha de pago</p>
             </div>
 
             <p style="margin:4px 0; font-weight:700; font-size:10pt;">Fecha de creación del contrato:</p>
             <p style="margin:0; font-size:10pt;">
-                Chalatenango a los <span class="placeholder">______</span> días del mes de
-                <span class="placeholder">_________________</span> año
-                <span class="placeholder">_________</span>
+                @php
+                    $fechaContrato = $contract->contract_date ?? $contract->signed_at ?? $contract->created_at;
+                    $dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+                    $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+                @endphp
+                @if ($fechaContrato)
+                    Chalatenango a los <strong>{{ $fechaContrato->format('d') }}</strong> días del mes de
+                    <strong>{{ $meses[$fechaContrato->format('n') - 1] }}</strong> del año
+                    <strong>{{ $fechaContrato->format('Y') }}</strong>
+                @else
+                    Chalatenango a los <span class="placeholder">______</span> días del mes de
+                    <span class="placeholder">_________________</span> año
+                    <span class="placeholder">_________</span>
+                @endif
             </p>
         </div>
 

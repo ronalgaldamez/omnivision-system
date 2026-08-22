@@ -65,6 +65,7 @@ class WorkOrderShow extends Component
     public $payment_date = '';
     public $payment_day = '';
     public $extra_tvs = 0;
+    public $extra_tvs_add = 0;
 
     // Verificación de instalación
     public $mufa_has_space = null;
@@ -93,29 +94,26 @@ class WorkOrderShow extends Component
 
         $service = app(VerificationPricingService::class);
 
-        // Costo de instalación según la tarifa por zona + campañas (instalación gratis)
-        if ($this->isVerificationOt()) {
-            $fee = $service->installFeeFor($ticket);
-            $covered = (int) ($fee['covered_meters'] ?? 150);
-            $base = (float) ($fee['fee'] ?? 0);
-            $excess = (float) ($this->precio_por_metro ?? $fee['excess_per_50m'] ?? 0);
+        // Costo de instalación según la tarifa por zona + campañas (instalación gratis).
+        // Aplica tanto en OT de verificación como en OT de instalación directa (chequeo en campo).
+        $fee = $service->installFeeFor($ticket);
+        $covered = (int) ($fee['covered_meters'] ?? 150);
+        $base = (float) ($fee['fee'] ?? 0);
+        $excess = (float) ($this->precio_por_metro ?? $fee['excess_per_50m'] ?? 0);
 
-            // Instalación gratis por campaña si aplica y no excede los metros cubiertos
-            if ($service->freeInstallationApplies($ticket, $drop)) {
-                if ($drop <= $covered) {
-                    return 0.0;
-                }
-            }
-
+        // Instalación gratis por campaña si aplica y no excede los metros cubiertos
+        if ($service->freeInstallationApplies($ticket, $drop)) {
             if ($drop <= $covered) {
-                return $base;
+                return 0.0;
             }
-
-            $extraBlocks = ceil(($drop - $covered) / 50);
-            return $base + ($extraBlocks * $excess);
         }
 
-        return 0;
+        if ($drop <= $covered) {
+            return $base;
+        }
+
+        $extraBlocks = ceil(($drop - $covered) / 50);
+        return $base + ($extraBlocks * $excess);
     }
 
     /**
@@ -225,14 +223,15 @@ class WorkOrderShow extends Component
         $this->desea_tv_extra = $draft['desea_tv_extra'] ?? null;
 
         $contract = $this->workOrder->ticket?->contract;
-        $this->access_type = $contract->access_type ?? '';
-        $this->speed = $contract->speed ?? '';
-        $this->technology = $contract->technology ?? '';
-        $this->modem_serial = $contract->modem_serial ?? '';
+        $this->access_type = $draft['access_type'] ?? $contract->access_type ?? '';
+        $this->speed = $draft['speed'] ?? $contract->speed ?? ($contract?->plan?->speed ?? '');
+        $this->technology = $draft['technology'] ?? $contract->technology ?? '';
+        $this->modem_serial = $draft['modem_serial'] ?? $contract->modem_serial ?? '';
         $this->installation_cost = $contract->installation_cost ?? '';
-        $this->payment_date = $draft['payment_date'] ?? $contract->payment_date ?? '';
+        $this->payment_date = $draft['payment_date'] ?? ($contract?->payment_date ? $contract->payment_date->format('Y-m-d') : '');
         $this->payment_day = $draft['payment_day'] ?? $contract->payment_day ?? '';
         $this->extra_tvs = $draft['extra_tvs'] ?? $contract->extra_tvs ?? 0;
+        $this->extra_tvs_add = $draft['extra_tvs_add'] ?? 0;
 
         $client = $this->workOrder->client;
         $this->latitude = $draft['latitude'] ?? $this->workOrder->latitude ?? $client->latitude ?? null;
@@ -311,6 +310,139 @@ class WorkOrderShow extends Component
         return $this->workOrder?->service_type === 'verificacion_instalacion';
     }
 
+    /**
+     * Si esta OT de instalación viene de un proceso previo de verificación (mismo ticket).
+     * Devuelve los datos de la OT de verificación asociada o null si no existe.
+     */
+    public function getPriorVerificationProperty(): ?array
+    {
+        if ($this->isVerificationOt()) {
+            return null;
+        }
+        $ticket = $this->workOrder->ticket;
+        if (!$ticket) {
+            return null;
+        }
+
+        $ot = \App\Models\WorkOrder::where('ticket_id', $ticket->id)
+            ->where('service_type', 'verificacion_instalacion')
+            ->first();
+
+        if (!$ot) {
+            return null;
+        }
+
+        // Desglose de la distancia de la OT de verificación (base + recargo).
+        $vbd = null;
+        try {
+            $service = app(\App\Services\VerificationPricingService::class);
+            $fee = $service->installFeeFor($ot->ticket);
+            $covered = (int) ($fee['covered_meters'] ?? 150);
+            $base = (float) ($fee['fee'] ?? 0);
+            $excessPer = (float) ($ot->precio_por_metro ?? $fee['excess_per_50m'] ?? 0);
+            $drop = (float) ($ot->drop_distance ?? 0);
+            $blocks = $drop > $covered ? (int) ceil(($drop - $covered) / 50) : 0;
+            $vbd = [
+                'distance' => $drop,
+                'covered' => $covered,
+                'base' => $base,
+                'excess_per_50m' => $excessPer,
+                'blocks' => $blocks,
+                'excess_total' => $blocks * $excessPer,
+                'subtotal' => $base + ($blocks * $excessPer),
+            ];
+        } catch (\Throwable $e) {
+            $vbd = null;
+        }
+
+        $extraTvs = (int) ($ot->extra_tvs ?? 0);
+
+        return [
+            'extra_tvs' => $extraTvs,
+            'verification_price' => (float) ($ot->verification_price ?? 0),
+            'drop_distance' => (float) ($ot->drop_distance ?? 0),
+            'tv_install_fee' => (float) $extraTvs * 6,
+            'monthly_extra_fee' => (float) $extraTvs,
+            'breakdown' => $vbd,
+        ];
+    }
+
+    /**
+     * Resumen del contrato para mostrar al técnico en la OT de instalación:
+     * paquete, megas, tipo de servicio, cuota total y el abono proporcional a cobrar.
+     */
+    public function getContractSummaryProperty(): ?array
+    {
+        if ($this->isVerificationOt()) {
+            return null;
+        }
+        $contract = $this->workOrder->ticket?->contract;
+        if (!$contract) {
+            return null;
+        }
+
+        $plan = $contract->plan;
+        $contractPrice = (float) ($contract->price ?? 0);
+
+        // TVs en vivo: precargadas (si vino de verificación) + las que el técnico agrega ahora.
+        $pv = $this->priorVerification;
+        $baseTvs = $pv ? (int) $pv['extra_tvs'] : (int) ($contract->extra_tvs ?? 0);
+        $liveTvs = $baseTvs + max(0, (int) $this->extra_tvs_add);
+
+        $fees = \App\Services\TvExtraFees::forZone($contract->zone_id ?: null);
+        $extraMonthly = $liveTvs * ($fees['monthly_fee'] ?? 1);
+        $base = $contractPrice + $extraMonthly;
+
+        // Recalcular el abono con la cuota en vivo.
+        $abono = null;
+        if ($contract->payment_day) {
+            $abono = $this->abonoLive($contract, $base);
+        }
+
+        return [
+            'plan_name' => $plan?->name,
+            'speed' => $contract->speed ?? $plan?->speed,
+            'service_contracted' => $contract->service_contracted,
+            'base' => $base,
+            'extra_tvs' => $liveTvs,
+            'extra_monthly' => $extraMonthly,
+            'install_cost' => (float) ($contract->installation_cost ?? 0),
+            'payment_day' => (int) ($contract->payment_day ?? 0),
+            'abono' => $abono,
+        ];
+    }
+
+    /**
+     * Calcula el abono proporcional usando una cuota base dada (en vivo).
+     */
+    private function abonoLive($contract, float $base): ?array
+    {
+        $paymentDay = (int) $contract->payment_day;
+        if ($paymentDay < 1 || $paymentDay > 31 || $base <= 0) {
+            return null;
+        }
+        $inst = now();
+        $reference = $inst->copy();
+        $reference->day = min($paymentDay, $reference->daysInMonth);
+        if ($reference->lte($inst)) {
+            $reference->addMonth();
+            $reference->day = min($paymentDay, $reference->daysInMonth);
+        }
+        $days = $inst->diffInDays($reference);
+        if ($days <= 0) {
+            $days = max(1, $inst->copy()->endOfMonth()->diffInDays($inst));
+        }
+        $days = (int) round($days);
+        $daysInMonth = $inst->daysInMonth;
+        return [
+            'charge' => round(($base / $daysInMonth) * $days, 2),
+            'days' => $days,
+            'payment_day' => $paymentDay,
+            'base' => round($base, 2),
+            'days_in_month' => $daysInMonth,
+        ];
+    }
+
     private function checkTechnicalDataComplete()
     {
         $wo = $this->workOrder;
@@ -375,6 +507,8 @@ class WorkOrderShow extends Component
             'payment_date' => $this->payment_date,
             'payment_day' => $this->payment_day,
             'extra_tvs' => $this->extra_tvs,
+            'extra_tvs_add' => $this->extra_tvs_add,
+            'invoice_number' => $this->invoice_number,
         ]);
 
         $this->updateDraftStatus();
@@ -510,26 +644,40 @@ class WorkOrderShow extends Component
                 'latitude' => $this->latitude,
                 'longitude' => $this->longitude,
                 'invoice_number' => $this->invoice_number ?: null,
+                'mufa_has_space' => $this->mufa_has_space,
+                'drop_distance' => $this->drop_distance,
+                'precio_por_metro' => $this->precio_por_metro,
+                'verification_price' => $this->verification_price ?: null,
+                'customer_accepts_cost' => $this->customer_accepts_cost,
             ]);
         }
 
         // Sincronizar datos técnicos al contrato asociado
         $contract = $this->workOrder->ticket?->contract;
         if ($contract) {
-            $extraTvs = max(0, (int) $this->extra_tvs);
+            // Total de TVs: si vino de verificación, precargadas + las agregadas; si no, solo las agregadas.
+            $pv = $this->priorVerification;
+            $baseTvs = $pv ? (int) $pv['extra_tvs'] : 0;
+            $extraTvs = $baseTvs + max(0, (int) $this->extra_tvs_add);
             $fees = \App\Services\TvExtraFees::forZone($contract->zone_id ?: null);
+
+            // En instalación sin verificación previa, el costo real es el chequeo del técnico.
+            $installCost = (!$pv && $this->verification_price !== null && $this->verification_price !== '')
+                ? $this->verification_price
+                : $this->installation_cost;
 
             $contract->update([
                 'access_type' => $this->access_type,
                 'speed' => $this->speed,
                 'technology' => $this->technology,
                 'modem_serial' => $this->modem_serial,
-                'installation_cost' => $this->installation_cost ?: null,
+                'modem_mac' => $this->mac,
+                'installation_cost' => $installCost ?: null,
                 'payment_date' => $this->payment_date ?: null,
                 'payment_day' => $this->payment_day ?: null,
                 'extra_tvs' => $extraTvs,
                 'tv_install_fee' => $extraTvs * ($fees['install_fee'] ?? 6),
-                'monthly_extra_fee' => $extraTvs > 0 ? ($fees['monthly_fee'] ?? 1) : 0,
+                'monthly_extra_fee' => $extraTvs * ($fees['monthly_fee'] ?? 1),
             ]);
 
             // Sincronizar cobros de TV extra (técnico puede registrar en campo)
