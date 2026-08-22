@@ -77,6 +77,7 @@ class ContractWorkflow extends Component
     public $plan_id = '';
     public $zone_id = '';
     public $service_type;
+    public $customer_type = '';
     public $price;
     public $effective_price = 0;
     public $availablePlans = [];
@@ -152,6 +153,7 @@ class ContractWorkflow extends Component
                 'latitude' => 'nullable|numeric',
                 'longitude' => 'nullable|numeric',
                 'client_nit' => 'nullable|string|max:20',
+                'customer_type' => 'required|in:residencial,pyme,corporativo',
                 'client_billing_address' => 'required|string|max:500',
             ],
             2 => [
@@ -175,6 +177,7 @@ class ContractWorkflow extends Component
 
     protected $messages = [
         'installation_address.required' => 'La dirección de instalación es obligatoria.',
+        'customer_type.required' => 'Debe seleccionar el tipo de servicio (Residencial, Pyme o Corporativo).',
         'plan_id.required' => 'Debe seleccionar un plan.',
         'price.required' => 'El precio es obligatorio.',
         'price.numeric' => 'El precio debe ser un valor numérico.',
@@ -285,6 +288,7 @@ class ContractWorkflow extends Component
                 $this->extra_tvs = (int) ($existingContract->extra_tvs ?? 0);
                 $this->tv_install_fee = (float) ($existingContract->tv_install_fee ?? 0);
                 $this->monthly_extra_fee = (float) ($existingContract->monthly_extra_fee ?? 0);
+                $this->customer_type = $existingContract->customer_type ?? '';
             }
 
             // ─── Ticket promovido desde verificación en campo ───
@@ -322,6 +326,15 @@ class ContractWorkflow extends Component
                 $this->sales_rep_signature_data = $draft['sales_rep_signature'];
                 $this->showSalesRepSignature = true;
             }
+            if (!empty($draft['customer_type'])) {
+                $this->customer_type = $draft['customer_type'];
+            }
+            if (!empty($draft['payment_date'])) {
+                $this->payment_date = $draft['payment_date'];
+            }
+            if (!empty($draft['payment_day'])) {
+                $this->payment_day = $draft['payment_day'];
+            }
         }
 
         $this->loadClientUploadedDocs();
@@ -338,7 +351,15 @@ class ContractWorkflow extends Component
         session()->put($this->draftKey(), [
             'uploaded_documents' => $this->uploadedDocuments,
             'sales_rep_signature' => $this->sales_rep_signature_data,
+            'customer_type' => $this->customer_type,
+            'payment_date' => $this->payment_date,
+            'payment_day' => $this->payment_day,
         ]);
+    }
+
+    public function updatedCustomerType($value)
+    {
+        $this->persistDraft();
     }
 
     public function updatedLatitude($value)
@@ -572,8 +593,38 @@ class ContractWorkflow extends Component
         $this->benefit = $this->getAppliedBenefits();
     }
 
+    private function defaultInstallationCost(): ?float
+    {
+        if (!$this->ticket_id) {
+            return null;
+        }
+        $tk = \App\Models\Ticket::find($this->ticket_id);
+        if (!$tk) {
+            return null;
+        }
+        try {
+            $fee = app(\App\Services\VerificationPricingService::class)->installFeeFor($tk);
+            return (float) ($fee['fee'] ?? 0);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     private function deriveServiceContracted(): string
     {
+        // Prioridad: derivar del tipo de servicio del plan seleccionado.
+        if ($this->plan_id) {
+            $planService = \App\Models\Plan::where('id', $this->plan_id)->value('service_type');
+            if ($planService) {
+                return match ($planService) {
+                    'internet' => 'internet',
+                    'cable' => 'cable',
+                    'internet_cable' => 'cable_internet',
+                    default => $planService,
+                };
+            }
+        }
+
         return match ($this->service_type) {
             'internet' => 'internet',
             'cable' => 'cable',
@@ -626,6 +677,9 @@ class ContractWorkflow extends Component
                 // Si la fecha es inválida, no se deriva nada.
             }
         }
+
+        // Persistir en sesión para que no se pierda al recargar.
+        $this->persistDraft();
 
         // Persistir la fecha y el día de pago para que no se pierdan al recargar la página.
         if ($this->ticket_id) {
@@ -1128,6 +1182,7 @@ class ContractWorkflow extends Component
             'plan_id' => $this->plan_id ?: null,
             'zone_id' => $this->zone_id ?: null,
             'service_type' => $this->service_type,
+            'customer_type' => $this->customer_type,
             'price' => $this->price,
             'installation_address' => $this->installation_address,
             'latitude' => $this->latitude ?: null,
@@ -1138,6 +1193,8 @@ class ContractWorkflow extends Component
             'created_by' => Auth::id(),
             'contract_type' => $this->contract_type,
             'service_contracted' => $this->deriveServiceContracted(),
+            'speed' => $this->plan_id ? (Plan::where('id', $this->plan_id)->value('speed') ?? null) : null,
+            'installation_cost' => $this->installation_cost ?: $this->defaultInstallationCost(),
             'term_months' => $this->term_months,
             'benefit' => $this->benefit,
             'extra_tvs' => $this->extra_tvs,

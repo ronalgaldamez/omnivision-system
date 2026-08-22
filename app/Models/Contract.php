@@ -17,6 +17,7 @@ class Contract extends Model
         'plan_id',
         'zone_id',
         'service_type',
+        'customer_type',
         'price',
         'status',
         'installation_address',

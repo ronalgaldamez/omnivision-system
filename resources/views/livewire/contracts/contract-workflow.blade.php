@@ -150,6 +150,14 @@
                             placeholder="-89.2182" />
                     </div>
 
+                    {{-- Tipo de servicio / tipo de cliente --}}
+                    <x-ui.select wire:model.live="customer_type" label="Tipo de servicio" icon="business">
+                        <option value="">Seleccionar tipo de servicio</option>
+                        <option value="residencial">Residencial</option>
+                        <option value="pyme">Pyme</option>
+                        <option value="corporativo">Corporativo</option>
+                    </x-ui.select>
+
                     {{-- Datos legales del contrato --}}
                     <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
                         <div class="flex items-center gap-2 mb-3">
@@ -590,14 +598,31 @@
                         <p class="text-sm text-gray-500">Seleccioná el plan y verificá el precio para la zona</p>
                     </div>
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Tipo de
-                            servicio</label>
+                            OT</label>
                         <div
                             class="bg-gray-50 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-800 capitalize">
-                            {{ str_replace('_', ' ', $service_type) }}
+                            {{ str_replace('_', ' ', $service_type ?: '—') }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Servicio
+                            contratado</label>
+                        <div
+                            class="bg-gray-50 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-800 capitalize">
+                            @php
+                                $planSvc = $this->plan_id ? (\App\Models\Plan::where('id', $this->plan_id)->value('service_type') ?? null) : null;
+                                $servCont = match ($planSvc) {
+                                    'internet' => 'Internet',
+                                    'cable' => 'Cable TV',
+                                    'internet_cable' => 'Cable TV + Internet',
+                                    default => '—',
+                                };
+                            @endphp
+                            {{ $servCont }}
                         </div>
                     </div>
 
@@ -607,7 +632,34 @@
                             <option value="{{ $z['id'] }}">{{ $z['name'] }}</option>
                         @endforeach
                     </x-ui.select>
+
                 </div>
+
+                {{-- Reglas de instalación (informativo) --}}
+                @php
+                    $installFeeInfo = null;
+                    if ($this->ticket_id) {
+                        $tk = \App\Models\Ticket::find($this->ticket_id);
+                        if ($tk) {
+                            $installFeeInfo = app(\App\Services\VerificationPricingService::class)->installFeeFor($tk);
+                        }
+                    }
+                @endphp
+                @if ($installFeeInfo && ((float) $installFeeInfo['fee'] > 0 || (float) $installFeeInfo['excess_per_50m'] > 0))
+                    <div class="mt-4 bg-sky-50 border border-sky-200 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="material-symbols-outlined text-sky-600 text-sm">straighten</span>
+                            <span class="text-xs font-semibold text-sky-700 uppercase tracking-wide">Reglas de
+                                instalación</span>
+                        </div>
+                        <p class="text-xs text-sky-800">
+                            Instalación: <strong>${{ number_format($installFeeInfo['fee'], 2) }}</strong> por los
+                            primeros {{ $installFeeInfo['covered_meters'] }} m. Recargo de
+                            <strong>${{ number_format($installFeeInfo['excess_per_50m'], 2) }}</strong> por cada 50 m
+                            adicionales. Se verificará en campo al instalar.
+                        </p>
+                    </div>
+                @endif
 
                 {{-- Catálogo de planes agrupados por tipo --}}
                 @php

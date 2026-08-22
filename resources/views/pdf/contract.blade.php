@@ -384,7 +384,7 @@
             <span style="font-weight:700;">Tipo de servicio:</span>
             <table class="checkbox-table">
                 <tr>
-                    @php $tipoServ = $contract->service_type ?? ''; @endphp
+                    @php $tipoServ = $contract->customer_type ?? ''; @endphp
                     <td><span class="checkbox-group"><span
                                 class="cb {{ $tipoServ == 'residencial' ? 'checked' : '' }}">{{ $tipoServ == 'residencial' ? 'X' : '' }}</span>
                             Residencial</span></td>
