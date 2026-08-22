@@ -432,6 +432,7 @@ class WorkOrderShow extends Component
         if ($days <= 0) {
             $days = max(1, $inst->copy()->endOfMonth()->diffInDays($inst));
         }
+        $days = (int) round($days);
         $daysInMonth = $inst->daysInMonth;
         return [
             'charge' => round(($base / $daysInMonth) * $days, 2),

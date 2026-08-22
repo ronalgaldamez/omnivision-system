@@ -218,6 +218,12 @@
                             </label>
                             <span class="text-sm text-gray-600">Aplicar doble velocidad</span>
                         </div>
+                        <div class="grid grid-cols-2 gap-3 mt-3">
+                            <x-ui.input type="number" wire:model="cfg_min_months" label="Plazo (meses)" icon="calendar_month" min="1" placeholder="24" />
+                            <div class="flex items-end">
+                                <p class="text-[11px] text-gray-400">La doble velocidad aplica cuando el plazo del contrato coincide con este valor. Vacío = aplica a cualquier plazo.</p>
+                            </div>
+                        </div>
                     @elseif($type === 'tv_extra')
                         <div class="grid grid-cols-2 gap-3">
                             <x-ui.input type="number" wire:model="cfg_install_fee" label="Cargo instalación por TV ($)" icon="attach_money" step="0.01" min="0" placeholder="6" />

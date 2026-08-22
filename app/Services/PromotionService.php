@@ -72,7 +72,24 @@ class PromotionService
             return false;
         }
 
-        $campaign = $campaigns->first();
+        // Elegir la campaña de doble velocidad que aplique al plazo del contrato.
+        // Si una define un plazo exacto, solo aplica con ese plazo; si ninguna, usa la que no tenga plazo.
+        $campaign = null;
+        foreach ($campaigns as $cand) {
+            $cfg = $cand->config ?? [];
+            $months = $cfg['months'] ?? null;
+            if ($months !== null && $months !== '' && (int) $months === (int) $termMonths) {
+                $campaign = $cand;
+                break;
+            }
+        }
+        if (!$campaign) {
+            $campaign = $campaigns->firstWhere(fn($c) => (($c->config['months'] ?? null) === null || ($c->config['months'] ?? '') === ''));
+        }
+        if (!$campaign) {
+            return false;
+        }
+
         $cfg = $campaign->config ?? [];
         return (bool) ($cfg['enabled'] ?? true);
     }

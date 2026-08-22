@@ -745,6 +745,44 @@ class ContractWorkflow extends Component
     }
 
     /**
+     * Vista previa del abono proporcional a cobrar al instalar, según el día de pago.
+     */
+    public function getAbonoPreviewProperty(): ?array
+    {
+        $paymentDay = (int) $this->payment_day;
+        if ($paymentDay < 1 || $paymentDay > 31) {
+            return null;
+        }
+
+        $base = $this->getMonthlyTotal();
+        if ($base <= 0) {
+            return null;
+        }
+
+        $inst = now();
+        $reference = $inst->copy();
+        $reference->day = min($paymentDay, $reference->daysInMonth);
+        if ($reference->lte($inst)) {
+            $reference->addMonth();
+            $reference->day = min($paymentDay, $reference->daysInMonth);
+        }
+        $days = $inst->diffInDays($reference);
+        if ($days <= 0) {
+            $days = max(1, $inst->copy()->endOfMonth()->diffInDays($inst));
+        }
+        $days = (int) round($days);
+        $daysInMonth = $inst->daysInMonth;
+
+        return [
+            'charge' => round(($base / $daysInMonth) * $days, 2),
+            'days' => $days,
+            'payment_day' => $paymentDay,
+            'base' => round($base, 2),
+            'days_in_month' => $daysInMonth,
+        ];
+    }
+
+    /**
      * Desglose de la instalación por distancia de la OT de verificación asociada.
      * Devuelve base, metros extra, recargo y la instalación desglosada para que
      * el agente entienda el costo de instalación.

@@ -26,6 +26,7 @@ class CampaignManager extends Component
     public $cfg_min_pay = '';
     public $cfg_free = '';
     public $cfg_enabled = true;
+    public $cfg_min_months = '';
     public $cfg_install_fee = '';
     public $cfg_monthly_fee = '';
 
@@ -63,6 +64,7 @@ class CampaignManager extends Component
             $this->cfg_min_pay = $c->config['min_pay'] ?? '';
             $this->cfg_free = $c->config['free'] ?? '';
             $this->cfg_enabled = $c->config['enabled'] ?? true;
+            $this->cfg_min_months = $c->config['months'] ?? '';
             $this->cfg_install_fee = $c->config['install_fee'] ?? '';
             $this->cfg_monthly_fee = $c->config['monthly_fee'] ?? '';
         } else {
@@ -76,6 +78,7 @@ class CampaignManager extends Component
             $this->cfg_min_pay = '';
             $this->cfg_free = '';
             $this->cfg_enabled = true;
+            $this->cfg_min_months = '';
             $this->cfg_install_fee = '';
             $this->cfg_monthly_fee = '';
         }
@@ -108,6 +111,7 @@ class CampaignManager extends Component
         $this->cfg_min_pay = '';
         $this->cfg_free = '';
         $this->cfg_enabled = true;
+        $this->cfg_min_months = '';
 
         // Sugerir servicios según el tipo y la categoría
         $allowed = $this->allowedServices($value);
@@ -221,6 +225,7 @@ class CampaignManager extends Component
             ],
             'double_speed' => [
                 'enabled' => $this->cfg_enabled,
+                'months' => $this->cfg_min_months !== '' ? (int) $this->cfg_min_months : null,
             ],
             'tv_extra' => [
                 'install_fee' => (float) $this->cfg_install_fee,

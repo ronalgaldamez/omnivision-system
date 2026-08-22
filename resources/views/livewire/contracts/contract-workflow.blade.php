@@ -760,7 +760,7 @@
                                 <option value="reconexion">Reconexión</option>
                                 <option value="renovacion">Renovación</option>
                             </x-ui.select>
-                            <x-ui.input type="number" wire:model="term_months" icon="calendar_month"
+                            <x-ui.input type="number" wire:model.live="term_months" icon="calendar_month"
                                 label="Plazo (meses)" min="1" max="60" />
                             <x-ui.input type="text" wire:model="benefit" icon="card_giftcard"
                                 label="Beneficio / Promoción" placeholder="Opcional" />
@@ -895,6 +895,19 @@
                             </div>
                         </div>
                         <p class="text-[11px] text-gray-400 mt-2">Seleccioná la fecha de pago. El día (ej. 15) se usa para calcular el abono proporcional al instalar, y se mostrará como "15 de cada mes" en el contrato.</p>
+
+                        @php $abono = $this->abonoPreview; @endphp
+                        @if ($abono)
+                        <div class="mt-3 rounded-xl border border-green-200 bg-white overflow-hidden">
+                            <div class="flex items-center justify-between gap-2 px-4 py-2.5 bg-green-50 border-b border-green-200">
+                                <span class="text-[11px] font-bold text-green-700 uppercase tracking-wide">Abono a cobrar al instalar</span>
+                                <span class="text-xl font-mono font-extrabold text-green-700">${{ number_format($abono['charge'], 2) }}</span>
+                            </div>
+                            <div class="px-4 py-2.5 font-mono text-[12px] text-gray-600">
+                                Cuota ${{ number_format($abono['base'], 2) }} ÷ {{ $abono['days_in_month'] }} días del mes × {{ $abono['days'] }} días (hasta el {{ $abono['payment_day'] }}) = <strong>${{ number_format($abono['charge'], 2) }}</strong>
+                            </div>
+                        </div>
+                        @endif
                     </div>
 
                     {{-- Promociones automáticas (meses gratis / doble velocidad) --}}
