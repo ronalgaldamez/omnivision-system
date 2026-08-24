@@ -554,7 +554,33 @@ class ContractWorkflow extends Component
     public function getAppliedBenefits(): string
     {
         $labels = array_map(fn($k) => $this->benefitLabel($k), $this->selectedBenefits);
-        return implode(', ', $labels);
+        $text = implode(', ', $labels);
+
+        // Auto-completar con la promoción vigente del plan (doble velocidad, meses gratis).
+        $promoText = $this->promoBenefitText();
+        if ($promoText) {
+            $text = $text ? $text . ', ' . $promoText : $promoText;
+        }
+
+        return $text;
+    }
+
+    /**
+     * Texto de la promoción vigente aplicada al plan (doble velocidad / meses gratis).
+     */
+    protected function promoBenefitText(): string
+    {
+        $parts = [];
+
+        if ($this->promo_double_speed && $this->promo_display_speed) {
+            $parts[] = 'Doble velocidad: ' . $this->promo_display_speed;
+        }
+
+        if ($this->promo_free_months > 0) {
+            $parts[] = $this->promo_free_months . ' meses gratis';
+        }
+
+        return implode(', ', $parts);
     }
 
     public function loadAvailableBenefits(): void
@@ -714,6 +740,11 @@ class ContractWorkflow extends Component
         $this->promo_display_speed = $speed['effective'] > 0
             ? $speed['effective'] . ' Mbps' . ($speed['doubled'] ? ' (doble)' : '')
             : $speed['original_text'];
+
+        // Refrescar el beneficio con la promo vigente (si el SA no lo configuró manualmente).
+        if (!$this->benefitManuallySet) {
+            $this->benefit = $this->getAppliedBenefits();
+        }
     }
 
     /**

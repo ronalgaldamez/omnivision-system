@@ -661,6 +661,29 @@
                     </div>
                 @endif
 
+                {{-- Promoción de instalación gratis vigente --}}
+                @php
+                    $_freeListWf = $this->ticket_id ? app(\App\Services\VerificationPricingService::class)->freeInstallationInfo(\App\Models\Ticket::find($this->ticket_id)) : [];
+                    $_servsWf = ['internet' => 'Internet', 'cable' => 'Cable', 'internet_cable' => 'Internet + Cable', 'all' => 'todos los servicios'];
+                @endphp
+                @if(count($_freeListWf) > 0)
+                    <div class="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="material-symbols-outlined text-purple-600 text-sm">local_activity</span>
+                            <span class="text-xs font-semibold text-purple-700 uppercase tracking-wide">Promoción: Instalación gratis</span>
+                        </div>
+                        @foreach($_freeListWf as $_freeWf)
+                        <p class="text-xs text-purple-700 mt-1">
+                            <strong>{{ $_freeWf['name'] }}</strong>
+                            @if ($_freeWf['month'])
+                            <span class="text-purple-600">· mes de {{ $_freeWf['month'] }}</span>
+                            @endif
+                            — Aplica para <strong>{{ $_servsWf[$_freeWf['service']] ?? $_freeWf['service'] }}</strong>. Instalación base $0; si excede los {{ $installFeeInfo['covered_meters'] ?? 150 }} m se cobra solo el recargo.
+                        </p>
+                        @endforeach
+                    </div>
+                @endif
+
                 {{-- Catálogo de planes agrupados por tipo --}}
                 @php
                     $internetPlans = $availablePlans->filter(fn($p) => $p->service_type === 'internet');
@@ -762,7 +785,7 @@
                             </x-ui.select>
                             <x-ui.input type="number" wire:model.live="term_months" icon="calendar_month"
                                 label="Plazo (meses)" min="1" max="60" />
-                            <x-ui.input type="text" wire:model="benefit" icon="card_giftcard"
+                            <x-ui.input type="text" wire:model.live="benefit" icon="card_giftcard"
                                 label="Beneficio / Promoción" placeholder="Opcional" />
                         </div>
                     </div>
