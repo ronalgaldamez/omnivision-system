@@ -146,39 +146,16 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">Latitud</label>
-                            <div class="relative">
-                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">pin_drop</span>
-                                <input type="text" wire:model.live="latitude"
-                                    x-on:input="$el.value = formatLat($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
-                                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
-                                    placeholder="13.6929" maxlength="7" inputmode="decimal" />
-                            </div>
-                            @error('latitude')<span class="text-[11px] text-red-500">{{ $message }}</span>@enderror
+                            <input type="text" wire:model.live="latitude"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
+                                placeholder="13.6929" maxlength="7" inputmode="decimal" />
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">Longitud</label>
-                            <div class="relative">
-                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">pin_drop</span>
-                                <input type="text" wire:model.live="longitude"
-                                    x-on:input="$el.value = formatLng($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
-                                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
-                                    placeholder="-89.2182" maxlength="8" inputmode="decimal" />
-                            </div>
-                            @error('longitude')<span class="text-[11px] text-red-500">{{ $message }}</span>@enderror
+                            <input type="text" wire:model.live="longitude"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
+                                placeholder="-89.2182" maxlength="8" inputmode="decimal" />
                         </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button type="button"
-                            @click="
-                                const lat = $wire.get('latitude');
-                                const lng = $wire.get('longitude');
-                                if (lat && lng) window.open('https://www.google.com/maps?q=' + lat + ',' + lng, '_blank');
-                            "
-                            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 bg-white hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition">
-                            <span class="material-symbols-outlined text-base">map</span>
-                            Ver en mapa
-                        </button>
-                        <p class="text-[11px] text-gray-400">Formato automático: solo números, punto y guion.</p>
                     </div>
 
                     {{-- Tipo de servicio / tipo de cliente --}}
@@ -819,7 +796,7 @@
                             </p>
                         @endif
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t-2 border-gray-300">
-                            <x-ui.select wire:model="contract_type" icon="assignment" label="Tipo de contrato">
+                            <x-ui.select wire:model.live="contract_type" icon="assignment" label="Tipo de contrato">
                                 <option value="nuevo">Nuevo</option>
                                 <option value="reconexion">Reconexión</option>
                                 <option value="renovacion">Renovación</option>
@@ -988,24 +965,41 @@
                     {{-- Promociones automáticas (meses gratis / doble velocidad) --}}
                     @if($promo_free_months > 0 || $promo_double_speed)
                         <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                            <div class="flex items-center gap-2 mb-2">
+                            <div class="flex items-center gap-2 mb-3">
                                 <span class="material-symbols-outlined text-purple-600 text-sm">local_activity</span>
                                 <span class="text-xs font-semibold text-purple-800 uppercase tracking-wide">Promociones aplicadas</span>
                             </div>
-                            <ul class="space-y-1 text-sm text-purple-800">
+                            <div class="space-y-2">
                                 @if($promo_free_months > 0)
-                                    <li class="flex items-center gap-2">
-                                        <span class="material-symbols-outlined text-purple-600 text-base">calendar_month</span>
-                                        Pagando {{ $promo_pay_months }} meses se te regalan {{ $promo_free_months }}.
-                                    </li>
+                                    <div class="flex items-center justify-between gap-3 bg-white rounded-lg border border-purple-200 px-3 py-2 {{ !$promo_enabled_free ? 'opacity-70' : '' }}">
+                                        <div class="flex items-center gap-2 text-sm text-purple-800">
+                                            <span class="material-symbols-outlined text-purple-600 text-base">calendar_month</span>
+                                            <div>
+                                                Pagando {{ $promo_pay_months }} meses se te regalan {{ $promo_free_months }}.
+                                                @if(!$promo_enabled_free)
+                                                    <span class="text-[10px] text-red-500 block">Desactivada para este contrato</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <x-ui.toggle wire:model.live="promo_enabled_free" onColor="green" />
+                                    </div>
                                 @endif
                                 @if($promo_double_speed)
-                                    <li class="flex items-center gap-2">
-                                        <span class="material-symbols-outlined text-purple-600 text-base">speed</span>
-                                        Doble velocidad: {{ $promo_original_speed }} → {{ $promo_display_speed }}
-                                    </li>
+                                    <div class="flex items-center justify-between gap-3 bg-white rounded-lg border border-purple-200 px-3 py-2 {{ !$promo_enabled_double ? 'opacity-70' : '' }}">
+                                        <div class="flex items-center gap-2 text-sm text-purple-800">
+                                            <span class="material-symbols-outlined text-purple-600 text-base">speed</span>
+                                            <div>
+                                                Doble velocidad: {{ $promo_original_speed }} → {{ $promo_display_speed }}
+                                                @if(!$promo_enabled_double)
+                                                    <span class="text-[10px] text-red-500 block">Desactivada para este contrato</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <x-ui.toggle wire:model.live="promo_enabled_double" onColor="green" />
+                                    </div>
                                 @endif
-                            </ul>
+                            </div>
+                            <p class="text-[10px] text-purple-500 mt-2">Activá/desactivá cada promoción para este contrato. No afecta la configuración global.</p>
                         </div>
                     @endif
 
@@ -1853,21 +1847,6 @@
 
 @push('scripts')
     <script>
-        function formatLat(value) {
-            let clean = value.replace(/[^0-9]/g, '');
-            if (clean.length > 2) {
-                clean = clean.slice(0, 2) + '.' + clean.slice(2, 6);
-            }
-            return clean;
-        }
-        function formatLng(value) {
-            let hasMinus = value.startsWith('-');
-            let clean = value.replace(/[^0-9]/g, '');
-            if (clean.length > 2) {
-                clean = clean.slice(0, 2) + '.' + clean.slice(2, 6);
-            }
-            return (hasMinus ? '-' : '') + clean;
-        }
         function openPreview(src, id) {
             const modal = document.getElementById('preview-modal-' + id);
             const img = document.getElementById('preview-image-' + id);

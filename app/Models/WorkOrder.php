@@ -44,6 +44,8 @@ class WorkOrder extends Model
         'verification_price',
         'invoice_number',
         'customer_accepts_cost',
+        'customer_paid',
+        'payment_place',
         'extra_tvs',
         'assigned_at',
         'assigned_by',
@@ -66,6 +68,7 @@ class WorkOrder extends Model
         'mufa_has_space' => 'boolean',
         'cumple_distancia' => 'boolean',
         'customer_accepts_cost' => 'boolean',
+        'customer_paid' => 'boolean',
         'extra_tvs' => 'integer',
     ];
 
