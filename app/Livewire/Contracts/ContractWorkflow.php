@@ -97,6 +97,17 @@ class ContractWorkflow extends Component
     public $promo_enabled_free = true;
     public $promo_enabled_double = true;
 
+    // Estado de pago del cliente
+    public $customer_paid = null;
+    public $payment_place = '';
+    public $payment_invoice = '';
+    public $payment_confirmed = false;
+    public $show_payment_modal = false;
+    // Qué conceptos se cobran de una vez (flexible)
+    public $pay_install = false;
+    public $pay_tv = false;
+    public $pay_abono = false;
+
     // ─── TV extra ───
     public $extra_tvs = 0;
     public $tv_install_fee = 0;
@@ -298,8 +309,25 @@ class ContractWorkflow extends Component
                 $this->apply_plazo = (bool) ($existingContract->apply_plazo ?? true);
                 $this->promo_enabled_free = (bool) ($existingContract->promo_enabled_free ?? true);
                 $this->promo_enabled_double = (bool) ($existingContract->promo_enabled_double ?? true);
+                $this->customer_paid = $existingContract->customer_paid === null ? null : ($existingContract->customer_paid ? '1' : '0');
+                $this->payment_place = $existingContract->payment_place ?? '';
+                $this->payment_invoice = $existingContract->payment_invoice ?? '';
+                $this->pay_install = (bool) $existingContract->pay_install;
+                $this->pay_tv = (bool) $existingContract->pay_tv;
+                $this->pay_abono = (bool) $existingContract->pay_abono;
+                $this->payment_confirmed = (bool) $existingContract->payment_confirmed;
                 // Recalcular promos según el estado cargado del contrato.
                 $this->refreshPromotions();
+            }
+
+            // Si el contrato no definió el pago, tomar el estado de la verificación.
+            if ($this->customer_paid === null) {
+                $vp = $this->verificationPayment;
+                if ($vp) {
+                    $this->customer_paid = $vp['customer_paid'] === null ? null : ($vp['customer_paid'] ? '1' : '0');
+                    $this->payment_place = $vp['payment_place'] ?? '';
+                    $this->payment_invoice = $vp['invoice_number'] ?? '';
+                }
             }
 
             // ─── Ticket promovido desde verificación en campo ───
@@ -346,6 +374,12 @@ class ContractWorkflow extends Component
             if (!empty($draft['payment_day'])) {
                 $this->payment_day = $draft['payment_day'];
             }
+            // Restaurar datos legales del contrato
+            foreach (['client_nit','client_nrc','dui_expedition_date','dui_expedition_place','client_nationality','client_marital_status','client_spouse_name','client_occupation','client_workplace','client_position','client_monthly_income','client_boss_name','client_work_phone','client_work_address','client_billing_address'] as $legalField) {
+                if (isset($draft[$legalField])) {
+                    $this->{$legalField} = $draft[$legalField];
+                }
+            }
         }
 
         $this->loadClientUploadedDocs();
@@ -357,9 +391,26 @@ class ContractWorkflow extends Component
         return 'contract_workflow_docs_' . ($this->ticket_id ?? 'no-ticket');
     }
 
-    private function persistDraft(): void
+    /**
+     * Hook general: al cambiar cualquier propiedad con wire:model.live,
+     * persistir el draft (incluye datos legales del Step 1).
+     */
+    public function updated($name, $value)
     {
-        session()->put($this->draftKey(), [
+        $legal = [
+            'client_nit', 'client_nrc', 'dui_expedition_date', 'dui_expedition_place',
+            'client_nationality', 'client_marital_status', 'client_spouse_name',
+            'client_occupation', 'client_workplace', 'client_position',
+            'client_monthly_income', 'client_boss_name', 'client_work_phone',
+            'client_work_address', 'client_billing_address',
+        ];
+        if (in_array($name, $legal, true)) {
+            $this->persistDraft();
+        }
+    }
+
+    private function persistDraft(): void
+    {        session()->put($this->draftKey(), [
             'uploaded_documents' => $this->uploadedDocuments,
             'sales_rep_signature' => $this->sales_rep_signature_data,
             'customer_type' => $this->customer_type,
@@ -368,6 +419,21 @@ class ContractWorkflow extends Component
             'promo_enabled_free' => $this->promo_enabled_free,
             'promo_enabled_double' => $this->promo_enabled_double,
             'apply_plazo' => $this->apply_plazo,
+            'client_nit' => $this->client_nit,
+            'client_nrc' => $this->client_nrc,
+            'dui_expedition_date' => $this->dui_expedition_date,
+            'dui_expedition_place' => $this->dui_expedition_place,
+            'client_nationality' => $this->client_nationality,
+            'client_marital_status' => $this->client_marital_status,
+            'client_spouse_name' => $this->client_spouse_name,
+            'client_occupation' => $this->client_occupation,
+            'client_workplace' => $this->client_workplace,
+            'client_position' => $this->client_position,
+            'client_monthly_income' => $this->client_monthly_income,
+            'client_boss_name' => $this->client_boss_name,
+            'client_work_phone' => $this->client_work_phone,
+            'client_work_address' => $this->client_work_address,
+            'client_billing_address' => $this->client_billing_address,
         ]);
     }
 
@@ -781,7 +847,67 @@ class ContractWorkflow extends Component
             'apply_plazo' => $this->apply_plazo,
             'promo_enabled_free' => $this->promo_enabled_free,
             'promo_enabled_double' => $this->promo_enabled_double,
+            'customer_paid' => $this->customer_paid,
+            'payment_place' => $this->payment_place ?: null,
+            'payment_invoice' => $this->payment_invoice ?: null,
+            'pay_install' => (bool) $this->pay_install,
+            'pay_tv' => (bool) $this->pay_tv,
+            'pay_abono' => (bool) $this->pay_abono,
+            'payment_confirmed' => (bool) $this->payment_confirmed,
         ]);
+    }
+
+    public function updatedCustomerPaid($value)
+    {
+        $this->customer_paid = ($value === '' || $value === null) ? null : (string) $value;
+        $this->persistPromoToggles();
+    }
+
+    public function updatedPaymentPlace($value)
+    {
+        $this->payment_place = $value;
+        $this->persistPromoToggles();
+    }
+
+    public function updatedPaymentInvoice($value)
+    {
+        $this->payment_invoice = $value;
+        $this->persistPromoToggles();
+    }
+
+    public function updatedPayInstall($value)
+    {
+        $this->pay_install = (bool) $value;
+        $this->persistPromoToggles();
+    }
+
+    public function updatedPayTv($value)
+    {
+        $this->pay_tv = (bool) $value;
+        $this->persistPromoToggles();
+    }
+
+    public function updatedPayAbono($value)
+    {
+        $this->pay_abono = (bool) $value;
+        $this->persistPromoToggles();
+    }
+
+    /**
+     * Confirma el pago: guarda los conceptos cobrados y cierra el modal.
+     */
+    public function confirmPayment()
+    {
+        $this->customer_paid = '1';
+        $this->payment_confirmed = true;
+        $this->show_payment_modal = false;
+        $this->persistPromoToggles();
+        $this->dispatch('show-toast', type: 'success', message: 'Pago registrado correctamente.');
+    }
+
+    public function openPaymentModal()
+    {
+        $this->show_payment_modal = true;
     }
     public function updatedPromoEnabledFree($value)
     {
@@ -1028,6 +1154,47 @@ class ContractWorkflow extends Component
             'excess_total' => $excessTotal,
             'manual_price' => $manual,
             'subtotal' => $subtotalInstall,
+        ];
+    }
+
+    /**
+     * Estado de pago registrado en la OT de verificación del ticket.
+     * Devuelve customer_paid, payment_place y si aplica pago pendiente.
+     */
+    public function getVerificationPaymentProperty(): ?array
+    {
+        if (!$this->ticket_id) {
+            return null;
+        }
+        $ot = WorkOrder::where('ticket_id', $this->ticket_id)
+            ->where('service_type', 'verificacion_instalacion')
+            ->first();
+        if (!$ot) {
+            return null;
+        }
+        return [
+            'customer_paid' => $ot->customer_paid,
+            'payment_place' => $ot->payment_place,
+            'invoice_number' => $ot->invoice_number,
+        ];
+    }
+
+    /**
+     * Desglose de pagos para el panel de cobro flexible:
+     * metraje/instalación, TVs extra y abono proporcional.
+     */
+    public function getPaymentBreakdownProperty(): array
+    {
+        $vbd = $this->verificationBreakdown;
+        $install = $vbd ? (float) ($vbd['subtotal'] ?? 0) : (float) ($this->installation_cost ?? 0);
+        $tvInstall = (float) $this->tv_install_fee;
+        $abono = $this->abonoPreview;
+
+        return [
+            'install' => $install,
+            'tv_install' => $tvInstall,
+            'abono' => $abono ? (float) $abono['charge'] : 0.0,
+            'total' => $install + $tvInstall + ($abono ? (float) $abono['charge'] : 0.0),
         ];
     }
 

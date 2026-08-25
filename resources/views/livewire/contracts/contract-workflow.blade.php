@@ -157,6 +157,14 @@
                                 placeholder="-89.2182" maxlength="8" inputmode="decimal" />
                         </div>
                     </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button"
+                            @click="const lat = $wire.get('latitude'); const lng = $wire.get('longitude'); if (lat && lng) window.open('https://www.google.com/maps?q=' + lat + ',' + lng, '_blank');"
+                            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 bg-white hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition">
+                            <span class="material-symbols-outlined text-base">map</span>
+                            Ver en mapa
+                        </button>
+                    </div>
 
                     {{-- Tipo de servicio / tipo de cliente --}}
                     <x-ui.select wire:model.live="customer_type" label="Tipo de servicio" icon="business">
@@ -174,17 +182,17 @@
                                 contrato</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <x-ui.input type="text" wire:model="client_nit" icon="badge" label="NIT"
+                            <x-ui.input type="text" wire:model.live="client_nit" icon="badge" label="NIT"
                                 maxlength="20" />
-                            <x-ui.input type="text" wire:model="client_nrc" icon="badge" label="NRC"
+                            <x-ui.input type="text" wire:model.live="client_nrc" icon="badge" label="NRC"
                                 maxlength="20" />
-                            <x-ui.input type="date" wire:model="dui_expedition_date" icon="calendar_month"
+                            <x-ui.input type="date" wire:model.live="dui_expedition_date" icon="calendar_month"
                                 label="Fecha de expedición DUI" />
-                            <x-ui.input type="text" wire:model="dui_expedition_place" icon="location_on"
+                            <x-ui.input type="text" wire:model.live="dui_expedition_place" icon="location_on"
                                 label="Lugar de expedición DUI" />
-                            <x-ui.input type="text" wire:model="client_nationality" icon="flag"
+                            <x-ui.input type="text" wire:model.live="client_nationality" icon="flag"
                                 label="Nacionalidad" />
-                            <x-ui.select wire:model="client_marital_status" icon="diversity_2" label="Estado civil">
+                            <x-ui.select wire:model.live="client_marital_status" icon="diversity_2" label="Estado civil">
                                 <option value="">Seleccionar</option>
                                 <option value="Soltero/a">Soltero/a</option>
                                 <option value="Casado/a">Casado/a</option>
@@ -192,22 +200,22 @@
                                 <option value="Viudo/a">Viudo/a</option>
                                 <option value="Acompañado/a">Acompañado/a</option>
                             </x-ui.select>
-                            <x-ui.input type="text" wire:model="client_spouse_name" icon="diversity_2"
+                            <x-ui.input type="text" wire:model.live="client_spouse_name" icon="diversity_2"
                                 label="Nombre del cónyuge" />
-                            <x-ui.input type="text" wire:model="client_occupation" icon="work"
+                            <x-ui.input type="text" wire:model.live="client_occupation" icon="work"
                                 label="Ocupación" />
-                            <x-ui.input type="text" wire:model="client_workplace" icon="business"
+                            <x-ui.input type="text" wire:model.live="client_workplace" icon="business"
                                 label="Lugar de trabajo" />
-                            <x-ui.input type="text" wire:model="client_position" icon="badge" label="Cargo" />
-                            <x-ui.input type="number" wire:model="client_monthly_income" icon="attach_money"
+                            <x-ui.input type="text" wire:model.live="client_position" icon="badge" label="Cargo" />
+                            <x-ui.input type="number" wire:model.live="client_monthly_income" icon="attach_money"
                                 label="Ingreso mensual" step="0.01" />
-                            <x-ui.input type="text" wire:model="client_boss_name" icon="supervisor_account"
+                            <x-ui.input type="text" wire:model.live="client_boss_name" icon="supervisor_account"
                                 label="Jefe inmediato" />
-                            <x-ui.input type="text" wire:model="client_work_phone" icon="call"
+                            <x-ui.input type="text" wire:model.live="client_work_phone" icon="call"
                                 label="Tel. trabajo" />
-                            <x-ui.input type="text" wire:model="client_work_address" icon="business"
+                            <x-ui.input type="text" wire:model.live="client_work_address" icon="business"
                                 label="Dirección de trabajo" />
-                            <x-ui.textarea wire:model="client_billing_address" icon="receipt"
+                            <x-ui.textarea wire:model.live="client_billing_address" icon="receipt"
                                 label="Dirección de cobro" rows="2"
                                 placeholder="Dirección donde recibirá las facturas" class="sm:col-span-2" />
                         </div>
@@ -779,32 +787,118 @@
 
                 {{-- Precio personalizado + Beneficios --}}
                 @if ($plan_id)
-                    {{-- Datos comerciales del contrato --}}
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                        <div class="flex items-center gap-2 mb-3">
-                            <span class="material-symbols-outlined text-gray-600 text-sm">description</span>
-                            <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Datos del
-                                contrato</span>
+                    {{-- Datos comerciales del contrato / Pagos (pestañas) --}}
+                    <div x-data="{ tab: 'contrato' }" class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                        <div class="flex gap-2 mb-4 border-b border-gray-200 pb-3">
+                            <button type="button" @click="tab = 'contrato'" :class="tab === 'contrato' ? 'bg-white text-gray-800 border-gray-300 shadow-sm' : 'text-gray-500 hover:bg-white/60'"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-transparent text-sm font-semibold transition">
+                                <span class="material-symbols-outlined text-base">description</span>
+                                Datos del contrato
+                            </button>
+                            <button type="button" @click="tab = 'pagos'" :class="tab === 'pagos' ? 'bg-white text-gray-800 border-gray-300 shadow-sm' : 'text-gray-500 hover:bg-white/60'"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-transparent text-sm font-semibold transition">
+                                <span class="material-symbols-outlined text-base">payments</span>
+                                Pagos
+                            </button>
                         </div>
-                        <x-ui.toggle wire:model.live="apply_plazo" onColor="green"
-                            label="¿El cliente paga por plazo?"
-                            description="ON = aplica beneficios de permanencia (meses gratis, doble velocidad, descuento por 12/24 meses). OFF = paga mes a mes, tarifa normal sin beneficios." />
-                        @if (!$apply_plazo)
-                            <p class="text-[11px] text-amber-600 mt-2 flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[14px]">info</span>
-                                Pago mes a mes: no se aplican beneficios ni promociones de permanencia.
-                            </p>
-                        @endif
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t-2 border-gray-300">
-                            <x-ui.select wire:model.live="contract_type" icon="assignment" label="Tipo de contrato">
-                                <option value="nuevo">Nuevo</option>
-                                <option value="reconexion">Reconexión</option>
-                                <option value="renovacion">Renovación</option>
-                            </x-ui.select>
-                            <x-ui.input type="number" wire:model.live="term_months" icon="calendar_month"
-                                label="Plazo (meses)" min="1" max="60" />
-                            <x-ui.input type="text" wire:model.live="benefit" icon="card_giftcard"
-                                label="Beneficio / Promoción" placeholder="Opcional" />
+
+                        {{-- Pestaña: Datos del contrato --}}
+                        <div x-show="tab === 'contrato'">
+                            <x-ui.toggle wire:model.live="apply_plazo" onColor="green"
+                                label="¿El cliente paga por plazo?"
+                                description="ON = aplica beneficios de permanencia (meses gratis, doble velocidad, descuento por 12/24 meses). OFF = paga mes a mes, tarifa normal sin beneficios." />
+                            @if (!$apply_plazo)
+                                <p class="text-[11px] text-amber-600 mt-2 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">info</span>
+                                    Pago mes a mes: no se aplican beneficios ni promociones de permanencia.
+                                </p>
+                            @endif
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t-2 border-gray-300">
+                                <x-ui.select wire:model.live="contract_type" icon="assignment" label="Tipo de contrato">
+                                    <option value="nuevo">Nuevo</option>
+                                    <option value="reconexion">Reconexión</option>
+                                    <option value="renovacion">Renovación</option>
+                                </x-ui.select>
+                                <x-ui.input type="number" wire:model.live="term_months" icon="calendar_month"
+                                    label="Plazo (meses)" min="1" max="60" />
+                                <x-ui.input type="text" wire:model.live="benefit" icon="card_giftcard"
+                                    label="Beneficio / Promoción" placeholder="Opcional" />
+                            </div>
+                        </div>
+
+                        {{-- Pestaña: Pagos --}}
+                        <div x-show="tab === 'pagos'">
+                            @php $vp = $this->verificationPayment; @endphp
+                            <div class="rounded-lg border border-gray-200 bg-white px-4 py-3">
+                                <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                                    <p class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Estado del pago</p>
+                                    @php $todoPagado = $pay_install && $pay_tv && $pay_abono; @endphp
+                                    @if ($todoPagado && $payment_confirmed)
+                                        <span class="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-green-100 text-green-700 text-sm font-semibold">
+                                            <span class="material-symbols-outlined text-base">check_circle</span>
+                                            Pagado
+                                        </span>
+                                    @else
+                                        <button type="button" wire:click="openPaymentModal"
+                                            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition">
+                                            <span class="material-symbols-outlined text-base">payments</span>
+                                            {{ $payment_confirmed ? 'Pagar pendiente' : 'Pagar' }}
+                                        </button>
+                                    @endif
+                                </div>
+
+                                {{-- Estado en texto --}}
+                                @if ($payment_confirmed)
+                                    <p class="text-[11px] text-green-700 mb-3 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[16px]">verified</span>
+                                        Se registraron pagos. Revisá el desglose:
+                                    </p>
+                                @elseif ($customer_paid === 0 || $customer_paid === '0' || $customer_paid === null)
+                                    <p class="text-[11px] text-amber-700 mb-3 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[16px]">schedule</span>
+                                        Pendiente de pago.
+                                        @if ($payment_place === 'instalacion')
+                                            El cliente pagará el día de la instalación.
+                                        @elseif ($payment_place === 'oficina')
+                                            El cliente pagará en oficina.
+                                        @else
+                                            El cliente pagará en oficina o el día de la instalación.
+                                        @endif
+                                    </p>
+                                @endif
+
+                                @php $pbd = $this->paymentBreakdown; @endphp
+                                <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-3">
+                                    <div class="space-y-1.5 text-[12px] font-mono">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="text-gray-600">Metraje / instalación</span>
+                                            <span class="flex items-center gap-2">
+                                                <span class="text-gray-800">${{ number_format($pbd['install'], 2) }}</span>
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded {{ $pay_install ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }} font-sans">{{ $pay_install ? 'PAGADO' : 'PENDIENTE' }}</span>
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="text-gray-600">TVs extra (instalación)</span>
+                                            <span class="flex items-center gap-2">
+                                                <span class="text-gray-800">${{ number_format($pbd['tv_install'], 2) }}</span>
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded {{ $pay_tv ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }} font-sans">{{ $pay_tv ? 'PAGADO' : 'PENDIENTE' }}</span>
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="text-gray-600">Abono proporcional</span>
+                                            <span class="flex items-center gap-2">
+                                                <span class="text-gray-800">${{ number_format($pbd['abono'], 2) }}</span>
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded {{ $pay_abono ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }} font-sans">{{ $pay_abono ? 'PAGADO' : 'PENDIENTE' }}</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-gray-200 text-[12px]">
+                                        <span class="font-semibold text-gray-600">Falta pagar</span>
+                                        <span class="font-mono font-bold text-amber-700">${{ number_format((!$pay_install ? $pbd['install'] : 0) + (!$pay_tv ? $pbd['tv_install'] : 0) + (!$pay_abono ? $pbd['abono'] : 0), 2) }}</span>
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-2">Usá el botón <strong>Pagar</strong> para registrar qué conceptos se cobran. Lo pendiente se paga el día de la instalación.</p>
+                            </div>
                         </div>
                     </div>
                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -1056,6 +1150,64 @@
                     </x-ui.button>
                 </div>
             </div>
+
+            {{-- Modal de registro de cobro (flexible) --}}
+            @if ($show_payment_modal)                @php $pbd = $this->paymentBreakdown; @endphp
+                <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div class="relative mx-auto w-full max-w-lg">
+                        <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                                <h3 class="text-lg font-semibold flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-green-600">payments</span>
+                                    Registrar cobro
+                                </h3>
+                                <button type="button" wire:click="$set('show_payment_modal', false)" class="text-gray-400 hover:text-gray-600 transition">
+                                    <span class="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+                            <div class="p-6">
+                                <p class="text-sm text-gray-500 mb-4">Marcá qué conceptos se cobran ahora. Lo no marcado se paga al instalar el servicio.</p>
+                                <div class="space-y-2">
+                                    <label class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                                        <span class="flex items-center gap-2 text-sm text-gray-700">
+                                            <input type="checkbox" wire:model.live="pay_install" class="rounded border-gray-300" />
+                                            Metraje / instalación
+                                        </span>
+                                        <span class="font-mono font-semibold text-gray-800">${{ number_format($pbd['install'], 2) }}</span>
+                                    </label>
+                                    <label class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                                        <span class="flex items-center gap-2 text-sm text-gray-700">
+                                            <input type="checkbox" wire:model.live="pay_tv" class="rounded border-gray-300" />
+                                            TVs extra (instalación)
+                                        </span>
+                                        <span class="font-mono font-semibold text-gray-800">${{ number_format($pbd['tv_install'], 2) }}</span>
+                                    </label>
+                                    <label class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                                        <span class="flex items-center gap-2 text-sm text-gray-700">
+                                            <input type="checkbox" wire:model.live="pay_abono" class="rounded border-gray-300" />
+                                            Abono proporcional
+                                        </span>
+                                        <span class="font-mono font-semibold text-gray-800">${{ number_format($pbd['abono'], 2) }}</span>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between gap-3 mt-4 pt-3 border-t-2 border-gray-200">
+                                    <span class="text-sm font-bold text-gray-700">TOTAL A COBRAR</span>
+                                    <span class="text-xl font-mono font-extrabold text-green-700">${{ number_format(($pay_install ? $pbd['install'] : 0) + ($pay_tv ? $pbd['tv_install'] : 0) + ($pay_abono ? $pbd['abono'] : 0), 2) }}</span>
+                                </div>
+                                <div class="mt-4">
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">N° factura</label>
+                                    <input type="text" wire:model.live="payment_invoice" placeholder="Ej. 000123"
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm" />
+                                </div>
+                            </div>
+                            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row-reverse gap-3">
+                                <x-ui.button type="button" variant="success" icon="check_circle" wire:click="confirmPayment">Confirmar pago</x-ui.button>
+                                <x-ui.button type="button" variant="secondary" icon="close" wire:click="$set('show_payment_modal', false)">Cancelar</x-ui.button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
         @endif
 
         {{-- Step 3: Documentos --}}

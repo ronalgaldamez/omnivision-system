@@ -677,59 +677,126 @@
             @endif
 
             @if (!$isVerificationOt && $workOrder->ticket?->contract)
-                @php $cs = $this->contractSummary; @endphp
-                @if ($cs)
-                <div class="border-t border-gray-100 pt-3">
-                    <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-purple-600 text-sm">summarize</span>
-                        Resumen del paquete y cuota
-                    </label>
-                    <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                        @php
-                            $servLabel = match ($cs['service_contracted']) {
-                                'internet' => 'Internet',
-                                'cable' => 'Cable TV',
-                                'cable_internet' => 'Internet + Cable',
-                                default => $cs['service_contracted'] ?? '—',
-                            };
-                        @endphp
-                        <div class="px-4 py-3 bg-gradient-to-r from-purple-50 to-white border-b border-gray-100">
-                            <p class="text-sm font-bold text-gray-900">{{ $cs['plan_name'] ?: '—' }}
-                                @if ($cs['speed'])
-                                    <span class="text-xs font-medium text-purple-600">· {{ $cs['speed'] }}</span>
+                @php $cs = $this->contractSummary; $pst = $this->paymentStatus; @endphp
+                <div class="border-t border-gray-100 pt-3" x-data="{ tab: 'instalacion' }">
+                    <div class="flex gap-2 mb-3 border-b border-gray-200 pb-2">
+                        <button type="button" @click="tab = 'instalacion'" :class="tab === 'instalacion' ? 'bg-white text-gray-800 border-gray-300 shadow-sm' : 'text-gray-500 hover:bg-white/60'"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-transparent text-sm font-semibold transition">
+                            <span class="material-symbols-outlined text-base">handyman</span>
+                            Instalación
+                        </button>
+                        <button type="button" @click="tab = 'pagos'" :class="tab === 'pagos' ? 'bg-white text-gray-800 border-gray-300 shadow-sm' : 'text-gray-500 hover:bg-white/60'"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-transparent text-sm font-semibold transition">
+                            <span class="material-symbols-outlined text-base">payments</span>
+                            Pagos
+                        </button>
+                    </div>
+
+                    {{-- Pestaña: Pagos --}}
+                    <div x-show="tab === 'pagos'">
+                        @if ($cs)
+                        <div class="mb-4">
+                            <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-purple-600 text-sm">summarize</span>
+                                Resumen del paquete y cuota
+                            </label>
+                            <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                                @php
+                                    $servLabel = match ($cs['service_contracted']) {
+                                        'internet' => 'Internet',
+                                        'cable' => 'Cable TV',
+                                        'cable_internet' => 'Internet + Cable',
+                                        default => $cs['service_contracted'] ?? '—',
+                                    };
+                                @endphp
+                                <div class="px-4 py-3 bg-gradient-to-r from-purple-50 to-white border-b border-gray-100">
+                                    <p class="text-sm font-bold text-gray-900">{{ $cs['plan_name'] ?: '—' }}
+                                        @if ($cs['speed'])
+                                            <span class="text-xs font-medium text-purple-600">· {{ $cs['speed'] }}</span>
+                                        @endif
+                                    </p>
+                                    <p class="text-[11px] text-gray-500 mt-0.5">{{ $servLabel }}</p>
+                                </div>
+                                <div class="px-4 py-3 space-y-1.5 font-mono text-[13px]">
+                                    <div class="flex items-baseline justify-between gap-2">
+                                        <span class="text-gray-600">Cuota del plan</span>
+                                        <span class="font-medium text-gray-800">${{ number_format($cs['base'] - $cs['extra_monthly'], 2) }}</span>
+                                    </div>
+                                    @if ($cs['extra_tvs'] > 0)
+                                    <div class="flex items-baseline justify-between gap-2">
+                                        <span class="text-gray-600">TVs extra ({{ $cs['extra_tvs'] }} × ${{ number_format($this->tvExtraInfo['monthly_fee'], 2) }})</span>
+                                        <span class="font-medium text-gray-800">+${{ number_format($cs['extra_monthly'], 2) }}</span>
+                                    </div>
+                                    @endif
+                                    <div class="flex items-baseline justify-between gap-2 pt-1 border-t border-gray-200">
+                                        <span class="text-[11px] font-bold text-gray-700">CUOTA TOTAL / MES</span>
+                                        <span class="text-base font-bold text-gray-900">${{ number_format($cs['base'], 2) }}</span>
+                                    </div>
+                                </div>
+                                @if ($cs['abono'])
+                                <div class="px-4 py-3 bg-green-50 border-t border-green-200">
+                                    <div class="flex items-center justify-between gap-2 mb-1">
+                                        <span class="text-[11px] font-bold text-green-700 uppercase tracking-wide">Abono a pagar hoy</span>
+                                        <span class="text-xl font-mono font-extrabold text-green-700">${{ number_format($cs['abono']['charge'], 2) }}</span>
+                                    </div>
+                                    <p class="text-[10px] text-green-600">Cuota ${{ number_format($cs['base'], 2) }} ÷ {{ $cs['abono']['days_in_month'] }} días del mes × {{ $cs['abono']['days'] }} días (hasta el {{ $cs['payment_day'] }})</p>
+                                </div>
                                 @endif
+                            </div>
+                        </div>
+                        @endif
+
+                        {{-- Estado de pago --}}
+                        @if ($pst)
+                        <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                            <div class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between gap-3">
+                                <p class="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Estado del pago</p>
+                                @if ($pst['falta'] > 0)
+                                <button type="button" wire:click="openPaymentModal"
+                                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition">
+                                    <span class="material-symbols-outlined text-sm">payments</span>
+                                    Pagar
+                                </button>
+                                @endif
+                            </div>
+                            <div class="px-4 py-3 space-y-1.5 text-[12px] font-mono">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-gray-600">Metraje / instalación</span>
+                                    <span class="flex items-center gap-2">
+                                        <span class="text-gray-800">${{ number_format($pst['install'], 2) }}</span>
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded {{ $pst['pay_install'] ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }} font-sans">{{ $pst['pay_install'] ? 'PAGADO' : 'PENDIENTE' }}</span>
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-gray-600">TVs extra (instalación)</span>
+                                    <span class="flex items-center gap-2">
+                                        <span class="text-gray-800">${{ number_format($pst['tv_install'], 2) }}</span>
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded {{ $pst['pay_tv'] ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }} font-sans">{{ $pst['pay_tv'] ? 'PAGADO' : 'PENDIENTE' }}</span>
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-gray-600">Abono proporcional</span>
+                                    <span class="flex items-center gap-2">
+                                        <span class="text-gray-800">${{ number_format($pst['abono'], 2) }}</span>
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded {{ $pst['pay_abono'] ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }} font-sans">{{ $pst['pay_abono'] ? 'PAGADO' : 'PENDIENTE' }}</span>
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-between gap-3 pt-2 border-t border-gray-200">
+                                    <span class="font-semibold text-gray-600">Falta pagar</span>
+                                    <span class="font-mono font-bold text-amber-700">${{ number_format($pst['falta'], 2) }}</span>
+                                </div>
+                            </div>
+                            @if ($pst['payment_place'])
+                            <p class="px-4 pb-3 text-[10px] text-gray-500">
+                                @if ($pst['payment_place'] === 'instalacion') El cliente pagará el día de la instalación. @elseif ($pst['payment_place'] === 'oficina') El cliente pagará en oficina. @endif
                             </p>
-                            <p class="text-[11px] text-gray-500 mt-0.5">{{ $servLabel }}</p>
-                        </div>
-                        <div class="px-4 py-3 space-y-1.5 font-mono text-[13px]">
-                            <div class="flex items-baseline justify-between gap-2">
-                                <span class="text-gray-600">Cuota del plan</span>
-                                <span class="font-medium text-gray-800">${{ number_format($cs['base'] - $cs['extra_monthly'], 2) }}</span>
-                            </div>
-                            @if ($cs['extra_tvs'] > 0)
-                            <div class="flex items-baseline justify-between gap-2">
-                                <span class="text-gray-600">TVs extra ({{ $cs['extra_tvs'] }} × ${{ number_format($this->tvExtraInfo['monthly_fee'], 2) }})</span>
-                                <span class="font-medium text-gray-800">+${{ number_format($cs['extra_monthly'], 2) }}</span>
-                            </div>
                             @endif
-                            <div class="flex items-baseline justify-between gap-2 pt-1 border-t border-gray-200">
-                                <span class="text-[11px] font-bold text-gray-700">CUOTA TOTAL / MES</span>
-                                <span class="text-base font-bold text-gray-900">${{ number_format($cs['base'], 2) }}</span>
-                            </div>
-                        </div>
-                        @if ($cs['abono'])
-                        <div class="px-4 py-3 bg-green-50 border-t border-green-200">
-                            <div class="flex items-center justify-between gap-2 mb-1">
-                                <span class="text-[11px] font-bold text-green-700 uppercase tracking-wide">Abono a pagar hoy</span>
-                                <span class="text-xl font-mono font-extrabold text-green-700">${{ number_format($cs['abono']['charge'], 2) }}</span>
-                            </div>
-                            <p class="text-[10px] text-green-600">Cuota ${{ number_format($cs['base'], 2) }} ÷ {{ $cs['abono']['days_in_month'] }} días del mes × {{ $cs['abono']['days'] }} días (hasta el {{ $cs['payment_day'] }})</p>
                         </div>
                         @endif
                     </div>
-                </div>
-                @endif
-                <div class="border-t border-gray-100 pt-3">
+
+                    {{-- Pestaña: Instalación --}}
+                    <div x-show="tab === 'instalacion'">
                     <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-gray-400 text-sm">description</span>
                         Datos para el contrato
@@ -792,21 +859,27 @@
                         </div>
                         <div class="sm:col-span-2">
                             <label class="block text-sm font-semibold text-gray-600 mb-2 flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-green-600 text-base">verified</span>
-                                Instalación (ya cubierta en la verificación)
+                                <span class="material-symbols-outlined text-green-600 text-base">handyman</span>
+                                Costo de instalación (verificación)
                             </label>
                             @if($this->priorVerification)
                                 @php $pv = $this->priorVerification; $b = $pv['breakdown']; $tvFee = $this->tvExtraInfo; @endphp
                                 <div class="rounded-xl border border-green-200 bg-white overflow-hidden">
                                     <div class="px-3 py-2 bg-green-50 border-b border-green-200 flex items-center justify-between">
-                                        <span class="text-[11px] font-bold text-green-700">Resumen de instalación</span>
+                                        <span class="text-[11px] font-bold text-green-700">Instalación</span>
                                         <span class="text-[11px] font-mono font-bold text-green-800">${{ number_format($pv['verification_price'] > 0 ? $pv['verification_price'] : ($b['subtotal'] ?? 0), 2) }}</span>
                                     </div>
                                     <div class="px-3 py-2 space-y-1.5 text-sm">
                                         @if($b && $b['distance'] > 0)
                                         <div class="flex items-center justify-between">
-                                            <span class="text-gray-600">Instalación base ({{ $b['covered'] }} m)</span>
-                                            <span class="font-mono font-semibold text-gray-800">${{ number_format($b['base'], 2) }}</span>
+                                            <span class="text-gray-600">Base ({{ $b['covered'] }} m)</span>
+                                            <span class="font-mono font-semibold text-gray-800">
+                                                @if($pv['verification_price'] == 0 || ($b['base'] == 0))
+                                                    $0.00 <span class="text-[10px] text-green-600 font-sans">(promo gratis)</span>
+                                                @else
+                                                    ${{ number_format($b['base'], 2) }}
+                                                @endif
+                                            </span>
                                         </div>
                                         @if($b['blocks'] > 0)
                                         <div class="flex items-center justify-between">
@@ -815,81 +888,63 @@
                                         </div>
                                         @endif
                                         @endif
-                                        @if($pv['tv_install_fee'] > 0)
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-gray-600">TVs extra ({{ $pv['extra_tvs'] }} × ${{ number_format($tvFee['install_fee'], 2) }})</span>
-                                            <span class="font-mono font-semibold text-gray-800">${{ number_format($pv['tv_install_fee'], 2) }}</span>
-                                        </div>
-                                        @endif
                                         <div class="border-t border-dashed border-green-200 pt-1.5 flex items-center justify-between">
-                                            <span class="text-[11px] font-bold text-green-700">TOTAL YA CUBIERTO</span>
-                                            <span class="text-base font-mono font-bold text-green-800">${{ number_format(($pv['verification_price'] > 0 ? $pv['verification_price'] : ($b['subtotal'] ?? 0)) + $pv['tv_install_fee'], 2) }}</span>
+                                            <span class="text-[11px] font-bold text-green-700">TOTAL INSTALACIÓN</span>
+                                            <span class="text-base font-mono font-bold text-green-800">${{ number_format($pv['verification_price'] > 0 ? $pv['verification_price'] : ($b['subtotal'] ?? 0), 2) }}</span>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="mt-3">
-                                    <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
-                                        <span class="material-symbols-outlined text-blue-600 text-sm">live_tv</span>
-                                        Agregar más TVs
-                                        <span class="text-[9px] text-green-500">(+${{ number_format($tvFee['install_fee'], 2) }} c/u de instalación)</span>
-                                    </label>
-                                    <input type="number" wire:model.live="extra_tvs_add"
-                                        {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
-                                        min="0" max="10" placeholder="0"
-                                        class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
-                                    @if($extra_tvs_add > 0)
-                                    <div class="mt-2 rounded-xl border border-blue-200 bg-blue-50 overflow-hidden">
-                                        <div class="px-3 py-2 border-b border-blue-200 flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined text-blue-600 text-[15px]">live_tv</span>
-                                            <span class="text-[11px] font-bold text-blue-700">TVs extra adicionales</span>
-                                        </div>
-                                        <div class="px-3 py-2 space-y-1.5 text-sm">
-                                            <div class="flex items-center justify-between">
-                                                <span class="text-blue-800">Instalación ({{ $extra_tvs_add }} × ${{ number_format($tvFee['install_fee'], 2) }})</span>
-                                                <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * $tvFee['install_fee'], 2) }}</span>
-                                            </div>
-                                            <div class="flex items-center justify-between">
-                                                <span class="text-blue-800">Mensual ({{ $extra_tvs_add }} × ${{ number_format($tvFee['monthly_fee'], 2) }})</span>
-                                                <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * $tvFee['monthly_fee'], 2) }}/mes</span>
-                                            </div>
-                                            <p class="text-[10px] text-blue-600 pt-1 border-t border-blue-200">Se sumará a la instalación al guardar.</p>
-                                        </div>
-                                    </div>
-                                    @endif
                                 </div>
                             @else
-                                @php $tvFee = $this->tvExtraInfo; @endphp
                                 <div class="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-600 mb-2">
                                     Sin verificación previa. Se cobrará y registrará la instalación aquí.
                                 </div>
+                            @endif
+
+                            {{-- TVs extra (combobox Sí/No + cantidad) --}}
+                            <div class="mt-3">
                                 <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
                                     <span class="material-symbols-outlined text-blue-600 text-sm">live_tv</span>
-                                    Cantidad de TVs
-                                    <span class="text-[9px] text-green-500">(+${{ number_format($tvFee['install_fee'], 2) }} c/u de instalación)</span>
+                                    ¿El cliente desea TV extra?
                                 </label>
-                                <input type="number" wire:model.live="extra_tvs_add"
+                                <select wire:model.live="desea_tv_extra"
+                                    {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
+                                    <option value="">Seleccionar</option>
+                                    <option value="1">Sí, desea</option>
+                                    <option value="0">No desea</option>
+                                </select>
+                            </div>
+
+                            @if($desea_tv_extra === '1')
+                            <div class="mt-3">
+                                <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-blue-600 text-sm">live_tv</span>
+                                    Cantidad de TVs extra
+                                    <span class="text-[9px] text-green-500">(+${{ number_format($tvFee['install_fee'] ?? 6, 2) }} c/u instalación, +${{ number_format($tvFee['monthly_fee'] ?? 1, 2) }}/mes)</span>
+                                </label>
+                                <input type="number" wire:model.live="extra_tvs"
                                     {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
                                     min="0" max="10" placeholder="0"
                                     class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
-                                @if($extra_tvs_add > 0)
+                                @if($extra_tvs > 0)
                                 <div class="mt-2 rounded-xl border border-blue-200 bg-blue-50 overflow-hidden">
                                     <div class="px-3 py-2 border-b border-blue-200 flex items-center gap-1.5">
                                         <span class="material-symbols-outlined text-blue-600 text-[15px]">live_tv</span>
-                                        <span class="text-[11px] font-bold text-blue-700">TVs extra</span>
+                                        <span class="text-[11px] font-bold text-blue-700">TVs extra ({{ $extra_tvs }})</span>
                                     </div>
                                     <div class="px-3 py-2 space-y-1.5 text-sm">
                                         <div class="flex items-center justify-between">
-                                            <span class="text-blue-800">Instalación ({{ $extra_tvs_add }} × ${{ number_format($tvFee['install_fee'], 2) }})</span>
-                                            <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * $tvFee['install_fee'], 2) }}</span>
+                                            <span class="text-blue-800">Instalación ({{ $extra_tvs }} × ${{ number_format($tvFee['install_fee'] ?? 6, 2) }})</span>
+                                            <span class="font-mono font-semibold text-blue-900">${{ number_format($extra_tvs * ($tvFee['install_fee'] ?? 6), 2) }}</span>
                                         </div>
                                         <div class="flex items-center justify-between">
-                                            <span class="text-blue-800">Mensual ({{ $extra_tvs_add }} × ${{ number_format($tvFee['monthly_fee'], 2) }})</span>
-                                            <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * $tvFee['monthly_fee'], 2) }}/mes</span>
+                                            <span class="text-blue-800">Mensual ({{ $extra_tvs }} × ${{ number_format($tvFee['monthly_fee'] ?? 1, 2) }})</span>
+                                            <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs * ($tvFee['monthly_fee'] ?? 1), 2) }}/mes</span>
                                         </div>
-                                        <p class="text-[10px] text-blue-600 pt-1 border-t border-blue-200">Se registrará al guardar.</p>
                                     </div>
                                 </div>
                                 @endif
+                            </div>
                             @endif
                         </div>
                         <div class="sm:col-span-2">
@@ -902,6 +957,66 @@
                                 placeholder="Ej. 000123"
                                 class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500">
                             @error('invoice_number')<span class="text-[10px] text-red-500">{{ $message }}</span>@enderror
+                        </div>
+                    </div>
+                </div>
+                </div>
+            @endif
+
+            {{-- Modal de pago (OT de instalación) --}}
+            @if ($show_payment_modal)
+                @php $pst2 = $this->paymentStatus; @endphp
+                <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div class="relative mx-auto w-full max-w-lg">
+                        <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                                <h3 class="text-lg font-semibold flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-green-600">payments</span>
+                                    Registrar cobro
+                                </h3>
+                                <button type="button" wire:click="$set('show_payment_modal', false)" class="text-gray-400 hover:text-gray-600 transition">
+                                    <span class="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+                            <div class="p-6">
+                                <p class="text-sm text-gray-500 mb-4">Marcá qué conceptos se cobran ahora. Lo no marcado se paga el día de la instalación.</p>
+                                <div class="space-y-2">
+                                    <label class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                                        <span class="flex items-center gap-2 text-sm text-gray-700">
+                                            <input type="checkbox" wire:model.live="pay_install" class="rounded border-gray-300" />
+                                            Metraje / instalación
+                                        </span>
+                                        <span class="font-mono font-semibold text-gray-800">${{ number_format($pst2['install'] ?? 0, 2) }}</span>
+                                    </label>
+                                    <label class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                                        <span class="flex items-center gap-2 text-sm text-gray-700">
+                                            <input type="checkbox" wire:model.live="pay_tv" class="rounded border-gray-300" />
+                                            TVs extra (instalación)
+                                        </span>
+                                        <span class="font-mono font-semibold text-gray-800">${{ number_format($pst2['tv_install'] ?? 0, 2) }}</span>
+                                    </label>
+                                    <label class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                                        <span class="flex items-center gap-2 text-sm text-gray-700">
+                                            <input type="checkbox" wire:model.live="pay_abono" class="rounded border-gray-300" />
+                                            Abono proporcional
+                                        </span>
+                                        <span class="font-mono font-semibold text-gray-800">${{ number_format($pst2['abono'] ?? 0, 2) }}</span>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between gap-3 mt-4 pt-3 border-t-2 border-gray-200">
+                                    <span class="text-sm font-bold text-gray-700">TOTAL A COBRAR</span>
+                                    <span class="text-xl font-mono font-extrabold text-green-700">${{ number_format(($pay_install ? ($pst2['install'] ?? 0) : 0) + ($pay_tv ? ($pst2['tv_install'] ?? 0) : 0) + ($pay_abono ? ($pst2['abono'] ?? 0) : 0), 2) }}</span>
+                                </div>
+                                <div class="mt-4">
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">N° factura</label>
+                                    <input type="text" wire:model.live="invoice_number" placeholder="Ej. 000123"
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm" />
+                                </div>
+                            </div>
+                            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row-reverse gap-3">
+                                <x-ui.button type="button" variant="success" icon="check_circle" wire:click="confirmPayment">Confirmar pago</x-ui.button>
+                                <x-ui.button type="button" variant="secondary" icon="close" wire:click="$set('show_payment_modal', false)">Cancelar</x-ui.button>
+                            </div>
                         </div>
                     </div>
                 </div>

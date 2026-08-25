@@ -77,6 +77,10 @@ class WorkOrderShow extends Component
     public $customer_accepts_cost = null;
     public $customer_paid = null;
     public $payment_place = '';
+    public $show_payment_modal = false;
+    public $pay_install = false;
+    public $pay_tv = false;
+    public $pay_abono = false;
     public $desea_tv_extra = null;
     public $invoice_number = '';
 
@@ -215,6 +219,9 @@ class WorkOrderShow extends Component
         $this->customer_paid = $draft['customer_paid'] ?? $this->workOrder->customer_paid;
         $this->payment_place = $draft['payment_place'] ?? $this->workOrder->payment_place ?? '';
         $this->desea_tv_extra = $draft['desea_tv_extra'] ?? null;
+        $this->pay_install = (bool) ($draft['pay_install'] ?? $this->workOrder->ticket?->contract?->pay_install ?? false);
+        $this->pay_tv = (bool) ($draft['pay_tv'] ?? $this->workOrder->ticket?->contract?->pay_tv ?? false);
+        $this->pay_abono = (bool) ($draft['pay_abono'] ?? $this->workOrder->ticket?->contract?->pay_abono ?? false);
 
         $contract = $this->workOrder->ticket?->contract;
         $this->access_type = $draft['access_type'] ?? $contract->access_type ?? '';
@@ -226,6 +233,8 @@ class WorkOrderShow extends Component
         $this->payment_day = $draft['payment_day'] ?? $contract->payment_day ?? '';
         $this->extra_tvs = $draft['extra_tvs'] ?? $contract->extra_tvs ?? 0;
         $this->extra_tvs_add = $draft['extra_tvs_add'] ?? 0;
+        // Si el contrato ya tiene TVs extra, precargar "desea TV" = Sí.
+        $this->desea_tv_extra = $draft['desea_tv_extra'] ?? (((int) $this->extra_tvs) > 0 ? '1' : null);
 
         $client = $this->workOrder->client;
         $this->latitude = $draft['latitude'] ?? $this->workOrder->latitude ?? $client->latitude ?? null;
@@ -379,10 +388,8 @@ class WorkOrderShow extends Component
         $plan = $contract->plan;
         $contractPrice = (float) ($contract->price ?? 0);
 
-        // TVs en vivo: precargadas (si vino de verificación) + las que el técnico agrega ahora.
-        $pv = $this->priorVerification;
-        $baseTvs = $pv ? (int) $pv['extra_tvs'] : (int) ($contract->extra_tvs ?? 0);
-        $liveTvs = $baseTvs + max(0, (int) $this->extra_tvs_add);
+        // TVs en vivo: la cantidad total del contrato, editable por el técnico.
+        $liveTvs = max(0, (int) $this->extra_tvs);
 
         $fees = \App\Services\TvExtraFees::forZone($contract->zone_id ?: null);
         $extraMonthly = $liveTvs * ($fees['monthly_fee'] ?? 1);
@@ -404,6 +411,61 @@ class WorkOrderShow extends Component
             'install_cost' => (float) ($contract->installation_cost ?? 0),
             'payment_day' => (int) ($contract->payment_day ?? 0),
             'abono' => $abono,
+        ];
+    }
+
+    /**
+     * Estado de pago del contrato: qué conceptos se pagaron y cuánto falta.
+     */
+    public function getPaymentStatusProperty(): ?array
+    {
+        if ($this->isVerificationOt()) {
+            return null;
+        }
+        $contract = $this->workOrder->ticket?->contract;
+        if (!$contract) {
+            return null;
+        }
+
+        $fees = \App\Services\TvExtraFees::forZone($contract->zone_id ?: null);
+        $vbd = null;
+        try {
+            $service = app(\App\Services\VerificationPricingService::class);
+            $fee = $service->installFeeFor($contract->ticket);
+            $vbd = [
+                'covered' => (int) ($fee['covered_meters'] ?? 150),
+                'base' => (float) ($fee['fee'] ?? 0),
+                'excess_per_50m' => (float) ($fee['excess_per_50m'] ?? 0),
+            ];
+        } catch (\Throwable $e) {
+            $vbd = null;
+        }
+
+        $install = (float) ($contract->installation_cost ?? 0);
+        $tvInstall = (float) ($contract->tv_install_fee ?? 0);
+        $abono = $contract->abonoProporcional(now());
+        $abonoCharge = $abono ? (float) $abono['charge'] : 0.0;
+
+        $payInstall = (bool) $contract->pay_install;
+        $payTv = (bool) $contract->pay_tv;
+        $payAbono = (bool) $contract->pay_abono;
+
+        $falta = 0.0;
+        if (!$payInstall) $falta += $install;
+        if (!$payTv) $falta += $tvInstall;
+        if (!$payAbono) $falta += $abonoCharge;
+
+        return [
+            'customer_paid' => $contract->customer_paid,
+            'payment_place' => $contract->payment_place,
+            'payment_invoice' => $contract->payment_invoice,
+            'install' => $install,
+            'tv_install' => $tvInstall,
+            'abono' => $abonoCharge,
+            'pay_install' => $payInstall,
+            'pay_tv' => $payTv,
+            'pay_abono' => $payAbono,
+            'falta' => $falta,
         ];
     }
 
@@ -551,6 +613,67 @@ class WorkOrderShow extends Component
     }
 
     /**
+     * Al cambiar la cantidad de TVs extra en la OT de instalación,
+     * recalcular los cargos y persistirlos en el contrato.
+     */
+    public function updatedExtraTvs($value)
+    {
+        $count = max(0, (int) $value);
+        $this->extra_tvs = $count;
+
+        $contract = $this->workOrder->ticket?->contract;
+        if (!$contract) {
+            return;
+        }
+        $fees = \App\Services\TvExtraFees::forZone($contract->zone_id ?: null);
+        $contract->update([
+            'extra_tvs' => $count,
+            'tv_install_fee' => $count * ($fees['install_fee'] ?? 6),
+            'monthly_extra_fee' => $count * ($fees['monthly_fee'] ?? 1),
+        ]);
+    }
+
+    public function openPaymentModal()
+    {
+        $this->show_payment_modal = true;
+    }
+
+    public function updatedPayInstall($value)
+    {
+        $this->pay_install = (bool) $value;
+    }
+
+    public function updatedPayTv($value)
+    {
+        $this->pay_tv = (bool) $value;
+    }
+
+    public function updatedPayAbono($value)
+    {
+        $this->pay_abono = (bool) $value;
+    }
+
+    /**
+     * Confirma el pago en la OT de instalación: guarda los conceptos cobrados en el contrato.
+     */
+    public function confirmPayment()
+    {
+        $contract = $this->workOrder->ticket?->contract;
+        if (!$contract) {
+            return;
+        }
+        $contract->update([
+            'customer_paid' => true,
+            'pay_install' => (bool) $this->pay_install,
+            'pay_tv' => (bool) $this->pay_tv,
+            'pay_abono' => (bool) $this->pay_abono,
+            'payment_invoice' => $this->invoice_number ?: null,
+        ]);
+        $this->show_payment_modal = false;
+        $this->dispatch('show-toast', type: 'success', message: 'Pago registrado correctamente.');
+    }
+
+    /**
      * Al cambiar si el cliente acepta, limpiar la pregunta de TV extra.
      */
     public function updatedCustomerAcceptsCost($value)
@@ -566,6 +689,15 @@ class WorkOrderShow extends Component
     {
         if ($value !== '1') {
             $this->extra_tvs = 0;
+            $contract = $this->workOrder->ticket?->contract;
+            if ($contract) {
+                $fees = \App\Services\TvExtraFees::forZone($contract->zone_id ?: null);
+                $contract->update([
+                    'extra_tvs' => 0,
+                    'tv_install_fee' => 0,
+                    'monthly_extra_fee' => 0,
+                ]);
+            }
         }
     }
 
@@ -654,10 +786,9 @@ class WorkOrderShow extends Component
         // Sincronizar datos técnicos al contrato asociado
         $contract = $this->workOrder->ticket?->contract;
         if ($contract) {
-            // Total de TVs: si vino de verificación, precargadas + las agregadas; si no, solo las agregadas.
+            // Total de TVs: la cantidad editable por el técnico (fuente = contrato).
             $pv = $this->priorVerification;
-            $baseTvs = $pv ? (int) $pv['extra_tvs'] : 0;
-            $extraTvs = $baseTvs + max(0, (int) $this->extra_tvs_add);
+            $extraTvs = max(0, (int) $this->extra_tvs);
             $fees = \App\Services\TvExtraFees::forZone($contract->zone_id ?: null);
 
             // En instalación sin verificación previa, el costo real es el chequeo del técnico.
