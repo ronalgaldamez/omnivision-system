@@ -75,6 +75,8 @@ class WorkOrderShow extends Component
     public $precio_por_metro = null;
     public $verification_price = null;
     public $customer_accepts_cost = null;
+    public $customer_paid = null;
+    public $payment_place = '';
     public $desea_tv_extra = null;
     public $invoice_number = '';
 
@@ -210,6 +212,8 @@ class WorkOrderShow extends Component
         $this->invoice_number = $draft['invoice_number'] ?? $this->workOrder->invoice_number ?? '';
         $this->precio_por_metro = $draft['precio_por_metro'] ?? ($this->workOrder->precio_por_metro ?? ($this->verificationRules['price_per_meter'] ?? 5));
         $this->customer_accepts_cost = $draft['customer_accepts_cost'] ?? $this->workOrder->customer_accepts_cost;
+        $this->customer_paid = $draft['customer_paid'] ?? $this->workOrder->customer_paid;
+        $this->payment_place = $draft['payment_place'] ?? $this->workOrder->payment_place ?? '';
         $this->desea_tv_extra = $draft['desea_tv_extra'] ?? null;
 
         $contract = $this->workOrder->ticket?->contract;
@@ -489,6 +493,8 @@ class WorkOrderShow extends Component
             'precio_por_metro' => $this->precio_por_metro,
             'verification_price' => $this->verification_price,
             'customer_accepts_cost' => $this->customer_accepts_cost,
+            'customer_paid' => $this->customer_paid,
+            'payment_place' => $this->payment_place,
             'desea_tv_extra' => $this->desea_tv_extra,
             'access_type' => $this->access_type,
             'speed' => $this->speed,
@@ -617,6 +623,8 @@ class WorkOrderShow extends Component
                 'precio_por_metro' => $this->precio_por_metro,
                 'verification_price' => $this->verification_price ?: null,
                 'customer_accepts_cost' => $this->customer_accepts_cost,
+                'customer_paid' => $this->customer_paid,
+                'payment_place' => $this->payment_place,
                 'extra_tvs' => max(0, (int) $this->extra_tvs),
                 'invoice_number' => $this->invoice_number ?: null,
                 'latitude' => $this->latitude,

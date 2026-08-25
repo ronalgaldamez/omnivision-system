@@ -378,9 +378,8 @@
                         <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>Latitud
                         @if($isVerificationOt)<span class="text-[10px] text-gray-400 font-normal">(opcional, recomendado)</span>@endif
                     </label>
-                    </label>
                     <input type="text" wire:model.live="latitude"
-                        x-on:input="$el.value = formatLat($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
+                        x-on:input="let formatted = formatLat($el.value); if ($el.value !== formatted) { $el.value = formatted; $el.dispatchEvent(new Event('input', { bubbles: true })); }"
                         class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
                         placeholder="14.1050" maxlength="7" inputmode="decimal"
                         {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}>
@@ -391,9 +390,8 @@
                         <span class="material-symbols-outlined text-gray-400 text-sm">explore</span>Longitud
                         @if($isVerificationOt)<span class="text-[10px] text-gray-400 font-normal">(opcional, recomendado)</span>@endif
                     </label>
-                    </label>
                     <input type="text" wire:model.live="longitude"
-                        x-on:input="$el.value = formatLng($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
+                        x-on:input="let formatted = formatLng($el.value); if ($el.value !== formatted) { $el.value = formatted; $el.dispatchEvent(new Event('input', { bubbles: true })); }"
                         class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
                         placeholder="-89.1488" maxlength="8" inputmode="decimal"
                         {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}>
@@ -536,6 +534,18 @@
                             <p class="text-[10px] text-red-500 mt-1">El cliente no acepta: no procede con el contrato.</p>
                             @endif
                             @if($customer_accepts_cost === '1')
+                            {{-- ¿El cliente paga? --}}
+                            <div class="mt-3">
+                                <label class="block text-[10px] text-gray-400 mb-0.5">¿El cliente paga?</label>
+                                <select wire:model.live="customer_paid"
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                                    <option value="">Seleccionar</option>
+                                    <option value="1">Sí, paga ahora</option>
+                                    <option value="0">No paga</option>
+                                </select>
+                            </div>
+
+                            @if($customer_paid === '1')
                             {{-- N° de factura del talonario del técnico --}}
                             <div class="mt-3">
                                 <label class="block text-[10px] text-gray-400 mb-0.5">
@@ -547,6 +557,18 @@
                                     class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                                 @error('invoice_number')<span class="text-[10px] text-red-500">{{ $message }}</span>@enderror
                             </div>
+                            @elseif($customer_paid === '0')
+                            {{-- ¿Dónde pagará? --}}
+                            <div class="mt-3">
+                                <label class="block text-[10px] text-gray-400 mb-0.5">¿Dónde pagará?</label>
+                                <select wire:model.live="payment_place"
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                                    <option value="">Seleccionar</option>
+                                    <option value="oficina">Paga en oficina</option>
+                                    <option value="instalacion">Paga el día de la instalación</option>
+                                </select>
+                            </div>
+                            @endif
                             @endif
                         </div>
                     @endif

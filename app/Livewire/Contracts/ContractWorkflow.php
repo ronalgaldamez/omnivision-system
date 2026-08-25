@@ -93,6 +93,9 @@ class ContractWorkflow extends Component
     public $promo_double_speed = false;
     public $promo_display_speed = '';
     public $promo_original_speed = '';
+    // Flags para desactivar promos puntualmente en este contrato (sin tocar config global).
+    public $promo_enabled_free = true;
+    public $promo_enabled_double = true;
 
     // ─── TV extra ───
     public $extra_tvs = 0;
@@ -286,10 +289,17 @@ class ContractWorkflow extends Component
                 $this->contractDigitalCode = $existingContract->contract_digital_code;
                 $this->payment_date = $existingContract->payment_date?->format('Y-m-d');
                 $this->payment_day = $existingContract->payment_day;
+                $this->term_months = (int) ($existingContract->term_months ?? $this->term_months);
+                $this->contract_type = $existingContract->contract_type ?? $this->contract_type;
                 $this->extra_tvs = (int) ($existingContract->extra_tvs ?? 0);
                 $this->tv_install_fee = (float) ($existingContract->tv_install_fee ?? 0);
                 $this->monthly_extra_fee = (float) ($existingContract->monthly_extra_fee ?? 0);
                 $this->customer_type = $existingContract->customer_type ?? '';
+                $this->apply_plazo = (bool) ($existingContract->apply_plazo ?? true);
+                $this->promo_enabled_free = (bool) ($existingContract->promo_enabled_free ?? true);
+                $this->promo_enabled_double = (bool) ($existingContract->promo_enabled_double ?? true);
+                // Recalcular promos según el estado cargado del contrato.
+                $this->refreshPromotions();
             }
 
             // ─── Ticket promovido desde verificación en campo ───
@@ -355,6 +365,9 @@ class ContractWorkflow extends Component
             'customer_type' => $this->customer_type,
             'payment_date' => $this->payment_date,
             'payment_day' => $this->payment_day,
+            'promo_enabled_free' => $this->promo_enabled_free,
+            'promo_enabled_double' => $this->promo_enabled_double,
+            'apply_plazo' => $this->apply_plazo,
         ]);
     }
 
@@ -373,12 +386,13 @@ class ContractWorkflow extends Component
 
     public function updatedLatitude($value)
     {
-        $this->persistClientCoordinates();
+        // Sin persistencia por tecla: se guarda al avanzar/crear el contrato.
+        // Evita re-renders que causan recursión con wire:model.live.
     }
 
     public function updatedLongitude($value)
     {
-        $this->persistClientCoordinates();
+        // Sin persistencia por tecla.
     }
 
     private function persistClientCoordinates(): void
@@ -581,12 +595,12 @@ class ContractWorkflow extends Component
     {
         $parts = [];
 
-        if ($this->promo_double_speed && $this->promo_display_speed) {
+        if ($this->appliedDoubleSpeed() && $this->promo_display_speed) {
             $parts[] = 'Doble velocidad: ' . $this->promo_display_speed;
         }
 
-        if ($this->promo_free_months > 0) {
-            $parts[] = $this->promo_free_months . ' meses gratis';
+        if ($this->appliedFreeMonths() > 0) {
+            $parts[] = $this->appliedFreeMonths() . ' meses gratis';
         }
 
         return implode(', ', $parts);
@@ -697,6 +711,27 @@ class ContractWorkflow extends Component
         $this->benefitManuallySet = false;
         $this->refreshBenefitsFromAvailable();
         $this->refreshPromotions();
+
+        // Persistir el plazo en el contrato para que no se pierda al recargar.
+        if ($this->ticket_id) {
+            $contract = \App\Models\Contract::where('ticket_id', $this->ticket_id)->first();
+            if ($contract) {
+                $contract->update(['term_months' => (int) $value ?: null]);
+            }
+        }
+    }
+
+    /**
+     * Persistir el tipo de contrato en el contrato al cambiarlo.
+     */
+    public function updatedContractType($value)
+    {
+        if ($this->ticket_id) {
+            $contract = \App\Models\Contract::where('ticket_id', $this->ticket_id)->first();
+            if ($contract) {
+                $contract->update(['contract_type' => $value ?: null]);
+            }
+        }
     }
 
     /**
@@ -706,6 +741,7 @@ class ContractWorkflow extends Component
     public function updatedApplyPlazo($value)
     {
         $apply = (bool) $value;
+        $this->apply_plazo = $apply;
 
         if (!$apply) {
             // Pago mes a mes: sin beneficios de permanencia.
@@ -724,6 +760,48 @@ class ContractWorkflow extends Component
             $this->refreshBenefitsFromAvailable();
             $this->refreshPromotions();
         }
+
+        $this->persistDraft();
+        $this->persistPromoToggles();
+    }
+
+    /**
+     * Guarda los toggles de promociones/plazo en el contrato para que persistan.
+     */
+    private function persistPromoToggles(): void
+    {
+        if (!$this->ticket_id) {
+            return;
+        }
+        $contract = \App\Models\Contract::where('ticket_id', $this->ticket_id)->first();
+        if (!$contract) {
+            return;
+        }
+        $contract->update([
+            'apply_plazo' => $this->apply_plazo,
+            'promo_enabled_free' => $this->promo_enabled_free,
+            'promo_enabled_double' => $this->promo_enabled_double,
+        ]);
+    }
+    public function updatedPromoEnabledFree($value)
+    {
+        $this->promo_enabled_free = (bool) $value;
+        $this->benefitManuallySet = false;
+        $this->refreshPromotions();
+        $this->persistDraft();
+        $this->persistPromoToggles();
+    }
+
+    /**
+     * Al desactivar/activar doble velocidad puntualmente, recalcular promos y beneficio.
+     */
+    public function updatedPromoEnabledDouble($value)
+    {
+        $this->promo_enabled_double = (bool) $value;
+        $this->benefitManuallySet = false;
+        $this->refreshPromotions();
+        $this->persistDraft();
+        $this->persistPromoToggles();
     }
 
     /**
@@ -794,6 +872,22 @@ class ContractWorkflow extends Component
     }
 
     /**
+     * Meses gratis efectivos considerando si el SA los desactivó para este contrato.
+     */
+    public function appliedFreeMonths(): int
+    {
+        return $this->promo_enabled_free ? $this->promo_free_months : 0;
+    }
+
+    /**
+     * Indica si la doble velocidad está activa para este contrato (considerando toggle).
+     */
+    public function appliedDoubleSpeed(): bool
+    {
+        return $this->promo_enabled_double && $this->promo_double_speed;
+    }
+
+    /**
      * Al cambiar la cantidad de TVs extra, recalcula los cargos:
      * - $6 de instalación por TV (cargo único)
      * - $1 mensual recurrente por TV
@@ -809,6 +903,18 @@ class ContractWorkflow extends Component
         $this->tv_install_fee = $count * $fees['install_fee'];
         // Recargo mensual: FIJO (+$1) sin importar cuántas TVs extra haya.
         $this->monthly_extra_fee = $count * ($fees['monthly_fee'] ?? 1);
+
+        // Persistir la cantidad de TVs en el contrato para que no se pierda al recargar.
+        if ($this->ticket_id) {
+            $contract = \App\Models\Contract::where('ticket_id', $this->ticket_id)->first();
+            if ($contract) {
+                $contract->update([
+                    'extra_tvs' => $count,
+                    'tv_install_fee' => $this->tv_install_fee,
+                    'monthly_extra_fee' => $this->monthly_extra_fee,
+                ]);
+            }
+        }
     }
 
     public function getMonthlyTotal(): float
