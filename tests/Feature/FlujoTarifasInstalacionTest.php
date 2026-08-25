@@ -171,7 +171,8 @@ class FlujoTarifasInstalacionTest extends TestCase
         $ticket = $this->makeTicketWithZone('internet', $zona);
         $service = new VerificationPricingService();
 
-        // Excede 150m con campaña: aplica recargo -> $25 + $5 = $30
-        $this->assertEquals(30.0, $service->suggestedInstallCostFor($ticket, 200));
+        // Campaña de instalación gratis activa: la base se perdona.
+        // Excede 150m (200m), solo se cobra el recargo por los 50m extra -> $5.
+        $this->assertEquals(5.0, $service->suggestedInstallCostFor($ticket, 200));
     }
 }
