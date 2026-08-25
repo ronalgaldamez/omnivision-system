@@ -119,12 +119,19 @@ class VerificationPricingService
     {
         $fee = $this->installFeeFor($ticket);
         $covered = (int) ($fee['covered_meters'] ?? 150);
+        $excess = (float) ($fee['excess_per_50m'] ?? 0);
 
         if ($this->freeInstallationApplies($ticket, $dropDistance)) {
-            // Dentro de los metros cubiertos con campaña activa -> gratis
-            return (float) $dropDistance <= $covered ? 0.0 : $this->suggestedInstallCost($dropDistance, $fee);
+            // Instalación gratis: dentro de los metros cubiertos => $0.
+            // Si se excede, solo se cobran los metros que se pasan (recargo), no la base.
+            if ($dropDistance <= $covered) {
+                return 0.0;
+            }
+            $extraBlocks = ceil(($dropDistance - $covered) / 50);
+            return $extraBlocks * $excess;
         }
 
+        // Sin campaña: se cobra la base + recargo por exceso.
         return $this->suggestedInstallCost($dropDistance, $fee);
     }
 
@@ -171,6 +178,49 @@ class VerificationPricingService
         }
 
         return true;
+    }
+
+    /**
+     * Devuelve TODAS las campañas de instalación gratis vigentes para el ticket
+     * (se muestran de forma informativa, sin filtrar por servicio del plan).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function freeInstallationInfo(Ticket $ticket): array
+    {
+        $zoneId = $ticket->contract?->zone_id ?? $ticket->zone_id;
+
+        $campaigns = \App\Models\Campaign::where('type', 'free_installation')
+            ->where('category', 'promotion')
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+            })
+            ->where(function ($q) use ($zoneId) {
+                $q->whereNull('zone_id');
+                if ($zoneId) {
+                    $q->orWhere('zone_id', $zoneId);
+                }
+            })
+            ->orderBy('service')
+            ->get();
+
+        $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+        return $campaigns->map(function ($campaign) use ($meses) {
+            $mes = $campaign->ends_at ? $campaign->ends_at->format('n') : null;
+            return [
+                'name' => $campaign->name,
+                'service' => $campaign->service,
+                'month' => $mes ? ($meses[$mes - 1] ?? null) : null,
+                'starts_at' => $campaign->starts_at?->format('d/m/Y'),
+                'ends_at' => $campaign->ends_at?->format('d/m/Y'),
+                'config' => $campaign->config ?? [],
+            ];
+        })->values()->all();
     }
 
     /**

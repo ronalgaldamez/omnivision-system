@@ -94,26 +94,9 @@ class WorkOrderShow extends Component
 
         $service = app(VerificationPricingService::class);
 
-        // Costo de instalación según la tarifa por zona + campañas (instalación gratis).
-        // Aplica tanto en OT de verificación como en OT de instalación directa (chequeo en campo).
-        $fee = $service->installFeeFor($ticket);
-        $covered = (int) ($fee['covered_meters'] ?? 150);
-        $base = (float) ($fee['fee'] ?? 0);
-        $excess = (float) ($this->precio_por_metro ?? $fee['excess_per_50m'] ?? 0);
-
-        // Instalación gratis por campaña si aplica y no excede los metros cubiertos
-        if ($service->freeInstallationApplies($ticket, $drop)) {
-            if ($drop <= $covered) {
-                return 0.0;
-            }
-        }
-
-        if ($drop <= $covered) {
-            return $base;
-        }
-
-        $extraBlocks = ceil(($drop - $covered) / 50);
-        return $base + ($extraBlocks * $excess);
+        // Costo de instalación según tarifa por zona + campañas de instalación gratis.
+        // Usa el servicio (corregido) para que con instalación gratis se cobre solo el recargo si se excede.
+        return $service->suggestedInstallCostFor($ticket, $drop);
     }
 
     /**
@@ -125,17 +108,24 @@ class WorkOrderShow extends Component
     public function getVerificationPriceBreakdownProperty(): array
     {
         $drop = (float) $this->drop_distance;
+        $ticket = $this->workOrder->ticket;
         $service = app(VerificationPricingService::class);
-        $fee = $service->installFeeFor($this->workOrder->ticket);
+        $fee = $service->installFeeFor($ticket);
         $covered = (int) ($fee['covered_meters'] ?? 150);
-        $base = (float) ($fee['fee'] ?? 0);
+        $regBase = (float) ($fee['fee'] ?? 0);
         $excess = (float) ($this->precio_por_metro ?? $fee['excess_per_50m'] ?? 0);
+
+        // Si aplica instalación gratis, la base es $0 (solo se cobra el recargo si se excede).
+        $free = $ticket && $service->freeInstallationApplies($ticket, $drop);
+        $base = $free ? 0.0 : $regBase;
 
         $blocks = $drop > $covered ? (int) ceil(($drop - $covered) / 50) : 0;
         $total = $drop <= 0 ? 0.0 : $base + ($blocks * $excess);
 
         return [
             'base' => $base,
+            'reg_base' => $regBase,
+            'free' => $free,
             'blocks' => $blocks,
             'excess' => $excess,
             'total' => $total,
@@ -356,13 +346,14 @@ class WorkOrderShow extends Component
         }
 
         $extraTvs = (int) ($ot->extra_tvs ?? 0);
+        $fees = \App\Services\TvExtraFees::forZone($ticket->contract?->zone_id ?? $ticket->zone_id ?? null);
 
         return [
             'extra_tvs' => $extraTvs,
             'verification_price' => (float) ($ot->verification_price ?? 0),
             'drop_distance' => (float) ($ot->drop_distance ?? 0),
-            'tv_install_fee' => (float) $extraTvs * 6,
-            'monthly_extra_fee' => (float) $extraTvs,
+            'tv_install_fee' => ((float) $extraTvs) * ($fees['install_fee'] ?? 6),
+            'monthly_extra_fee' => ((float) $extraTvs) * ($fees['monthly_fee'] ?? 1),
             'breakdown' => $vbd,
         ];
     }
@@ -602,7 +593,7 @@ class WorkOrderShow extends Component
                     'pon' => 'required|string|max:255',
                     'mufa' => 'required|string|max:255',
                     'installation_date' => 'required|date',
-                    'invoice_number' => ['nullable', 'string', 'max:50', Rule::unique('work_orders', 'invoice_number')->whereNotNull('invoice_number')->ignore($this->workOrder->id)],
+                    'invoice_number' => ['required', 'string', 'max:50', Rule::unique('work_orders', 'invoice_number')->whereNotNull('invoice_number')->ignore($this->workOrder->id)],
                     'latitude' => 'required|numeric|between:-90,90',
                     'longitude' => 'required|numeric|between:-180,180',
                 ];

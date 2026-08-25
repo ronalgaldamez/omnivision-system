@@ -576,6 +576,37 @@
                     </div>
                     @endif
 
+                    {{-- Promoción de instalación gratis vigente --}}
+                    @if($this->isVerificationOt() && $mufa_has_space === '1')
+                        @php
+                            $_freeList = app(\App\Services\VerificationPricingService::class)->freeInstallationInfo($this->workOrder->ticket);
+                            $_servs = ['internet' => 'Internet', 'cable' => 'Cable', 'internet_cable' => 'Internet + Cable', 'all' => 'todos los servicios'];
+                        @endphp
+                        @if(count($_freeList) > 0)
+                        <div class="mt-2 rounded-xl border border-purple-200 bg-purple-50 overflow-hidden">
+                            <div class="px-3 py-2 border-b border-purple-200 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-purple-600 text-[15px]">local_activity</span>
+                                <span class="text-[11px] font-bold text-purple-700">Promoción: Instalación gratis</span>
+                            </div>
+                            <div class="px-3 py-2 space-y-1 text-[11px] text-purple-700">
+                                @foreach($_freeList as $_free)
+                                <div class="flex items-start gap-1.5">
+                                    <span class="material-symbols-outlined text-purple-500 text-[13px] mt-0.5">check_circle</span>
+                                    <div>
+                                        <p class="font-semibold">{{ $_free['name'] }}
+                                            @if ($_free['month'])
+                                            <span class="font-normal text-purple-600">· mes de {{ $_free['month'] }}</span>
+                                            @endif
+                                        </p>
+                                        <p class="text-purple-600">Aplica para <strong>{{ $_servs[$_free['service']] ?? $_free['service'] }}</strong>. La instalación base sale <strong>$0</strong>; si excede los {{ ($installFee['covered_meters'] ?? 150) }} m se cobra solo el recargo.</p>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
+                    @endif
+
                     {{-- TV extra: solo el proceso de verificación (no en instalación directa, ahí va en Datos del contrato) --}}
                     @if($this->isVerificationOt() && $mufa_has_space === '1' && $customer_accepts_cost === '1')
                     <div class="mt-3">
@@ -655,7 +686,7 @@
                             </div>
                             @if ($cs['extra_tvs'] > 0)
                             <div class="flex items-baseline justify-between gap-2">
-                                <span class="text-gray-600">TVs extra ({{ $cs['extra_tvs'] }} × $1)</span>
+                                <span class="text-gray-600">TVs extra ({{ $cs['extra_tvs'] }} × ${{ number_format($this->tvExtraInfo['monthly_fee'], 2) }})</span>
                                 <span class="font-medium text-gray-800">+${{ number_format($cs['extra_monthly'], 2) }}</span>
                             </div>
                             @endif
@@ -743,7 +774,7 @@
                                 Instalación (ya cubierta en la verificación)
                             </label>
                             @if($this->priorVerification)
-                                @php $pv = $this->priorVerification; $b = $pv['breakdown']; @endphp
+                                @php $pv = $this->priorVerification; $b = $pv['breakdown']; $tvFee = $this->tvExtraInfo; @endphp
                                 <div class="rounded-xl border border-green-200 bg-white overflow-hidden">
                                     <div class="px-3 py-2 bg-green-50 border-b border-green-200 flex items-center justify-between">
                                         <span class="text-[11px] font-bold text-green-700">Resumen de instalación</span>
@@ -764,7 +795,7 @@
                                         @endif
                                         @if($pv['tv_install_fee'] > 0)
                                         <div class="flex items-center justify-between">
-                                            <span class="text-gray-600">TVs extra ({{ $pv['extra_tvs'] }} × $6.00)</span>
+                                            <span class="text-gray-600">TVs extra ({{ $pv['extra_tvs'] }} × ${{ number_format($tvFee['install_fee'], 2) }})</span>
                                             <span class="font-mono font-semibold text-gray-800">${{ number_format($pv['tv_install_fee'], 2) }}</span>
                                         </div>
                                         @endif
@@ -778,7 +809,7 @@
                                     <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
                                         <span class="material-symbols-outlined text-blue-600 text-sm">live_tv</span>
                                         Agregar más TVs
-                                        <span class="text-[9px] text-green-500">(+$6 c/u de instalación)</span>
+                                        <span class="text-[9px] text-green-500">(+${{ number_format($tvFee['install_fee'], 2) }} c/u de instalación)</span>
                                     </label>
                                     <input type="number" wire:model.live="extra_tvs_add"
                                         {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
@@ -792,12 +823,12 @@
                                         </div>
                                         <div class="px-3 py-2 space-y-1.5 text-sm">
                                             <div class="flex items-center justify-between">
-                                                <span class="text-blue-800">Instalación ({{ $extra_tvs_add }} × $6.00)</span>
-                                                <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * 6, 2) }}</span>
+                                                <span class="text-blue-800">Instalación ({{ $extra_tvs_add }} × ${{ number_format($tvFee['install_fee'], 2) }})</span>
+                                                <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * $tvFee['install_fee'], 2) }}</span>
                                             </div>
                                             <div class="flex items-center justify-between">
-                                                <span class="text-blue-800">Mensual ({{ $extra_tvs_add }} × $1.00)</span>
-                                                <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * 1, 2) }}/mes</span>
+                                                <span class="text-blue-800">Mensual ({{ $extra_tvs_add }} × ${{ number_format($tvFee['monthly_fee'], 2) }})</span>
+                                                <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * $tvFee['monthly_fee'], 2) }}/mes</span>
                                             </div>
                                             <p class="text-[10px] text-blue-600 pt-1 border-t border-blue-200">Se sumará a la instalación al guardar.</p>
                                         </div>
@@ -805,13 +836,14 @@
                                     @endif
                                 </div>
                             @else
+                                @php $tvFee = $this->tvExtraInfo; @endphp
                                 <div class="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-600 mb-2">
                                     Sin verificación previa. Se cobrará y registrará la instalación aquí.
                                 </div>
                                 <label class="block text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
                                     <span class="material-symbols-outlined text-blue-600 text-sm">live_tv</span>
                                     Cantidad de TVs
-                                    <span class="text-[9px] text-green-500">(+$6 c/u de instalación)</span>
+                                    <span class="text-[9px] text-green-500">(+${{ number_format($tvFee['install_fee'], 2) }} c/u de instalación)</span>
                                 </label>
                                 <input type="number" wire:model.live="extra_tvs_add"
                                     {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
@@ -825,12 +857,12 @@
                                     </div>
                                     <div class="px-3 py-2 space-y-1.5 text-sm">
                                         <div class="flex items-center justify-between">
-                                            <span class="text-blue-800">Instalación ({{ $extra_tvs_add }} × $6.00)</span>
-                                            <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * 6, 2) }}</span>
+                                            <span class="text-blue-800">Instalación ({{ $extra_tvs_add }} × ${{ number_format($tvFee['install_fee'], 2) }})</span>
+                                            <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * $tvFee['install_fee'], 2) }}</span>
                                         </div>
                                         <div class="flex items-center justify-between">
-                                            <span class="text-blue-800">Mensual ({{ $extra_tvs_add }} × $1.00)</span>
-                                            <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * 1, 2) }}/mes</span>
+                                            <span class="text-blue-800">Mensual ({{ $extra_tvs_add }} × ${{ number_format($tvFee['monthly_fee'], 2) }})</span>
+                                            <span class="font-mono font-semibold text-blue-900">+${{ number_format($extra_tvs_add * $tvFee['monthly_fee'], 2) }}/mes</span>
                                         </div>
                                         <p class="text-[10px] text-blue-600 pt-1 border-t border-blue-200">Se registrará al guardar.</p>
                                     </div>

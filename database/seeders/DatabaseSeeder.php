@@ -29,5 +29,6 @@ class DatabaseSeeder extends Seeder
         $this->call(PlansSeeder::class);
         $this->call(ZonesAndBranchesSeeder::class);
         $this->call(SlaGoalSeeder::class);
+        $this->call(CompanyConfigSeeder::class);
     }
 }
