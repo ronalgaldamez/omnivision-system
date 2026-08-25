@@ -598,6 +598,7 @@
                         <p class="text-sm text-gray-500">Seleccioná el plan y verificá el precio para la zona</p>
                     </div>
                 </div>
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Tipo de
@@ -777,7 +778,16 @@
                             <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Datos del
                                 contrato</span>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <x-ui.toggle wire:model.live="apply_plazo" onColor="green"
+                            label="¿El cliente paga por plazo?"
+                            description="ON = aplica beneficios de permanencia (meses gratis, doble velocidad, descuento por 12/24 meses). OFF = paga mes a mes, tarifa normal sin beneficios." />
+                        @if (!$apply_plazo)
+                            <p class="text-[11px] text-amber-600 mt-2 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px]">info</span>
+                                Pago mes a mes: no se aplican beneficios ni promociones de permanencia.
+                            </p>
+                        @endif
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t-2 border-gray-300">
                             <x-ui.select wire:model="contract_type" icon="assignment" label="Tipo de contrato">
                                 <option value="nuevo">Nuevo</option>
                                 <option value="reconexion">Reconexión</option>
@@ -830,6 +840,7 @@
                                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                                         <div class="space-y-2 font-mono text-[13px]">
                                             @php $vbd = $this->verificationBreakdown; @endphp
+                                            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Instalación</p>
                                             @if($vbd)
                                             <div class="flex items-baseline gap-2">
                                                 <span class="text-gray-600">Base ({{ $vbd['covered'] }} m)</span>
@@ -843,8 +854,11 @@
                                                 <span class="font-medium text-gray-800">${{ number_format($vbd['excess_total'], 2) }}</span>
                                             </div>
                                             @endif
-                                            @endif
-                                            @if(!$vbd && (float)($this->installation_cost ?? 0) > 0)
+                                            <div class="flex items-baseline justify-between gap-2 mt-1 px-2 py-1.5 rounded bg-green-100 border border-green-200">
+                                                <span class="text-[11px] font-bold text-green-800">Subtotal instalación</span>
+                                                <span class="font-extrabold text-green-800">${{ number_format(($vbd['subtotal'] ?? 0), 2) }}</span>
+                                            </div>
+                                            @elseif((float)($this->installation_cost ?? 0) > 0)
                                             <div class="flex items-baseline gap-2">
                                                 <span class="text-gray-600">Instalación</span>
                                                 <span class="flex-1 border-b border-dotted border-gray-300"></span>
@@ -852,8 +866,9 @@
                                             </div>
                                             @endif
                                             @if((float)($this->tv_install_fee ?? 0) > 0)
+                                            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wide pt-1">TVs extra</p>
                                             <div class="flex items-baseline gap-2">
-                                                <span class="text-gray-600">TVs extra ({{ $this->extra_tvs }} × $6)</span>
+                                                <span class="text-gray-600">Instalación TV ({{ $this->extra_tvs }} × $6)</span>
                                                 <span class="flex-1 border-b border-dotted border-gray-300"></span>
                                                 <span class="font-medium text-gray-800">${{ number_format((float)$this->tv_install_fee, 2) }}</span>
                                             </div>
@@ -889,6 +904,12 @@
                                             <span class="text-[13px] font-bold text-white tracking-wide">TOTAL A PAGAR / MES</span>
                                             <span class="text-2xl font-mono font-extrabold text-white leading-none">${{ number_format($this->getMonthlyTotal(), 2) }}</span>
                                         </div>
+                                        @if ($apply_plazo && (int)($this->term_months ?? 0) > 0)
+                                        <div class="mt-2 rounded-lg bg-green-700 px-4 py-2.5 flex items-center justify-between gap-3">
+                                            <span class="text-[12px] font-bold text-white tracking-wide">TOTAL POR {{ (int)$this->term_months }} MESES</span>
+                                            <span class="text-lg font-mono font-extrabold text-white leading-none">${{ number_format($this->getMonthlyTotal() * (int)$this->term_months, 2) }}</span>
+                                        </div>
+                                        @endif
                                     </div>
                                 </div>
                                 </div>

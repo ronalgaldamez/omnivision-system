@@ -101,6 +101,7 @@ class ContractWorkflow extends Component
 
     // ─── Datos comerciales del contrato ───
     public $contract_type = 'nuevo';
+    public $apply_plazo = true;
     public $term_months = 24;
     public $benefit = '';
     public $benefitManuallySet = false;
@@ -359,6 +360,14 @@ class ContractWorkflow extends Component
 
     public function updatedCustomerType($value)
     {
+        $this->customer_type = $value;
+        // Persistir en el contrato si ya existe, para no perderlo al recargar.
+        if ($this->ticket_id) {
+            $contract = \App\Models\Contract::where('ticket_id', $this->ticket_id)->first();
+            if ($contract) {
+                $contract->update(['customer_type' => $value ?: null]);
+            }
+        }
         $this->persistDraft();
     }
 
@@ -691,6 +700,33 @@ class ContractWorkflow extends Component
     }
 
     /**
+     * Si el cliente paga por plazo (switch ON) aplica beneficios/promos.
+     * Si paga mes a mes (switch OFF), se limpian los beneficios y queda la tarifa normal.
+     */
+    public function updatedApplyPlazo($value)
+    {
+        $apply = (bool) $value;
+
+        if (!$apply) {
+            // Pago mes a mes: sin beneficios de permanencia.
+            $this->selectedBenefits = [];
+            $this->benefit = '';
+            $this->promo_free_months = 0;
+            $this->promo_pay_months = 0;
+            $this->promo_total_months = 0;
+            $this->promo_double_speed = false;
+            $this->promo_display_speed = '';
+            $this->benefitManuallySet = false;
+            $this->updateEffectivePrice();
+        } else {
+            // Pago por plazo: recalcular beneficios y promos.
+            $this->benefitManuallySet = false;
+            $this->refreshBenefitsFromAvailable();
+            $this->refreshPromotions();
+        }
+    }
+
+    /**
      * Al seleccionar la fecha de pago en el workflow, se deriva el día del mes (payment_day).
      */
     public function updatedPaymentDate($value)
@@ -724,6 +760,16 @@ class ContractWorkflow extends Component
      */
     public function refreshPromotions(): void
     {
+        // Si el cliente paga mes a mes (sin plazo), no aplican promociones de permanencia.
+        if (!$this->apply_plazo) {
+            $this->promo_free_months = 0;
+            $this->promo_pay_months = 0;
+            $this->promo_total_months = 0;
+            $this->promo_double_speed = false;
+            $this->promo_display_speed = '';
+            return;
+        }
+
         $promo = app(\App\Services\PromotionService::class);
         $planId = $this->plan_id ?: null;
         $zoneId = $this->zone_id ?: null;
@@ -772,7 +818,10 @@ class ContractWorkflow extends Component
 
     public function getInstallTotal(): float
     {
-        return (float) ($this->installation_cost ?? 0) + (float) $this->tv_install_fee;
+        // Total instalación = subtotal instalación (con promo/un verification_price) + TVs extra.
+        $vbd = $this->verificationBreakdown;
+        $installPart = $vbd ? (float) ($vbd['subtotal'] ?? 0) : (float) ($this->installation_cost ?? 0);
+        return $installPart + (float) $this->tv_install_fee;
     }
 
     /**
@@ -850,18 +899,29 @@ class ContractWorkflow extends Component
         $blocks = $drop > $covered ? (int) ceil(($drop - $covered) / 50) : 0;
         $excessTotal = $blocks * $excessPer;
 
-        // Si hay campaña de instalación gratis aplicada, el costo también es 0.
+        // El costo real de instalación ya quedó en la OT de verificación (verification_price),
+        // que ya incluye la instalación gratis o la tarifa según lo que el cliente aceptó.
         $manual = (float) ($ot->verification_price ?? 0);
+        // La instalación gratis pone la base efectiva en $0 (solo queda el recargo si excede).
+        $free = $service->freeInstallationApplies($ot->ticket, $drop);
+        $baseEfectiva = $free ? ($drop > $covered ? 0.0 : 0.0) : $base;
+
+        if ($manual > 0) {
+            // Coherencia: el subtotal instalación = lo que realmente se cobró en la OT.
+            $subtotalInstall = $manual;
+        } else {
+            $subtotalInstall = ($free ? 0.0 : $base) + $excessTotal;
+        }
 
         return [
             'distance' => $drop,
             'covered' => $covered,
-            'base' => $base,
+            'base' => $baseEfectiva,
             'excess_per_50m' => $excessPer,
             'blocks' => $blocks,
             'excess_total' => $excessTotal,
             'manual_price' => $manual,
-            'subtotal' => $base + $excessTotal,
+            'subtotal' => $subtotalInstall,
         ];
     }
 
