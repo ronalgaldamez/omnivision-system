@@ -144,10 +144,41 @@
                         icon="edit_note" rows="2" placeholder="Dirección donde se instalará el servicio" />
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <x-ui.input type="text" wire:model="latitude" icon="pin_drop" label="Latitud"
-                            placeholder="13.6929" />
-                        <x-ui.input type="text" wire:model="longitude" icon="pin_drop" label="Longitud"
-                            placeholder="-89.2182" />
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Latitud</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">pin_drop</span>
+                                <input type="text" wire:model.live="latitude"
+                                    x-on:input="$el.value = formatLat($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
+                                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
+                                    placeholder="13.6929" maxlength="7" inputmode="decimal" />
+                            </div>
+                            @error('latitude')<span class="text-[11px] text-red-500">{{ $message }}</span>@enderror
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Longitud</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">pin_drop</span>
+                                <input type="text" wire:model.live="longitude"
+                                    x-on:input="$el.value = formatLng($el.value); $el.dispatchEvent(new Event('input', { bubbles: true }));"
+                                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
+                                    placeholder="-89.2182" maxlength="8" inputmode="decimal" />
+                            </div>
+                            @error('longitude')<span class="text-[11px] text-red-500">{{ $message }}</span>@enderror
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button"
+                            @click="
+                                const lat = $wire.get('latitude');
+                                const lng = $wire.get('longitude');
+                                if (lat && lng) window.open('https://www.google.com/maps?q=' + lat + ',' + lng, '_blank');
+                            "
+                            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 bg-white hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition">
+                            <span class="material-symbols-outlined text-base">map</span>
+                            Ver en mapa
+                        </button>
+                        <p class="text-[11px] text-gray-400">Formato automático: solo números, punto y guion.</p>
                     </div>
 
                     {{-- Tipo de servicio / tipo de cliente --}}
@@ -1822,6 +1853,21 @@
 
 @push('scripts')
     <script>
+        function formatLat(value) {
+            let clean = value.replace(/[^0-9]/g, '');
+            if (clean.length > 2) {
+                clean = clean.slice(0, 2) + '.' + clean.slice(2, 6);
+            }
+            return clean;
+        }
+        function formatLng(value) {
+            let hasMinus = value.startsWith('-');
+            let clean = value.replace(/[^0-9]/g, '');
+            if (clean.length > 2) {
+                clean = clean.slice(0, 2) + '.' + clean.slice(2, 6);
+            }
+            return (hasMinus ? '-' : '') + clean;
+        }
         function openPreview(src, id) {
             const modal = document.getElementById('preview-modal-' + id);
             const img = document.getElementById('preview-image-' + id);
