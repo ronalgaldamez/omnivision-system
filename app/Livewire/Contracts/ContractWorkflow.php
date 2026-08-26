@@ -112,6 +112,7 @@ class ContractWorkflow extends Component
     public $extra_tvs = 0;
     public $tv_install_fee = 0;
     public $monthly_extra_fee = 0;
+    public $desea_tv = false;
 
     // ─── Datos comerciales del contrato ───
     public $contract_type = 'nuevo';
@@ -305,6 +306,7 @@ class ContractWorkflow extends Component
                 $this->extra_tvs = (int) ($existingContract->extra_tvs ?? 0);
                 $this->tv_install_fee = (float) ($existingContract->tv_install_fee ?? 0);
                 $this->monthly_extra_fee = (float) ($existingContract->monthly_extra_fee ?? 0);
+                $this->desea_tv = (bool) ($existingContract->extra_tvs > 0);
                 $this->customer_type = $existingContract->customer_type ?? '';
                 $this->apply_plazo = (bool) ($existingContract->apply_plazo ?? true);
                 $this->promo_enabled_free = (bool) ($existingContract->promo_enabled_free ?? true);
@@ -1046,6 +1048,30 @@ class ContractWorkflow extends Component
     public function getMonthlyTotal(): float
     {
         return (float) ($this->price ?? 0) + (float) $this->monthly_extra_fee;
+    }
+
+    /**
+     * Al apagar el switch de TV, resetear la cantidad a 0.
+     */
+    public function updatedDeseaTv($value)
+    {
+        $this->desea_tv = (bool) $value;
+        if (!$this->desea_tv) {
+            $this->extra_tvs = 0;
+            $this->tv_install_fee = 0;
+            $this->monthly_extra_fee = 0;
+
+            if ($this->ticket_id) {
+                $contract = \App\Models\Contract::where('ticket_id', $this->ticket_id)->first();
+                if ($contract) {
+                    $contract->update([
+                        'extra_tvs' => 0,
+                        'tv_install_fee' => 0,
+                        'monthly_extra_fee' => 0,
+                    ]);
+                }
+            }
+        }
     }
 
     public function getInstallTotal(): float
