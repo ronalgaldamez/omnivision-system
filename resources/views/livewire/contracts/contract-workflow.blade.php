@@ -1649,8 +1649,9 @@
                             <p class="font-semibold text-gray-800">Firma del Cliente</p>
                             @if ($showClientSignature)
                                 <span
-                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                    ✓ Firmado
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                                    <span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                    Firmado
                                 </span>
                             @endif
                         </div>
@@ -1662,6 +1663,11 @@
                                 <button
                                     @click="$wire.call('resetClientSignature')"
                                     class="text-xs text-red-600 hover:text-red-700 mt-2">Volver a firmar</button>
+                            </div>
+                        @elseif ($signature_pending)
+                            <div class="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm text-amber-700">
+                                <span class="material-symbols-outlined text-amber-600">schedule</span>
+                                Firma pendiente. Se le enviará un enlace al cliente para que firme de forma remota.
                             </div>
                         @else
                             {{-- Canvas para firma --}}
@@ -1829,6 +1835,15 @@
                         @endif
                     </div>
                 </div>
+
+                {{-- Switch de firma pendiente (independiente, entre los dos bloques) --}}
+                @if (!$showClientSignature)
+                <div class="rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3">
+                    <x-ui.toggle wire:model.live="signature_pending" onColor="amber"
+                        label="Firma del cliente pendiente"
+                        description="Activá si el cliente firmará después (se le enviará el enlace para firmar de forma remota)." />
+                </div>
+                @endif
 
                 {{-- Enlace público de firma (como GPS y Documentos) --}}
                 <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">

@@ -81,6 +81,10 @@ class WorkOrderShow extends Component
     public $pay_install = false;
     public $pay_tv = false;
     public $pay_abono = false;
+    // Flags de cobro del modal (conceptos que se cobran AHORA, independientes del estado ya pagado)
+    public $cobrar_install = false;
+    public $cobrar_tv = false;
+    public $cobrar_abono = false;
     public $desea_tv_extra = null;
     public $invoice_number = '';
 
@@ -470,6 +474,27 @@ class WorkOrderShow extends Component
     }
 
     /**
+     * Indica si la firma del cliente queda pendiente (no ha firmado aún).
+     * Útil para avisar al técnico en la OT de instalación.
+     */
+    public function getSignaturePendingProperty(): bool
+    {
+        if ($this->isVerificationOt()) {
+            return false;
+        }
+        $contract = $this->workOrder->ticket?->contract;
+        if (!$contract) {
+            return false;
+        }
+        // Firmado si el contrato ya fue firmado (signed_at) o el cliente tiene firma registrada.
+        $clientSigned = (bool) ($contract->client?->client_signature_data ?? false);
+        $contractSigned = (bool) ($contract->signed_at ?? false);
+        // Pendiente explícito marcado en el contrato (switch del paso 4).
+        $explicitPending = (bool) ($contract->signature_pending ?? false);
+        return $explicitPending || (!$clientSigned && !$contractSigned);
+    }
+
+    /**
      * Calcula el abono proporcional usando una cuota base dada (en vivo).
      */
     private function abonoLive($contract, float $base): ?array
@@ -664,22 +689,26 @@ class WorkOrderShow extends Component
 
     public function openPaymentModal()
     {
+        // Los conceptos a cobrar arrancan desmarcados; el técnico marca lo que cobra.
+        $this->cobrar_install = false;
+        $this->cobrar_tv = false;
+        $this->cobrar_abono = false;
         $this->show_payment_modal = true;
     }
 
-    public function updatedPayInstall($value)
+    public function updatedCobrarInstall($value)
     {
-        $this->pay_install = (bool) $value;
+        $this->cobrar_install = (bool) $value;
     }
 
-    public function updatedPayTv($value)
+    public function updatedCobrarTv($value)
     {
-        $this->pay_tv = (bool) $value;
+        $this->cobrar_tv = (bool) $value;
     }
 
-    public function updatedPayAbono($value)
+    public function updatedCobrarAbono($value)
     {
-        $this->pay_abono = (bool) $value;
+        $this->cobrar_abono = (bool) $value;
     }
 
     /**
@@ -693,9 +722,9 @@ class WorkOrderShow extends Component
         }
         $contract->update([
             'customer_paid' => true,
-            'pay_install' => (bool) $this->pay_install,
-            'pay_tv' => (bool) $this->pay_tv,
-            'pay_abono' => (bool) $this->pay_abono,
+            'pay_install' => (bool) ($this->pay_install || $this->cobrar_install),
+            'pay_tv' => (bool) ($this->pay_tv || $this->cobrar_tv),
+            'pay_abono' => (bool) ($this->pay_abono || $this->cobrar_abono),
             'payment_invoice' => $this->invoice_number ?: null,
         ]);
         $this->show_payment_modal = false;
@@ -809,6 +838,7 @@ class WorkOrderShow extends Component
                 'precio_por_metro' => $this->precio_por_metro,
                 'verification_price' => $this->verification_price ?: null,
                 'customer_accepts_cost' => $this->customer_accepts_cost,
+                'extra_tvs' => max(0, (int) $this->extra_tvs),
             ]);
         }
 

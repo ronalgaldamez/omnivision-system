@@ -147,6 +147,7 @@ class ContractWorkflow extends Component
     public $showSignatureCanvas = false;
     public $showClientSignature = false;
     public $showSalesRepSignature = false;
+    public $signature_pending = false;
 
     // ─── Step 5: Preview PDF ───
     public $contract_terms;
@@ -186,7 +187,7 @@ class ContractWorkflow extends Component
                 'fachada' => 'nullable|file|mimes:jpg,jpeg,png|max:10240',
             ],
             4 => [
-                'client_signature_data' => 'required_without:signature_link',
+                'client_signature_data' => 'nullable',
             ],
             default => [],
         };
@@ -320,6 +321,7 @@ class ContractWorkflow extends Component
                 $this->pay_tv = (bool) $existingContract->pay_tv;
                 $this->pay_abono = (bool) $existingContract->pay_abono;
                 $this->payment_confirmed = (bool) $existingContract->payment_confirmed;
+                $this->signature_pending = (bool) $existingContract->signature_pending;
                 // Recalcular promos según el estado cargado del contrato.
                 $this->refreshPromotions();
             }
@@ -907,6 +909,20 @@ class ContractWorkflow extends Component
         $this->show_payment_modal = false;
         $this->persistPromoToggles();
         $this->dispatch('show-toast', type: 'success', message: 'Pago registrado correctamente.');
+    }
+
+    /**
+     * Al activar/desactivar el switch de firma pendiente, persistir en el contrato.
+     */
+    public function updatedSignaturePending($value)
+    {
+        $this->signature_pending = (bool) $value;
+        if ($this->ticket_id) {
+            $contract = \App\Models\Contract::where('ticket_id', $this->ticket_id)->first();
+            if ($contract) {
+                $contract->update(['signature_pending' => (bool) $value]);
+            }
+        }
     }
 
     public function openPaymentModal()
