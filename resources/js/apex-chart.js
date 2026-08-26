@@ -1,9 +1,10 @@
 /**
- * Función global para renderizar gráficos ApexCharts dentro de componentes Livewire.
- * Se define globalmente para que esté disponible en cualquier navegación (SPA o recarga completa).
+ * Componente Alpine global para renderizar gráficos ApexCharts dentro de componentes Livewire.
+ * Se registra vía Alpine.data() en el evento `alpine:init` para garantizar que esté disponible
+ * antes de que Alpine evalúe las directivas x-data, sin depender del orden de carga de scripts.
  */
-window.apexChart = function (id, type, height, series, categories, labels, colors) {
-    return {
+function registerApexChart(Alpine) {
+    Alpine.data('apexChart', (id, type, height, series, categories, labels, colors) => ({
         chart: null,
         init() {
             if (typeof ApexCharts === 'undefined') return;
@@ -103,5 +104,11 @@ window.apexChart = function (id, type, height, series, categories, labels, color
             this.chart.render();
             el._apexChart = this.chart;
         },
-    };
-};
+    }));
+}
+
+if (window.Alpine) {
+    registerApexChart(window.Alpine);
+} else {
+    document.addEventListener('alpine:init', () => registerApexChart(window.Alpine));
+}
