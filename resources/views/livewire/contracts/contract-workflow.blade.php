@@ -1041,7 +1041,10 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <x-ui.input type="date" wire:model.live="payment_date" icon="calendar_today"
-                                    label="Próxima fecha de pago" />
+                                    label="Próxima fecha de pago" required />
+                                @error('payment_date')
+                                    <p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-600 mb-1">Día de pago del cliente</label>
