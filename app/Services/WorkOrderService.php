@@ -6,6 +6,7 @@ use App\Models\Contract;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Notifications\WorkOrderNotification;
 use Illuminate\Support\Facades\Auth;
 
 class WorkOrderService
@@ -83,7 +84,11 @@ class WorkOrderService
             $data['code'] = $this->generateCode(Auth::user(), $ticket);
         }
 
-        return WorkOrder::create($data);
+        $workOrder = WorkOrder::create($data);
+
+        WorkOrderNotification::notifySupervisors($workOrder, 'created');
+
+        return $workOrder;
     }
 
     /**
@@ -129,6 +134,10 @@ class WorkOrderService
             $data['code'] = $this->generateCode(Auth::user(), $ticket);
         }
 
-        return WorkOrder::create($data);
+        $workOrder = WorkOrder::create($data);
+
+        WorkOrderNotification::notifySupervisors($workOrder, 'created');
+
+        return $workOrder;
     }
 }

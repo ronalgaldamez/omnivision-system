@@ -11,6 +11,7 @@ use App\Models\TechnicianInventory;
 use App\Models\WorkOrderMaterial;
 use App\Models\ServiceRule;
 use App\Models\PlanRule;
+use App\Notifications\WorkOrderNotification;
 use App\Services\VerificationPricingService;
 use App\Services\VerificationPromotionService;
 use Illuminate\Support\Facades\Auth;
@@ -1283,6 +1284,8 @@ class WorkOrderShow extends Component
         $this->workOrder->started_at = now();
         $this->workOrder->save();
 
+        WorkOrderNotification::notifySupervisors($this->workOrder, 'started');
+
         $this->checkAnotherInProgress();
         $this->canEditTech = true;
         $this->isEditing = true;
@@ -1304,6 +1307,8 @@ class WorkOrderShow extends Component
         $this->workOrder->status = 'paused';
         $this->workOrder->started_at = null;
         $this->workOrder->save();
+
+        WorkOrderNotification::notifySupervisors($this->workOrder, 'paused');
 
         // Registrar la pausa
         WorkOrderPause::create([
@@ -1337,6 +1342,8 @@ class WorkOrderShow extends Component
         $this->workOrder->status = 'in_progress';
         $this->workOrder->started_at = now();
         $this->workOrder->save();
+
+        WorkOrderNotification::notifySupervisors($this->workOrder, 'resumed');
 
         $this->canEditTech = true;
         $this->isEditing = false;
@@ -1372,6 +1379,8 @@ class WorkOrderShow extends Component
         $this->workOrder->completed_date = now();
         $this->workOrder->accumulated_seconds = $totalSeconds;
         $this->workOrder->save();
+
+        WorkOrderNotification::notifySupervisors($this->workOrder, 'completed');
 
         // Si es la OT de instalación, el contrato queda completo y listo para
         // que el agente lo revise y lo envíe al cliente.
