@@ -1837,11 +1837,13 @@
                 </div>
 
                 {{-- Switch de firma pendiente (independiente, entre los dos bloques) --}}
+                @if (!$showClientSignature)
                 <div class="rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3">
                     <x-ui.toggle wire:model.live="signature_pending" onColor="amber"
                         label="Firma del cliente pendiente"
                         description="Activá si el cliente firmará después (se le enviará el enlace para firmar de forma remota)." />
                 </div>
+                @endif
 
                 {{-- Enlace público de firma (como GPS y Documentos) --}}
                 <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
