@@ -929,10 +929,20 @@
                                 <span class="material-symbols-outlined text-gray-500 text-sm">live_tv</span>
                                 TVs extra (otras pantallas)
                             </label>
-                            <div class="grid grid-cols-1 gap-4">
+                            <x-ui.toggle wire:model.live="desea_tv" onColor="green"
+                                label="¿Desea servicio de TV?"
+                                description="ON = contratar TVs extra. OFF = sin TVs (la cantidad se resetea a 0)." />
+                            @if (!$desea_tv)
+                                <p class="text-[11px] text-amber-600 mt-2 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">info</span>
+                                    Sin servicio de TV.
+                                </p>
+                            @endif
+                            <div class="grid grid-cols-1 gap-4 mt-3">
                                 <div>
                                     <x-ui.input type="number" wire:model.live="extra_tvs" icon="tv"
-                                        label="Cantidad de TVs extra" min="0" max="10" placeholder="0" />
+                                        label="Cantidad de TVs extra" min="0" max="10" placeholder="0"
+                                        :disabled="!$desea_tv" />
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
