@@ -1,0 +1,16 @@
+[Unit]
+Description=Laravel Reverb WebSocket Server
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/var/www/omnivision-system
+ExecStart=/usr/bin/php artisan reverb:start --no-interaction
+Restart=always
+RestartSec=3
+StandardOutput=append:/var/www/omnivision-system/storage/logs/reverb.log
+StandardError=append:/var/www/omnivision-system/storage/logs/reverb.log
+
+[Install]
+WantedBy=multi-user.target
