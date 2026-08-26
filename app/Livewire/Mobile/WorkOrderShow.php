@@ -470,6 +470,27 @@ class WorkOrderShow extends Component
     }
 
     /**
+     * Indica si la firma del cliente queda pendiente (no ha firmado aún).
+     * Útil para avisar al técnico en la OT de instalación.
+     */
+    public function getSignaturePendingProperty(): bool
+    {
+        if ($this->isVerificationOt()) {
+            return false;
+        }
+        $contract = $this->workOrder->ticket?->contract;
+        if (!$contract) {
+            return false;
+        }
+        // Firmado si el contrato ya fue firmado (signed_at) o el cliente tiene firma registrada.
+        $clientSigned = (bool) ($contract->client?->client_signature_data ?? false);
+        $contractSigned = (bool) ($contract->signed_at ?? false);
+        // Pendiente explícito marcado en el contrato (switch del paso 4).
+        $explicitPending = (bool) ($contract->signature_pending ?? false);
+        return $explicitPending || (!$clientSigned && !$contractSigned);
+    }
+
+    /**
      * Calcula el abono proporcional usando una cuota base dada (en vivo).
      */
     private function abonoLive($contract, float $base): ?array

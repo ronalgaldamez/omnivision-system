@@ -686,6 +686,15 @@
 
             @if (!$isVerificationOt && $workOrder->ticket?->contract)
                 @php $cs = $this->contractSummary; $pst = $this->paymentStatus; @endphp
+                @if ($this->signaturePending)
+                <div class="flex items-start gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200 mb-3">
+                    <span class="material-symbols-outlined text-amber-600">draw</span>
+                    <div>
+                        <p class="text-sm font-medium text-amber-800">Firma del cliente pendiente</p>
+                        <p class="text-xs text-amber-700">El cliente aún no firmó el contrato. Se le enviará un enlace para que firme de forma remota.</p>
+                    </div>
+                </div>
+                @endif
                 <div class="border-t border-gray-100 pt-3" x-data="{ tab: 'instalacion' }">
                     <div class="flex gap-2 mb-3 border-b border-gray-200 pb-2">
                         <button type="button" @click="tab = 'instalacion'" :class="tab === 'instalacion' ? 'bg-white text-gray-800 border-gray-300 shadow-sm' : 'text-gray-500 hover:bg-white/60'"

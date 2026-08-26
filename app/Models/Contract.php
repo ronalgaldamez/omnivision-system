@@ -40,6 +40,7 @@ class Contract extends Model
         'pay_tv',
         'pay_abono',
         'payment_confirmed',
+        'signature_pending',
         'created_by',
         'contract_type',
         'service_contracted',
@@ -74,6 +75,7 @@ class Contract extends Model
             'pay_tv' => 'boolean',
             'pay_abono' => 'boolean',
             'payment_confirmed' => 'boolean',
+            'signature_pending' => 'boolean',
             'tv_install_fee' => 'decimal:2',
             'monthly_extra_fee' => 'decimal:2',
         ];
