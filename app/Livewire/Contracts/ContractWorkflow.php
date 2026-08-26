@@ -177,6 +177,7 @@ class ContractWorkflow extends Component
                 'price' => 'required|numeric|min:0',
                 'contract_type' => 'required|in:nuevo,reconexion,renovacion',
                 'term_months' => 'required|integer|min:1|max:60',
+                'payment_date' => 'required|date',
             ],
             3 => [
                 'dui_front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
@@ -197,6 +198,7 @@ class ContractWorkflow extends Component
         'plan_id.required' => 'Debe seleccionar un plan.',
         'price.required' => 'El precio es obligatorio.',
         'price.numeric' => 'El precio debe ser un valor numérico.',
+        'payment_date.required' => 'La próxima fecha de pago es obligatoria.',
         'client_signature_data.required_without' => 'Debe capturar la firma del cliente o enviar un enlace.',
     ];
 
