@@ -477,8 +477,9 @@
                         <div class="mb-3">
                             <label class="block text-[10px] text-gray-400 mb-0.5">Distancia (metros)</label>
                             <input type="number" wire:model.live="drop_distance"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
                                 step="0.01" min="0" placeholder="0.00"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                         </div>
 
                         {{-- Paso 2.5: Recargo editable por cada 50m extra --}}
@@ -487,8 +488,9 @@
                                 <span class="text-[9px] text-green-500">(editable)</span>
                             </label>
                             <input type="number" wire:model.live="precio_por_metro"
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
                                 step="0.01" min="0" placeholder="0.00"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                         </div>
 
                         {{-- Paso 3: Resumen tipo factura (solo lectura) --}}
@@ -525,7 +527,8 @@
                         <div class="mb-3">
                             <label class="block text-[10px] text-gray-400 mb-0.5">¿El cliente acepta el costo?</label>
                             <select wire:model.live="customer_accepts_cost"
-                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                                {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                                 <option value="">Seleccionar</option>
                                 <option value="1">Sí, acepta</option>
                                 <option value="0">No acepta</option>
@@ -538,7 +541,8 @@
                             <div class="mt-3">
                                 <label class="block text-[10px] text-gray-400 mb-0.5">¿El cliente paga?</label>
                                 <select wire:model.live="customer_paid"
-                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                                    {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                                     <option value="">Seleccionar</option>
                                     <option value="1">Sí, paga ahora</option>
                                     <option value="0">No paga</option>
@@ -553,8 +557,9 @@
                                     N° de factura del talonario
                                 </label>
                                 <input type="text" wire:model.live="invoice_number"
+                                    {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
                                     placeholder="Ej. 000123"
-                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                                 @error('invoice_number')<span class="text-[10px] text-red-500">{{ $message }}</span>@enderror
                             </div>
                             @elseif($customer_paid === '0')
@@ -562,7 +567,8 @@
                             <div class="mt-3">
                                 <label class="block text-[10px] text-gray-400 mb-0.5">¿Dónde pagará?</label>
                                 <select wire:model.live="payment_place"
-                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                                    {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                                     <option value="">Seleccionar</option>
                                     <option value="oficina">Paga en oficina</option>
                                     <option value="instalacion">Paga el día de la instalación</option>
@@ -637,7 +643,8 @@
                             ¿El cliente desea TV extra?
                         </label>
                         <select wire:model.live="desea_tv_extra"
-                            class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                            {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                             <option value="">Seleccionar</option>
                             <option value="1">Sí, desea</option>
                             <option value="0">No desea</option>
@@ -649,8 +656,9 @@
                         @php $tvFees = $this->tvExtraInfo; @endphp
                         <label class="block text-[10px] text-gray-400 mb-0.5">¿Cuántas TVs extra?</label>
                         <input type="number" wire:model.live="extra_tvs"
+                            {{ !$canEditTech || !$isEditing ? 'disabled' : '' }}
                             min="0" max="10" placeholder="0"
-                            class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100/80 disabled:text-gray-500 focus:ring-2 focus:ring-green-500/20 focus:border-green-400">
                         @if($extra_tvs > 0)
                         <div class="mt-2 rounded-xl border border-blue-200 bg-blue-50 overflow-hidden">
                             <div class="px-3 py-2 border-b border-blue-200 flex items-center gap-1.5">

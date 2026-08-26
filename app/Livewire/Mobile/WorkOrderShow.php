@@ -208,15 +208,15 @@ class WorkOrderShow extends Component
         $this->mufa = $draft['mufa'] ?? $this->workOrder->mufa;
         $this->installation_date = $draft['installation_date'] ?? $this->workOrder->installation_date?->format('Y-m-d');
 
-        $this->mufa_has_space = $draft['mufa_has_space'] ?? $this->workOrder->mufa_has_space;
+        $this->mufa_has_space = $draft['mufa_has_space'] ?? ($this->workOrder->mufa_has_space === null ? null : ($this->workOrder->mufa_has_space ? '1' : '0'));
         $this->cumple_distancia = $draft['cumple_distancia'] ?? null;
         $this->drop_distance = $draft['drop_distance'] ?? $this->workOrder->drop_distance;
         $this->distancia_exceso = $draft['distancia_exceso'] ?? null;
         $this->verification_price = $draft['verification_price'] ?? $this->workOrder->verification_price;
         $this->invoice_number = $draft['invoice_number'] ?? $this->workOrder->invoice_number ?? '';
         $this->precio_por_metro = $draft['precio_por_metro'] ?? ($this->workOrder->precio_por_metro ?? ($this->verificationRules['price_per_meter'] ?? 5));
-        $this->customer_accepts_cost = $draft['customer_accepts_cost'] ?? $this->workOrder->customer_accepts_cost;
-        $this->customer_paid = $draft['customer_paid'] ?? $this->workOrder->customer_paid;
+        $this->customer_accepts_cost = $draft['customer_accepts_cost'] ?? ($this->workOrder->customer_accepts_cost === null ? null : ($this->workOrder->customer_accepts_cost ? '1' : '0'));
+        $this->customer_paid = $draft['customer_paid'] ?? ($this->workOrder->customer_paid === null ? null : ($this->workOrder->customer_paid ? '1' : '0'));
         $this->payment_place = $draft['payment_place'] ?? $this->workOrder->payment_place ?? '';
         $this->desea_tv_extra = $draft['desea_tv_extra'] ?? null;
         $this->pay_install = (bool) ($draft['pay_install'] ?? $this->workOrder->ticket?->contract?->pay_install ?? false);
@@ -237,8 +237,8 @@ class WorkOrderShow extends Component
         $this->desea_tv_extra = $draft['desea_tv_extra'] ?? (((int) $this->extra_tvs) > 0 ? '1' : null);
 
         $client = $this->workOrder->client;
-        $this->latitude = $draft['latitude'] ?? $this->workOrder->latitude ?? $client->latitude ?? null;
-        $this->longitude = $draft['longitude'] ?? $this->workOrder->longitude ?? $client->longitude ?? null;
+        $this->latitude = $draft['latitude'] ?? $this->formatCoord($this->workOrder->latitude ?? $client->latitude ?? null);
+        $this->longitude = $draft['longitude'] ?? $this->formatCoord($this->workOrder->longitude ?? $client->longitude ?? null);
 
         // Determinar si hay cambios sin guardar (badge de borrador)
         $this->updateDraftStatus();
@@ -501,6 +501,18 @@ class WorkOrderShow extends Component
     }
 
     /**
+     * Formatea una coordenada quitando ceros decimales sobrantes (ej. 14.04290000 → 14.0429).
+     */
+    private function formatCoord($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        $str = rtrim(rtrim((string) $value, '0'), '.');
+        return $str === '' || $str === '-' ? null : $str;
+    }
+
+    /**
      * Fecha real de instalación de la OT (cuando el servicio empieza a funcionar).
      * Si no hay fecha registrada, usa hoy.
      */
@@ -518,7 +530,8 @@ class WorkOrderShow extends Component
     }
 
     private function checkTechnicalDataComplete()
-    {        $wo = $this->workOrder;
+    {
+        $wo = $this->workOrder;
 
         // OT de verificación: solo requiere la evaluación de mufa/distancia (y coordenadas).
         if ($this->isVerificationOt()) {
