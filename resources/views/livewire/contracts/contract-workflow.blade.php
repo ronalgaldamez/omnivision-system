@@ -1665,7 +1665,7 @@
                             </div>
                         @else
                             {{-- Canvas para firma --}}
-                            <div x-data="{ canvas: null, ctx: null, drawing: false, sigData: null }" x-init="Alpine.nextTick(() => {
+                            <div x-data="{ canvas: null, ctx: null, drawing: false, sigData: null, hasDrawing: false }" x-init="Alpine.nextTick(() => {
                             canvas = $refs.canvas;
                             if (!canvas) return;
                             ctx = canvas.getContext('2d');
@@ -1677,6 +1677,7 @@
                             
                             const startDraw = (e) => {
                                 drawing = true;
+                                hasDrawing = true;
                                 const rect = canvas.getBoundingClientRect();
                                 const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
                                 const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
@@ -1711,15 +1712,16 @@
                                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                             });
                         })" class="space-y-2">
-                                <canvas x-ref="canvas"
+                                <canvas x-ref="canvas" wire:ignore
                                     class="w-full h-[120px] bg-white border-2 border-dashed border-gray-300 rounded-lg cursor-crosshair"></canvas>
                                 <div class="flex gap-2">
-                                    <button type="button" @click="ctx.clearRect(0, 0, canvas.width, canvas.height)"
+                                    <button type="button" @click="ctx.clearRect(0, 0, canvas.width, canvas.height); hasDrawing = false"
                                         class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
                                         Limpiar
                                     </button>
                                     <button type="button"
                                         @click="(function(){
+                                            if (!hasDrawing) { $wire.dispatch('show-toast', { type: 'error', message: 'La firma está vacía. Dibujá antes de guardar.' }); return; }
                                             sigData = canvas.toDataURL('image/png');
                                             $wire.call('saveClientSignature', sigData);
                                         })()"
@@ -1767,7 +1769,7 @@
                             </div>
                         @else
                             {{-- Canvas para firma del agente --}}
-                            <div x-data="{ canvas2: null, ctx2: null, drawing2: false, sigData2: null }" x-init="Alpine.nextTick(() => {
+                            <div x-data="{ canvas2: null, ctx2: null, drawing2: false, sigData2: null, hasDrawing2: false }" x-init="Alpine.nextTick(() => {
                             canvas2 = $refs.canvas2;
                             if (!canvas2) return;
                             ctx2 = canvas2.getContext('2d');
@@ -1779,6 +1781,7 @@
                             
                             const startDraw2 = (e) => {
                                 drawing2 = true;
+                                hasDrawing2 = true;
                                 const rect = canvas2.getBoundingClientRect();
                                 const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
                                 const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
@@ -1804,16 +1807,17 @@
                             canvas2.addEventListener('touchmove', draw2, { passive: false });
                             canvas2.addEventListener('touchend', endDraw2);
                         })" class="space-y-2">
-                                <canvas x-ref="canvas2"
+                                <canvas x-ref="canvas2" wire:ignore
                                     class="w-full h-[120px] bg-white border-2 border-dashed border-gray-300 rounded-lg cursor-crosshair"></canvas>
                                 <div class="flex gap-2">
                                     <button type="button"
-                                        @click="ctx2.clearRect(0, 0, canvas2.width, canvas2.height)"
+                                        @click="ctx2.clearRect(0, 0, canvas2.width, canvas2.height); hasDrawing2 = false"
                                         class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
                                         Limpiar
                                     </button>
                                     <button type="button"
                                         @click="(function(){
+                                            if (!hasDrawing2) { $wire.dispatch('show-toast', { type: 'error', message: 'La firma está vacía. Dibujá antes de guardar.' }); return; }
                                             sigData2 = canvas2.toDataURL('image/png');
                                             $wire.call('saveSalesRepSignature', sigData2);
                                         })()"
