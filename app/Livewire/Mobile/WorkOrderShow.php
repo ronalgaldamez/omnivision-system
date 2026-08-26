@@ -443,7 +443,7 @@ class WorkOrderShow extends Component
 
         $install = (float) ($contract->installation_cost ?? 0);
         $tvInstall = (float) ($contract->tv_install_fee ?? 0);
-        $abono = $contract->abonoProporcional(now());
+        $abono = $contract->abonoProporcional($this->installationDate());
         $abonoCharge = $abono ? (float) $abono['charge'] : 0.0;
 
         $payInstall = (bool) $contract->pay_install;
@@ -478,7 +478,7 @@ class WorkOrderShow extends Component
         if ($paymentDay < 1 || $paymentDay > 31 || $base <= 0) {
             return null;
         }
-        $inst = now();
+        $inst = $this->installationDate();
         $reference = $inst->copy();
         $reference->day = min($paymentDay, $reference->daysInMonth);
         if ($reference->lte($inst)) {
@@ -500,9 +500,25 @@ class WorkOrderShow extends Component
         ];
     }
 
-    private function checkTechnicalDataComplete()
+    /**
+     * Fecha real de instalación de la OT (cuando el servicio empieza a funcionar).
+     * Si no hay fecha registrada, usa hoy.
+     */
+    private function installationDate(): \Carbon\Carbon
     {
-        $wo = $this->workOrder;
+        $date = $this->installation_date ?? $this->workOrder->installation_date;
+        if ($date) {
+            try {
+                return \Carbon\Carbon::parse($date);
+            } catch (\Throwable $e) {
+                // fecha inválida, usar hoy
+            }
+        }
+        return now();
+    }
+
+    private function checkTechnicalDataComplete()
+    {        $wo = $this->workOrder;
 
         // OT de verificación: solo requiere la evaluación de mufa/distancia (y coordenadas).
         if ($this->isVerificationOt()) {
