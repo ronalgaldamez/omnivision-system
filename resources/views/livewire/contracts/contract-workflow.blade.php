@@ -1181,27 +1181,51 @@
                             <div class="p-6">
                                 <p class="text-sm text-gray-500 mb-4">Marcá qué conceptos se cobran ahora. Lo no marcado se paga al instalar el servicio.</p>
                                 <div class="space-y-2">
-                                    <label class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                                    @php
+                                        // Conceptos ya pagados (no se pueden volver a cobrar)
+                                        $installSaldado = (bool) $pay_install;
+                                        $tvSaldado = (bool) $pay_tv;
+                                        $abonoSaldado = (bool) $pay_abono;
+                                    @endphp
+                                    <div class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 {{ $installSaldado ? 'bg-green-50 opacity-70' : 'cursor-pointer hover:bg-gray-50' }} transition">
                                         <span class="flex items-center gap-2 text-sm text-gray-700">
-                                            <input type="checkbox" wire:model.live="pay_install" class="rounded border-gray-300" />
+                                            <input type="checkbox" wire:model.live="pay_install" class="rounded border-gray-300"
+                                                {{ $installSaldado ? 'disabled' : '' }} />
                                             Metraje / instalación
                                         </span>
-                                        <span class="font-mono font-semibold text-gray-800">${{ number_format($pbd['install'], 2) }}</span>
-                                    </label>
-                                    <label class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                                        <span class="flex items-center gap-2">
+                                            <span class="font-mono font-semibold text-gray-800">${{ number_format($pbd['install'], 2) }}</span>
+                                            @if ($installSaldado)
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-sans font-semibold">YA PAGADO</span>
+                                            @endif
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 {{ $tvSaldado ? 'bg-green-50 opacity-70' : 'cursor-pointer hover:bg-gray-50' }} transition">
                                         <span class="flex items-center gap-2 text-sm text-gray-700">
-                                            <input type="checkbox" wire:model.live="pay_tv" class="rounded border-gray-300" />
+                                            <input type="checkbox" wire:model.live="pay_tv" class="rounded border-gray-300"
+                                                {{ $tvSaldado ? 'disabled' : '' }} />
                                             TVs extra (instalación)
                                         </span>
-                                        <span class="font-mono font-semibold text-gray-800">${{ number_format($pbd['tv_install'], 2) }}</span>
-                                    </label>
-                                    <label class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                                        <span class="flex items-center gap-2">
+                                            <span class="font-mono font-semibold text-gray-800">${{ number_format($pbd['tv_install'], 2) }}</span>
+                                            @if ($tvSaldado)
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-sans font-semibold">YA PAGADO</span>
+                                            @endif
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 {{ $abonoSaldado ? 'bg-green-50 opacity-70' : 'cursor-pointer hover:bg-gray-50' }} transition">
                                         <span class="flex items-center gap-2 text-sm text-gray-700">
-                                            <input type="checkbox" wire:model.live="pay_abono" class="rounded border-gray-300" />
+                                            <input type="checkbox" wire:model.live="pay_abono" class="rounded border-gray-300"
+                                                {{ $abonoSaldado ? 'disabled' : '' }} />
                                             Abono proporcional
                                         </span>
-                                        <span class="font-mono font-semibold text-gray-800">${{ number_format($pbd['abono'], 2) }}</span>
-                                    </label>
+                                        <span class="flex items-center gap-2">
+                                            <span class="font-mono font-semibold text-gray-800">${{ number_format($pbd['abono'], 2) }}</span>
+                                            @if ($abonoSaldado)
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-sans font-semibold">YA PAGADO</span>
+                                            @endif
+                                        </span>
+                                    </div>
                                 </div>
                                 <div class="flex items-center justify-between gap-3 mt-4 pt-3 border-t-2 border-gray-200">
                                     <span class="text-sm font-bold text-gray-700">TOTAL A COBRAR</span>
