@@ -1026,6 +1026,7 @@ class TicketForm extends Component
                 $this->dispatch('ticket-created-for-noc');
                 try {
                     \App\Events\TicketRequiresNoc::dispatch($ticket->ticket_code);
+                    \App\Notifications\TicketRequiresNocNotification::notifyNoc($ticket->ticket_code);
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning('Broadcast NOC omitido: ' . $e->getMessage());
                 }
@@ -1111,6 +1112,7 @@ class TicketForm extends Component
         $this->dispatch('ticket-created-for-noc');
         try {
             \App\Events\TicketRequiresNoc::dispatch($ticket->ticket_code);
+            \App\Notifications\TicketRequiresNocNotification::notifyNoc($ticket->ticket_code);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Broadcast NOC omitido: ' . $e->getMessage());
         }

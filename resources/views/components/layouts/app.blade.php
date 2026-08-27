@@ -584,6 +584,75 @@
             });
         });
     </script>
+    {{-- ========== WEB PUSH (Service Worker + suscripción) ========== --}}
+    <script>
+        window.csrfToken = '{{ csrf_token() }}';
+        window.vapidPublicKey = '{{ config('webpush.vapid.public_key') }}';
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        function pushSupported() {
+            return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+        }
+
+        if (pushSupported()) {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
+        }
+
+        window.pushToggle = async function () {
+            if (!pushSupported()) {
+                alert('Tu navegador no soporta notificaciones push.');
+                return false;
+            }
+
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                alert('Permiso de notificaciones denegado. Habilitalo desde la configuración del navegador.');
+                return false;
+            }
+
+            const registration = await navigator.serviceWorker.ready;
+            const existing = await registration.pushManager.getSubscription();
+
+            if (existing) {
+                await existing.unsubscribe();
+                await fetch('/push/unsubscribe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': window.csrfToken,
+                    },
+                    body: JSON.stringify({ endpoint: existing.endpoint }),
+                });
+                return true;
+            }
+
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(window.vapidPublicKey),
+            });
+
+            await fetch('/push/subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': window.csrfToken,
+                },
+                body: JSON.stringify(subscription.toJSON ? subscription.toJSON() : subscription),
+            });
+
+            return true;
+        };
+    </script>
 </body>
 
 </html>

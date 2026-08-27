@@ -86,6 +86,31 @@ Route::middleware(['auth'])->group(function () {
     // ========== NOTIFICACIONES ==========
     Route::get('/notifications', \App\Livewire\NotificationsIndex::class)->name('notifications.index');
 
+    // ========== WEB PUSH SUBSCRIPTIONS ==========
+    Route::post('/push/subscribe', function (\Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'endpoint' => 'required|string',
+            'keys.p256dh' => 'required|string',
+            'keys.auth' => 'required|string',
+        ]);
+
+        auth()->user()->updatePushSubscription(
+            $validated['endpoint'],
+            $validated['keys']['p256dh'],
+            $validated['keys']['auth']
+        );
+
+        return response()->json(['success' => true]);
+    })->name('push.subscribe');
+
+    Route::post('/push/unsubscribe', function (\Illuminate\Http\Request $request) {
+        $request->validate(['endpoint' => 'required|string']);
+
+        auth()->user()->deletePushSubscription($request->input('endpoint'));
+
+        return response()->json(['success' => true]);
+    })->name('push.unsubscribe');
+
     // ========== TECHNICIANS MOBILE ==========
     Route::prefix('mobile/technician')->middleware(['auth'])->group(function () {
         Route::get('/work-orders', \App\Livewire\Mobile\WorkOrderList::class)

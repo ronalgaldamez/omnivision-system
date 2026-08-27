@@ -9,6 +9,8 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Support\Facades\Log;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class RequisitionSubmittedNotification extends Notification implements ShouldBroadcastNow
 {
@@ -21,7 +23,17 @@ class RequisitionSubmittedNotification extends Notification implements ShouldBro
 
     public function via($notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['database', 'broadcast', WebPushChannel::class];
+    }
+
+    public function toWebPush($notifiable, $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title("Requisición #{$this->requisition->id}")
+            ->body($this->toArray($notifiable)['message'])
+            ->icon('/android-chrome-192x192.png')
+            ->badge('/favicon-32x32.png')
+            ->data(['url' => '/bodega/requisitions']);
     }
 
     public function toArray($notifiable): array

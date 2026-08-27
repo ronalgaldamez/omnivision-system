@@ -9,6 +9,8 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Support\Facades\Log;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class WorkOrderNotification extends Notification implements ShouldBroadcastNow
 {
@@ -22,7 +24,17 @@ class WorkOrderNotification extends Notification implements ShouldBroadcastNow
 
     public function via($notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['database', 'broadcast', WebPushChannel::class];
+    }
+
+    public function toWebPush($notifiable, $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title("Orden de Trabajo {$this->workOrder->code}")
+            ->body($this->message())
+            ->icon('/android-chrome-192x192.png')
+            ->badge('/favicon-32x32.png')
+            ->data(['url' => "/work-orders/{$this->workOrder->id}/show"]);
     }
 
     public function toArray($notifiable): array
