@@ -55,6 +55,29 @@
                 </form>
             </div>
 
+            <!-- Notificaciones Push -->
+            <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-md font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-gray-500">notifications_active</span>
+                    Notificaciones Push
+                </h3>
+                <p class="text-sm text-gray-500 mb-4">Recibí notificaciones del sistema operativo aunque no tengas la pestaña del sistema abierta.</p>
+
+                <div x-data="{ subscribed: {{ auth()->user()->pushSubscriptions()->exists() ? 'true' : 'false' }} }">
+                    <button type="button"
+                        @click="pushToggle().then(ok => { if (ok) subscribed = !subscribed; })"
+                        :class="subscribed ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border transition">
+                        <span class="material-symbols-outlined text-base"
+                            x-text="subscribed ? 'notifications_off' : 'notifications_active'"></span>
+                        <span x-text="subscribed ? 'Desactivar notificaciones push' : 'Activar notificaciones push'"></span>
+                    </button>
+                    <p class="text-xs text-gray-400 mt-2" x-show="!subscribed">
+                        Al activar, el navegador te pedirá permiso para enviar notificaciones.
+                    </p>
+                </div>
+            </div>
+
             <!-- Formulario de cambio de contraseña -->
             <div class="border-t border-gray-200 pt-6">
                 <h3 class="text-md font-semibold text-gray-800 mb-4">Cambiar Contraseña</h3>

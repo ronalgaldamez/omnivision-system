@@ -7,6 +7,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class RequisitionStatusNotification extends Notification implements ShouldBroadcastNow
 {
@@ -20,7 +22,17 @@ class RequisitionStatusNotification extends Notification implements ShouldBroadc
 
     public function via($notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['database', 'broadcast', WebPushChannel::class];
+    }
+
+    public function toWebPush($notifiable, $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title("Requisición #{$this->requisition->id}")
+            ->body($this->toArray($notifiable)['message'])
+            ->icon('/android-chrome-192x192.png')
+            ->badge('/favicon-32x32.png')
+            ->data(['url' => "/requisitions/{$this->requisition->id}/show"]);
     }
 
     public function toArray($notifiable): array
