@@ -35,14 +35,16 @@
 
         <div class="max-h-64 overflow-y-auto">
             @forelse($notifications as $notification)
-                @php $data = $notification->data; @endphp
-                <a href="{{ isset($data['requisition_id']) ? route('technician.requisitions.show', $data['requisition_id']) : route('notifications.index') }}"
+                @php
+                    $data = $notification->data;
+                    [$icon, $iconColor, $iconBg] = notification_visual($data);
+                    $link = notification_url($data);
+                @endphp
+                <a href="{{ $link ?? route('notifications.index') }}"
                     wire:click="markAsRead('{{ $notification->id }}')"
                     class="flex items-start gap-3 px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition {{ $notification->read_at ? 'opacity-60' : 'bg-blue-50/40' }}">
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center {{ ($data['status'] ?? '') === 'approved' ? 'bg-green-100' : 'bg-red-100' }}">
-                        <span class="material-symbols-outlined text-base {{ ($data['status'] ?? '') === 'approved' ? 'text-green-600' : 'text-red-600' }}">
-                            {{ ($data['status'] ?? '') === 'approved' ? 'check_circle' : 'cancel' }}
-                        </span>
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center {{ $iconBg }}">
+                        <span class="material-symbols-outlined text-base {{ $iconColor }}">{{ $icon }}</span>
                     </div>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm text-gray-800 font-medium">{{ $data['message'] ?? 'Notificación' }}</p>

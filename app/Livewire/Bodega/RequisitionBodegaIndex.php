@@ -12,7 +12,6 @@ use App\Models\RequisitionLog;
 use App\Models\TechnicianInventory;
 use App\Notifications\RequisitionStatusNotification;
 use App\Services\InventoryService;
-use Illuminate\Notifications\Events\BroadcastNotificationCreated;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -354,9 +353,7 @@ class RequisitionBodegaIndex extends Component
             DB::commit();
 
             if ($technician = $requisition->technician) {
-                $notification = new RequisitionStatusNotification($requisition, 'approved');
-                $technician->notify($notification);
-                broadcast(new BroadcastNotificationCreated($notification, $technician));
+                $technician->notify(new RequisitionStatusNotification($requisition, 'approved'));
             }
 
             $this->dispatch('show-toast', type: 'success', message: 'Requisición #' . $requisition->id . ' aprobada.');
@@ -393,9 +390,7 @@ class RequisitionBodegaIndex extends Component
         ]);
 
         if ($technician = $this->selectedRequisition->technician) {
-            $notification = new RequisitionStatusNotification($this->selectedRequisition, 'rejected', $this->rejectionReason);
-            $technician->notify($notification);
-            broadcast(new BroadcastNotificationCreated($notification, $technician));
+            $technician->notify(new RequisitionStatusNotification($this->selectedRequisition, 'rejected', $this->rejectionReason));
         }
 
         $this->dispatch('show-toast', type: 'info', message: 'Requisición #' . $this->selectedRequisition->id . ' rechazada.');

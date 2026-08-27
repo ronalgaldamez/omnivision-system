@@ -432,7 +432,7 @@
                             <livewire:notifications-badge />
                         @endif
 
-                        @if(Auth::user()->hasRole('technician'))
+                        @if(Auth::check())
                             <livewire:technician-notifications-badge />
                         @endif
 

@@ -8,6 +8,7 @@ use App\Models\Requisition;
 use App\Models\RequisitionItem;
 use App\Models\TechnicianInventory;
 use App\Models\WorkOrderMaterial;
+use App\Notifications\WorkOrderNotification;
 use Illuminate\Support\Facades\Auth;
 
 class WorkOrderShow extends Component
@@ -194,6 +195,8 @@ public function completeWorkOrder()
 
         $this->order->status = 'cancelled';
         $this->order->save();
+
+        WorkOrderNotification::notifySupervisors($this->order, 'cancelled');
 
         $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Orden cancelada.']);
         return redirect()->route('work-orders.index');

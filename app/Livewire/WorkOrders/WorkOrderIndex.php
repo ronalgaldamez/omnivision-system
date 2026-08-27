@@ -6,7 +6,10 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\WorkOrder;
 use App\Models\User;
+use App\Models\Zone;
+use App\Notifications\WorkOrderNotification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class WorkOrderIndex extends Component
 {
@@ -265,6 +268,10 @@ class WorkOrderIndex extends Component
 
         $wo->update($data);
         $this->dispatch('show-toast', type: 'success', message: "{$wo->code} → {$techName}");
+
+        if ($technicianId) {
+            $this->notifyTechnicianAndSupervisor($wo, (int) $technicianId);
+        }
     }
 
     public function assignSelected()
@@ -328,6 +335,13 @@ class WorkOrderIndex extends Component
         }
 
         $count = WorkOrder::whereIn('id', $ids)->update($data);
+
+        $assignedTechId = $this->assignTechnicianId ? (int) $this->assignTechnicianId : null;
+        if ($assignedTechId) {
+            foreach (WorkOrder::whereIn('id', $ids)->get() as $wo) {
+                $this->notifyTechnicianAndSupervisor($wo, $assignedTechId);
+            }
+        }
 
         $this->selectedOrders = [];
         $this->selectAll = false;
@@ -512,5 +526,32 @@ class WorkOrderIndex extends Component
         return view('livewire.work-orders.work-order-index', compact(
             'orders', 'encargados', 'tecnicos', 'vehiculos', 'alreadyAssigned', 'kpis', 'serviceTypes'
         ))->layout('components.layouts.app');
+    }
+
+    /**
+     * Notifica la asignación de una OT al técnico y al supervisor de su zona.
+     */
+    private function notifyTechnicianAndSupervisor(WorkOrder $wo, int $technicianId): void
+    {
+        try {
+            if ($technician = User::find($technicianId)) {
+                $technician->notify(new WorkOrderNotification($wo, 'assigned_to_technician', $technicianId));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo notificar al técnico de OT: ' . $e->getMessage());
+        }
+
+        if ($wo->zone_id) {
+            $zone = Zone::with('supervisors')->find($wo->zone_id);
+            if ($zone) {
+                foreach ($zone->effectiveSupervisors() as $supervisor) {
+                    try {
+                        $supervisor->notify(new WorkOrderNotification($wo, 'assigned', $supervisor->id));
+                    } catch (\Throwable $e) {
+                        Log::warning('No se pudo notificar al supervisor de OT: ' . $e->getMessage());
+                    }
+                }
+            }
+        }
     }
 }

@@ -28,14 +28,13 @@
             @forelse($notifications as $notification)
                 @php
                     $data = $notification->data;
-                    $isApproved = ($data['status'] ?? '') === 'approved';
+                    [$icon, $iconColor, $iconBg] = notification_visual($data);
+                    $link = notification_url($data);
                 @endphp
                 <div class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl
                     {{ $notification->read_at ? 'bg-white' : 'bg-blue-50/40 border-blue-100' }}">
-                    <div class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center {{ $isApproved ? 'bg-green-100' : 'bg-red-100' }}">
-                        <span class="material-symbols-outlined {{ $isApproved ? 'text-green-600' : 'text-red-600' }}">
-                            {{ $isApproved ? 'check_circle' : 'cancel' }}
-                        </span>
+                    <div class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center {{ $iconBg }}">
+                        <span class="material-symbols-outlined {{ $iconColor }}">{{ $icon }}</span>
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-start justify-between gap-3">
@@ -43,11 +42,11 @@
                                 <p class="text-sm text-gray-800 font-medium">{{ $data['message'] ?? 'Notificación' }}</p>
                                 <p class="text-xs text-gray-500 mt-1">{{ $notification->created_at->format('d/m/Y H:i') }}</p>
                             </div>
-                            @if(isset($data['requisition_id']))
-                                <a href="{{ route('technician.requisitions.show', $data['requisition_id']) }}"
+                            @if($link)
+                                <a href="{{ $link }}"
                                     class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap flex-shrink-0">
                                     <span class="material-symbols-outlined text-sm">open_in_new</span>
-                                    Ver requisición
+                                    Ver detalle
                                 </a>
                             @endif
                         </div>
@@ -65,7 +64,7 @@
                 <div class="text-center py-12">
                     <span class="material-symbols-outlined text-gray-300 text-5xl mb-3">notifications_off</span>
                     <p class="text-gray-500 font-medium">Sin notificaciones</p>
-                    <p class="text-sm text-gray-400 mt-1">Las notificaciones de requisiciones aparecerán aquí</p>
+                    <p class="text-sm text-gray-400 mt-1">Las notificaciones aparecerán aquí</p>
                 </div>
             @endforelse
         </div>
