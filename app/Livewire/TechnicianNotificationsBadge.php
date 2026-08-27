@@ -10,6 +10,8 @@ class TechnicianNotificationsBadge extends Component
     public $count = 0;
     public $notifications = [];
     public $soundEnabled = true;
+    public $pendingNocTickets = 0;
+    public $nocTickets = [];
 
     public function mount()
     {
@@ -22,6 +24,16 @@ class TechnicianNotificationsBadge extends Component
         $user = auth()->user();
         $this->count = $user->unreadNotifications->count();
         $this->notifications = $user->notifications()->latest()->take(10)->get();
+
+        $this->pendingNocTickets = $user->can('access noc panel')
+            ? \App\Models\Ticket::where('requires_noc', true)->where('status', 'pending')->count()
+            : 0;
+        $this->nocTickets = $user->can('access noc panel')
+            ? \App\Models\Ticket::with('client')
+                ->where('requires_noc', true)->where('status', 'pending')
+                ->latest()->take(5)
+                ->get(['id', 'ticket_code', 'client_id', 'description', 'created_at'])
+            : [];
     }
 
     public function markAsRead($id)
@@ -39,6 +51,7 @@ class TechnicianNotificationsBadge extends Component
 
     protected $listeners = [
         'refresh-notifications-badge' => 'updateCount',
+        'refresh-noc-badge' => 'updateCount',
     ];
 
     public function toggleSound()

@@ -20,8 +20,11 @@
         class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200/80 overflow-hidden z-50"
         style="display: none;">
 
-        <div class="p-3 border-b border-gray-100">
+        <div class="p-3 border-b border-gray-100 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-700">Notificaciones NOC</h3>
+            <button wire:click="toggleSound" class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition" title="{{ $soundEnabled ? 'Silenciar sonido' : 'Activar sonido' }}">
+                <span class="material-symbols-outlined text-lg">{{ $soundEnabled ? 'volume_up' : 'volume_off' }}</span>
+            </button>
         </div>
 
         <div class="max-h-64 overflow-y-auto">

@@ -139,6 +139,12 @@
                                 min="5" max="300" step="5">
                             <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-base">schedule</span>
                         </div>
+
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <x-ui.toggle wire:model.live="globalSoundEnabled" onColor="green"
+                                label="Sonido de notificaciones global"
+                                description="Activado = cada usuario controla su propio sonido. Desactivado = silencia el sonido para todos los usuarios." />
+                        </div>
                     </div>
                 </div>
             </div>

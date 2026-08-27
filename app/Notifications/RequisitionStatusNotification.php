@@ -4,11 +4,11 @@ namespace App\Notifications;
 
 use App\Models\Requisition;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
 
-class RequisitionStatusNotification extends Notification implements ShouldBroadcast
+class RequisitionStatusNotification extends Notification implements ShouldBroadcastNow
 {
     use Queueable;
 
