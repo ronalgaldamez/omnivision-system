@@ -2,9 +2,9 @@
     {{-- Icono de campana con badge --}}
     <button @click="open = !open" class="relative inline-flex items-center focus:outline-none">
         <span class="material-symbols-outlined text-gray-500 text-2xl hover:text-gray-700 transition">notifications</span>
-        @if($count > 0)
+        @if(($count + $pendingNocTickets) > 0)
             <span class="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                {{ $count > 9 ? '9+' : $count }}
+                {{ ($count + $pendingNocTickets) > 9 ? '9+' : ($count + $pendingNocTickets) }}
             </span>
         @endif
     </button>
@@ -34,6 +34,15 @@
         </div>
 
         <div class="max-h-64 overflow-y-auto">
+            @if($pendingNocTickets > 0)
+            <div class="px-4 py-2 bg-amber-50 border-b border-amber-100">
+                <a href="{{ route('noc.panel') }}" class="flex items-center justify-between text-sm text-amber-800 hover:underline">
+                    <span class="font-semibold">Tickets NOC pendientes</span>
+                    <span class="font-bold">{{ $pendingNocTickets }}</span>
+                </a>
+            </div>
+            @endif
+
             @forelse($notifications as $notification)
                 @php
                     $data = $notification->data;

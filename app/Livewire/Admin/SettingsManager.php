@@ -20,6 +20,7 @@ class SettingsManager extends Component
     public $documentTypeList = [];
     public $modules = [];
     public $nocPollingInterval = 30;
+    public $globalSoundEnabled = true;
 
     // ========== PROPIEDADES DE LOGOS ==========
     public $globalLogoPath = '';
@@ -101,6 +102,7 @@ class SettingsManager extends Component
         }
 
         $this->nocPollingInterval = (int) Setting::get('noc_polling_interval', 30);
+        $this->globalSoundEnabled = Setting::get('notif_sound_global', 'enabled') !== 'silenced';
 
         // Cargar logos configurados
         $this->globalLogoPath = (string) Setting::get('logo_global', '');
@@ -146,6 +148,13 @@ class SettingsManager extends Component
         $this->validate(['nocPollingInterval' => 'required|integer|min:5|max:300']);
         Setting::set('noc_polling_interval', (string) $this->nocPollingInterval);
         $this->dispatch('show-toast', type: 'success', message: 'Intervalo de notificaciones guardado.');
+    }
+
+    public function updatedGlobalSoundEnabled($value)
+    {
+        $this->globalSoundEnabled = (bool) $value;
+        Setting::set('notif_sound_global', $this->globalSoundEnabled ? 'enabled' : 'silenced');
+        $this->dispatch('show-toast', type: 'success', message: $this->globalSoundEnabled ? 'Sonido de notificaciones activado para todos.' : 'Sonido de notificaciones silenciado globalmente.');
     }
 
     // ========== MÉTODOS PARA TIPOS DE SERVICIO ==========

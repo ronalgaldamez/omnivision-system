@@ -11,11 +11,21 @@ class NotificationsBadge extends Component
     public $pendingNocTickets = 0;
     public $notifications = [];
     public $pollingInterval = 30; // NUEVO: se cargará desde la configuración
+    public $soundEnabled = true;
 
     public function mount()
     {
         $this->pollingInterval = (int) \App\Models\Setting::get('noc_polling_interval', 30);
+        $this->soundEnabled = \App\Models\Setting::get('user_notif_sound_' . auth()->id(), 'enabled') !== 'silenced';
         $this->updateCount();
+    }
+
+    public function toggleSound()
+    {
+        $this->soundEnabled = !$this->soundEnabled;
+        \App\Models\Setting::set('user_notif_sound_' . auth()->id(), $this->soundEnabled ? 'enabled' : 'silenced');
+        $this->dispatch('notif-sound-setting-changed');
+        $this->dispatch('show-toast', type: 'success', message: $this->soundEnabled ? 'Sonido de notificaciones activado.' : 'Sonido de notificaciones silenciado.');
     }
 
     public function updateCount()

@@ -428,10 +428,6 @@
 
                         <livewire:changelog-badge />
 
-                        @if(Auth::user()->can('access noc panel'))
-                            <livewire:notifications-badge />
-                        @endif
-
                         @if(Auth::check())
                             <livewire:technician-notifications-badge />
                         @endif
@@ -530,7 +526,15 @@
 
         @if(Auth::check())
         window.Echo.private('App.Models.User.' + {{ auth()->user()->id }})
-            .notification((notification) => {
+            .listen('.work-order.notification', (e) => {
+                window.dispatchEvent(new CustomEvent('refresh-notifications'));
+                window.dispatchEvent(new CustomEvent('play-notification-sound'));
+            })
+            .listen('.requisition.status', (e) => {
+                window.dispatchEvent(new CustomEvent('refresh-notifications'));
+                window.dispatchEvent(new CustomEvent('play-notification-sound'));
+            })
+            .listen('.requisition.submitted', (e) => {
                 window.dispatchEvent(new CustomEvent('refresh-notifications'));
                 window.dispatchEvent(new CustomEvent('play-notification-sound'));
             });
@@ -553,7 +557,9 @@
         @endif
     </script>
     <script>
-        @php($soundSilenced = auth()->check() && \App\Models\Setting::get('user_notif_sound_' . auth()->id(), 'enabled') === 'silenced')
+        @php($globalSilenced = \App\Models\Setting::get('notif_sound_global', 'enabled') === 'silenced')
+        @php($userSilenced = auth()->check() && \App\Models\Setting::get('user_notif_sound_' . auth()->id(), 'enabled') === 'silenced')
+        @php($soundSilenced = $globalSilenced || $userSilenced)
         document.addEventListener('livewire:initialized', () => {
             const audio = new Audio('{{ asset('sounds/notification.mp3') }}');
             window.notifSoundSilenced = {{ $soundSilenced ? 'true' : 'false' }};

@@ -289,6 +289,8 @@ class RequisitionForm extends Component
             // agrega los ítems nuevos (is_inherited = false).
         }
 
+        \App\Notifications\RequisitionSubmittedNotification::notifyWarehouse($requisition);
+
         $this->dispatch('show-toast', type: 'success', message: 'Requisición enviada a bodega para aprobación.');
         return redirect()->route('technician.requisitions.index');
     }

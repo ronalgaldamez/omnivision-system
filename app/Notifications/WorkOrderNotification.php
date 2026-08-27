@@ -5,12 +5,12 @@ namespace App\Notifications;
 use App\Models\WorkOrder;
 use App\Models\Zone;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Support\Facades\Log;
 
-class WorkOrderNotification extends Notification implements ShouldBroadcast
+class WorkOrderNotification extends Notification implements ShouldBroadcastNow
 {
     use Queueable;
 
