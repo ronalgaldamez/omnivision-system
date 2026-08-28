@@ -9,6 +9,11 @@
                 <form wire:submit.prevent="confirmUpdate" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <x-ui.input icon="edit_note" wire:model="currentName" label="Nombre *" required />
+                        <x-ui.select wire:model="currentUnit" label="Unidad de medida" icon="straighten" placeholder="">
+                            @foreach($units as $u)
+                                <option value="{{ $u->code }}">{{ $u->name }}{{ $u->symbol ? ' ('.$u->symbol.')' : '' }}</option>
+                            @endforeach
+                        </x-ui.select>
                         <x-ui.input type="number" icon="remove" wire:model="currentStockMin" label="Stock mínimo" />
                         <x-ui.input type="number" icon="add" wire:model="currentStockMax" label="Stock máximo" />
 
@@ -186,6 +191,11 @@
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <x-ui.input icon="edit_note" wire:model="currentName" label="Nombre *" required />
+                        <x-ui.select wire:model="currentUnit" label="Unidad de medida" icon="straighten" placeholder="">
+                            @foreach($units as $u)
+                                <option value="{{ $u->code }}">{{ $u->name }}{{ $u->symbol ? ' ('.$u->symbol.')' : '' }}</option>
+                            @endforeach
+                        </x-ui.select>
                         <x-ui.input type="number" icon="inventory" wire:model="currentStockMin" label="Stock mínimo" />
                         <x-ui.input type="number" icon="exposure_plus_1" wire:model="currentStockMax" label="Stock máximo" />
 

@@ -46,7 +46,7 @@ class RequisitionBodegaIndex extends Component
 
     public function selectRequisition($id)
     {
-        $this->selectedRequisition = Requisition::with('items.product', 'technician', 'workOrders')
+        $this->selectedRequisition = Requisition::with('items.product.unitOfMeasure', 'technician', 'workOrders')
             ->findOrFail($id);
 
         $this->branchAssignments = [];
@@ -181,6 +181,7 @@ class RequisitionBodegaIndex extends Component
             $this->approvalSummary[] = [
                 'item_id' => $itemId,
                 'product_name' => $product?->name ?? '—',
+                'unit' => $product?->unitLabel() ?? '',
                 'requested_qty' => (float) $item->quantity_requested,
                 'qty' => $qty,
                 'removed' => $isRemoved,

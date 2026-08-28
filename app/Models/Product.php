@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Product extends Model
 {
@@ -100,6 +101,27 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function unitOfMeasure(): BelongsTo
+    {
+        return $this->belongsTo(UnitOfMeasure::class, 'unit_of_measure', 'code');
+    }
+
+    public function isWholeUnit(): bool
+    {
+        return $this->unitOfMeasure?->is_whole ?? true;
+    }
+
+    public function unitLabel(): string
+    {
+        $unit = $this->unitOfMeasure;
+
+        if ($unit) {
+            return $unit->symbol ?: $unit->name;
+        }
+
+        return $this->unit_of_measure ?: 'unidad';
     }
 
     public function shelves()

@@ -155,6 +155,9 @@
                             <tr class="hover:bg-gray-50/80 transition {{ $isInherited ? 'bg-blue-50/30' : '' }}">
                                 <td class="px-4 py-3 text-gray-800">
                                     {{ $item['product_name'] }} ({{ $item['product_sku'] }})
+                                    @if(!empty($item['unit']) && $item['unit'] !== 'unidad')
+                                        <span class="text-xs text-gray-400 font-normal">· {{ $item['unit'] }}</span>
+                                    @endif
                                     @if($isInherited)
                                         <x-ui.badge variant="info" class="ml-2">Heredado</x-ui.badge>
                                     @endif
@@ -162,7 +165,7 @@
                                 <td class="px-4 py-3 text-center font-mono text-sm {{ $onHand > 0 ? 'text-amber-600' : 'text-gray-400' }}">
                                     {{ $onHand > 0 ? $onHand : '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-center font-mono">{{ $item['quantity'] }}</td>
+                                <td class="px-4 py-3 text-center font-mono">{{ $item['quantity'] }}@if(!empty($item['unit']) && $item['unit'] !== 'unidad') <span class="text-xs text-gray-400">{{ $item['unit'] }}</span>@endif</td>
                                 <td class="px-4 py-3 text-center">
                                     <button type="button" wire:click="removeItem({{ $index }})"
                                         class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition">

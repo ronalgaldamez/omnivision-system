@@ -174,10 +174,14 @@
                                     $product = $item->product;
                                     $globalStock = $product ? (float) $product->current_stock : 0;
                                     $isRemoved = in_array($item->id, $removedItems);
+                                    $unitLabel = $product ? $product->unitLabel() : '';
                                 @endphp
                                 <tr class="hover:bg-gray-50/50 transition {{ $isRemoved ? 'bg-red-50 opacity-60' : '' }}">
                                     <td class="px-4 py-3 text-gray-800">
                                         {{ $item->product?->name }}
+                                        @if($unitLabel && $unitLabel !== 'unidad')
+                                            <span class="text-xs text-gray-400 font-normal">· {{ $unitLabel }}</span>
+                                        @endif
                                         @if($item->is_inherited)
                                             <span class="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium ml-1">
                                                 <span class="material-symbols-outlined text-xs">archive</span> Heredado
@@ -357,6 +361,9 @@
                                     <tr class="{{ $s['removed'] ? 'bg-red-50 opacity-60' : '' }}">
                                         <td class="px-3 py-2.5 text-gray-800">
                                             {{ $s['product_name'] }}
+                                            @if(!empty($s['unit']) && $s['unit'] !== 'unidad')
+                                                <span class="text-xs text-gray-400 font-normal">· {{ $s['unit'] }}</span>
+                                            @endif
                                             @if($s['inherited'])
                                                 <span class="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium ml-1">Heredado</span>
                                             @endif
