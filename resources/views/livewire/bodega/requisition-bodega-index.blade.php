@@ -170,9 +170,9 @@
                                 @php
                                     $selectedBranchId = $branchAssignments[$item->id]['source_branch_id'] ?? '';
                                     $branchInv = $selectedBranchId ? \App\Models\BranchInventory::where('branch_id', $selectedBranchId)->where('product_id', $item->product_id)->first() : null;
-                                    $stockInBranch = $branchInv ? (int) $branchInv->allocated_quantity : 0;
+                                    $stockInBranch = $branchInv ? (float) $branchInv->allocated_quantity : 0;
                                     $product = $item->product;
-                                    $globalStock = $product ? (int) $product->current_stock : 0;
+                                    $globalStock = $product ? (float) $product->current_stock : 0;
                                     $isRemoved = in_array($item->id, $removedItems);
                                 @endphp
                                 <tr class="hover:bg-gray-50/50 transition {{ $isRemoved ? 'bg-red-50 opacity-60' : '' }}">
@@ -217,7 +217,7 @@
                                                     <option value="">Stock general ({{ $globalStock }} disp.)</option>
                                                     @foreach($allBranches as $b)
                                                         @php $bi = \App\Models\BranchInventory::where('branch_id', $b->id)->where('product_id', $item->product_id)->first();
-                                                        $biQty = $bi ? (int) $bi->allocated_quantity : 0; @endphp
+                                                        $biQty = $bi ? (float) $bi->allocated_quantity : 0; @endphp
                                                         <option value="{{ $b->id }}" {{ $biQty <= 0 ? 'disabled' : '' }}>
                                                             {{ $b->name }} @if($bi)({{ $biQty }} disp.)@endif
                                                         </option>
@@ -460,7 +460,7 @@
                                 </div>
                                 <div class="min-w-0">
                                     <p class="text-sm font-medium text-gray-800 group-hover:text-blue-700 truncate">{{ $p->name }}</p>
-                                    <p class="text-xs text-gray-500 mt-0.5 font-mono">{{ $p->sku }} · Stock: {{ (int) $p->current_stock }}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5 font-mono">{{ $p->sku }} · Stock: {{ (float) $p->current_stock }}</p>
                                 </div>
                             </div>
                             <span class="material-symbols-outlined text-gray-300 group-hover:text-blue-500 text-lg flex-shrink-0">chevron_right</span>

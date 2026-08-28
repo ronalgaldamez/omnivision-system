@@ -10,7 +10,7 @@ class Product extends Model
     use HasFactory;
 
     protected $casts = [
-        'current_stock' => 'integer',
+        'current_stock' => 'float',
     ];
 
     protected $fillable = [

@@ -57,7 +57,8 @@ class InventoryService
         DB::transaction(function () use ($product, $quantity, $averageCost, $totalValue, $movement) {
             $product->current_stock -= $quantity;
             $product->total_value -= $totalValue;
-            if ($product->current_stock == 0) {
+            if ($product->current_stock <= 0) {
+                $product->current_stock = 0;
                 $product->average_cost = 0;
                 $product->total_value = 0;
             }
