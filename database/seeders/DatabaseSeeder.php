@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call(UsersSeeder::class);
         $this->call(PackagingTypesSeeder::class);
         $this->call(MovementTypeSeeder::class);
+        $this->call(UnitOfMeasureSeeder::class);
         $this->call(ServiceTypeSeeder::class);
         // $this->call(KnowledgeBaseSeeder::class);
 
