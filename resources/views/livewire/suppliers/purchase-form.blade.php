@@ -230,6 +230,25 @@
                                     <button type="button" wire:click="clearProductSelection" class="text-xs text-blue-600 hover:text-blue-800 transition">Cambiar</button>
                                 </div>
 
+                                @if(count($currentPackagings) > 0)
+                                    <div>
+                                        <x-forms.label icon="package_2">Empaque</x-forms.label>
+                                        <select wire:model.live="currentPackagingId"
+                                            class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                            @foreach($currentPackagings as $pkg)
+                                                <option value="{{ $pkg->id }}">{{ $pkg->name }} · {{ rtrim(rtrim(number_format($pkg->quantity_in_base_unit, 4), '0'), '.') }} un. base</option>
+                                            @endforeach
+                                        </select>
+                                        @php
+                                            $selPkg = collect($currentPackagings)->firstWhere('id', $currentPackagingId);
+                                            $pkgBase = $selPkg ? (float) $selPkg->quantity_in_base_unit : 1;
+                                        @endphp
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            {{ $currentQuantity }} × {{ rtrim(rtrim(number_format($pkgBase, 4), '0'), '.') }} = {{ rtrim(rtrim(number_format($currentQuantity * $pkgBase, 4), '0'), '.') }} un. base
+                                        </p>
+                                    </div>
+                                @endif
+
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <x-forms.label icon="123">Cantidad</x-forms.label>
@@ -241,7 +260,7 @@
                                         @enderror
                                     </div>
                                     <div>
-                                        <x-forms.label icon="attach_money">Costo unitario</x-forms.label>
+                                        <x-forms.label icon="attach_money">{{ count($currentPackagings) > 0 ? 'Costo por empaque' : 'Costo unitario' }}</x-forms.label>
                                         <input type="number" step="0.01" wire:model.live.debounce.500ms="currentUnitCost"
                                             x-on:keydown="if(!/^[0-9.]$/.test($event.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes($event.key)) $event.preventDefault()"
                                             class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
@@ -307,6 +326,9 @@
                                                 </td>
                                                 <td class="px-4 py-3 text-center">
                                                     <span class="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-800 rounded-md text-sm font-medium">{{ $item['quantity'] }}</span>
+                                                    @if(!empty($item['packaging_name']))
+                                                        <div class="text-xs text-gray-400 mt-1">{{ rtrim(rtrim(number_format($item['base_quantity'], 4), '0'), '.') }} un. base</div>
+                                                    @endif
                                                 </td>
                                                 <td class="px-4 py-3 text-center text-gray-700 font-mono">${{ number_format($item['unit_cost'], 2) }}</td>
                                                 <td class="px-4 py-3 text-center font-bold text-gray-800 font-mono">${{ number_format($item['quantity'] * $item['unit_cost'], 2) }}</td>
@@ -361,7 +383,7 @@
                                         <div class="grid grid-cols-2 gap-2 text-xs">
                                             <div class="bg-gray-50 rounded p-2">
                                                 <p class="text-gray-500">Cantidad</p>
-                                                <p class="font-semibold text-gray-800">{{ $item['quantity'] }}</p>
+                                                <p class="font-semibold text-gray-800">{{ $item['quantity'] }}@if(!empty($item['packaging_name'])) <span class="text-xs text-gray-400">· {{ rtrim(rtrim(number_format($item['base_quantity'], 4), '0'), '.') }} un.</span>@endif</p>
                                             </div>
                                             <div class="bg-gray-50 rounded p-2">
                                                 <p class="text-gray-500">Costo unit.</p>

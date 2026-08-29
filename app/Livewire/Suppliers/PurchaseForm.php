@@ -4,6 +4,7 @@ namespace App\Livewire\Suppliers;
 
 use App\Models\Movement;
 use App\Models\Product;
+use App\Models\ProductPackaging;
 use App\Models\ProductShelf;
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
@@ -55,6 +56,10 @@ class PurchaseForm extends Component
     public $productListSearch = '';
 
     public $packagingTypes = [];
+
+    public $currentPackagings = [];
+
+    public $currentPackagingId = '';
 
     // Crear producto inline
     public $createMode = false;
@@ -283,13 +288,16 @@ class PurchaseForm extends Component
 
     public function selectProduct($id)
     {
-        $product = Product::find($id);
+        $product = Product::with('packagings')->find($id);
         if ($product) {
             $this->currentProductId = $product->id;
             $this->currentProductSearch = $product->name.' ('.$product->sku.')';
             $this->stockMin = $product->stock_min;
             $this->stockMax = $product->stock_max;
             $this->productSearchResults = [];
+            $this->currentPackagings = $product->packagings;
+            $default = $product->packagings->firstWhere('is_default_for_purchase', true);
+            $this->currentPackagingId = $default ? $default->id : ($product->packagings->first()?->id ?? '');
         }
     }
 
@@ -310,12 +318,24 @@ class PurchaseForm extends Component
 
         $product = Product::find($this->currentProductId);
 
+        $packaging = null;
+        $baseQuantity = $this->currentQuantity;
+        if ($this->currentPackagingId) {
+            $packaging = collect($this->currentPackagings)->firstWhere('id', $this->currentPackagingId);
+            if ($packaging && (float) $packaging->quantity_in_base_unit > 0) {
+                $baseQuantity = $this->currentQuantity * (float) $packaging->quantity_in_base_unit;
+            }
+        }
+
         $item = [
             'product_id' => $this->currentProductId,
             'product_name' => $product->name,
             'product_sku' => $product->sku,
             'quantity' => $this->currentQuantity,
             'unit_cost' => $this->currentUnitCost,
+            'packaging_id' => $this->currentPackagingId ?: null,
+            'packaging_name' => $packaging?->name ?? null,
+            'base_quantity' => $baseQuantity,
             'stock_min' => $this->stockMin,
             'stock_max' => $this->stockMax,
         ];
@@ -340,6 +360,8 @@ class PurchaseForm extends Component
         $this->productSearchResults = [];
         $this->stockMin = null;
         $this->stockMax = null;
+        $this->currentPackagings = [];
+        $this->currentPackagingId = '';
     }
 
     public function clearProductSelection()
@@ -389,6 +411,9 @@ class PurchaseForm extends Component
         $this->editingIndex = $index;
         $this->stockMin = $item['stock_min'] ?? null;
         $this->stockMax = $item['stock_max'] ?? null;
+        $this->currentPackagingId = $item['packaging_id'] ?? '';
+        $product = Product::with('packagings')->find($item['product_id']);
+        $this->currentPackagings = $product?->packagings ?? collect();
         unset($this->items[$index]);
         $this->items = array_values($this->items);
 
@@ -403,12 +428,21 @@ class PurchaseForm extends Component
 
         $product = Product::find($this->currentProductId);
 
+        $packaging = $this->currentPackagingId ? collect($this->currentPackagings)->firstWhere('id', $this->currentPackagingId) : null;
+        $baseQuantity = $this->currentQuantity;
+        if ($packaging && (float) $packaging->quantity_in_base_unit > 0) {
+            $baseQuantity = $this->currentQuantity * (float) $packaging->quantity_in_base_unit;
+        }
+
         $this->items[] = [
             'product_id' => $this->currentProductId,
             'product_name' => $product->name ?? '',
             'product_sku' => $product->sku ?? '',
             'quantity' => $this->currentQuantity,
             'unit_cost' => $this->currentUnitCost,
+            'packaging_id' => $this->currentPackagingId ?: null,
+            'packaging_name' => $packaging?->name ?? null,
+            'base_quantity' => $baseQuantity,
             'stock_min' => $this->stockMin,
             'stock_max' => $this->stockMax,
         ];
@@ -645,19 +679,30 @@ class PurchaseForm extends Component
             $inventoryService = new InventoryService;
 
             foreach ($this->items as $item) {
+                $baseQuantity = $item['base_quantity'] ?? $item['quantity'];
+                $perPackaging = 1;
+                if (! empty($item['packaging_id'])) {
+                    $pkg = ProductPackaging::find($item['packaging_id']);
+                    if ($pkg && (float) $pkg->quantity_in_base_unit > 0) {
+                        $perPackaging = (float) $pkg->quantity_in_base_unit;
+                    }
+                }
+                $baseUnitCost = $item['unit_cost'] / $perPackaging;
+
                 PurchaseItem::create([
                     'purchase_id' => $purchase->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                     'unit_cost' => $item['unit_cost'],
-                    'base_quantity' => $item['quantity'],
+                    'base_quantity' => $baseQuantity,
+                    'packaging_id' => $item['packaging_id'] ?? null,
                 ]);
 
                 $movement = Movement::create([
                     'product_id' => $item['product_id'],
                     'type' => 'entry',
-                    'quantity' => $item['quantity'],
-                    'unit_cost' => $item['unit_cost'],
+                    'quantity' => $baseQuantity,
+                    'unit_cost' => $baseUnitCost,
                     'description' => 'Compra No. '.$this->invoice_number,
                     'user_id' => Auth::id(),
                     'reference_type' => 'purchase',
@@ -665,7 +710,7 @@ class PurchaseForm extends Component
                 ]);
 
                 $product = $products[$item['product_id']] ?? Product::find($item['product_id']);
-                $inventoryService->processPurchaseEntry($product, $item['quantity'], $item['unit_cost'], $movement);
+                $inventoryService->processPurchaseEntry($product, $baseQuantity, $baseUnitCost, $movement);
 
                 $needsSave = false;
                 if (! is_null($item['stock_min'] ?? null) && $item['stock_min'] != $product->stock_min) {

@@ -99,7 +99,7 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-3 text-center text-gray-700">${{ number_format($item->unit_cost, 2) }}</td>
-                                    <td class="px-4 py-3 text-center font-medium text-gray-800">${{ number_format(($item->base_quantity ?? $item->quantity) * $item->unit_cost, 2) }}</td>
+                                    <td class="px-4 py-3 text-center font-medium text-gray-800">${{ number_format($item->quantity * $item->unit_cost, 2) }}</td>
                                 </tr>
                                 @if($item->fractional_quantity)
                                 <tr class="bg-amber-50/50">
