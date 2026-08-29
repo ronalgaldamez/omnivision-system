@@ -40,11 +40,16 @@
                         <div class="p-4 bg-gray-50 rounded-lg border border-gray-100">
                             <p class="text-xs text-gray-500 uppercase">Estado</p>
                             <p class="text-sm font-semibold mt-1">
-                                @if($viewingHistory->status === 'approved')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">Aprobada</span>
-                                @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700">Rechazada</span>
-                                @endif
+                                @php
+                                    $detailStatus = match($viewingHistory->status) {
+                                        'approved' => ['badge' => 'bg-green-50 text-green-700', 'label' => 'Aprobada'],
+                                        'rejected' => ['badge' => 'bg-red-50 text-red-700', 'label' => 'Rechazada'],
+                                        'heredada' => ['badge' => 'bg-blue-50 text-blue-700', 'label' => 'Heredada'],
+                                        'closed'   => ['badge' => 'bg-gray-50 text-gray-700', 'label' => 'Cerrada'],
+                                        default    => ['badge' => 'bg-gray-50 text-gray-700', 'label' => $viewingHistory->status],
+                                    };
+                                @endphp
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $detailStatus['badge'] }}">{{ $detailStatus['label'] }}</span>
                             </p>
                         </div>
                     </div>
@@ -65,7 +70,7 @@
                             <div class="relative flex gap-4 pb-5 last:pb-0">
                                 <div class="flex flex-col items-center">
                                     <span class="w-3.5 h-3.5 rounded-full flex-shrink-0 mt-1
-                                        {{ $log->action === 'approved' ? 'bg-green-500' : ($log->action === 'rejected' ? 'bg-red-500' : 'bg-blue-500') }}"></span>
+                                        {{ $log->action === 'approved' ? 'bg-green-500' : ($log->action === 'rejected' ? 'bg-red-500' : ($log->action === 'closed' ? 'bg-gray-400' : 'bg-blue-500')) }}"></span>
                                     @if(!$loop->last)
                                         <span class="w-px flex-1 bg-gray-200"></span>
                                     @endif
@@ -86,17 +91,28 @@
                     <x-ui.select wire:model.live="historyStatus" class="sm:w-48">
                         <option value="">Todos los estados</option>
                         <option value="approved">Aprobadas</option>
+                        <option value="heredada">Heredadas</option>
+                        <option value="closed">Cerradas</option>
                         <option value="rejected">Rechazadas</option>
                     </x-ui.select>
                 </div>
                 <div class="space-y-3">
                     @forelse($history as $r)
+                        @php
+                            $statusMeta = match($r->status) {
+                                'approved' => ['icon' => 'check_circle', 'box' => 'bg-green-100', 'iconColor' => 'text-green-600', 'badge' => 'bg-green-50 text-green-700', 'label' => 'Aprobada'],
+                                'rejected' => ['icon' => 'cancel', 'box' => 'bg-red-100', 'iconColor' => 'text-red-600', 'badge' => 'bg-red-50 text-red-700', 'label' => 'Rechazada'],
+                                'heredada' => ['icon' => 'archive', 'box' => 'bg-blue-100', 'iconColor' => 'text-blue-600', 'badge' => 'bg-blue-50 text-blue-700', 'label' => 'Heredada'],
+                                'closed'   => ['icon' => 'task_alt', 'box' => 'bg-gray-100', 'iconColor' => 'text-gray-600', 'badge' => 'bg-gray-50 text-gray-700', 'label' => 'Cerrada'],
+                                default    => ['icon' => 'circle', 'box' => 'bg-gray-100', 'iconColor' => 'text-gray-600', 'badge' => 'bg-gray-50 text-gray-700', 'label' => $r->status],
+                            };
+                        @endphp
                         <div class="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer"
                             wire:click="selectHistory({{ $r->id }})">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-lg {{ $r->status === 'approved' ? 'bg-green-100' : 'bg-red-100' }} flex items-center justify-center">
-                                        <span class="material-symbols-outlined {{ $r->status === 'approved' ? 'text-green-600' : 'text-red-600' }}">{{ $r->status === 'approved' ? 'check_circle' : 'cancel' }}</span>
+                                    <div class="w-10 h-10 rounded-lg {{ $statusMeta['box'] }} flex items-center justify-center">
+                                        <span class="material-symbols-outlined {{ $statusMeta['iconColor'] }}">{{ $statusMeta['icon'] }}</span>
                                     </div>
                                     <div>
                                         <p class="text-sm font-semibold text-gray-800">#{{ $r->id }} — {{ $r->technician?->name }}</p>
@@ -104,8 +120,8 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $r->status === 'approved' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700' }}">
-                                        {{ $r->status === 'approved' ? 'Aprobada' : 'Rechazada' }}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusMeta['badge'] }}">
+                                        {{ $statusMeta['label'] }}
                                     </span>
                                     <span class="material-symbols-outlined text-gray-400">chevron_right</span>
                                 </div>
@@ -169,8 +185,7 @@
                             @foreach($selectedRequisition->items as $item)
                                 @php
                                     $selectedBranchId = $branchAssignments[$item->id]['source_branch_id'] ?? '';
-                                    $branchInv = $selectedBranchId ? \App\Models\BranchInventory::where('branch_id', $selectedBranchId)->where('product_id', $item->product_id)->first() : null;
-                                    $stockInBranch = $branchInv ? (float) $branchInv->allocated_quantity : 0;
+                                    $stockInBranch = $selectedBranchId ? ($branchStocks[$item->product_id][$selectedBranchId] ?? 0) : 0;
                                     $product = $item->product;
                                     $globalStock = $product ? (float) $product->current_stock : 0;
                                     $isRemoved = in_array($item->id, $removedItems);
@@ -220,10 +235,9 @@
                                                     class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm appearance-none">
                                                     <option value="">Stock general ({{ $globalStock }} disp.)</option>
                                                     @foreach($allBranches as $b)
-                                                        @php $bi = \App\Models\BranchInventory::where('branch_id', $b->id)->where('product_id', $item->product_id)->first();
-                                                        $biQty = $bi ? (float) $bi->allocated_quantity : 0; @endphp
+                                                        @php $biQty = $branchStocks[$item->product_id][$b->id] ?? 0; @endphp
                                                         <option value="{{ $b->id }}" {{ $biQty <= 0 ? 'disabled' : '' }}>
-                                                            {{ $b->name }} @if($bi)({{ $biQty }} disp.)@endif
+                                                            {{ $b->name }} @if($biQty > 0)({{ $biQty }} disp.)@endif
                                                         </option>
                                                     @endforeach
                                                 </select>

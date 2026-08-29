@@ -44,13 +44,23 @@ class RequisitionBodegaIndex extends Component
     public $substituteList = [];
     public $substituteListSearch = '';
 
+    public $branchStocks = [];
+
     public function selectRequisition($id)
     {
-        $this->selectedRequisition = Requisition::with('items.product.unitOfMeasure', 'technician', 'workOrders')
+        $requisition = Requisition::with('items.product.unitOfMeasure', 'technician', 'workOrders')
             ->findOrFail($id);
+
+        if ($requisition->status !== 'pending') {
+            $this->dispatch('show-toast', type: 'error', message: 'Esta requisición ya fue procesada.');
+            return;
+        }
+
+        $this->selectedRequisition = $requisition;
 
         $this->branchAssignments = [];
         $this->removedItems = [];
+        $this->branchStocks = [];
         foreach ($this->selectedRequisition->items as $item) {
             $this->branchAssignments[$item->id] = [
                 'product_id' => $item->product_id,
@@ -58,6 +68,13 @@ class RequisitionBodegaIndex extends Component
                 'source_branch_id' => '',
             ];
         }
+
+        $productIds = $this->selectedRequisition->items->pluck('product_id');
+        BranchInventory::whereIn('product_id', $productIds)
+            ->get()
+            ->each(function ($bi) {
+                $this->branchStocks[$bi->product_id][$bi->branch_id] = (float) $bi->allocated_quantity;
+            });
     }
 
     public function removeItem($itemId)
@@ -126,6 +143,7 @@ class RequisitionBodegaIndex extends Component
         if (!$product || !$this->changingItemId) return;
 
         $this->branchAssignments[$this->changingItemId]['product_id'] = $product->id;
+        $this->branchAssignments[$this->changingItemId]['source_branch_id'] = '';
         $this->dispatch('show-toast', type: 'info', message: "Producto cambiado a: {$product->name}");
         $this->closeSubstituteModal();
     }
@@ -135,6 +153,7 @@ class RequisitionBodegaIndex extends Component
         $this->selectedRequisition = null;
         $this->branchAssignments = [];
         $this->removedItems = [];
+        $this->branchStocks = [];
         $this->showApproveModal = false;
         $this->showRejectModal = false;
         $this->approvalSummary = [];
@@ -441,14 +460,19 @@ class RequisitionBodegaIndex extends Component
             return;
         }
 
-        $isRejected = $requisition->status === 'rejected';
+        $map = [
+            'rejected' => ['action' => 'rejected', 'description' => 'Requisición rechazada: ' . ($requisition->rejection_reason ?: 'Sin motivo registrado.')],
+            'heredada' => ['action' => 'heredada', 'description' => 'Requisición heredada por una nueva solicitud.'],
+            'closed'   => ['action' => 'closed',   'description' => 'Requisición cerrada (cierre semanal).'],
+        ];
+
+        $entry = $map[$requisition->status] ?? ['action' => 'approved', 'description' => 'Requisición aprobada.'];
+
         RequisitionLog::create([
             'requisition_id' => $requisition->id,
             'user_id' => $requisition->approver?->id ?? 1,
-            'action' => $isRejected ? 'rejected' : 'approved',
-            'description' => $isRejected
-                ? "Requisición rechazada: " . ($requisition->rejection_reason ?: 'Sin motivo registrado.')
-                : "Requisición aprobada.",
+            'action' => $entry['action'],
+            'description' => $entry['description'],
             'created_at' => $requisition->approved_at ?? $requisition->updated_at,
         ]);
     }
@@ -463,7 +487,7 @@ class RequisitionBodegaIndex extends Component
 
         $history = Requisition::with('technician', 'logs.user')
             ->withCount('items')
-            ->whereIn('status', ['approved', 'rejected'])
+            ->whereIn('status', ['approved', 'rejected', 'heredada', 'closed'])
             ->when($this->historySearch, fn($q) => $q->whereHas('technician', fn($t) => $t->where('name', 'like', '%' . $this->historySearch . '%')))
             ->when($this->historyStatus, fn($q) => $q->where('status', $this->historyStatus))
             ->orderBy('updated_at', 'desc')
