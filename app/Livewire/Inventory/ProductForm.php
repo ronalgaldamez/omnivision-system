@@ -4,6 +4,8 @@ namespace App\Livewire\Inventory;
 
 use App\Models\Product;
 use App\Models\ProductModel;
+use App\Models\PackagingType;
+use App\Models\ProductPackaging;
 use App\Models\UnitOfMeasure;
 use App\Traits\HasFormPersistence;
 use App\Traits\ManagesProductPackaging;
@@ -38,6 +40,10 @@ class ProductForm extends Component
     public $currentModelId = '';
 
     public $currentCategoryId = '';
+
+    public $currentPackagingTypeId = '';
+
+    public $currentPackagingQuantity = 1;
 
     // Modal de búsqueda de modelo
     public $showModelModal = false;
@@ -99,6 +105,7 @@ class ProductForm extends Component
             'currentName', 'currentUnit',
             'currentStockMin', 'currentStockMax', 'currentDescription',
             'currentBrandId', 'currentModelId', 'currentCategoryId',
+            'currentPackagingTypeId', 'currentPackagingQuantity',
             'selectedModelDisplay', 'productList',
             'categorySearch', 'brandSearch',
         ];
@@ -144,6 +151,7 @@ class ProductForm extends Component
         } else {
             $this->productList = [];
             $this->resetCurrent();
+            $this->initPackagingState();
             if (session()->has($this->persistenceKey())) {
                 $this->restorePersistedState();
             }
@@ -160,6 +168,8 @@ class ProductForm extends Component
         $this->currentBrandId = '';
         $this->currentModelId = '';
         $this->currentCategoryId = '';
+        $this->currentPackagingTypeId = '';
+        $this->currentPackagingQuantity = 1;
         $this->selectedModelDisplay = '';
         $this->modelSearchTerm = '';
         $this->modelSearchResults = [];
@@ -331,6 +341,8 @@ class ProductForm extends Component
             'brand_id' => $this->currentBrandId,
             'model_id' => $this->currentModelId,
             'category_id' => $this->currentCategoryId,
+            'packaging_type_id' => $this->currentPackagingTypeId ?: null,
+            'packaging_quantity' => $this->currentPackagingTypeId ? $this->currentPackagingQuantity : null,
         ];
 
         $this->resetCurrent();
@@ -380,6 +392,8 @@ class ProductForm extends Component
         $this->currentBrandId = $item['brand_id'];
         $this->currentModelId = $item['model_id'];
         $this->currentCategoryId = $item['category_id'];
+        $this->currentPackagingTypeId = $item['packaging_type_id'] ?? '';
+        $this->currentPackagingQuantity = $item['packaging_quantity'] ?? 1;
         if ($this->currentModelId) {
             $model = ProductModel::with('brand', 'category')->find($this->currentModelId);
             if ($model) {
@@ -413,9 +427,27 @@ class ProductForm extends Component
             $prod['brand_id'] = $prod['brand_id'] ?: null;
             $prod['model_id'] = $prod['model_id'] ?: null;
             $prod['category_id'] = $prod['category_id'] ?: null;
-            Product::create($prod);
+
+            $packagingTypeId = $prod['packaging_type_id'] ?? null;
+            $packagingQty = $prod['packaging_quantity'] ?? null;
+            unset($prod['packaging_type_id'], $prod['packaging_quantity']);
+
+            $product = Product::create($prod);
+
+            if ($packagingTypeId && $packagingQty > 0) {
+                $type = PackagingType::find($packagingTypeId);
+                $name = ($type?->name ?? 'Empaque').' x'.rtrim(rtrim(number_format($packagingQty, 4), '0'), '.');
+                ProductPackaging::create([
+                    'product_id' => $product->id,
+                    'packaging_type_id' => $packagingTypeId,
+                    'name' => $name,
+                    'quantity_in_base_unit' => $packagingQty,
+                    'is_default_for_purchase' => true,
+                ]);
+            }
         }
         $this->clearPersistedState();
+        $this->dispatch('clear-unsaved-changes');
         $this->dispatch('show-toast', ['type' => 'success', 'message' => count($this->productList).' producto(s) creado(s) correctamente.']);
         $this->redirectRoute('products.index');
     }
@@ -442,6 +474,7 @@ class ProductForm extends Component
             'category_id' => $this->currentCategoryId ?: null,
         ]);
         $this->clearPersistedState();
+        $this->dispatch('clear-unsaved-changes');
         $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Producto actualizado correctamente.']);
         $this->redirectRoute('products.index');
     }

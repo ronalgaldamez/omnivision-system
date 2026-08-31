@@ -1,5 +1,6 @@
 <div class="max-w-6xl mx-auto" x-data="{ hasChanges: @entangle('hasUnsavedChanges') }"
-    @beforeunload.window="if (hasChanges) { event.preventDefault(); event.returnValue = ''; }">
+    @beforeunload.window="if (hasChanges) { event.preventDefault(); event.returnValue = ''; }"
+    @clear-unsaved-changes.window="hasChanges = false">
     <x-ui.card :title="$editingId ? 'Editar Producto' : 'Nuevos Productos'"
         :subtitle="$editingId ? 'Modifica los datos del producto seleccionado' : 'Agrega uno o varios productos y guárdalos juntos'"
         :icon="$editingId ? 'edit' : 'add_box'">
@@ -198,6 +199,13 @@
                         </x-ui.select>
                         <x-ui.input type="number" icon="inventory" wire:model="currentStockMin" label="Stock mínimo" />
                         <x-ui.input type="number" icon="exposure_plus_1" wire:model="currentStockMax" label="Stock máximo" />
+
+                        <x-ui.select wire:model="currentPackagingTypeId" label="Tipo de empaque (opcional)" icon="package_2" placeholder="Sin empaque">
+                            @foreach($packagingTypes as $pt)
+                                <option value="{{ $pt->id }}">{{ $pt->name }}</option>
+                            @endforeach
+                        </x-ui.select>
+                        <x-ui.input type="number" step="any" icon="123" wire:model="currentPackagingQuantity" label="Unidades por empaque" />
 
                         <div class="md:col-span-2">
                             <x-forms.label icon="category">Modelo (Marca / Modelo / Categoría)</x-forms.label>
