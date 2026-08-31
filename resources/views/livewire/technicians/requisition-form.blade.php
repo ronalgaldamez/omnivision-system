@@ -127,6 +127,26 @@
                             @endif
                         </div>
                     </div>
+
+                    @if($currentProductId && count($currentPackagings) > 0)
+                        <div class="mt-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Empaque</label>
+                            <select wire:model.live="currentPackagingId"
+                                class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm text-sm">
+                                @foreach($currentPackagings as $pkg)
+                                    <option value="{{ $pkg->id }}">{{ $pkg->name }}</option>
+                                @endforeach
+                            </select>
+                            @php
+                                $selPkg = collect($currentPackagings)->firstWhere('id', $currentPackagingId);
+                                $pkgBase = $selPkg ? (float) $selPkg->quantity_in_base_unit : 1;
+                            @endphp
+                            <p class="text-xs text-blue-700 mt-1.5 font-medium">
+                                {{ $currentQuantity }} empaque(s) = {{ rtrim(rtrim(number_format($currentQuantity * $pkgBase, 4), '0'), '.') }} {{ $currentProductUnit }}
+                            </p>
+                        </div>
+                    @endif
+
                     <div class="mt-4 flex justify-end">
                         <x-ui.button type="button" variant="primary" icon="add_circle" wire:click="addItem">
                             Agregar producto
@@ -165,7 +185,9 @@
                                 <td class="px-4 py-3 text-center font-mono text-sm {{ $onHand > 0 ? 'text-amber-600' : 'text-gray-400' }}">
                                     {{ $onHand > 0 ? $onHand : '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-center font-mono">{{ $item['quantity'] }}@if(!empty($item['unit']) && $item['unit'] !== 'unidad') <span class="text-xs text-gray-400">{{ $item['unit'] }}</span>@endif</td>
+                                <td class="px-4 py-3 text-center font-mono">{{ $item['quantity'] }}@if(!empty($item['unit']) && $item['unit'] !== 'unidad') <span class="text-xs text-gray-400">{{ $item['unit'] }}</span>@endif
+                                    @if(!empty($item['packaging_name']))<div class="text-xs text-gray-400 mt-0.5">{{ $item['packaging_name'] }}</div>@endif
+                                </td>
                                 <td class="px-4 py-3 text-center">
                                     <button type="button" wire:click="removeItem({{ $index }})"
                                         class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition">

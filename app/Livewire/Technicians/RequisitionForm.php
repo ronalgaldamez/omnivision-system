@@ -19,6 +19,9 @@ class RequisitionForm extends Component
     public $currentProductId;
     public $currentProductSearch = '';
     public $currentQuantity = 1;
+    public $currentPackagings = [];
+    public $currentPackagingId = '';
+    public $currentProductUnit = '';
     public $showProductModal = false;
     public $productList = [];
     public $productListSearch = '';
@@ -123,12 +126,16 @@ class RequisitionForm extends Component
 
     public function selectProduct($id)
     {
-        $product = Product::find($id);
+        $product = Product::with('packagings')->find($id);
         if ($product) {
             $this->currentProductId = $product->id;
             $this->currentProductSearch = $product->name . ' (' . $product->sku . ')';
             $this->productResults = [];
             $this->showProductModal = false;
+            $this->currentPackagings = $product->packagings;
+            $default = $product->packagings->firstWhere('is_default_for_purchase', true);
+            $this->currentPackagingId = $default ? $default->id : ($product->packagings->first()?->id ?? '');
+            $this->currentProductUnit = $product->unitLabel();
         }
     }
 
@@ -184,18 +191,31 @@ class RequisitionForm extends Component
             'currentQuantity.min' => 'La cantidad debe ser mayor a 0.',
         ]);
 
+        $packaging = null;
+        $requestedQty = $isWhole ? (int) $this->currentQuantity : $this->currentQuantity;
+        if ($this->currentPackagingId) {
+            $packaging = collect($this->currentPackagings)->firstWhere('id', $this->currentPackagingId);
+            if ($packaging && (float) $packaging->quantity_in_base_unit > 0) {
+                $requestedQty = $this->currentQuantity * (float) $packaging->quantity_in_base_unit;
+            }
+        }
+
         $this->items[] = [
             'product_id' => $this->currentProductId,
             'product_name' => $product->name,
             'product_sku' => $product->sku,
-            'quantity' => $isWhole ? (int) $this->currentQuantity : $this->currentQuantity,
+            'quantity' => $requestedQty,
             'unit' => $product->unitLabel(),
             'is_whole' => $isWhole,
+            'packaging_name' => $packaging?->name ?? null,
         ];
 
         $this->currentProductSearch = '';
         $this->currentProductId = null;
         $this->currentQuantity = 1;
+        $this->currentPackagings = [];
+        $this->currentPackagingId = '';
+        $this->currentProductUnit = '';
     }
 
     public function removeItem($index)

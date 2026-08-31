@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Auth;
 
 class RequisitionIndex extends Component
 {
+    public $showCloseModal = false;
+    public $closeSummary = [];
+    public $closeReturnQty = [];
+
     public function closeWeek()
     {
         $user = Auth::user();
@@ -23,45 +27,94 @@ class RequisitionIndex extends Component
             return;
         }
 
-        // Consolidar inventario sobrante
-        $inventoryItems = TechnicianInventory::where('technician_id', $user->id)->get();
+        $inventoryItems = TechnicianInventory::where('technician_id', $user->id)
+            ->where('quantity_in_hand', '>', 0)
+            ->with('product')
+            ->get();
+
         if ($inventoryItems->isEmpty()) {
             $this->dispatch('show-toast', type: 'info', message: 'No tienes material pendiente de devolución.');
             return;
         }
 
-        // Crear una devolución por producto (una fila por producto en la tabla technician_returns)
+        $productIds = $inventoryItems->pluck('product_id');
+        $entregado = \App\Models\RequisitionItem::whereIn('product_id', $productIds)
+            ->whereHas('requisition', fn($q) => $q->where('technician_id', $user->id)->where('status', 'approved'))
+            ->selectRaw('product_id, SUM(quantity_requested) as total')
+            ->groupBy('product_id')
+            ->pluck('total', 'product_id');
+
+        $this->closeSummary = [];
+        $this->closeReturnQty = [];
         foreach ($inventoryItems as $inv) {
-            if ($inv->quantity_in_hand > 0) {
-                \App\Models\TechnicianReturn::create([
-                    'user_id' => $user->id,
-                    'product_id' => $inv->product_id,
-                    'quantity' => $inv->quantity_in_hand,
-                    'type' => 'surplus',
-                    'notes' => 'Cierre semanal automático - Material sobrante de requisiciones',
-                ]);
-
-                // Devolver stock a bodega con costo actual
-                $product = $inv->product;
-                $returnCost = $product->average_cost ?? 0;
-
-                $movement = \App\Models\Movement::create([
-                    'product_id' => $inv->product_id,
-                    'type' => 'technician_return',
-                    'quantity' => $inv->quantity_in_hand,
-                    'description' => 'Devolución cierre semanal (Req. agrupadas)',
-                    'user_id' => $user->id,
-                    'reference_type' => 'weekly_close',
-                ]);
-
-                app(InventoryService::class)->processPurchaseEntry($product, $inv->quantity_in_hand, $returnCost, $movement);
-
-                // Limpiar inventario del técnico
-                $inv->update(['quantity_in_hand' => 0]);
-            }
+            $sobrante = (float) $inv->quantity_in_hand;
+            $entregadoVal = (float) ($entregado[$inv->product_id] ?? 0);
+            $this->closeSummary[] = [
+                'product_id' => $inv->product_id,
+                'product_name' => $inv->product->name,
+                'unit' => $inv->product->unitLabel(),
+                'entregado' => $entregadoVal,
+                'usado' => max(0, $entregadoVal - $sobrante),
+            ];
+            $this->closeReturnQty[$inv->product_id] = $sobrante;
         }
 
-        // Devolver dispositivos (routers, ONT, etc.) asignados que aún no fueron instalados
+        $this->showCloseModal = true;
+    }
+
+    public function cancelClose()
+    {
+        $this->showCloseModal = false;
+        $this->closeSummary = [];
+        $this->closeReturnQty = [];
+    }
+
+    public function confirmClose()
+    {
+        $user = Auth::user();
+        $openRequisitions = Requisition::where('technician_id', $user->id)
+            ->where('status', 'approved')
+            ->get();
+
+        foreach ($this->closeSummary as $row) {
+            $qty = (float) ($this->closeReturnQty[$row['product_id']] ?? 0);
+            if ($qty <= 0) continue;
+
+            $inv = TechnicianInventory::where('technician_id', $user->id)
+                ->where('product_id', $row['product_id'])
+                ->first();
+
+            if (!$inv || $qty > (float) $inv->quantity_in_hand) {
+                $this->dispatch('show-toast', type: 'error', message: "Cantidad inválida para {$row['product_name']}.");
+                return;
+            }
+
+            $product = $inv->product;
+            $returnCost = $product->average_cost ?? 0;
+
+            \App\Models\TechnicianReturn::create([
+                'user_id' => $user->id,
+                'product_id' => $row['product_id'],
+                'quantity' => $qty,
+                'type' => 'surplus',
+                'notes' => 'Cierre semanal automático - Material sobrante de requisiciones',
+            ]);
+
+            $movement = \App\Models\Movement::create([
+                'product_id' => $row['product_id'],
+                'type' => 'technician_return',
+                'quantity' => $qty,
+                'description' => 'Devolución cierre semanal (Req. agrupadas)',
+                'user_id' => $user->id,
+                'reference_type' => 'weekly_close',
+            ]);
+
+            app(InventoryService::class)->processPurchaseEntry($product, $qty, $returnCost, $movement);
+
+            $newQty = (float) $inv->quantity_in_hand - $qty;
+            $inv->update(['quantity_in_hand' => max(0, $newQty)]);
+        }
+
         $returnedDevices = Device::where('technician_id', $user->id)
             ->where('status', 'assigned')
             ->count();
@@ -76,11 +129,11 @@ class RequisitionIndex extends Component
                 ]);
         }
 
-        // Marcar requisiciones como cerradas
         foreach ($openRequisitions as $req) {
             $req->update(['status' => 'closed', 'closed_at' => now()]);
         }
 
+        $this->showCloseModal = false;
         $message = $returnedDevices > 0
             ? "Cierre semanal realizado. Material y {$returnedDevices} dispositivo(s) devueltos a bodega."
             : 'Cierre semanal realizado. Material devuelto a bodega.';
