@@ -44,13 +44,23 @@ class RequisitionBodegaIndex extends Component
     public $substituteList = [];
     public $substituteListSearch = '';
 
+    public $branchStocks = [];
+
     public function selectRequisition($id)
     {
-        $this->selectedRequisition = Requisition::with('items.product', 'technician', 'workOrders')
+        $requisition = Requisition::with('items.product.unitOfMeasure', 'technician', 'workOrders')
             ->findOrFail($id);
+
+        if ($requisition->status !== 'pending') {
+            $this->dispatch('show-toast', type: 'error', message: 'Esta requisición ya fue procesada.');
+            return;
+        }
+
+        $this->selectedRequisition = $requisition;
 
         $this->branchAssignments = [];
         $this->removedItems = [];
+        $this->branchStocks = [];
         foreach ($this->selectedRequisition->items as $item) {
             $this->branchAssignments[$item->id] = [
                 'product_id' => $item->product_id,
@@ -58,6 +68,13 @@ class RequisitionBodegaIndex extends Component
                 'source_branch_id' => '',
             ];
         }
+
+        $productIds = $this->selectedRequisition->items->pluck('product_id');
+        BranchInventory::whereIn('product_id', $productIds)
+            ->get()
+            ->each(function ($bi) {
+                $this->branchStocks[$bi->product_id][$bi->branch_id] = (float) $bi->allocated_quantity;
+            });
     }
 
     public function removeItem($itemId)
@@ -126,6 +143,7 @@ class RequisitionBodegaIndex extends Component
         if (!$product || !$this->changingItemId) return;
 
         $this->branchAssignments[$this->changingItemId]['product_id'] = $product->id;
+        $this->branchAssignments[$this->changingItemId]['source_branch_id'] = '';
         $this->dispatch('show-toast', type: 'info', message: "Producto cambiado a: {$product->name}");
         $this->closeSubstituteModal();
     }
@@ -135,6 +153,7 @@ class RequisitionBodegaIndex extends Component
         $this->selectedRequisition = null;
         $this->branchAssignments = [];
         $this->removedItems = [];
+        $this->branchStocks = [];
         $this->showApproveModal = false;
         $this->showRejectModal = false;
         $this->approvalSummary = [];
@@ -149,7 +168,7 @@ class RequisitionBodegaIndex extends Component
             $item = $requisition->items->firstWhere('id', $itemId);
             if (!$item) continue;
 
-            $qty = (int) ($assign['quantity'] ?? 0);
+            $qty = round((float) ($assign['quantity'] ?? 0), 2);
             $product = Product::find($assign['product_id']);
             $isRemoved = in_array($itemId, $this->removedItems);
 
@@ -160,9 +179,9 @@ class RequisitionBodegaIndex extends Component
                 $branchInv = BranchInventory::where('branch_id', $assign['source_branch_id'])
                     ->where('product_id', $assign['product_id'])
                     ->first();
-                $stockAvailable = $branchInv ? (int) $branchInv->allocated_quantity : 0;
+                $stockAvailable = $branchInv ? (float) $branchInv->allocated_quantity : 0;
             } else {
-                $stockAvailable = $product ? (int) $product->current_stock : 0;
+                $stockAvailable = $product ? (float) $product->current_stock : 0;
             }
 
             $deviceCount = 0;
@@ -181,7 +200,8 @@ class RequisitionBodegaIndex extends Component
             $this->approvalSummary[] = [
                 'item_id' => $itemId,
                 'product_name' => $product?->name ?? '—',
-                'requested_qty' => (int) $item->quantity_requested,
+                'unit' => $product?->unitLabel() ?? '',
+                'requested_qty' => (float) $item->quantity_requested,
                 'qty' => $qty,
                 'removed' => $isRemoved,
                 'inherited' => (bool) $item->is_inherited,
@@ -219,10 +239,10 @@ class RequisitionBodegaIndex extends Component
                 // solo se registran en la requisición, no se despachan de bodega.
                 if ($item->is_inherited) continue;
 
-                $qty = (int) ($assign['quantity'] ?? 0);
+                $qty = round((float) ($assign['quantity'] ?? 0), 2);
 
                 // Validación estricta en servidor (nunca más de lo solicitado ni negativos)
-                if ($qty < 0 || $qty > (int) $item->quantity_requested) {
+                if ($qty < 0 || $qty > (float) $item->quantity_requested) {
                     throw new \Exception("Cantidad inválida para {$item->product?->name}: {$qty} (solicitado: {$item->quantity_requested}).");
                 }
 
@@ -249,21 +269,26 @@ class RequisitionBodegaIndex extends Component
                     if ($product->current_stock < $qty) {
                         throw new \Exception("Stock general insuficiente para {$product->name}. Disponible: {$product->current_stock}");
                     }
-                    $product->decrement('current_stock', $qty);
                 }
 
-                Movement::create([
+                $movement = Movement::create([
                     'product_id' => $assign['product_id'],
                     'type' => 'requisition_out',
                     'quantity' => $qty,
-                    'unit_cost' => $product->average_cost ?? 0,
-                    'total_value' => ($qty * ($product->average_cost ?? 0)),
                     'description' => 'Requisición #' . $requisition->id . ' (aprobada)',
                     'user_id' => Auth::id(),
                     'reference_type' => 'requisition',
                     'reference_id' => $requisition->id,
                     'branch_id' => $assign['source_branch_id'] ?: null,
                 ]);
+
+                if ($assign['source_branch_id']) {
+                    $movement->unit_cost = $product->average_cost ?? 0;
+                    $movement->total_value = round($qty * ($product->average_cost ?? 0), 2);
+                    $movement->save();
+                } else {
+                    app(InventoryService::class)->processExit($product, $qty, $movement);
+                }
 
                 $inventory = TechnicianInventory::firstOrNew([
                     'technician_id' => $requisition->technician_id,
@@ -282,7 +307,7 @@ class RequisitionBodegaIndex extends Component
                     $deviceQuery->whereNull('branch_id');
                 }
 
-                $devices = $deviceQuery->take($qty)->get();
+                $devices = $deviceQuery->take((int) $qty)->get();
 
                 foreach ($devices as $device) {
                     $device->update([
@@ -301,7 +326,7 @@ class RequisitionBodegaIndex extends Component
 
                 $originalName = $item->product?->name ?? 'Producto';
                 $newProduct = Product::find($assign['product_id']);
-                $qty = (int) ($assign['quantity'] ?? 0);
+                $qty = round((float) ($assign['quantity'] ?? 0), 2);
 
                 if (in_array($itemId, $this->removedItems)) {
                     $logEntries[] = "Se quitó el producto {$originalName} de la requisición.";
@@ -310,7 +335,7 @@ class RequisitionBodegaIndex extends Component
                 if ((int) $assign['product_id'] !== (int) $item->product_id) {
                     $logEntries[] = "Se sustituyó {$originalName} por {$newProduct?->name}.";
                 }
-                if ((int) $item->quantity_requested !== $qty) {
+                if ((float) $item->quantity_requested !== $qty) {
                     $logEntries[] = "Se ajustó la cantidad de {$originalName}: {$item->quantity_requested} → {$qty}.";
                 }
                 if ($assign['source_branch_id']) {
@@ -331,7 +356,7 @@ class RequisitionBodegaIndex extends Component
             $deliveredCount = 0;
             foreach ($this->branchAssignments as $itemId => $assign) {
                 $item = $requisition->items->firstWhere('id', $itemId);
-                if ($item && !$item->is_inherited && (int) ($assign['quantity'] ?? 0) > 0) {
+                if ($item && !$item->is_inherited && (float) ($assign['quantity'] ?? 0) > 0) {
                     $deliveredCount++;
                 }
             }
@@ -343,11 +368,17 @@ class RequisitionBodegaIndex extends Component
                 'description' => "Requisición aprobada por " . (auth()->user()->name ?? 'bodega') . ". {$deliveredCount} producto(s) entregado(s).",
             ]);
 
+            $sourceBranchIds = collect($this->branchAssignments)
+                ->pluck('source_branch_id')
+                ->filter()
+                ->unique()
+                ->values();
+
             $requisition->update([
                 'status' => 'approved',
                 'approved_by' => Auth::id(),
                 'approved_at' => now(),
-                'branch_id' => collect($this->branchAssignments)->first()['source_branch_id'] ?: null,
+                'branch_id' => $sourceBranchIds->count() === 1 ? $sourceBranchIds->first() : null,
             ]);
 
             DB::commit();
@@ -429,14 +460,19 @@ class RequisitionBodegaIndex extends Component
             return;
         }
 
-        $isRejected = $requisition->status === 'rejected';
+        $map = [
+            'rejected' => ['action' => 'rejected', 'description' => 'Requisición rechazada: ' . ($requisition->rejection_reason ?: 'Sin motivo registrado.')],
+            'heredada' => ['action' => 'heredada', 'description' => 'Requisición heredada por una nueva solicitud.'],
+            'closed'   => ['action' => 'closed',   'description' => 'Requisición cerrada (cierre semanal).'],
+        ];
+
+        $entry = $map[$requisition->status] ?? ['action' => 'approved', 'description' => 'Requisición aprobada.'];
+
         RequisitionLog::create([
             'requisition_id' => $requisition->id,
             'user_id' => $requisition->approver?->id ?? 1,
-            'action' => $isRejected ? 'rejected' : 'approved',
-            'description' => $isRejected
-                ? "Requisición rechazada: " . ($requisition->rejection_reason ?: 'Sin motivo registrado.')
-                : "Requisición aprobada.",
+            'action' => $entry['action'],
+            'description' => $entry['description'],
             'created_at' => $requisition->approved_at ?? $requisition->updated_at,
         ]);
     }
@@ -451,7 +487,7 @@ class RequisitionBodegaIndex extends Component
 
         $history = Requisition::with('technician', 'logs.user')
             ->withCount('items')
-            ->whereIn('status', ['approved', 'rejected'])
+            ->whereIn('status', ['approved', 'rejected', 'heredada', 'closed'])
             ->when($this->historySearch, fn($q) => $q->whereHas('technician', fn($t) => $t->where('name', 'like', '%' . $this->historySearch . '%')))
             ->when($this->historyStatus, fn($q) => $q->where('status', $this->historyStatus))
             ->orderBy('updated_at', 'desc')

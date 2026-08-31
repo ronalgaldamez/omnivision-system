@@ -79,6 +79,7 @@ class RequisitionForm extends Component
                     'product_name' => $inv->product->name,
                     'product_sku' => $inv->product->sku,
                     'quantity' => $inv->quantity_in_hand,
+                    'unit' => $inv->product->unitLabel(),
                     'inherited' => true,
                 ];
                 $this->inheritedItemIds[] = $inv->product_id;
@@ -169,22 +170,27 @@ class RequisitionForm extends Component
 
     public function addItem()
     {
+        $product = Product::find($this->currentProductId);
+        $isWhole = $product?->isWholeUnit() ?? true;
+
         $this->validate([
             'currentProductId' => 'required|exists:products,id',
-            'currentQuantity' => 'required|numeric|min:0.01',
+            'currentQuantity' => $isWhole ? 'required|integer|min:1' : 'required|numeric|min:0.01',
         ], [
             'currentProductId.required' => 'Seleccioná un producto antes de agregar.',
             'currentProductId.exists' => 'El producto seleccionado no existe.',
             'currentQuantity.required' => 'Indicá la cantidad a solicitar.',
+            'currentQuantity.integer' => 'Este producto se maneja en unidades enteras.',
             'currentQuantity.min' => 'La cantidad debe ser mayor a 0.',
         ]);
 
-        $product = Product::find($this->currentProductId);
         $this->items[] = [
             'product_id' => $this->currentProductId,
             'product_name' => $product->name,
             'product_sku' => $product->sku,
-            'quantity' => $this->currentQuantity,
+            'quantity' => $isWhole ? (int) $this->currentQuantity : $this->currentQuantity,
+            'unit' => $product->unitLabel(),
+            'is_whole' => $isWhole,
         ];
 
         $this->currentProductSearch = '';

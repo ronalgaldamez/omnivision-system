@@ -7,6 +7,7 @@ use Livewire\WithPagination;
 use App\Models\Brand;
 use App\Models\ProductModel;
 use App\Models\Category;
+use App\Models\UnitOfMeasure;
 
 class CatalogManager extends Component
 {
@@ -31,6 +32,12 @@ class CatalogManager extends Component
     public $categoryName = '';
     public $categoryDescription = '';
     public $categoryRequiresDevice = false;
+
+    // Campos para unidad de medida
+    public $unitCode = '';
+    public $unitName = '';
+    public $unitSymbol = '';
+    public $unitIsWhole = true;
 
     // Búsquedas
     public $searchModels = '';
@@ -254,6 +261,79 @@ class CatalogManager extends Component
         $this->confirmAction = null;
     }
 
+    // ==================== UNIDADES DE MEDIDA ====================
+    public function openUnitModal($id = null)
+    {
+        $this->resetValidation();
+        $this->modalType = 'unit';
+        $this->editingId = $id;
+        if ($id) {
+            $unit = UnitOfMeasure::findOrFail($id);
+            $this->unitCode = $unit->code;
+            $this->unitName = $unit->name;
+            $this->unitSymbol = $unit->symbol;
+            $this->unitIsWhole = $unit->is_whole;
+        } else {
+            $this->unitCode = '';
+            $this->unitName = '';
+            $this->unitSymbol = '';
+            $this->unitIsWhole = true;
+        }
+        $this->showModal = true;
+    }
+
+    public function confirmSaveUnit()
+    {
+        $rules = [
+            'unitCode' => 'required|string|max:50',
+            'unitName' => 'required|string|max:100',
+            'unitSymbol' => 'nullable|string|max:20',
+        ];
+        $rules['unitCode'] .= !$this->editingId
+            ? '|unique:unit_of_measures,code'
+            : '|unique:unit_of_measures,code,' . $this->editingId;
+        $this->validate($rules);
+        $this->confirmAction = 'saveUnit';
+        $this->confirmMessage = $this->editingId ? '¿Actualizar esta unidad?' : '¿Crear esta unidad?';
+        $this->showConfirmModal = true;
+    }
+
+    public function saveUnit()
+    {
+        UnitOfMeasure::updateOrCreate(['id' => $this->editingId], [
+            'code' => $this->unitCode,
+            'name' => $this->unitName,
+            'symbol' => $this->unitSymbol ?: null,
+            'is_whole' => $this->unitIsWhole,
+        ]);
+        $this->showModal = false;
+        $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Unidad guardada correctamente.']);
+        $this->reset(['unitCode', 'unitName', 'unitSymbol', 'unitIsWhole', 'editingId']);
+        $this->showConfirmModal = false;
+    }
+
+    public function confirmDeleteUnit($id)
+    {
+        $this->confirmAction = 'deleteUnit';
+        $this->confirmId = $id;
+        $this->confirmMessage = '¿Eliminar esta unidad? Los productos que la usen perderán la referencia.';
+        $this->showConfirmModal = true;
+    }
+
+    public function deleteUnit()
+    {
+        $unit = UnitOfMeasure::findOrFail($this->confirmId);
+        if ($unit->products()->count() > 0) {
+            $this->dispatch('show-toast', ['type' => 'error', 'message' => 'No se puede eliminar una unidad con productos asociados.']);
+        } else {
+            $unit->delete();
+            $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Unidad eliminada.']);
+        }
+        $this->showConfirmModal = false;
+        $this->confirmId = null;
+        $this->confirmAction = null;
+    }
+
     public function executeConfirmedAction()
     {
         if ($this->confirmAction === 'saveModel')
@@ -268,6 +348,10 @@ class CatalogManager extends Component
             $this->saveCategory();
         elseif ($this->confirmAction === 'deleteCategory')
             $this->deleteCategory();
+        elseif ($this->confirmAction === 'saveUnit')
+            $this->saveUnit();
+        elseif ($this->confirmAction === 'deleteUnit')
+            $this->deleteUnit();
         $this->showConfirmModal = false;
         $this->confirmAction = null;
     }
@@ -289,6 +373,8 @@ class CatalogManager extends Component
             ->orderBy('name')
             ->paginate(10);
 
-        return view('livewire.admin.catalog.catalog-manager', compact('models', 'brands', 'categories'))->layout('components.layouts.app');
+        $units = UnitOfMeasure::orderBy('name')->get();
+
+        return view('livewire.admin.catalog.catalog-manager', compact('models', 'brands', 'categories', 'units'))->layout('components.layouts.app');
     }
 }

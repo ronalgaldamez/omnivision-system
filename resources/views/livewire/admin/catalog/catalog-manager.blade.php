@@ -19,12 +19,20 @@
                         Marcas
                     </button>
                 </li>
-                <li>
+                <li class="mr-2">
                     <button wire:click="$set('activeTab', 'categories')"
                         class="inline-flex items-center gap-1.5 p-3 rounded-t-lg transition
                         {{ $activeTab == 'categories' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:text-gray-600 hover:bg-gray-50' }}">
                         <span class="material-symbols-outlined text-base">sell</span>
                         Categorías
+                    </button>
+                </li>
+                <li>
+                    <button wire:click="$set('activeTab', 'units')"
+                        class="inline-flex items-center gap-1.5 p-3 rounded-t-lg transition
+                        {{ $activeTab == 'units' ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:text-gray-600 hover:bg-gray-50' }}">
+                        <span class="material-symbols-outlined text-base">straighten</span>
+                        Unidades
                     </button>
                 </li>
             </ul>
@@ -173,6 +181,62 @@
                     <div>{{ $categories->links() }}</div>
                 </div>
             @endif
+
+            {{-- ========== UNIDADES DE MEDIDA ========== --}}
+            @if($activeTab == 'units')
+                <div class="space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <p class="text-sm text-gray-500">Unidades de medida disponibles para productos.</p>
+                        <x-ui.button type="primary" icon="add_circle" wire:click="openUnitModal">Nueva Unidad</x-ui.button>
+                    </div>
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200">
+                                    <th class="px-4 py-3 text-left text-gray-600 font-medium">Código</th>
+                                    <th class="px-4 py-3 text-left text-gray-600 font-medium">Nombre</th>
+                                    <th class="px-4 py-3 text-center text-gray-600 font-medium">Símbolo</th>
+                                    <th class="px-4 py-3 text-center text-gray-600 font-medium">Tipo</th>
+                                    <th class="px-4 py-3 text-center text-gray-600 font-medium">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @forelse($units as $unit)
+                                    <tr class="hover:bg-gray-50/80 transition">
+                                        <td class="px-4 py-3 text-gray-800 font-mono">{{ $unit->code }}</td>
+                                        <td class="px-4 py-3 text-gray-800">{{ $unit->name }}</td>
+                                        <td class="px-4 py-3 text-center text-gray-600">{{ $unit->symbol ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-center">
+                                            @if($unit->is_whole)
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Entero</span>
+                                            @else
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">Decimal</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <button wire:click="openUnitModal({{ $unit->id }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
+                                                    <span class="material-symbols-outlined text-lg">edit</span>
+                                                </button>
+                                                <button wire:click="confirmDeleteUnit({{ $unit->id }})" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
+                                                    <span class="material-symbols-outlined text-lg">delete</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="px-4 py-12 text-center bg-gray-50/50">
+                                            <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">straighten</span>
+                                            <p class="text-gray-500">No hay unidades registradas</p>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
         </div>
     </x-ui.card>
 
@@ -191,6 +255,11 @@
                             <h3 class="text-lg font-semibold flex items-center gap-2">
                                 <span class="material-symbols-outlined text-gray-500">branding_watermark</span>
                                 {{ $editingId ? 'Editar' : 'Nueva' }} Marca
+                            </h3>
+                        @elseif($modalType == 'unit')
+                            <h3 class="text-lg font-semibold flex items-center gap-2">
+                                <span class="material-symbols-outlined text-gray-500">straighten</span>
+                                {{ $editingId ? 'Editar' : 'Nueva' }} Unidad
                             </h3>
                         @else
                             <h3 class="text-lg font-semibold flex items-center gap-2">
@@ -228,6 +297,25 @@
                             <x-forms.group name="brandDescription" label="Descripción">
                                 <x-ui.textarea wire:model="brandDescription" rows="2" />
                             </x-forms.group>
+                        @elseif($modalType == 'unit')
+                            <x-forms.group name="unitCode" label="Código">
+                                <x-ui.input type="text" wire:model="unitCode" placeholder="ej: metro" />
+                            </x-forms.group>
+                            <x-forms.group name="unitName" label="Nombre">
+                                <x-ui.input type="text" wire:model="unitName" placeholder="ej: Metro" />
+                            </x-forms.group>
+                            <x-forms.group name="unitSymbol" label="Símbolo (opcional)">
+                                <x-ui.input type="text" wire:model="unitSymbol" placeholder="ej: m, L, kg" />
+                            </x-forms.group>
+                            <div class="space-y-1 px-1">
+                                <div class="flex items-center gap-2">
+                                    <x-ui.checkbox wire:model="unitIsWhole" id="unitIsWhole" />
+                                    <label for="unitIsWhole" class="text-sm text-gray-700 cursor-pointer select-none">Solo acepta números enteros</label>
+                                </div>
+                                <p class="text-xs text-gray-400 ml-6 leading-relaxed">
+                                    Marcá esta opción si la unidad no se divide (ej: routers, piezas). Desmarcá para unidades fraccionables (metros, litros, kilos).
+                                </p>
+                            </div>
                         @else
                             <x-forms.group name="categoryName" label="Nombre">
                                 <x-ui.input type="text" wire:model="categoryName" />
@@ -251,6 +339,8 @@
                                 <x-ui.button variant="primary" icon="save" wire:click="confirmSaveModel">Guardar</x-ui.button>
                             @elseif($modalType == 'brand')
                                 <x-ui.button variant="primary" icon="save" wire:click="confirmSaveBrand">Guardar</x-ui.button>
+                            @elseif($modalType == 'unit')
+                                <x-ui.button variant="primary" icon="save" wire:click="confirmSaveUnit">Guardar</x-ui.button>
                             @else
                                 <x-ui.button variant="primary" icon="save" wire:click="confirmSaveCategory">Guardar</x-ui.button>
                             @endif

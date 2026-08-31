@@ -3,6 +3,7 @@
 namespace App\Livewire\Technicians;
 
 use Livewire\Component;
+use App\Models\Device;
 use App\Models\Requisition;
 use App\Models\TechnicianInventory;
 use App\Services\InventoryService;
@@ -60,12 +61,30 @@ class RequisitionIndex extends Component
             }
         }
 
+        // Devolver dispositivos (routers, ONT, etc.) asignados que aún no fueron instalados
+        $returnedDevices = Device::where('technician_id', $user->id)
+            ->where('status', 'assigned')
+            ->count();
+
+        if ($returnedDevices > 0) {
+            Device::where('technician_id', $user->id)
+                ->where('status', 'assigned')
+                ->update([
+                    'status' => 'in_stock',
+                    'technician_id' => null,
+                    'assigned_at' => null,
+                ]);
+        }
+
         // Marcar requisiciones como cerradas
         foreach ($openRequisitions as $req) {
             $req->update(['status' => 'closed', 'closed_at' => now()]);
         }
 
-        $this->dispatch('show-toast', type: 'success', message: 'Cierre semanal realizado. Material devuelto a bodega.');
+        $message = $returnedDevices > 0
+            ? "Cierre semanal realizado. Material y {$returnedDevices} dispositivo(s) devueltos a bodega."
+            : 'Cierre semanal realizado. Material devuelto a bodega.';
+        $this->dispatch('show-toast', type: 'success', message: $message);
         return redirect()->route('technician-returns.index');
     }
 

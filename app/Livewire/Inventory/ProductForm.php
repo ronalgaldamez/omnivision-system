@@ -4,6 +4,7 @@ namespace App\Livewire\Inventory;
 
 use App\Models\Product;
 use App\Models\ProductModel;
+use App\Models\UnitOfMeasure;
 use App\Traits\HasFormPersistence;
 use App\Traits\ManagesProductPackaging;
 use Livewire\Component;
@@ -83,6 +84,7 @@ class ProductForm extends Component
 
     protected $rules = [
         'currentName' => 'required|string|max:255',
+        'currentUnit' => 'required|string|max:50',
         'currentStockMin' => 'required|integer|min:0',
         'currentStockMax' => 'nullable|integer|min:0',
         'currentDescription' => 'nullable|string',
@@ -94,7 +96,7 @@ class ProductForm extends Component
     protected function persistableProperties(): array
     {
         return [
-            'currentName',
+            'currentName', 'currentUnit',
             'currentStockMin', 'currentStockMax', 'currentDescription',
             'currentBrandId', 'currentModelId', 'currentCategoryId',
             'selectedModelDisplay', 'productList',
@@ -123,6 +125,7 @@ class ProductForm extends Component
             $this->editingId = $id;
             $product = Product::findOrFail($id);
             $this->currentName = $product->name;
+            $this->currentUnit = $product->unit_of_measure ?? 'unidad';
             $this->currentStockMin = intval($product->stock_min ?? 0);
             $this->currentStockMax = intval($product->stock_max ?? 0);
             $this->currentDescription = $product->description;
@@ -150,6 +153,7 @@ class ProductForm extends Component
     public function resetCurrent()
     {
         $this->currentName = '';
+        $this->currentUnit = 'unidad';
         $this->currentStockMin = 0;
         $this->currentStockMax = null;
         $this->currentDescription = '';
@@ -444,6 +448,8 @@ class ProductForm extends Component
 
     public function render()
     {
-        return view('livewire.inventory.products.form')->layout('components.layouts.app');
+        $units = UnitOfMeasure::where('is_active', true)->orderBy('name')->get();
+
+        return view('livewire.inventory.products.form', compact('units'))->layout('components.layouts.app');
     }
 }
