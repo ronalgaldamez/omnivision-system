@@ -7,8 +7,11 @@ use App\Models\ProductModel;
 use App\Models\PackagingType;
 use App\Models\ProductPackaging;
 use App\Models\UnitOfMeasure;
+use App\Models\Movement;
+use App\Services\InventoryService;
 use App\Traits\HasFormPersistence;
 use App\Traits\ManagesProductPackaging;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class ProductForm extends Component
@@ -44,6 +47,22 @@ class ProductForm extends Component
     public $currentPackagingTypeId = '';
 
     public $currentPackagingQuantity = 1;
+
+    public $showImport = false;
+
+    public $importUrl = '';
+
+    public $importError = null;
+
+    public $showImportPreview = false;
+
+    public $importPreview = [];
+
+    public $importSkipped = 0;
+
+    public $importSearch = '';
+
+    public $importStatusFilter = '';
 
     // Modal de búsqueda de modelo
     public $showModelModal = false;
@@ -331,6 +350,13 @@ class ProductForm extends Component
     {
         $this->validate();
 
+        $nameKey = strtolower(trim($this->currentName));
+        $exists = collect($this->productList)->contains(fn ($p) => strtolower(trim($p['name'])) === $nameKey);
+        if ($exists) {
+            $this->dispatch('show-toast', ['type' => 'error', 'message' => 'Ese producto ya está en la lista.']);
+            return;
+        }
+
         $this->productList[] = [
             'name' => $this->currentName,
             'unit_of_measure' => $this->currentUnit,
@@ -350,13 +376,19 @@ class ProductForm extends Component
         $this->dispatch('productAdded');
     }
 
-    public function confirmAction($action, $index)
+    public function confirmAction($action, $index = null)
     {
         $this->modalAction = $action;
         $this->modalItemIndex = $index;
-        $this->modalMessage = $action === 'edit'
-            ? '¿Editar este producto? Los datos se cargarán en el formulario para modificarlos.'
-            : '¿Eliminar este producto de la lista?';
+
+        if ($action === 'edit') {
+            $this->modalMessage = '¿Editar este producto? Los datos se cargarán en el formulario para modificarlos.';
+        } elseif ($action === 'delete') {
+            $this->modalMessage = '¿Eliminar este producto de la lista?';
+        } elseif ($action === 'clear_list') {
+            $this->modalMessage = '¿Limpiar toda la lista de productos pendientes? Se perderán los productos no guardados.';
+        }
+
         $this->showConfirmModal = true;
     }
 
@@ -368,6 +400,8 @@ class ProductForm extends Component
         } elseif ($this->modalAction === 'edit') {
             $this->editItem($this->modalItemIndex);
             $this->dispatch('show-toast', ['type' => 'info', 'message' => 'Producto cargado para edición.']);
+        } elseif ($this->modalAction === 'clear_list') {
+            $this->clearList();
         }
         $this->closeModal();
     }
@@ -410,6 +444,13 @@ class ProductForm extends Component
         $this->persistState();
     }
 
+    public function clearList()
+    {
+        $this->productList = [];
+        $this->persistState();
+        $this->dispatch('show-toast', ['type' => 'info', 'message' => 'Lista de productos limpiada.']);
+    }
+
     // Confirmación para guardar múltiples productos
     public function confirmSaveAll()
     {
@@ -430,7 +471,10 @@ class ProductForm extends Component
 
             $packagingTypeId = $prod['packaging_type_id'] ?? null;
             $packagingQty = $prod['packaging_quantity'] ?? null;
-            unset($prod['packaging_type_id'], $prod['packaging_quantity']);
+            $initialStock = (float) ($prod['stock'] ?? 0);
+            $initialCost = $prod['costo'] ?? null;
+
+            unset($prod['packaging_type_id'], $prod['packaging_quantity'], $prod['stock'], $prod['costo']);
 
             $product = Product::create($prod);
 
@@ -445,9 +489,34 @@ class ProductForm extends Component
                     'is_default_for_purchase' => true,
                 ]);
             }
+
+            if ($initialStock > 0) {
+                $baseStock = ($packagingTypeId && $packagingQty > 0)
+                    ? $initialStock * (float) $packagingQty
+                    : $initialStock;
+
+                $rawCost = ($initialCost !== null && $initialCost !== '') ? (float) $initialCost : 0;
+                $perUnitCost = $rawCost;
+                if ($packagingTypeId && $packagingQty > 0) {
+                    $perUnitCost = $rawCost / (float) $packagingQty;
+                }
+
+                $movement = Movement::create([
+                    'product_id' => $product->id,
+                    'type' => 'entry',
+                    'quantity' => $baseStock,
+                    'description' => 'Inventario inicial',
+                    'user_id' => Auth::id(),
+                    'reference_type' => 'initial_stock',
+                    'reference_id' => $product->id,
+                ]);
+
+                app(InventoryService::class)->processPurchaseEntry($product, $baseStock, $perUnitCost, $movement);
+            }
         }
         $this->clearPersistedState();
         $this->dispatch('clear-unsaved-changes');
+        $this->js('window.__suppressBeforeUnload = true');
         $this->dispatch('show-toast', ['type' => 'success', 'message' => count($this->productList).' producto(s) creado(s) correctamente.']);
         $this->redirectRoute('products.index');
     }
@@ -475,6 +544,7 @@ class ProductForm extends Component
         ]);
         $this->clearPersistedState();
         $this->dispatch('clear-unsaved-changes');
+        $this->js('window.__suppressBeforeUnload = true');
         $this->dispatch('show-toast', ['type' => 'success', 'message' => 'Producto actualizado correctamente.']);
         $this->redirectRoute('products.index');
     }
@@ -484,5 +554,261 @@ class ProductForm extends Component
         $units = UnitOfMeasure::where('is_active', true)->orderBy('name')->get();
 
         return view('livewire.inventory.products.form', compact('units'))->layout('components.layouts.app');
+    }
+
+    // ==================== IMPORTAR DESDE GOOGLE SHEETS (CSV) ====================
+    public function importFromUrl()
+    {
+        $this->validate([
+            'importUrl' => 'required|url',
+        ]);
+
+        $this->runImport();
+    }
+
+    public function refreshImport()
+    {
+        $this->runImport();
+    }
+
+    private function runImport()
+    {
+        $this->importError = null;
+        $this->importSearch = '';
+        $this->importStatusFilter = '';
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(20)->get($this->importUrl);
+            if (! $response->ok()) {
+                $this->importError = 'No se pudo leer la URL. Verificá que esté publicada como CSV.';
+                return;
+            }
+
+            $content = $response->body();
+            if (stripos($content, '<html') !== false || stripos($content, '<table') !== false) {
+                $this->importError = 'La URL devolvió una página web, no un CSV. Publicá la hoja en formato "CSV", no "Página web".';
+                return;
+            }
+
+            $parsed = $this->parseCsvRows($content);
+            if (empty($parsed['rows'])) {
+                $this->importError = 'No se encontraron filas válidas. Revisá que la primera fila tenga encabezados.';
+                return;
+            }
+
+            if (! array_key_exists('name', $parsed['colMap'])) {
+                $this->importError = 'No se reconoció la columna de nombre. Encabezados detectados: '.implode(', ', array_filter($parsed['headers'])).'.';
+                return;
+            }
+
+            $unitsMap = [];
+            foreach (UnitOfMeasure::all() as $u) {
+                $unitsMap[strtolower($u->code)] = $u->code;
+                $unitsMap[strtolower($u->name)] = $u->code;
+                if ($u->symbol) {
+                    $unitsMap[strtolower($u->symbol)] = $u->code;
+                }
+            }
+
+            $packagingMap = [];
+            foreach (PackagingType::all() as $pt) {
+                $packagingMap[strtolower(trim($pt->name))] = $pt->id;
+            }
+
+            $existingSkus = Product::whereNotNull('sku')->pluck('sku')->map(fn ($s) => strtolower(trim($s)))->all();
+            $existingNames = Product::pluck('name')->map(fn ($n) => strtolower(trim($n)))->all();
+
+            $pendingSkus = collect($this->productList)->pluck('sku')->filter()->map(fn ($s) => strtolower(trim($s)))->all();
+            $pendingNames = collect($this->productList)->pluck('name')->map(fn ($n) => strtolower(trim($n)))->all();
+
+            $existingSkus = array_fill_keys(array_merge($existingSkus, $pendingSkus), true);
+            $existingNames = array_fill_keys(array_merge($existingNames, $pendingNames), true);
+
+            $this->importPreview = [];
+            $this->importSkipped = 0;
+            foreach ($parsed['rows'] as $row) {
+                $name = $row['name'] ?? null;
+                if (! $name) {
+                    $this->importSkipped++;
+                    continue;
+                }
+
+                $sku = $row['sku'] ?: null;
+                $nameKey = strtolower(trim($name));
+                $skuKey = $sku ? strtolower(trim($sku)) : null;
+
+                $isExisting = false;
+                if (($skuKey && isset($existingSkus[$skuKey])) || isset($existingNames[$nameKey])) {
+                    $isExisting = true;
+                }
+
+                $existingNames[$nameKey] = true;
+                if ($skuKey) {
+                    $existingSkus[$skuKey] = true;
+                }
+
+                $packagingTypeId = '';
+                $pkgName = $row['packaging_type'] ?? null;
+                if ($pkgName && isset($packagingMap[strtolower(trim($pkgName))])) {
+                    $packagingTypeId = $packagingMap[strtolower(trim($pkgName))];
+                }
+                $packagingQty = $row['packaging_quantity'] ?? '';
+                $stock = $row['stock'] ?? null;
+                $costo = $row['costo'] ?? null;
+
+                // Si NO hay empaque pero "cant_por_empaque" trae un número, la fila viene corrida:
+                // el stock quedó en "cant_por_empaque" y el costo en "stock".
+                if ($packagingTypeId === '' && is_numeric($packagingQty) && (float) $packagingQty > 0) {
+                    $stock = $packagingQty;
+                    $costo = $row['stock'] ?? null;
+                    $packagingQty = '';
+                }
+
+                $this->importPreview[] = [
+                    'name' => $name,
+                    'sku' => $sku,
+                    'unit_of_measure' => $this->resolveUnitCode($row['unit'] ?? null, $unitsMap),
+                    'measure_value' => null,
+                    'stock_min' => (int) ($row['stock_min'] ?? 0),
+                    'stock_max' => ($row['stock_max'] !== null && $row['stock_max'] !== '') ? (int) $row['stock_max'] : null,
+                    'description' => $row['description'] ?? null,
+                    'stock' => $stock,
+                    'costo' => $costo,
+                    'brand_id' => null,
+                    'model_id' => null,
+                    'category_id' => null,
+                    'packaging_type_id' => $packagingTypeId,
+                    'packaging_quantity' => $packagingQty,
+                    'status' => $isExisting ? 'existing' : 'new',
+                ];
+            }
+
+            if (empty($this->importPreview)) {
+                $this->importError = 'No se encontraron productos con nombre válido.';
+                return;
+            }
+
+            $this->showImportPreview = true;
+        } catch (\Exception $e) {
+            $this->importError = 'Error al importar: '.$e->getMessage();
+        }
+    }
+
+    public function confirmImport()
+    {
+        $new = [];
+        $skipped = 0;
+        foreach ($this->importPreview as $row) {
+            if (($row['status'] ?? 'new') === 'existing') {
+                $skipped++;
+                continue;
+            }
+            unset($row['status']);
+            $new[] = $row;
+        }
+
+        $this->productList = array_merge($this->productList, $new);
+        $count = count($new);
+        $this->importPreview = [];
+        $this->importSkipped = 0;
+        $this->showImportPreview = false;
+        $this->persistState();
+
+        $message = "{$count} producto(s) agregado(s) a la lista.";
+        if ($skipped > 0) {
+            $message .= " {$skipped} omitido(s) por ya existir.";
+        }
+        $this->dispatch('show-toast', ['type' => 'success', 'message' => $message]);
+    }
+
+    public function cancelImport()
+    {
+        $this->importPreview = [];
+        $this->importSkipped = 0;
+        $this->showImportPreview = false;
+        $this->importSearch = '';
+        $this->importStatusFilter = '';
+    }
+
+    private function resolveUnitCode($value, $unitsMap)
+    {
+        if (! $value) return 'unidad';
+        $v = strtolower(trim($value));
+        return $unitsMap[$v] ?? 'unidad';
+    }
+
+    private function parseCsvRows($content)
+    {
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+        $lines = preg_split('/\r\n|\r|\n/', $content);
+        $lines = array_values(array_filter(array_map('trim', $lines)));
+        if (count($lines) < 2) return ['headers' => [], 'colMap' => [], 'rows' => []];
+
+        $headers = str_getcsv(array_shift($lines));
+        $headers = array_map(fn ($h) => $this->normalizeHeader($h), $headers);
+        $colMap = $this->buildColumnMap($headers);
+
+        $rows = [];
+        foreach ($lines as $line) {
+            $cells = str_getcsv($line);
+            if (count($cells) < count($headers)) {
+                $cells = array_pad($cells, count($headers), '');
+            }
+            $rows[] = [
+                'name' => $this->cell($cells, $colMap['name'] ?? null),
+                'sku' => $this->cell($cells, $colMap['sku'] ?? null),
+                'unit' => $this->cell($cells, $colMap['unit'] ?? null),
+                'description' => $this->cell($cells, $colMap['description'] ?? null),
+                'stock_min' => $this->cell($cells, $colMap['stock_min'] ?? null),
+                'stock_max' => $this->cell($cells, $colMap['stock_max'] ?? null),
+                'stock' => $this->cell($cells, $colMap['stock'] ?? null),
+                'costo' => $this->cell($cells, $colMap['costo'] ?? null),
+                'packaging_type' => $this->cell($cells, $colMap['packaging_type'] ?? null),
+                'packaging_quantity' => $this->cell($cells, $colMap['packaging_quantity'] ?? null),
+            ];
+        }
+        return ['headers' => $headers, 'colMap' => $colMap, 'rows' => $rows];
+    }
+
+    private function normalizeHeader($h)
+    {
+        $h = strtolower(trim($h));
+        $h = strtr($h, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n', 'ü' => 'u']);
+        $h = preg_replace('/[^a-z0-9]+/', '_', $h);
+        return trim($h, '_');
+    }
+
+    private function buildColumnMap($headers)
+    {
+        $aliases = [
+            'name' => ['nombre', 'name', 'producto', 'product', 'material', 'articulo', 'item', 'nombre_del_producto', 'nombre_producto'],
+            'sku' => ['sku', 'codigo', 'code'],
+            'unit' => ['unidad', 'unit', 'medida', 'um', 'unidad_de_medida', 'unit_of_measure'],
+            'description' => ['descripcion', 'description', 'detalle'],
+            'stock_min' => ['stock_min', 'minimo', 'min'],
+            'stock_max' => ['stock_max', 'maximo', 'max'],
+            'stock' => ['stock', 'existencia', 'cantidad', 'inventario', 'qty', 'cant'],
+            'costo' => ['costo', 'cost', 'costo_unitario', 'costo_promedio', 'precio', 'costo_unit'],
+            'packaging_type' => ['empaque', 'empaque_tipo', 'tipo_empaque', 'packaging', 'envase'],
+            'packaging_quantity' => ['cant_por_empaque', 'cantidad_por_empaque', 'cant_empaque', 'unidades_por_empaque', 'cantidad_empaque'],
+        ];
+
+        $map = [];
+        foreach ($headers as $i => $h) {
+            foreach ($aliases as $canonical => $names) {
+                if (in_array($h, $names, true)) {
+                    $map[$canonical] = $i;
+                    break;
+                }
+            }
+        }
+        return $map;
+    }
+
+    private function cell($cells, $index)
+    {
+        if ($index === null || ! isset($cells[$index])) return null;
+        $v = trim($cells[$index]);
+        return $v === '' ? null : $v;
     }
 }
