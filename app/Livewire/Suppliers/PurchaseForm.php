@@ -3,6 +3,7 @@
 namespace App\Livewire\Suppliers;
 
 use App\Models\Movement;
+use App\Models\BranchInventory;
 use App\Models\Product;
 use App\Models\ProductPackaging;
 use App\Models\ProductShelf;
@@ -24,6 +25,8 @@ class PurchaseForm extends Component
     use AuthorizesRequests;
 
     public $supplier_id;
+
+    public $targetBranchId = '';
 
     public $invoice_number;
 
@@ -119,6 +122,7 @@ class PurchaseForm extends Component
 
     protected $rules = [
         'supplier_id' => 'required|exists:suppliers,id',
+        'targetBranchId' => 'required|exists:branches,id',
         'invoice_number' => 'required|string|unique:purchases,invoice_number',
         'purchase_date' => 'required|date',
         'notes' => 'nullable|string|max:65535',
@@ -128,12 +132,18 @@ class PurchaseForm extends Component
         'items.*.unit_cost' => 'required|numeric|gt:0',
     ];
 
+    protected $messages = [
+        'targetBranchId.required' => 'La sucursal destino es obligatoria.',
+        'targetBranchId.exists' => 'La sucursal destino seleccionada no es válida.',
+    ];
+
     public function mount()
     {
         $this->packagingTypes = PackagingType::orderBy('name')->get();
 
         if ($draft = session()->get('purchase_form_draft')) {
             $this->supplier_id = $draft['supplier_id'] ?? '';
+            $this->targetBranchId = $draft['targetBranchId'] ?? '';
             $this->invoice_number = $draft['invoice_number'] ?? '';
             $this->purchase_date = $draft['purchase_date'] ?? date('Y-m-d');
             $this->notes = $draft['notes'] ?? '';
@@ -196,6 +206,7 @@ class PurchaseForm extends Component
     {
         session()->put('purchase_form_draft', [
             'supplier_id' => $this->supplier_id,
+            'targetBranchId' => $this->targetBranchId,
             'invoice_number' => $this->invoice_number,
             'purchase_date' => $this->purchase_date,
             'notes' => $this->notes,
@@ -526,6 +537,7 @@ class PurchaseForm extends Component
     public function resetForm()
     {
         $this->supplier_id = '';
+        $this->targetBranchId = '';
         $this->invoice_number = '';
         $this->purchase_date = date('Y-m-d');
         $this->notes = '';
@@ -666,6 +678,7 @@ class PurchaseForm extends Component
         try {
             $purchase = Purchase::create([
                 'supplier_id' => $this->supplier_id,
+                'branch_id' => $this->targetBranchId,
                 'invoice_number' => $this->invoice_number,
                 'purchase_date' => $this->purchase_date,
                 'notes' => $this->notes,
@@ -705,9 +718,15 @@ class PurchaseForm extends Component
                     'unit_cost' => $baseUnitCost,
                     'description' => 'Compra No. '.$this->invoice_number,
                     'user_id' => Auth::id(),
+                    'branch_id' => $this->targetBranchId,
                     'reference_type' => 'purchase',
                     'reference_id' => $purchase->id,
                 ]);
+
+                BranchInventory::firstOrCreate([
+                    'branch_id' => $this->targetBranchId,
+                    'product_id' => $item['product_id'],
+                ])->increment('allocated_quantity', $baseQuantity);
 
                 $product = $products[$item['product_id']] ?? Product::find($item['product_id']);
                 $inventoryService->processPurchaseEntry($product, $baseQuantity, $baseUnitCost, $movement);
@@ -826,6 +845,7 @@ class PurchaseForm extends Component
 
     public function render()
     {
-        return view('livewire.suppliers.purchase-form')->layout('components.layouts.app');
+        $branches = \App\Models\Branch::where('is_active', true)->orderBy('name')->get();
+        return view('livewire.suppliers.purchase-form', compact('branches'))->layout('components.layouts.app');
     }
 }

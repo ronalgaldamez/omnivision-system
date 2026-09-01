@@ -10,7 +10,7 @@ class Purchase extends Model
     use HasFactory;
 
     protected $fillable = [
-        'supplier_id', 'invoice_number', 'purchase_date', 'notes',
+        'supplier_id', 'branch_id', 'invoice_number', 'purchase_date', 'notes',
         'user_id', 'subtotal', 'iva_amount', 'total', 'include_iva',
     ];
 
@@ -26,6 +26,11 @@ class Purchase extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function items()

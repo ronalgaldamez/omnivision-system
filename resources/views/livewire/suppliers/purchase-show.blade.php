@@ -32,6 +32,13 @@
                     </div>
                 </div>
                 <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-400">store</span>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Sucursal destino</p>
+                        <p class="text-gray-700">{{ $purchase->branch?->name ?? '—' }}</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
                     <span class="material-symbols-outlined text-gray-400">person</span>
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wide">Registrado por</p>
