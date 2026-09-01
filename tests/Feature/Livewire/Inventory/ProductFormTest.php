@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\UnitOfMeasure;
 use App\Models\User;
+use App\Services\GoogleSheetsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
@@ -500,5 +501,51 @@ class ProductFormTest extends TestCase
         $this->assertDatabaseHas('products', ['name' => 'Cinta aislante', 'unit_of_measure' => 'metro', 'current_stock' => 800]);
         $this->assertDatabaseHas('products', ['name' => 'Router Mikrotik', 'unit_of_measure' => 'unidad', 'current_stock' => 45]);
         $this->assertDatabaseHas('products', ['name' => 'Patch cord 1m', 'unit_of_measure' => 'unidad', 'current_stock' => 300]);
+    }
+
+    public function test_import_reads_sheet_via_api()
+    {
+        $this->actingAs(User::factory()->create());
+
+        UnitOfMeasure::create(['code' => 'unidad', 'name' => 'Unidad', 'is_whole' => true, 'is_active' => true]);
+        UnitOfMeasure::create(['code' => 'metro', 'name' => 'Metro', 'symbol' => 'm', 'is_whole' => false, 'is_active' => true]);
+        \App\Models\PackagingType::create(['name' => 'Bobina', 'unit_of_measure' => 'm']);
+
+        $grid = [
+            ['nombre', 'sku', 'unidad', 'descripcion', 'stock_min', 'stock_max', 'empaque', 'cant_por_empaque', 'stock', 'costo'],
+            ['Fibra óptica', '', 'metro', 'Fibra monomodo', '0', '50000', 'Bobina', '5000', '5', '499'],
+            ['Conector RJ45', '', 'unidad', 'Conector de red', '200', '2000', '', '', '500', '0.15'],
+        ];
+
+        $this->mock(GoogleSheetsService::class, function ($mock) use ($grid) {
+            $mock->shouldReceive('readSheet')->once()->andReturn($grid);
+        });
+
+        $component = Livewire::test(ProductForm::class)
+            ->set('importUrl', '1RGKE6WdYNxokfK2m8ghsvtedpWfUneqbbCqcpDx7OAs')
+            ->call('importFromUrl')
+            ->assertCount('importPreview', 2);
+
+        $preview = $component->get('importPreview');
+        $this->assertEquals('Fibra óptica', $preview[0]['name']);
+        $this->assertEquals('metro', $preview[0]['unit_of_measure']);
+        $this->assertEquals('5', $preview[0]['stock']);
+        $this->assertEquals('499', $preview[0]['costo']);
+        $this->assertEquals('500', $preview[1]['stock']);
+        $this->assertEquals('0.15', $preview[1]['costo']);
+    }
+
+    public function test_extract_sheet_id_from_urls()
+    {
+        $comp = new ProductForm();
+        $ref = new \ReflectionMethod(ProductForm::class, 'extractSheetId');
+        $ref->setAccessible(true);
+
+        $id = '1RGKE6WdYNxokfK2m8ghsvtedpWfUneqbbCqcpDx7OAs';
+
+        $this->assertEquals($id, $ref->invoke($comp, $id));
+        $this->assertEquals($id, $ref->invoke($comp, 'https://docs.google.com/spreadsheets/d/'.$id.'/edit#gid=0'));
+        $this->assertNull($ref->invoke($comp, 'https://docs.google.com/spreadsheets/d/e/2PACX-xxx/pub?output=csv'));
+        $this->assertNull($ref->invoke($comp, 'https://docs.google.com/spreadsheets/d/xxx/pub?output=csv'));
     }
 }
