@@ -8,6 +8,7 @@ use App\Models\PackagingType;
 use App\Models\ProductPackaging;
 use App\Models\UnitOfMeasure;
 use App\Models\Movement;
+use App\Services\GoogleSheetsService;
 use App\Services\InventoryService;
 use App\Traits\HasFormPersistence;
 use App\Traits\ManagesProductPackaging;
@@ -63,6 +64,8 @@ class ProductForm extends Component
     public $importSearch = '';
 
     public $importStatusFilter = '';
+
+    public $showImportHelp = false;
 
     // Modal de búsqueda de modelo
     public $showModelModal = false;
@@ -560,7 +563,7 @@ class ProductForm extends Component
     public function importFromUrl()
     {
         $this->validate([
-            'importUrl' => 'required|url',
+            'importUrl' => 'required|string',
         ]);
 
         $this->runImport();
@@ -578,19 +581,30 @@ class ProductForm extends Component
         $this->importStatusFilter = '';
 
         try {
-            $response = \Illuminate\Support\Facades\Http::timeout(20)->get($this->importUrl);
-            if (! $response->ok()) {
-                $this->importError = 'No se pudo leer la URL. Verificá que esté publicada como CSV.';
-                return;
-            }
+            $sheetId = $this->extractSheetId($this->importUrl);
 
-            $content = $response->body();
-            if (stripos($content, '<html') !== false || stripos($content, '<table') !== false) {
-                $this->importError = 'La URL devolvió una página web, no un CSV. Publicá la hoja en formato "CSV", no "Página web".';
-                return;
-            }
+            if ($sheetId) {
+                $grid = app(GoogleSheetsService::class)->readSheet($sheetId);
+                if (empty($grid)) {
+                    $this->importError = 'No se pudo leer la hoja. Verificá que esté compartida con el robot.';
+                    return;
+                }
+                $parsed = $this->parseGrid($grid);
+            } else {
+                $response = \Illuminate\Support\Facades\Http::timeout(20)->get($this->importUrl);
+                if (! $response->ok()) {
+                    $this->importError = 'No se pudo leer la URL. Verificá que esté publicada como CSV.';
+                    return;
+                }
 
-            $parsed = $this->parseCsvRows($content);
+                $content = $response->body();
+                if (stripos($content, '<html') !== false || stripos($content, '<table') !== false) {
+                    $this->importError = 'La URL devolvió una página web, no un CSV. Publicá la hoja en formato "CSV", no "Página web".';
+                    return;
+                }
+
+                $parsed = $this->parseCsvRows($content);
+            }
             if (empty($parsed['rows'])) {
                 $this->importError = 'No se encontraron filas válidas. Revisá que la primera fila tenga encabezados.';
                 return;
@@ -737,20 +751,41 @@ class ProductForm extends Component
         return $unitsMap[$v] ?? 'unidad';
     }
 
+    private function extractSheetId($input)
+    {
+        $input = trim((string) $input);
+        // ID directo (letras, números, guiones, guiones bajos)
+        if (preg_match('/^[A-Za-z0-9_-]{20,}$/', $input)) {
+            return $input;
+        }
+        // URL de edición: /spreadsheets/d/{id}/... (la publicada /d/e/... no sirve para la API)
+        if (preg_match('#/spreadsheets/d/([A-Za-z0-9_-]{20,})/#', $input, $m)) {
+            return $m[1];
+        }
+        return null;
+    }
+
     private function parseCsvRows($content)
     {
         $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
         $lines = preg_split('/\r\n|\r|\n/', $content);
         $lines = array_values(array_filter(array_map('trim', $lines)));
-        if (count($lines) < 2) return ['headers' => [], 'colMap' => [], 'rows' => []];
 
-        $headers = str_getcsv(array_shift($lines));
-        $headers = array_map(fn ($h) => $this->normalizeHeader($h), $headers);
+        $grid = array_map(fn ($line) => str_getcsv($line), $lines);
+
+        return $this->parseGrid($grid);
+    }
+
+    private function parseGrid(array $grid)
+    {
+        if (count($grid) < 2) return ['headers' => [], 'colMap' => [], 'rows' => []];
+
+        $headers = array_map(fn ($h) => $this->normalizeHeader((string) $h), array_values($grid[0]));
         $colMap = $this->buildColumnMap($headers);
 
         $rows = [];
-        foreach ($lines as $line) {
-            $cells = str_getcsv($line);
+        foreach (array_slice($grid, 1) as $line) {
+            $cells = array_map(fn ($c) => (string) $c, array_values($line));
             if (count($cells) < count($headers)) {
                 $cells = array_pad($cells, count($headers), '');
             }

@@ -606,6 +606,9 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-1">
+                            <button type="button" wire:click="$set('showImportHelp', true)" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition" title="Ayuda">
+                                <span class="material-symbols-outlined text-xl">help</span>
+                            </button>
                             <button type="button" wire:click="refreshImport" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition" title="Recargar">
                                 <span class="material-symbols-outlined text-xl">refresh</span>
                             </button>
@@ -647,9 +650,10 @@
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Producto</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Unidad</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Empaque</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Unid. x empaque</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Por empaque</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Costo</th>
+                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Costo unit.</th>
                                 <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Base</th>
                             </tr>
                         </thead>
@@ -659,6 +663,8 @@
                                     $pkgQty = (float) ($row['packaging_quantity'] ?? 0);
                                     $stockQty = (float) ($row['stock'] ?? 0);
                                     $baseQty = $pkgQty > 0 ? $stockQty * $pkgQty : $stockQty;
+                                    $rawCosto = (float) ($row['costo'] ?? 0);
+                                    $costoUnit = $pkgQty > 0 ? $rawCosto / $pkgQty : $rawCosto;
                                     $isExisting = ($row['status'] ?? 'new') === 'existing';
                                 @endphp
                                 <tr class="hover:bg-gray-50/50 {{ $isExisting ? 'bg-amber-50/50' : '' }}">
@@ -702,6 +708,13 @@
                                             class="w-24 px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                     </td>
                                     <td class="px-3 py-2 text-right font-mono whitespace-nowrap">
+                                        @if($pkgQty > 0 && $rawCosto > 0)
+                                            <span class="font-medium text-gray-700">${{ rtrim(rtrim(number_format($costoUnit, 4), '0'), '.') }}</span>
+                                        @else
+                                            <span class="text-gray-300">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-2 text-right font-mono whitespace-nowrap">
                                         @if($pkgQty > 0)
                                             <span class="text-gray-400">{{ $stockQty }} × {{ $pkgQty }} =</span>
                                             <span class="font-semibold text-blue-700">{{ rtrim(rtrim(number_format($baseQty, 4), '0'), '.') }}</span>
@@ -712,7 +725,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-3 py-10 text-center text-gray-500 text-sm">No se encontraron productos con ese filtro.</td>
+                                    <td colspan="9" class="px-3 py-10 text-center text-gray-500 text-sm">No se encontraron productos con ese filtro.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -723,6 +736,74 @@
                     <x-ui.button variant="primary" icon="check_circle" wire:click="confirmImport">Confirmar</x-ui.button>
                     <button @click="show = false" wire:click="cancelImport"
                         class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal de ayuda --}}
+    <div x-data="{ show: @entangle('showImportHelp') }" x-show="show" x-cloak
+        x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        style="display: none;">
+        <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+            class="relative w-full max-w-3xl">
+            <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-blue-600">help</span>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-900">¿Cómo completar los campos?</h3>
+                            <p class="text-xs text-gray-500">Guía rápida de cada columna</p>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="$set('showImportHelp', false)" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                        <span class="material-symbols-outlined text-xl">close</span>
+                    </button>
+                </div>
+
+                <div class="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
+                    <p class="text-sm font-semibold text-gray-800">Cómo llenar cada producto</p>
+                    <p class="text-xs text-gray-500">El mismo producto se puede cargar de dos formas: <strong>suelto</strong> o <strong>empacado</strong>.</p>
+
+                    <div class="border rounded-lg p-3 bg-gray-50/60">
+                        <p class="text-sm font-medium text-gray-800">Router Mikrotik · 45 sueltos</p>
+                        <p class="text-xs text-gray-600 mt-1">Medida: <strong>unidad</strong> &nbsp;·&nbsp; Empaque: <strong>Sin empaque</strong> &nbsp;·&nbsp; Stock: <strong>45</strong></p>
+                        <p class="text-xs text-blue-700 mt-1 font-mono">→ 45 routers</p>
+                    </div>
+
+                    <div class="border rounded-lg p-3 bg-gray-50/60">
+                        <p class="text-sm font-medium text-gray-800">Router Mikrotik · 10 cajas de 20</p>
+                        <p class="text-xs text-gray-600 mt-1">Medida: <strong>unidad</strong> &nbsp;·&nbsp; Empaque: <strong>Caja</strong> &nbsp;·&nbsp; Por empaque: <strong>20</strong> &nbsp;·&nbsp; Stock: <strong>10</strong></p>
+                        <p class="text-xs text-blue-700 mt-1 font-mono">→ 10 cajas × 20 = 200 routers</p>
+                    </div>
+
+                    <div class="border rounded-lg p-3 bg-gray-50/60">
+                        <p class="text-sm font-medium text-gray-800">Fibra óptica · 5 bobinas de 5000 m</p>
+                        <p class="text-xs text-gray-600 mt-1">Medida: <strong>metro</strong> &nbsp;·&nbsp; Empaque: <strong>Bobina</strong> &nbsp;·&nbsp; Por empaque: <strong>5000</strong> &nbsp;·&nbsp; Stock: <strong>5</strong></p>
+                        <p class="text-xs text-blue-700 mt-1 font-mono">→ 5 bobinas × 5000 = 25.000 m</p>
+                    </div>
+
+                    <div class="border rounded-lg p-3 bg-gray-50/60">
+                        <p class="text-sm font-medium text-gray-800">Conector RJ45 · 500 sueltos</p>
+                        <p class="text-xs text-gray-600 mt-1">Medida: <strong>unidad</strong> &nbsp;·&nbsp; Empaque: <strong>Sin empaque</strong> &nbsp;·&nbsp; Stock: <strong>500</strong></p>
+                        <p class="text-xs text-blue-700 mt-1 font-mono">→ 500 conectores</p>
+                    </div>
+
+                    <div class="border rounded-lg p-3 bg-gray-50/60">
+                        <p class="text-sm font-medium text-gray-800">Aceite · 20 litros</p>
+                        <p class="text-xs text-gray-600 mt-1">Medida: <strong>litro</strong> &nbsp;·&nbsp; Empaque: <strong>Sin empaque</strong> &nbsp;·&nbsp; Stock: <strong>20</strong></p>
+                        <p class="text-xs text-blue-700 mt-1 font-mono">→ 20 L</p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 px-6 py-4 flex justify-end">
+                    <x-ui.button variant="primary" wire:click="$set('showImportHelp', false)">Entendido</x-ui.button>
                 </div>
             </div>
         </div>
