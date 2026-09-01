@@ -10,7 +10,7 @@ class Movement extends Model
     use HasFactory;
 
     protected $casts = [
-        'quantity' => 'integer',
+        'quantity' => 'float',
     ];
 
     protected $fillable = [

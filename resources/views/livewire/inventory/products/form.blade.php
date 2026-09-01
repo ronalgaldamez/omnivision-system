@@ -1,5 +1,5 @@
 <div class="max-w-6xl mx-auto" x-data="{ hasChanges: @entangle('hasUnsavedChanges') }"
-    @beforeunload.window="if (hasChanges) { event.preventDefault(); event.returnValue = ''; }"
+    @beforeunload.window="if (hasChanges && !window.__suppressBeforeUnload) { event.preventDefault(); event.returnValue = ''; }"
     @clear-unsaved-changes.window="hasChanges = false">
     <x-ui.card :title="$editingId ? 'Editar Producto' : 'Nuevos Productos'"
         :subtitle="$editingId ? 'Modifica los datos del producto seleccionado' : 'Agrega uno o varios productos y guárdalos juntos'"
@@ -185,6 +185,49 @@
                     </div>
                 </form>
             @else
+                {{-- Importar desde Google Sheets --}}
+                <div class="mb-4">
+                    @if(!$showImport)
+                        <x-ui.button variant="secondary" icon="cloud_download" wire:click="$set('showImport', true)">
+                            Importar desde Google Sheets (CSV)
+                        </x-ui.button>
+                    @else
+                        <div class="rounded-xl border border-gray-200 overflow-hidden">
+                            <div class="flex items-center justify-between px-4 py-3 bg-gray-50/80 border-b border-gray-100">
+                                <p class="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-gray-500 text-base">cloud_download</span>
+                                    Importar desde Google Sheets
+                                </p>
+                                <button type="button" wire:click="$set('showImport', false)" class="text-gray-400 hover:text-gray-600 transition">
+                                    <span class="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+                            <div class="p-4 space-y-3">
+                                <x-ui.alert variant="info" title="¿Cómo obtener la URL?">
+                                    <ul>
+                                        <li>En Google Sheets: Archivo → Compartir → Publicar en la web.</li>
+                                        <li>Elegí el formato "CSV" y copiá la URL.</li>
+                                        <li>Pegá la URL acá abajo y tocá "Importar".</li>
+                                    </ul>
+                                </x-ui.alert>
+                                <div class="flex gap-2 items-start">
+                                    <div class="flex-1">
+                                        <x-ui.input type="text" wire:model="importUrl" icon="link"
+                                            placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" />
+                                    </div>
+                                    <x-ui.button variant="primary" icon="download" wire:click="importFromUrl">Importar</x-ui.button>
+                                </div>
+                                @if($importError)
+                                    <p class="text-sm text-red-600 flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined text-base">error</span>
+                                        {{ $importError }}
+                                    </p>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
                 <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-5">
                     <div class="flex items-center gap-2 mb-4">
                         <span class="material-symbols-outlined text-gray-500 text-lg">add_box</span>
@@ -292,9 +335,15 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="flex justify-end gap-3 pt-2">
-                            <x-ui.button variant="secondary" icon="arrow_back" href="{{ route('products.index') }}">Cancelar</x-ui.button>
-                            <x-ui.button variant="primary" icon="save" wire:click="confirmSaveAll">Guardar todos ({{ count($productList) }})</x-ui.button>
+                        <div class="flex flex-col-reverse sm:flex-row justify-between items-center gap-3 pt-4 border-t border-gray-200">
+                            <button type="button" wire:click="confirmAction('clear_list')"
+                                class="w-full sm:w-auto px-5 py-2.5 border border-red-200 rounded-lg text-sm font-medium text-red-600 bg-white hover:bg-red-50 transition shadow-sm inline-flex items-center justify-center gap-1.5">
+                                <span class="material-symbols-outlined text-base">delete_sweep</span> Limpiar
+                            </button>
+                            <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                <x-ui.button variant="secondary" icon="arrow_back" href="{{ route('products.index') }}">Cancelar</x-ui.button>
+                                <x-ui.button variant="primary" icon="save" wire:click="confirmSaveAll">Guardar todos ({{ count($productList) }})</x-ui.button>
+                            </div>
                         </div>
                     </div>
                 @else
@@ -513,6 +562,167 @@
                     <span @click="showSaveModal = false">
                         <x-ui.button variant="secondary">Cancelar</x-ui.button>
                     </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal de previsualización de importación --}}
+    <div x-data="{ show: @entangle('showImportPreview') }" x-show="show" x-cloak
+        x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        style="display: none;">
+        <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+            class="relative w-full max-w-6xl">
+            <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100">
+                    @php
+                        $newCount = collect($importPreview)->where('status', 'new')->count();
+                        $existingCount = collect($importPreview)->where('status', 'existing')->count();
+                        $totalValue = collect($importPreview)->where('status', 'new')
+                            ->sum(fn ($r) => (float) ($r['stock'] ?? 0) * (float) ($r['costo'] ?? 0));
+                        $importCountMsg = count($importPreview) . ' producto(s)';
+                        if ($existingCount > 0) $importCountMsg .= ', ' . $existingCount . ' existente(s)';
+                        if ($importSkipped > 0) $importCountMsg .= ', ' . $importSkipped . ' sin nombre';
+
+                        $filteredRows = collect($importPreview)->filter(function ($row) use ($importSearch, $importStatusFilter) {
+                            $nameMatch = ! $importSearch || stripos($row['name'], $importSearch) !== false || stripos((string) ($row['sku'] ?? ''), $importSearch) !== false;
+                            $statusMatch = ! $importStatusFilter || (($row['status'] ?? 'new') === $importStatusFilter);
+                            return $nameMatch && $statusMatch;
+                        });
+                    @endphp
+
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-blue-600">preview</span>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-semibold text-gray-900">Revisar importación</h3>
+                                <p class="text-xs text-gray-500">{{ $importCountMsg }}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button type="button" wire:click="refreshImport" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition" title="Recargar">
+                                <span class="material-symbols-outlined text-xl">refresh</span>
+                            </button>
+                            <button type="button" wire:click="cancelImport" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                                <span class="material-symbols-outlined text-xl">close</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                            <span class="material-symbols-outlined text-sm">add_circle</span> Nuevos: {{ $newCount }}
+                        </span>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+                            <span class="material-symbols-outlined text-sm">inventory_2</span> Existentes: {{ $existingCount }}
+                        </span>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                            <span class="material-symbols-outlined text-sm">attach_money</span> Valor: ${{ number_format($totalValue, 2) }}
+                        </span>
+                        <div class="flex-1"></div>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
+                            <input type="text" wire:model.live.debounce.300ms="importSearch" placeholder="Buscar..."
+                                class="w-44 pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                        </div>
+                        <select wire:model.live="importStatusFilter" class="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                            <option value="">Todos</option>
+                            <option value="new">Nuevos</option>
+                            <option value="existing">Existentes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="p-4 max-h-[60vh] overflow-y-auto">
+                    <table class="w-full text-sm">
+                        <thead class="sticky top-0 z-10 bg-gray-50">
+                            <tr class="border-b border-gray-200">
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Estado</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Producto</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Unidad</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Empaque</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Unid. x empaque</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Costo</th>
+                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Base</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @forelse($filteredRows as $index => $row)
+                                @php
+                                    $pkgQty = (float) ($row['packaging_quantity'] ?? 0);
+                                    $stockQty = (float) ($row['stock'] ?? 0);
+                                    $baseQty = $pkgQty > 0 ? $stockQty * $pkgQty : $stockQty;
+                                    $isExisting = ($row['status'] ?? 'new') === 'existing';
+                                @endphp
+                                <tr class="hover:bg-gray-50/50 {{ $isExisting ? 'bg-amber-50/50' : '' }}">
+                                    <td class="px-3 py-2 whitespace-nowrap">
+                                        @if($isExisting)
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Existente</span>
+                                        @else
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Nuevo</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <div class="font-medium text-gray-800">{{ $row['name'] }}</div>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <select wire:model.live="importPreview.{{ $index }}.unit_of_measure"
+                                            class="w-28 px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                            @foreach($units as $u)
+                                                <option value="{{ $u->code }}">{{ $u->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <select wire:model.live="importPreview.{{ $index }}.packaging_type_id"
+                                            class="w-32 px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                            <option value="">Sin empaque</option>
+                                            @foreach($packagingTypes as $pt)
+                                                <option value="{{ $pt->id }}">{{ $pt->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <input type="number" step="any" min="0" wire:model.live.debounce.500ms="importPreview.{{ $index }}.packaging_quantity"
+                                            class="w-20 px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <input type="number" step="any" min="0" wire:model.live.debounce.500ms="importPreview.{{ $index }}.stock"
+                                            class="w-20 px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <input type="number" step="any" min="0" wire:model.live.debounce.500ms="importPreview.{{ $index }}.costo"
+                                            class="w-24 px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                    </td>
+                                    <td class="px-3 py-2 text-right font-mono whitespace-nowrap">
+                                        @if($pkgQty > 0)
+                                            <span class="text-gray-400">{{ $stockQty }} × {{ $pkgQty }} =</span>
+                                            <span class="font-semibold text-blue-700">{{ rtrim(rtrim(number_format($baseQty, 4), '0'), '.') }}</span>
+                                        @else
+                                            <span class="font-semibold text-gray-700">{{ rtrim(rtrim(number_format($baseQty, 4), '0'), '.') }}</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="px-3 py-10 text-center text-gray-500 text-sm">No se encontraron productos con ese filtro.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bg-gray-50 px-6 py-4 flex gap-3 sm:flex-row-reverse">
+                    <x-ui.button variant="primary" icon="check_circle" wire:click="confirmImport">Confirmar</x-ui.button>
+                    <button @click="show = false" wire:click="cancelImport"
+                        class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">Cancelar</button>
                 </div>
             </div>
         </div>
