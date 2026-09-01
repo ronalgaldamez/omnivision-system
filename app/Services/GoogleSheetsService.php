@@ -30,4 +30,16 @@ class GoogleSheetsService
 
         return $response->getValues() ?? [];
     }
+
+    public function listTabs(string $spreadsheetId): array
+    {
+        $sheet = $this->service()->spreadsheets->get($spreadsheetId);
+
+        $tabs = [];
+        foreach ($sheet->getSheets() as $s) {
+            $tabs[] = $s->getProperties()->getTitle();
+        }
+
+        return $tabs;
+    }
 }

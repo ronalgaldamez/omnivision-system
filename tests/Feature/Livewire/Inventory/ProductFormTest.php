@@ -548,4 +548,97 @@ class ProductFormTest extends TestCase
         $this->assertNull($ref->invoke($comp, 'https://docs.google.com/spreadsheets/d/e/2PACX-xxx/pub?output=csv'));
         $this->assertNull($ref->invoke($comp, 'https://docs.google.com/spreadsheets/d/xxx/pub?output=csv'));
     }
+
+    public function test_load_sheet_tabs()
+    {
+        $this->actingAs(User::factory()->create());
+
+        $this->mock(GoogleSheetsService::class, function ($mock) {
+            $mock->shouldReceive('listTabs')->once()->andReturn(['Inventario', 'Otros']);
+        });
+
+        Livewire::test(ProductForm::class)
+            ->set('importUrl', '1RGKE6WdYNxokfK2m8ghsvtedpWfUneqbbCqcpDx7OAs')
+            ->call('loadSheetTabs')
+            ->assertCount('sheetTabs', 2)
+            ->assertSet('selectedTab', 'Inventario');
+    }
+
+    public function test_import_reads_selected_tab()
+    {
+        $this->actingAs(User::factory()->create());
+
+        UnitOfMeasure::create(['code' => 'unidad', 'name' => 'Unidad', 'is_whole' => true, 'is_active' => true]);
+
+        $grid = [
+            ['nombre', 'unidad', 'stock'],
+            ['Conector RJ45', 'unidad', '500'],
+        ];
+
+        $this->mock(GoogleSheetsService::class, function ($mock) use ($grid) {
+            $mock->shouldReceive('readSheet')->once()->andReturn($grid);
+        });
+
+        $component = Livewire::test(ProductForm::class)
+            ->set('importUrl', '1RGKE6WdYNxokfK2m8ghsvtedpWfUneqbbCqcpDx7OAs')
+            ->set('selectedTab', 'Otros')
+            ->call('importFromUrl')
+            ->assertCount('importPreview', 1);
+
+        $preview = $component->get('importPreview');
+        $this->assertEquals('Conector RJ45', $preview[0]['name']);
+        $this->assertEquals('unidad', $preview[0]['unit_of_measure']);
+    }
+
+    public function test_parse_csv_content()
+    {
+        $comp = new ProductForm();
+        $ref = new \ReflectionMethod(ProductForm::class, 'parseCsvRows');
+        $ref->setAccessible(true);
+
+        $parsed = $ref->invoke($comp, "nombre,unidad,stock,costo\nConector RJ45,unidad,500,0.15\nRouter,unidad,45,85.5");
+
+        $this->assertCount(2, $parsed['rows']);
+        $this->assertEquals('Conector RJ45', $parsed['rows'][0]['name']);
+        $this->assertEquals('500', $parsed['rows'][0]['stock']);
+        $this->assertEquals('0.15', $parsed['rows'][0]['costo']);
+        $this->assertEquals('Router', $parsed['rows'][1]['name']);
+    }
+
+    public function test_grid_from_json_object_array()
+    {
+        $comp = new ProductForm();
+        $ref = new \ReflectionMethod(ProductForm::class, 'gridFromJson');
+        $ref->setAccessible(true);
+
+        $json = json_encode([
+            ['nombre' => 'Router', 'unidad' => 'unidad', 'stock' => '45'],
+            ['nombre' => 'Conector', 'unidad' => 'unidad', 'stock' => '500'],
+        ]);
+
+        $grid = $ref->invoke($comp, $json);
+
+        $this->assertEquals(['nombre', 'unidad', 'stock'], $grid[0]);
+        $this->assertEquals('Router', $grid[1][0]);
+        $this->assertEquals('45', $grid[1][2]);
+        $this->assertEquals('Conector', $grid[2][0]);
+    }
+
+    public function test_grid_from_json_array_of_arrays()
+    {
+        $comp = new ProductForm();
+        $ref = new \ReflectionMethod(ProductForm::class, 'gridFromJson');
+        $ref->setAccessible(true);
+
+        $json = json_encode([
+            ['nombre', 'stock'],
+            ['Router', '45'],
+        ]);
+
+        $grid = $ref->invoke($comp, $json);
+
+        $this->assertEquals(['nombre', 'stock'], $grid[0]);
+        $this->assertEquals('Router', $grid[1][0]);
+        $this->assertEquals('45', $grid[1][1]);
+    }
 }

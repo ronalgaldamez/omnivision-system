@@ -14,11 +14,14 @@ use App\Traits\HasFormPersistence;
 use App\Traits\ManagesProductPackaging;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use Livewire\WithFileUploads;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductForm extends Component
 {
     use HasFormPersistence;
     use ManagesProductPackaging;
+    use WithFileUploads;
 
     public $editingId = null;
 
@@ -66,6 +69,14 @@ class ProductForm extends Component
     public $importStatusFilter = '';
 
     public $showImportHelp = false;
+
+    public $sheetTabs = [];
+
+    public $selectedTab = '';
+
+    public $importFile = null;
+
+    public $importSource = 'sheets';
 
     // Modal de búsqueda de modelo
     public $showModelModal = false;
@@ -574,6 +585,97 @@ class ProductForm extends Component
         $this->runImport();
     }
 
+    public function loadSheetTabs()
+    {
+        $this->importError = null;
+        $sheetId = $this->extractSheetId($this->importUrl);
+
+        if (! $sheetId) {
+            $this->importError = 'Pegá el ID o la URL de edición de la hoja.';
+            return;
+        }
+
+        try {
+            $this->sheetTabs = app(GoogleSheetsService::class)->listTabs($sheetId);
+
+            if (empty($this->sheetTabs)) {
+                $this->importError = 'No se encontraron pestañas en la hoja.';
+                return;
+            }
+
+            if (! in_array($this->selectedTab, $this->sheetTabs, true)) {
+                $this->selectedTab = $this->sheetTabs[0];
+            }
+        } catch (\Exception $e) {
+            $this->importError = 'No se pudo leer la hoja: '.$e->getMessage();
+        }
+    }
+
+    public function updatedSelectedTab()
+    {
+        if ($this->showImportPreview) {
+            $this->runImport();
+        }
+    }
+
+    public function importFromFile()
+    {
+        $this->validate([
+            'importFile' => 'required|file|mimes:csv,xlsx,xls,json|max:10240',
+        ]);
+
+        $this->importError = null;
+        $this->importSearch = '';
+        $this->importStatusFilter = '';
+
+        try {
+            $file = $this->importFile;
+            $extension = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
+            $path = $file->getRealPath();
+
+            if ($extension === 'json') {
+                $grid = $this->gridFromJson(file_get_contents($path));
+                if ($grid === null) {
+                    $this->importError = 'El JSON no es válido o está vacío.';
+                    return;
+                }
+                $parsed = $this->parseGrid($grid);
+            } elseif ($extension === 'csv') {
+                $parsed = $this->parseCsvRows(file_get_contents($path));
+            } else {
+                $sheets = Excel::toArray(new \App\Imports\GenericRowsImport(), $path);
+                $grid = $sheets[0] ?? [];
+                $parsed = $this->parseGrid($grid);
+            }
+
+            $this->buildPreviewFromParsed($parsed);
+        } catch (\Exception $e) {
+            $this->importError = 'Error al importar el archivo: '.$e->getMessage();
+        }
+    }
+
+    private function gridFromJson(string $json): ?array
+    {
+        $grid = json_decode($json, true);
+
+        if (! is_array($grid) || empty($grid)) {
+            return null;
+        }
+
+        // Si viene como lista de objetos, lo convertimos a grid (primera fila = encabezados)
+        if (isset($grid[0]) && is_array($grid[0]) && ! array_is_list($grid[0])) {
+            $headers = array_keys($grid[0]);
+            $result = [$headers];
+            foreach ($grid as $row) {
+                $result[] = array_map(fn ($h) => $row[$h] ?? '', $headers);
+            }
+
+            return $result;
+        }
+
+        return $grid;
+    }
+
     private function runImport()
     {
         $this->importError = null;
@@ -584,7 +686,19 @@ class ProductForm extends Component
             $sheetId = $this->extractSheetId($this->importUrl);
 
             if ($sheetId) {
-                $grid = app(GoogleSheetsService::class)->readSheet($sheetId);
+                if (empty($this->sheetTabs)) {
+                    try {
+                        $this->sheetTabs = app(GoogleSheetsService::class)->listTabs($sheetId);
+                    } catch (\Exception $e) {
+                        $this->sheetTabs = [];
+                    }
+                }
+                if (empty($this->selectedTab) && ! empty($this->sheetTabs)) {
+                    $this->selectedTab = $this->sheetTabs[0];
+                }
+
+                $range = $this->selectedTab ? $this->selectedTab.'!A:Z' : 'A:Z';
+                $grid = app(GoogleSheetsService::class)->readSheet($sheetId, $range);
                 if (empty($grid)) {
                     $this->importError = 'No se pudo leer la hoja. Verificá que esté compartida con el robot.';
                     return;
@@ -605,107 +719,112 @@ class ProductForm extends Component
 
                 $parsed = $this->parseCsvRows($content);
             }
-            if (empty($parsed['rows'])) {
-                $this->importError = 'No se encontraron filas válidas. Revisá que la primera fila tenga encabezados.';
-                return;
-            }
-
-            if (! array_key_exists('name', $parsed['colMap'])) {
-                $this->importError = 'No se reconoció la columna de nombre. Encabezados detectados: '.implode(', ', array_filter($parsed['headers'])).'.';
-                return;
-            }
-
-            $unitsMap = [];
-            foreach (UnitOfMeasure::all() as $u) {
-                $unitsMap[strtolower($u->code)] = $u->code;
-                $unitsMap[strtolower($u->name)] = $u->code;
-                if ($u->symbol) {
-                    $unitsMap[strtolower($u->symbol)] = $u->code;
-                }
-            }
-
-            $packagingMap = [];
-            foreach (PackagingType::all() as $pt) {
-                $packagingMap[strtolower(trim($pt->name))] = $pt->id;
-            }
-
-            $existingSkus = Product::whereNotNull('sku')->pluck('sku')->map(fn ($s) => strtolower(trim($s)))->all();
-            $existingNames = Product::pluck('name')->map(fn ($n) => strtolower(trim($n)))->all();
-
-            $pendingSkus = collect($this->productList)->pluck('sku')->filter()->map(fn ($s) => strtolower(trim($s)))->all();
-            $pendingNames = collect($this->productList)->pluck('name')->map(fn ($n) => strtolower(trim($n)))->all();
-
-            $existingSkus = array_fill_keys(array_merge($existingSkus, $pendingSkus), true);
-            $existingNames = array_fill_keys(array_merge($existingNames, $pendingNames), true);
-
-            $this->importPreview = [];
-            $this->importSkipped = 0;
-            foreach ($parsed['rows'] as $row) {
-                $name = $row['name'] ?? null;
-                if (! $name) {
-                    $this->importSkipped++;
-                    continue;
-                }
-
-                $sku = $row['sku'] ?: null;
-                $nameKey = strtolower(trim($name));
-                $skuKey = $sku ? strtolower(trim($sku)) : null;
-
-                $isExisting = false;
-                if (($skuKey && isset($existingSkus[$skuKey])) || isset($existingNames[$nameKey])) {
-                    $isExisting = true;
-                }
-
-                $existingNames[$nameKey] = true;
-                if ($skuKey) {
-                    $existingSkus[$skuKey] = true;
-                }
-
-                $packagingTypeId = '';
-                $pkgName = $row['packaging_type'] ?? null;
-                if ($pkgName && isset($packagingMap[strtolower(trim($pkgName))])) {
-                    $packagingTypeId = $packagingMap[strtolower(trim($pkgName))];
-                }
-                $packagingQty = $row['packaging_quantity'] ?? '';
-                $stock = $row['stock'] ?? null;
-                $costo = $row['costo'] ?? null;
-
-                // Si NO hay empaque pero "cant_por_empaque" trae un número, la fila viene corrida:
-                // el stock quedó en "cant_por_empaque" y el costo en "stock".
-                if ($packagingTypeId === '' && is_numeric($packagingQty) && (float) $packagingQty > 0) {
-                    $stock = $packagingQty;
-                    $costo = $row['stock'] ?? null;
-                    $packagingQty = '';
-                }
-
-                $this->importPreview[] = [
-                    'name' => $name,
-                    'sku' => $sku,
-                    'unit_of_measure' => $this->resolveUnitCode($row['unit'] ?? null, $unitsMap),
-                    'measure_value' => null,
-                    'stock_min' => (int) ($row['stock_min'] ?? 0),
-                    'stock_max' => ($row['stock_max'] !== null && $row['stock_max'] !== '') ? (int) $row['stock_max'] : null,
-                    'description' => $row['description'] ?? null,
-                    'stock' => $stock,
-                    'costo' => $costo,
-                    'brand_id' => null,
-                    'model_id' => null,
-                    'category_id' => null,
-                    'packaging_type_id' => $packagingTypeId,
-                    'packaging_quantity' => $packagingQty,
-                    'status' => $isExisting ? 'existing' : 'new',
-                ];
-            }
-
-            if (empty($this->importPreview)) {
-                $this->importError = 'No se encontraron productos con nombre válido.';
-                return;
-            }
-
-            $this->showImportPreview = true;
+            $this->buildPreviewFromParsed($parsed);
         } catch (\Exception $e) {
             $this->importError = 'Error al importar: '.$e->getMessage();
         }
+    }
+
+    private function buildPreviewFromParsed(array $parsed)
+    {
+        if (empty($parsed['rows'])) {
+            $this->importError = 'No se encontraron filas válidas. Revisá que la primera fila tenga encabezados.';
+            return;
+        }
+
+        if (! array_key_exists('name', $parsed['colMap'])) {
+            $this->importError = 'No se reconoció la columna de nombre. Encabezados detectados: '.implode(', ', array_filter($parsed['headers'])).'.';
+            return;
+        }
+
+        $unitsMap = [];
+        foreach (UnitOfMeasure::all() as $u) {
+            $unitsMap[strtolower($u->code)] = $u->code;
+            $unitsMap[strtolower($u->name)] = $u->code;
+            if ($u->symbol) {
+                $unitsMap[strtolower($u->symbol)] = $u->code;
+            }
+        }
+
+        $packagingMap = [];
+        foreach (PackagingType::all() as $pt) {
+            $packagingMap[strtolower(trim($pt->name))] = $pt->id;
+        }
+
+        $existingSkus = Product::whereNotNull('sku')->pluck('sku')->map(fn ($s) => strtolower(trim($s)))->all();
+        $existingNames = Product::pluck('name')->map(fn ($n) => strtolower(trim($n)))->all();
+
+        $pendingSkus = collect($this->productList)->pluck('sku')->filter()->map(fn ($s) => strtolower(trim($s)))->all();
+        $pendingNames = collect($this->productList)->pluck('name')->map(fn ($n) => strtolower(trim($n)))->all();
+
+        $existingSkus = array_fill_keys(array_merge($existingSkus, $pendingSkus), true);
+        $existingNames = array_fill_keys(array_merge($existingNames, $pendingNames), true);
+
+        $this->importPreview = [];
+        $this->importSkipped = 0;
+        foreach ($parsed['rows'] as $row) {
+            $name = $row['name'] ?? null;
+            if (! $name) {
+                $this->importSkipped++;
+                continue;
+            }
+
+            $sku = $row['sku'] ?: null;
+            $nameKey = strtolower(trim($name));
+            $skuKey = $sku ? strtolower(trim($sku)) : null;
+
+            $isExisting = false;
+            if (($skuKey && isset($existingSkus[$skuKey])) || isset($existingNames[$nameKey])) {
+                $isExisting = true;
+            }
+
+            $existingNames[$nameKey] = true;
+            if ($skuKey) {
+                $existingSkus[$skuKey] = true;
+            }
+
+            $packagingTypeId = '';
+            $pkgName = $row['packaging_type'] ?? null;
+            if ($pkgName && isset($packagingMap[strtolower(trim($pkgName))])) {
+                $packagingTypeId = $packagingMap[strtolower(trim($pkgName))];
+            }
+            $packagingQty = $row['packaging_quantity'] ?? '';
+            $stock = $row['stock'] ?? null;
+            $costo = $row['costo'] ?? null;
+
+            // Si NO hay empaque pero "cant_por_empaque" trae un número, la fila viene corrida:
+            // el stock quedó en "cant_por_empaque" y el costo en "stock".
+            if ($packagingTypeId === '' && is_numeric($packagingQty) && (float) $packagingQty > 0) {
+                $stock = $packagingQty;
+                $costo = $row['stock'] ?? null;
+                $packagingQty = '';
+            }
+
+            $this->importPreview[] = [
+                'name' => $name,
+                'sku' => $sku,
+                'unit_of_measure' => $this->resolveUnitCode($row['unit'] ?? null, $unitsMap),
+                'measure_value' => null,
+                'stock_min' => (int) ($row['stock_min'] ?? 0),
+                'stock_max' => ($row['stock_max'] !== null && $row['stock_max'] !== '') ? (int) $row['stock_max'] : null,
+                'description' => $row['description'] ?? null,
+                'stock' => $stock,
+                'costo' => $costo,
+                'brand_id' => null,
+                'model_id' => null,
+                'category_id' => null,
+                'packaging_type_id' => $packagingTypeId,
+                'packaging_quantity' => $packagingQty,
+                'status' => $isExisting ? 'existing' : 'new',
+            ];
+        }
+
+        if (empty($this->importPreview)) {
+            $this->importError = 'No se encontraron productos con nombre válido.';
+            return;
+        }
+
+        $this->showImportPreview = true;
     }
 
     public function confirmImport()

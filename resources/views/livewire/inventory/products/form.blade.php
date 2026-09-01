@@ -185,38 +185,82 @@
                     </div>
                 </form>
             @else
-                {{-- Importar desde Google Sheets --}}
+                {{-- Importar productos --}}
                 <div class="mb-4">
                     @if(!$showImport)
-                        <x-ui.button variant="secondary" icon="cloud_download" wire:click="$set('showImport', true)">
-                            Importar desde Google Sheets (CSV)
+                        <x-ui.button variant="secondary" icon="cloud_upload" wire:click="$set('showImport', true)">
+                            Importar productos
                         </x-ui.button>
                     @else
                         <div class="rounded-xl border border-gray-200 overflow-hidden">
                             <div class="flex items-center justify-between px-4 py-3 bg-gray-50/80 border-b border-gray-100">
                                 <p class="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-500 text-base">cloud_download</span>
-                                    Importar desde Google Sheets
+                                    <span class="material-symbols-outlined text-gray-500 text-base">cloud_upload</span>
+                                    Importar productos
                                 </p>
                                 <button type="button" wire:click="$set('showImport', false)" class="text-gray-400 hover:text-gray-600 transition">
                                     <span class="material-symbols-outlined">close</span>
                                 </button>
                             </div>
-                            <div class="p-4 space-y-3">
-                                <x-ui.alert variant="info" title="¿Cómo obtener la URL?">
-                                    <ul>
-                                        <li>En Google Sheets: Archivo → Compartir → Publicar en la web.</li>
-                                        <li>Elegí el formato "CSV" y copiá la URL.</li>
-                                        <li>Pegá la URL acá abajo y tocá "Importar".</li>
-                                    </ul>
-                                </x-ui.alert>
-                                <div class="flex gap-2 items-start">
-                                    <div class="flex-1">
-                                        <x-ui.input type="text" wire:model="importUrl" icon="link"
-                                            placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" />
-                                    </div>
-                                    <x-ui.button variant="primary" icon="download" wire:click="importFromUrl">Importar</x-ui.button>
+
+                            <div class="p-4 space-y-4">
+                                {{-- Selector de fuente --}}
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button type="button" wire:click="$set('importSource', 'sheets')"
+                                        class="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition {{ $importSource === 'sheets' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300' }}">
+                                        <span class="material-symbols-outlined text-3xl {{ $importSource === 'sheets' ? 'text-blue-600' : 'text-gray-400' }}">table_chart</span>
+                                        <span class="text-sm font-medium {{ $importSource === 'sheets' ? 'text-blue-700' : 'text-gray-700' }}">Google Sheets</span>
+                                    </button>
+                                    <button type="button" wire:click="$set('importSource', 'file')"
+                                        class="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition {{ $importSource === 'file' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300' }}">
+                                        <span class="material-symbols-outlined text-3xl {{ $importSource === 'file' ? 'text-blue-600' : 'text-gray-400' }}">upload_file</span>
+                                        <span class="text-sm font-medium {{ $importSource === 'file' ? 'text-blue-700' : 'text-gray-700' }}">Archivo</span>
+                                    </button>
                                 </div>
+
+                                @if($importSource === 'sheets')
+                                    <x-ui.alert variant="info" title="¿Cómo importar?">
+                                        <ul>
+                                            <li>Pegá el <strong>ID de tu hoja</strong> o su <strong>URL de edición</strong>.</li>
+                                            <li>Asegurate de compartir la hoja con el robot (omnivision-sheets@...).</li>
+                                            <li>Tocá "Cargar" para ver las pestañas, elegí una, y después "Importar".</li>
+                                        </ul>
+                                    </x-ui.alert>
+                                    <div class="flex gap-2 items-start">
+                                        <div class="flex-1">
+                                            <x-ui.input type="text" wire:model="importUrl" icon="link"
+                                                placeholder="https://docs.google.com/spreadsheets/d/.../edit" />
+                                        </div>
+                                        <x-ui.button variant="secondary" icon="folder_open" wire:click="loadSheetTabs">Cargar</x-ui.button>
+                                    </div>
+                                    @if(count($sheetTabs) > 0)
+                                        <x-ui.select wire:model.live="selectedTab" label="Pestaña de la hoja" icon="tab" placeholder="">
+                                            @foreach($sheetTabs as $tab)
+                                                <option value="{{ $tab }}">{{ $tab }}</option>
+                                            @endforeach
+                                        </x-ui.select>
+                                    @endif
+                                    <div class="flex justify-end">
+                                        <x-ui.button variant="primary" icon="download" wire:click="importFromUrl">Importar</x-ui.button>
+                                    </div>
+                                @else
+                                    <x-ui.alert variant="info" title="Formatos aceptados">
+                                        <ul>
+                                            <li><strong>CSV</strong> (.csv)</li>
+                                            <li><strong>Excel</strong> (.xlsx / .xls)</li>
+                                            <li><strong>JSON</strong> (.json)</li>
+                                        </ul>
+                                    </x-ui.alert>
+                                    <div class="flex gap-2 items-start">
+                                        <input type="file" wire:model="importFile" accept=".csv,.xlsx,.xls,.json"
+                                            class="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:text-sm file:font-medium file:cursor-pointer">
+                                        <x-ui.button variant="primary" icon="upload_file" wire:click="importFromFile">Subir</x-ui.button>
+                                    </div>
+                                    @error('importFile')
+                                        <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                                    @enderror
+                                @endif
+
                                 @if($importError)
                                     <p class="text-sm text-red-600 flex items-center gap-1.5">
                                         <span class="material-symbols-outlined text-base">error</span>
@@ -628,6 +672,16 @@
                         <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
                             <span class="material-symbols-outlined text-sm">attach_money</span> Valor: ${{ number_format($totalValue, 2) }}
                         </span>
+                        @if(count($sheetTabs) > 0)
+                            <div class="flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-base">tab</span>
+                                <select wire:model.live="selectedTab" class="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 max-w-44">
+                                    @foreach($sheetTabs as $tab)
+                                        <option value="{{ $tab }}">{{ $tab }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
                         <div class="flex-1"></div>
                         <div class="relative">
                             <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
