@@ -185,38 +185,82 @@
                     </div>
                 </form>
             @else
-                {{-- Importar desde Google Sheets --}}
+                {{-- Importar productos --}}
                 <div class="mb-4">
                     @if(!$showImport)
-                        <x-ui.button variant="secondary" icon="cloud_download" wire:click="$set('showImport', true)">
-                            Importar desde Google Sheets (CSV)
+                        <x-ui.button variant="secondary" icon="cloud_upload" wire:click="$set('showImport', true)">
+                            Importar productos
                         </x-ui.button>
                     @else
                         <div class="rounded-xl border border-gray-200 overflow-hidden">
                             <div class="flex items-center justify-between px-4 py-3 bg-gray-50/80 border-b border-gray-100">
                                 <p class="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-gray-500 text-base">cloud_download</span>
-                                    Importar desde Google Sheets
+                                    <span class="material-symbols-outlined text-gray-500 text-base">cloud_upload</span>
+                                    Importar productos
                                 </p>
                                 <button type="button" wire:click="$set('showImport', false)" class="text-gray-400 hover:text-gray-600 transition">
                                     <span class="material-symbols-outlined">close</span>
                                 </button>
                             </div>
-                            <div class="p-4 space-y-3">
-                                <x-ui.alert variant="info" title="¿Cómo obtener la URL?">
-                                    <ul>
-                                        <li>En Google Sheets: Archivo → Compartir → Publicar en la web.</li>
-                                        <li>Elegí el formato "CSV" y copiá la URL.</li>
-                                        <li>Pegá la URL acá abajo y tocá "Importar".</li>
-                                    </ul>
-                                </x-ui.alert>
-                                <div class="flex gap-2 items-start">
-                                    <div class="flex-1">
-                                        <x-ui.input type="text" wire:model="importUrl" icon="link"
-                                            placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" />
-                                    </div>
-                                    <x-ui.button variant="primary" icon="download" wire:click="importFromUrl">Importar</x-ui.button>
+
+                            <div class="p-4 space-y-4">
+                                {{-- Selector de fuente --}}
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button type="button" wire:click="$set('importSource', 'sheets')"
+                                        class="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition {{ $importSource === 'sheets' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300' }}">
+                                        <span class="material-symbols-outlined text-3xl {{ $importSource === 'sheets' ? 'text-blue-600' : 'text-gray-400' }}">table_chart</span>
+                                        <span class="text-sm font-medium {{ $importSource === 'sheets' ? 'text-blue-700' : 'text-gray-700' }}">Google Sheets</span>
+                                    </button>
+                                    <button type="button" wire:click="$set('importSource', 'file')"
+                                        class="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition {{ $importSource === 'file' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300' }}">
+                                        <span class="material-symbols-outlined text-3xl {{ $importSource === 'file' ? 'text-blue-600' : 'text-gray-400' }}">upload_file</span>
+                                        <span class="text-sm font-medium {{ $importSource === 'file' ? 'text-blue-700' : 'text-gray-700' }}">Archivo</span>
+                                    </button>
                                 </div>
+
+                                @if($importSource === 'sheets')
+                                    <x-ui.alert variant="info" title="¿Cómo importar?">
+                                        <ul>
+                                            <li>Pegá el <strong>ID de tu hoja</strong> o su <strong>URL de edición</strong>.</li>
+                                            <li>Asegurate de compartir la hoja con el robot (omnivision-sheets@...).</li>
+                                            <li>Tocá "Cargar" para ver las pestañas, elegí una, y después "Importar".</li>
+                                        </ul>
+                                    </x-ui.alert>
+                                    <div class="flex gap-2 items-start">
+                                        <div class="flex-1">
+                                            <x-ui.input type="text" wire:model="importUrl" icon="link"
+                                                placeholder="https://docs.google.com/spreadsheets/d/.../edit" />
+                                        </div>
+                                        <x-ui.button variant="secondary" icon="folder_open" wire:click="loadSheetTabs">Cargar</x-ui.button>
+                                    </div>
+                                    @if(count($sheetTabs) > 0)
+                                        <x-ui.select wire:model.live="selectedTab" label="Pestaña de la hoja" icon="tab" placeholder="">
+                                            @foreach($sheetTabs as $tab)
+                                                <option value="{{ $tab }}">{{ $tab }}</option>
+                                            @endforeach
+                                        </x-ui.select>
+                                    @endif
+                                    <div class="flex justify-end">
+                                        <x-ui.button variant="primary" icon="download" wire:click="importFromUrl">Importar</x-ui.button>
+                                    </div>
+                                @else
+                                    <x-ui.alert variant="info" title="Formatos aceptados">
+                                        <ul>
+                                            <li><strong>CSV</strong> (.csv)</li>
+                                            <li><strong>Excel</strong> (.xlsx / .xls)</li>
+                                            <li><strong>JSON</strong> (.json)</li>
+                                        </ul>
+                                    </x-ui.alert>
+                                    <div class="flex gap-2 items-start">
+                                        <input type="file" wire:model="importFile" accept=".csv,.xlsx,.xls,.json"
+                                            class="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:text-sm file:font-medium file:cursor-pointer">
+                                        <x-ui.button variant="primary" icon="upload_file" wire:click="importFromFile">Subir</x-ui.button>
+                                    </div>
+                                    @error('importFile')
+                                        <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                                    @enderror
+                                @endif
+
                                 @if($importError)
                                     <p class="text-sm text-red-600 flex items-center gap-1.5">
                                         <span class="material-symbols-outlined text-base">error</span>
@@ -606,6 +650,9 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-1">
+                            <button type="button" wire:click="$set('showImportHelp', true)" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition" title="Ayuda">
+                                <span class="material-symbols-outlined text-xl">help</span>
+                            </button>
                             <button type="button" wire:click="refreshImport" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition" title="Recargar">
                                 <span class="material-symbols-outlined text-xl">refresh</span>
                             </button>
@@ -625,6 +672,16 @@
                         <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
                             <span class="material-symbols-outlined text-sm">attach_money</span> Valor: ${{ number_format($totalValue, 2) }}
                         </span>
+                        @if(count($sheetTabs) > 0)
+                            <div class="flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-gray-400 text-base">tab</span>
+                                <select wire:model.live="selectedTab" class="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 max-w-44">
+                                    @foreach($sheetTabs as $tab)
+                                        <option value="{{ $tab }}">{{ $tab }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
                         <div class="flex-1"></div>
                         <div class="relative">
                             <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
@@ -647,9 +704,10 @@
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Producto</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Unidad</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Empaque</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Unid. x empaque</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Por empaque</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Costo</th>
+                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Costo unit.</th>
                                 <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Base</th>
                             </tr>
                         </thead>
@@ -659,6 +717,8 @@
                                     $pkgQty = (float) ($row['packaging_quantity'] ?? 0);
                                     $stockQty = (float) ($row['stock'] ?? 0);
                                     $baseQty = $pkgQty > 0 ? $stockQty * $pkgQty : $stockQty;
+                                    $rawCosto = (float) ($row['costo'] ?? 0);
+                                    $costoUnit = $pkgQty > 0 ? $rawCosto / $pkgQty : $rawCosto;
                                     $isExisting = ($row['status'] ?? 'new') === 'existing';
                                 @endphp
                                 <tr class="hover:bg-gray-50/50 {{ $isExisting ? 'bg-amber-50/50' : '' }}">
@@ -702,6 +762,13 @@
                                             class="w-24 px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                     </td>
                                     <td class="px-3 py-2 text-right font-mono whitespace-nowrap">
+                                        @if($pkgQty > 0 && $rawCosto > 0)
+                                            <span class="font-medium text-gray-700">${{ rtrim(rtrim(number_format($costoUnit, 4), '0'), '.') }}</span>
+                                        @else
+                                            <span class="text-gray-300">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-2 text-right font-mono whitespace-nowrap">
                                         @if($pkgQty > 0)
                                             <span class="text-gray-400">{{ $stockQty }} × {{ $pkgQty }} =</span>
                                             <span class="font-semibold text-blue-700">{{ rtrim(rtrim(number_format($baseQty, 4), '0'), '.') }}</span>
@@ -712,7 +779,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-3 py-10 text-center text-gray-500 text-sm">No se encontraron productos con ese filtro.</td>
+                                    <td colspan="9" class="px-3 py-10 text-center text-gray-500 text-sm">No se encontraron productos con ese filtro.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -723,6 +790,74 @@
                     <x-ui.button variant="primary" icon="check_circle" wire:click="confirmImport">Confirmar</x-ui.button>
                     <button @click="show = false" wire:click="cancelImport"
                         class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal de ayuda --}}
+    <div x-data="{ show: @entangle('showImportHelp') }" x-show="show" x-cloak
+        x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        style="display: none;">
+        <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+            class="relative w-full max-w-3xl">
+            <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-blue-600">help</span>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-900">¿Cómo completar los campos?</h3>
+                            <p class="text-xs text-gray-500">Guía rápida de cada columna</p>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="$set('showImportHelp', false)" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                        <span class="material-symbols-outlined text-xl">close</span>
+                    </button>
+                </div>
+
+                <div class="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
+                    <p class="text-sm font-semibold text-gray-800">Cómo llenar cada producto</p>
+                    <p class="text-xs text-gray-500">El mismo producto se puede cargar de dos formas: <strong>suelto</strong> o <strong>empacado</strong>.</p>
+
+                    <div class="border rounded-lg p-3 bg-gray-50/60">
+                        <p class="text-sm font-medium text-gray-800">Router Mikrotik · 45 sueltos</p>
+                        <p class="text-xs text-gray-600 mt-1">Medida: <strong>unidad</strong> &nbsp;·&nbsp; Empaque: <strong>Sin empaque</strong> &nbsp;·&nbsp; Stock: <strong>45</strong></p>
+                        <p class="text-xs text-blue-700 mt-1 font-mono">→ 45 routers</p>
+                    </div>
+
+                    <div class="border rounded-lg p-3 bg-gray-50/60">
+                        <p class="text-sm font-medium text-gray-800">Router Mikrotik · 10 cajas de 20</p>
+                        <p class="text-xs text-gray-600 mt-1">Medida: <strong>unidad</strong> &nbsp;·&nbsp; Empaque: <strong>Caja</strong> &nbsp;·&nbsp; Por empaque: <strong>20</strong> &nbsp;·&nbsp; Stock: <strong>10</strong></p>
+                        <p class="text-xs text-blue-700 mt-1 font-mono">→ 10 cajas × 20 = 200 routers</p>
+                    </div>
+
+                    <div class="border rounded-lg p-3 bg-gray-50/60">
+                        <p class="text-sm font-medium text-gray-800">Fibra óptica · 5 bobinas de 5000 m</p>
+                        <p class="text-xs text-gray-600 mt-1">Medida: <strong>metro</strong> &nbsp;·&nbsp; Empaque: <strong>Bobina</strong> &nbsp;·&nbsp; Por empaque: <strong>5000</strong> &nbsp;·&nbsp; Stock: <strong>5</strong></p>
+                        <p class="text-xs text-blue-700 mt-1 font-mono">→ 5 bobinas × 5000 = 25.000 m</p>
+                    </div>
+
+                    <div class="border rounded-lg p-3 bg-gray-50/60">
+                        <p class="text-sm font-medium text-gray-800">Conector RJ45 · 500 sueltos</p>
+                        <p class="text-xs text-gray-600 mt-1">Medida: <strong>unidad</strong> &nbsp;·&nbsp; Empaque: <strong>Sin empaque</strong> &nbsp;·&nbsp; Stock: <strong>500</strong></p>
+                        <p class="text-xs text-blue-700 mt-1 font-mono">→ 500 conectores</p>
+                    </div>
+
+                    <div class="border rounded-lg p-3 bg-gray-50/60">
+                        <p class="text-sm font-medium text-gray-800">Aceite · 20 litros</p>
+                        <p class="text-xs text-gray-600 mt-1">Medida: <strong>litro</strong> &nbsp;·&nbsp; Empaque: <strong>Sin empaque</strong> &nbsp;·&nbsp; Stock: <strong>20</strong></p>
+                        <p class="text-xs text-blue-700 mt-1 font-mono">→ 20 L</p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 px-6 py-4 flex justify-end">
+                    <x-ui.button variant="primary" wire:click="$set('showImportHelp', false)">Entendido</x-ui.button>
                 </div>
             </div>
         </div>
