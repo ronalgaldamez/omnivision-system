@@ -97,13 +97,31 @@
                             @enderror
                         </div>
 
-                        <x-ui.input type="text" icon="receipt_long" wire:model="invoice_number" label="Número de factura" required placeholder="Ej: FAC-001" />
+                        {{-- Sucursal destino --}}
+                        <div>
+                            <x-forms.label icon="store" required>Sucursal destino</x-forms.label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">store</span>
+                                <select wire:model="targetBranchId"
+                                    class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none cursor-pointer">
+                                    <option value="">Seleccioná la sucursal destino...</option>
+                                    @foreach ($branches as $branch)
+                                        <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            @error('targetBranchId')
+                                <span class="text-xs text-red-500 mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ $message }}</span>
+                            @enderror
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <x-ui.input type="text" icon="receipt_long" wire:model="invoice_number" label="Número de factura" required placeholder="Ej: FAC-001" />
                         <x-ui.input type="date" icon="event" wire:model="purchase_date" label="Fecha de compra" required />
-                        <x-ui.textarea icon="edit_note" wire:model="notes" label="Notas" placeholder="Notas o comentarios de la compra" />
                     </div>
+
+                    <x-ui.textarea icon="edit_note" wire:model="notes" label="Notas" placeholder="Notas o comentarios de la compra" />
                 </div>
             </section>
 

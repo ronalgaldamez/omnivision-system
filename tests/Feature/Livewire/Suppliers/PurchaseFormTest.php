@@ -92,6 +92,26 @@ class PurchaseFormTest extends TestCase
             ->assertHasErrors(['supplier_id', 'items']);
     }
 
+    public function test_requires_target_branch()
+    {
+        $this->actingAs(User::factory()->create());
+
+        $supplier = Supplier::factory()->create();
+        $product = Product::factory()->create(['current_stock' => 0]);
+
+        Livewire::test(PurchaseForm::class)
+            ->call('selectSupplier', $supplier->id)
+            ->set('invoice_number', 'FAC-TEST-002')
+            ->set('purchase_date', now()->format('Y-m-d'))
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 10)
+            ->set('currentUnitCost', 50)
+            ->call('addItem')
+            ->call('save')
+            ->assertHasErrors(['targetBranchId'])
+            ->assertSee('La sucursal destino es obligatoria.');
+    }
+
     public function test_calculates_totals()
     {
         $this->actingAs(User::factory()->create());
@@ -160,10 +180,12 @@ class PurchaseFormTest extends TestCase
         PackagingType::factory()->create();
 
         $supplier = Supplier::factory()->create();
+        $branch = \App\Models\Branch::factory()->create();
         $product = Product::factory()->create(['current_stock' => 0]);
 
         Livewire::test(PurchaseForm::class)
             ->call('selectSupplier', $supplier->id)
+            ->set('targetBranchId', $branch->id)
             ->set('invoice_number', 'FAC-TEST-001')
             ->set('purchase_date', now()->format('Y-m-d'))
             ->call('selectProduct', $product->id)
@@ -172,6 +194,45 @@ class PurchaseFormTest extends TestCase
             ->call('addItem')
             ->call('confirmSave');
 
-        $this->assertDatabaseHas('purchases', ['invoice_number' => 'FAC-TEST-001']);
+        $this->assertDatabaseHas('purchases', [
+            'invoice_number' => 'FAC-TEST-001',
+            'branch_id' => $branch->id,
+        ]);
+
+        $this->assertDatabaseHas('branch_inventories', [
+            'branch_id' => $branch->id,
+            'product_id' => $product->id,
+        ]);
+    }
+
+    public function test_purchase_entry_movement_carries_branch()
+    {
+        $this->actingAs(User::factory()->create());
+        PackagingType::factory()->create();
+
+        $supplier = Supplier::factory()->create();
+        $branch = \App\Models\Branch::factory()->create();
+        $product = Product::factory()->create(['current_stock' => 0]);
+
+        Livewire::test(PurchaseForm::class)
+            ->call('selectSupplier', $supplier->id)
+            ->set('targetBranchId', $branch->id)
+            ->set('invoice_number', 'FAC-TEST-003')
+            ->set('purchase_date', now()->format('Y-m-d'))
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 10)
+            ->set('currentUnitCost', 50)
+            ->call('addItem')
+            ->call('confirmSave');
+
+        $purchase = \App\Models\Purchase::where('invoice_number', 'FAC-TEST-003')->firstOrFail();
+
+        $this->assertDatabaseHas('movements', [
+            'product_id' => $product->id,
+            'type' => 'entry',
+            'branch_id' => $branch->id,
+            'reference_type' => 'purchase',
+            'reference_id' => $purchase->id,
+        ]);
     }
 }
