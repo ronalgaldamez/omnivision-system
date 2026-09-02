@@ -109,7 +109,21 @@ class PurchaseFormTest extends TestCase
             ->call('addItem')
             ->call('save')
             ->assertHasErrors(['targetBranchId'])
-            ->assertSee('La sucursal destino es obligatoria.');
+            ->assertDispatched('show-toasts');
+    }
+
+    public function test_validate_dispatches_toast_and_no_inline_text()
+    {
+        $this->actingAs(User::factory()->create());
+
+        Livewire::test(PurchaseForm::class)
+            ->set('invoice_number', '')
+            ->set('targetBranchId', '')
+            ->set('purchase_date', '')
+            ->call('save')
+            ->assertHasErrors(['supplier_id', 'targetBranchId', 'invoice_number', 'items'])
+            ->assertDispatched('show-toasts')
+            ->assertDontSee('The target branch id field is required.');
     }
 
     public function test_calculates_totals()

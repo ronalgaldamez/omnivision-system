@@ -21,7 +21,7 @@
     </div>
 
     <x-ui.card title="Nueva Compra" icon="add_shopping_cart" subtitle="Registra una nueva factura de adquisición">
-        <form wire:submit.prevent="save" class="space-y-6">
+        <form wire:submit.prevent="save" novalidate class="space-y-6">
 
             {{-- ═══════════ SECCIÓN 1: DATOS DE COMPRA ═══════════ --}}
             <section x-data="{ open: true }" class="border border-gray-200 rounded-xl overflow-hidden">
@@ -67,7 +67,7 @@
                                     <input type="text" wire:model.live.debounce.300ms="supplierSearch"
                                         @focus="focused = true" @blur="setTimeout(() => focused = false, 200)"
                                         placeholder="Buscar por nombre, NIT o NRC..."
-                                        class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                        class="w-full pl-10 pr-3 py-2.5 rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500/20 transition text-sm {{ $errors->has('supplier_id') ? 'border-red-300 bg-red-50 focus:border-red-400 focus:bg-white' : 'border-gray-300 bg-white focus:border-blue-500' }}">
                                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                                     @if (count($supplierResults) > 0)
                                         <ul x-show="focused" x-transition
@@ -92,9 +92,6 @@
                                 </button>
                             </div>
                             @endif
-                            @error('supplier_id')
-                                <span class="text-xs text-red-500 mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ $message }}</span>
-                            @enderror
                         </div>
 
                         {{-- Sucursal destino --}}
@@ -103,22 +100,19 @@
                             <div class="relative">
                                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">store</span>
                                 <select wire:model="targetBranchId"
-                                    class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm appearance-none cursor-pointer">
+                                    class="w-full pl-10 pr-3 py-2.5 rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500/20 transition text-sm appearance-none cursor-pointer {{ $errors->has('targetBranchId') ? 'border-red-300 bg-red-50 focus:border-red-400 focus:bg-white' : 'border-gray-300 bg-white focus:border-blue-500' }}">
                                     <option value="">Seleccioná la sucursal destino...</option>
                                     @foreach ($branches as $branch)
                                         <option value="{{ $branch->id }}">{{ $branch->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            @error('targetBranchId')
-                                <span class="text-xs text-red-500 mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ $message }}</span>
-                            @enderror
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <x-ui.input type="text" icon="receipt_long" wire:model="invoice_number" label="Número de factura" required placeholder="Ej: FAC-001" />
-                        <x-ui.input type="date" icon="event" wire:model="purchase_date" label="Fecha de compra" required />
+                        <x-ui.input type="text" icon="receipt_long" wire:model="invoice_number" name="invoice_number" label="Número de factura" required placeholder="Ej: FAC-001" hide-error-text />
+                        <x-ui.input type="date" icon="event" wire:model="purchase_date" name="purchase_date" label="Fecha de compra" required hide-error-text />
                     </div>
 
                     <x-ui.textarea icon="edit_note" wire:model="notes" label="Notas" placeholder="Notas o comentarios de la compra" />
@@ -153,11 +147,8 @@
                                 </div>
                                 <div class="grid grid-cols-1 gap-3">
                                     <input type="text" wire:model.live.debounce.500ms="newProductName"
-                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition"
+                                        class="w-full px-3 py-2 rounded-lg border bg-white text-sm focus:ring-2 transition {{ $errors->has('newProductName') ? 'border-red-300 bg-red-50 focus:ring-red-500/20 focus:border-red-400' : 'border-gray-300 focus:ring-green-500/20 focus:border-green-500' }}"
                                         placeholder="Nombre del producto">
-                                    @error('newProductName')
-                                        <span class="text-xs text-red-500 mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ $message }}</span>
-                                    @enderror
                                     <div>
                                         @if($newProductCategoryId && $selCat = \App\Models\Category::find($newProductCategoryId))
                                         <div class="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
@@ -171,7 +162,7 @@
                                         <div class="flex gap-2">
                                             <div class="relative flex-1">
                                                 <input type="text" wire:model.live.debounce.300ms="newProductCategorySearch" placeholder="Buscar categoría..."
-                                                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition">
+                                                    class="w-full pl-9 pr-3 py-2 rounded-lg border bg-white text-sm focus:ring-2 transition {{ $errors->has('newProductCategoryId') ? 'border-red-300 bg-red-50 focus:ring-red-500/20 focus:border-red-400' : 'border-gray-300 focus:ring-green-500/20 focus:border-green-500' }}">
                                                 <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
                                                 @if(count($newProductCategoryResults) > 0)
                                                 <ul class="absolute z-30 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-48 overflow-auto">
@@ -192,9 +183,6 @@
                                             </button>
                                         </div>
                                         @endif
-                                        @error('newProductCategoryId')
-                                            <span class="text-xs text-red-500 mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ $message }}</span>
-                                        @enderror
                                     </div>
                                 </div>
                                 <div class="flex justify-end gap-2">
@@ -458,9 +446,6 @@
                             <p class="text-sm text-gray-400 mt-1">Usa el formulario de arriba para agregar productos a la compra.</p>
                         </div>
                     @endif
-                    @error('items')
-                        <span class="text-xs text-red-500 mt-2 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ $message }}</span>
-                    @enderror
                 </div>
             </section>
 
@@ -565,22 +550,16 @@
             class="relative w-full max-w-md">
             <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
                 <div class="p-6 text-center">
-                    <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full {{ $modalAction === 'pending_product_save' ? 'bg-amber-100' : 'bg-blue-100' }} mb-4">
-                        <span class="material-symbols-outlined {{ $modalAction === 'pending_product_save' ? 'text-amber-600' : 'text-blue-600' }} text-2xl">{{ $modalAction === 'pending_product_save' ? 'warning' : 'help' }}</span>
+                    <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 mb-4">
+                        <span class="material-symbols-outlined text-blue-600 text-2xl">help</span>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900">{{ $modalAction === 'pending_product_save' ? 'Producto sin agregar' : 'Confirmar acción' }}</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">Confirmar acción</h3>
                     <p class="text-sm text-gray-600 mt-2">{{ $modalMessage }}</p>
                 </div>
                 <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                    @if($modalAction === 'pending_product_save')
-                        <x-ui.button variant="primary" wire:click="discardPendingAndSave">Descartar y guardar</x-ui.button>
-                        <button @click="show = false" wire:click="closeModal"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">Volver al formulario</button>
-                    @else
-                        <x-ui.button variant="primary" wire:click="executeAction">Sí, continuar</x-ui.button>
-                        <button @click="show = false" wire:click="closeModal"
-                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">Cancelar</button>
-                    @endif
+                    <x-ui.button variant="primary" wire:click="executeAction">Sí, continuar</x-ui.button>
+                    <button @click="show = false" wire:click="closeModal"
+                        class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">Cancelar</button>
                 </div>
             </div>
         </div>
