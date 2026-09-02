@@ -654,6 +654,15 @@ class PurchaseForm extends Component
             return;
         }
 
+        if ($this->hasPendingNewProduct()) {
+            $name = trim((string) $this->newProductName) ?: 'sin nombre';
+            $this->modalAction = 'pending_product_save';
+            $this->modalMessage = "Tenés un producto a medio crear \"{$name}\" que no se agregó a la lista. Podés volver a crearlo, o descartarlo y guardar igual.";
+            $this->showConfirmModal = true;
+
+            return;
+        }
+
         try {
             $this->validate();
         } catch (ValidationException $e) {
@@ -661,6 +670,24 @@ class PurchaseForm extends Component
             throw $e;
         }
         $this->dispatch('confirm-save');
+    }
+
+    private function hasPendingNewProduct(): bool
+    {
+        if (! $this->createMode) {
+            return false;
+        }
+
+        return trim((string) $this->newProductName) !== ''
+            || $this->newProductCategoryId !== ''
+            || trim((string) $this->newProductCategorySearch) !== '';
+    }
+
+    public function discardPendingAndSave()
+    {
+        $this->cancelCreateMode();
+        $this->closeModal();
+        $this->save();
     }
 
     public function confirmSave()

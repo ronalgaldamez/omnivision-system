@@ -565,16 +565,22 @@
             class="relative w-full max-w-md">
             <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
                 <div class="p-6 text-center">
-                    <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 mb-4">
-                        <span class="material-symbols-outlined text-blue-600 text-2xl">help</span>
+                    <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full {{ $modalAction === 'pending_product_save' ? 'bg-amber-100' : 'bg-blue-100' }} mb-4">
+                        <span class="material-symbols-outlined {{ $modalAction === 'pending_product_save' ? 'text-amber-600' : 'text-blue-600' }} text-2xl">{{ $modalAction === 'pending_product_save' ? 'warning' : 'help' }}</span>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900">Confirmar acción</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">{{ $modalAction === 'pending_product_save' ? 'Producto sin agregar' : 'Confirmar acción' }}</h3>
                     <p class="text-sm text-gray-600 mt-2">{{ $modalMessage }}</p>
                 </div>
                 <div class="bg-gray-50 px-6 py-4 flex flex-col gap-3 sm:flex-row-reverse">
-                    <x-ui.button variant="primary" wire:click="executeAction">Sí, continuar</x-ui.button>
-                    <button @click="show = false" wire:click="closeModal"
-                        class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">Cancelar</button>
+                    @if($modalAction === 'pending_product_save')
+                        <x-ui.button variant="primary" wire:click="discardPendingAndSave">Descartar y guardar</x-ui.button>
+                        <button @click="show = false" wire:click="closeModal"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">Volver al formulario</button>
+                    @else
+                        <x-ui.button variant="primary" wire:click="executeAction">Sí, continuar</x-ui.button>
+                        <button @click="show = false" wire:click="closeModal"
+                            class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">Cancelar</button>
+                    @endif
                 </div>
             </div>
         </div>
