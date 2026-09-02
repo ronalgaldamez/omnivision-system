@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\PackagingType;
 use App\Models\Product;
 use App\Models\Supplier;
+use App\Models\UnitOfMeasure;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -248,5 +249,72 @@ class PurchaseFormTest extends TestCase
             'reference_type' => 'purchase',
             'reference_id' => $purchase->id,
         ]);
+    }
+
+    public function test_create_new_product_inline_requires_unit()
+    {
+        $this->actingAs(User::factory()->create());
+
+        $category = Category::factory()->create();
+
+        Livewire::test(PurchaseForm::class)
+            ->call('activateCreateMode')
+            ->set('newProductName', 'Cable Nuevo')
+            ->set('newProductCategoryId', $category->id)
+            ->set('newProductUnit', '')
+            ->call('createProduct')
+            ->assertHasErrors('newProductUnit');
+    }
+
+    public function test_create_new_product_inline_with_unit_and_packaging()
+    {
+        $this->actingAs(User::factory()->create());
+
+        UnitOfMeasure::create(['code' => 'metro', 'name' => 'Metro', 'symbol' => 'm', 'is_whole' => false, 'is_active' => true]);
+        $category = Category::factory()->create();
+        $bobina = PackagingType::create(['name' => 'Bobina', 'unit_of_measure' => 'metro']);
+
+        $component = Livewire::test(PurchaseForm::class)
+            ->call('activateCreateMode')
+            ->set('newProductName', 'Fibra Optica')
+            ->set('newProductCategoryId', $category->id)
+            ->set('newProductUnit', 'metro')
+            ->set('newProductPackagingTypeId', $bobina->id)
+            ->set('newProductPackagingQuantity', 5000)
+            ->call('createProduct')
+            ->assertDispatched('show-toast')
+            ->assertSet('createMode', false)
+            ->assertCount('currentPackagings', 1);
+
+        $product = Product::where('name', 'Fibra Optica')->firstOrFail();
+        $component->assertSet('currentProductId', $product->id);
+        $this->assertEquals('metro', $product->unit_of_measure);
+
+        $this->assertDatabaseHas('product_packagings', [
+            'product_id' => $product->id,
+            'packaging_type_id' => $bobina->id,
+            'quantity_in_base_unit' => 5000,
+            'is_default_for_purchase' => true,
+        ]);
+    }
+
+    public function test_create_new_product_inline_without_packaging_has_no_packaging()
+    {
+        $this->actingAs(User::factory()->create());
+
+        UnitOfMeasure::create(['code' => 'unidad', 'name' => 'Unidad', 'symbol' => null, 'is_whole' => true, 'is_active' => true]);
+        $category = Category::factory()->create();
+
+        Livewire::test(PurchaseForm::class)
+            ->call('activateCreateMode')
+            ->set('newProductName', 'Router Simple')
+            ->set('newProductCategoryId', $category->id)
+            ->set('newProductUnit', 'unidad')
+            ->call('createProduct')
+            ->assertDispatched('show-toast');
+
+        $product = Product::where('name', 'Router Simple')->firstOrFail();
+        $this->assertEquals('unidad', $product->unit_of_measure);
+        $this->assertCount(0, $product->packagings);
     }
 }
