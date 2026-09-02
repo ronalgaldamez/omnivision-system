@@ -524,6 +524,7 @@ class PurchaseForm extends Component
         $this->currentProductId = '';
         $this->currentProductSearch = '';
         $this->productSearchResults = [];
+        $this->resetValidation(['newProductName', 'newProductCategoryId', 'newProductCategorySearch']);
     }
 
     public function cancelCreateMode()
@@ -531,7 +532,9 @@ class PurchaseForm extends Component
         $this->createMode = false;
         $this->newProductName = '';
         $this->newProductCategoryId = '';
+        $this->newProductCategorySearch = '';
         $this->productSearchResults = [];
+        $this->resetValidation(['newProductName', 'newProductCategoryId', 'newProductCategorySearch']);
     }
 
     public function resetForm()
@@ -557,10 +560,22 @@ class PurchaseForm extends Component
 
     public function createProduct()
     {
-        $this->validate([
-            'newProductName' => 'required|string|max:255',
-            'newProductCategoryId' => 'required|exists:categories,id',
-        ]);
+        try {
+            $this->validate([
+                'newProductName' => 'required|string|max:255',
+                'newProductCategoryId' => 'required|exists:categories,id',
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+
+            $this->dispatch('show-toasts', errors: $errors->all());
+
+            foreach ($errors->keys() as $key) {
+                $this->addError($key, $errors->first($key));
+            }
+
+            return;
+        }
 
         $product = Product::create([
             'name' => $this->newProductName,
@@ -654,13 +669,37 @@ class PurchaseForm extends Component
             return;
         }
 
+        if ($this->hasPendingNewProduct()) {
+            $this->dispatch('show-toast', type: 'warning', message: 'No podés guardar: tenés un producto a medio crear que no se agregó a la lista. Completalo o cancelá su creación antes de registrar la compra.');
+
+            return;
+        }
+
         try {
             $this->validate();
         } catch (ValidationException $e) {
-            $this->dispatch('show-toasts', errors: $e->validator->errors()->all());
-            throw $e;
+            $errors = $e->validator->errors();
+
+            $this->dispatch('show-toasts', errors: $errors->all());
+
+            foreach ($errors->keys() as $key) {
+                $this->addError($key, $errors->first($key));
+            }
+
+            return;
         }
         $this->dispatch('confirm-save');
+    }
+
+    private function hasPendingNewProduct(): bool
+    {
+        if (! $this->createMode) {
+            return false;
+        }
+
+        return trim((string) $this->newProductName) !== ''
+            || $this->newProductCategoryId !== ''
+            || trim((string) $this->newProductCategorySearch) !== '';
     }
 
     public function confirmSave()

@@ -6,6 +6,7 @@
     'error' => null,
     'disabled' => false,
     'required' => false,
+    'hide-error-text' => false,
     'name' => null,
     'id' => null,
 ])
@@ -40,7 +41,7 @@
         />
     </div>
 
-    @if($hasError && $errorMsg)
+    @if($hasError && $errorMsg && !$hideErrorText)
         <x-forms.error>{{ $errorMsg }}</x-forms.error>
     @endif
 </div>
