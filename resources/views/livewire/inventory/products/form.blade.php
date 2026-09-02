@@ -134,13 +134,9 @@
                                                     @endif
                                                 </td>
                                                 <td class="px-3 py-2 text-center">
-                                                    <div class="flex items-center justify-center gap-0.5">
-                                                        <span wire:click="editPackaging({{ $pkg->id }})" class="p-1 text-blue-600 hover:bg-blue-50 rounded transition cursor-pointer" title="Editar">
-                                                            <span class="material-symbols-outlined text-sm">edit</span>
-                                                        </span>
-                                                        <span wire:click="deletePackaging({{ $pkg->id }})" class="p-1 text-red-500 hover:bg-red-50 rounded transition cursor-pointer" title="Eliminar" onclick="return confirm('¿Eliminar este empaque?')">
-                                                            <span class="material-symbols-outlined text-sm">delete</span>
-                                                        </span>
+                                                    <div class="flex items-center justify-center gap-1">
+                                                        <x-ui.button variant="ghost" size="sm" icon="edit" wire:click="editPackaging({{ $pkg->id }})">Editar</x-ui.button>
+                                                        <x-ui.button variant="ghost" size="sm" icon="delete" wire:click="deletePackaging({{ $pkg->id }})" onclick="return confirm('¿Eliminar este empaque?')">Eliminar</x-ui.button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -150,33 +146,12 @@
                             </div>
                         @endif
 
-                        @if($showPackagingForm)
-                            <div class="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                <p class="text-xs font-medium text-blue-700">{{ $editingPackagingId ? 'Editando empaque' : 'Nuevo empaque' }}</p>
-                                <div class="flex items-end gap-2 flex-wrap">
-                                    <div class="flex-1 min-w-[120px]">
-                                        <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
-                                        <select wire:model.live="newPackagingTypeId" class="w-full px-2 py-1.5 rounded border border-gray-300 bg-white text-xs">
-                                            <option value="">Seleccioná...</option>
-                                            @foreach($packagingTypes as $pt)
-                                                <option value="{{ $pt->id }}">{{ $pt->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-medium text-gray-600 mb-1">Unidades</label>
-                                        <input type="number" step="1" wire:model.live.debounce.500ms="newPackagingQuantity" class="w-36 px-2 py-1.5 rounded border border-gray-300 bg-white text-xs" min="1">
-                                    </div>
-                                    <x-ui.button variant="primary" size="sm" wire:click="savePackaging">{{ $editingPackagingId ? 'Actualizar' : 'Guardar' }}</x-ui.button>
-                                    <x-ui.button variant="secondary" size="sm" wire:click="cancelEditPackaging">Cancelar</x-ui.button>
-                                </div>
-                            </div>
-                        @else
-                            <span wire:click="editPackaging(0)" class="text-xs text-blue-600 hover:text-blue-800 transition flex items-center gap-1 cursor-pointer">
-                                <span class="material-symbols-outlined text-sm">add</span>
-                                Agregar empaque
-                            </span>
-                        @endif
+                        <div class="flex items-center gap-3">
+                            <x-ui.button variant="secondary" size="sm" icon="add" wire:click="editPackaging(0)">Agregar empaque</x-ui.button>
+                            @if(count($currentPackagings) > 0)
+                                <p class="text-xs text-gray-500">Usá el botón para agregar otro empaque al producto.</p>
+                            @endif
+                        </div>
                     </div>
 
                     <div class="flex justify-end gap-3 pt-2">
@@ -492,58 +467,110 @@
     </div>
 
     {{-- Modal de búsqueda de modelos --}}
-    @if($showModelModal)
-        <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div class="relative mx-auto p-5 w-full max-w-3xl">
-                <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                        <h3 class="text-lg font-medium text-gray-800 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-gray-500">search</span>
-                            Seleccionar Modelo
-                        </h3>
-                        <span wire:click="$set('showModelModal', false)" class="text-gray-400 hover:text-gray-600 cursor-pointer">
-                            <span class="material-symbols-outlined">close</span>
-                        </span>
-                    </div>
-                    <div class="p-5">
-                        <div class="relative mb-4">
-                            <input type="text" wire:model.live="modelSearchTerm"
-                                placeholder="Buscar por marca, modelo o categoría..."
-                                class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+    <div x-data="{ show: @entangle('showModelModal') }" x-show="show" x-cloak
+        x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+            class="relative w-full max-w-3xl">
+            <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-blue-600">travel_explore</span>
                         </div>
-                        <div class="overflow-x-auto rounded-lg border border-gray-200">
-                            <table class="min-w-full text-sm">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-4 py-2 text-left">Marca</th>
-                                        <th class="px-4 py-2 text-left">Modelo</th>
-                                        <th class="px-4 py-2 text-left">Categoría</th>
-                                        <th class="px-4 py-2 text-center">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100">
-                                    @foreach($modelSearchResults as $res)
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-4 py-2">{{ $res->brand->name ?? '-' }}</td>
-                                            <td class="px-4 py-2">{{ $res->name }}</td>
-                                            <td class="px-4 py-2">{{ $res->category->name ?? '-' }}</td>
-                                            <td class="px-4 py-2 text-center">
-                                                <span wire:click="selectModel({{ $res->id }})" class="text-blue-600 hover:text-blue-800 font-medium text-sm cursor-pointer">Seleccionar</span>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="mt-4 flex justify-end">
-                            <x-ui.button variant="secondary" wire:click="$set('showModelModal', false)">Cerrar</x-ui.button>
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-900">Seleccionar modelo</h3>
+                            <p class="text-xs text-gray-500">Buscá por marca, modelo o categoría</p>
                         </div>
                     </div>
+                    <button type="button" wire:click="$set('showModelModal', false)" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                        <span class="material-symbols-outlined text-xl">close</span>
+                    </button>
+                </div>
+                <div class="p-4 border-b border-gray-100">
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                        <input type="text" wire:model.live="modelSearchTerm"
+                            placeholder="Buscar por marca, modelo o categoría..."
+                            class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm text-sm">
+                    </div>
+                </div>
+                <div class="p-2 max-h-96 overflow-y-auto">
+                    @forelse($modelSearchResults as $res)
+                        <button type="button" wire:click="selectModel({{ $res->id }})"
+                            class="w-full text-left px-4 py-3 hover:bg-blue-50 rounded-xl transition flex items-center gap-3 group border-b border-gray-50 last:border-0">
+                            <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition">
+                                <span class="material-symbols-outlined text-gray-500 text-lg group-hover:text-blue-600">inventory_2</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-800 group-hover:text-blue-700">{{ $res->name }}</p>
+                                <p class="text-xs text-gray-500 mt-0.5">
+                                    {{ $res->brand?->name ?? '—' }} · {{ $res->category?->name ?? '—' }}
+                                </p>
+                            </div>
+                            <span class="material-symbols-outlined text-gray-300 group-hover:text-blue-500 text-lg">chevron_right</span>
+                        </button>
+                    @empty
+                        <div class="py-12 text-center">
+                            <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">search_off</span>
+                            <p class="text-gray-500 text-sm">No se encontraron modelos</p>
+                            <p class="text-xs text-gray-400 mt-1">Escribí al menos 2 letras para buscar</p>
+                        </div>
+                    @endforelse
+                </div>
+                <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+                    <x-ui.button variant="secondary" wire:click="$set('showModelModal', false)">Cerrar</x-ui.button>
                 </div>
             </div>
         </div>
-    @endif
+    </div>
+
+    {{-- Modal de empaque (nuevo/editar) --}}
+    <div x-data="{ show: @entangle('showPackagingForm') }" x-show="show" x-cloak
+        x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
+            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+            class="relative w-full max-w-lg">
+            <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-blue-600">package_2</span>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-900">{{ $editingPackagingId ? 'Editar empaque' : 'Nuevo empaque' }}</h3>
+                            <p class="text-xs text-gray-500">Definí el tipo y las unidades por empaque</p>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="cancelEditPackaging" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                        <span class="material-symbols-outlined text-xl">close</span>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <x-forms.label icon="package_2">Tipo de empaque</x-forms.label>
+                        <x-ui.select wire:model.live="newPackagingTypeId" placeholder="Seleccioná...">
+                            @foreach($packagingTypes as $pt)
+                                <option value="{{ $pt->id }}">{{ $pt->name }}</option>
+                            @endforeach
+                        </x-ui.select>
+                    </div>
+                    <div>
+                        <x-forms.label icon="123">Unidades por empaque</x-forms.label>
+                        <x-ui.input type="number" step="1" wire:model.live.debounce.500ms="newPackagingQuantity" min="1" />
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                    <x-ui.button variant="secondary" wire:click="cancelEditPackaging">Cancelar</x-ui.button>
+                    <x-ui.button variant="primary" icon="save" wire:click="savePackaging">{{ $editingPackagingId ? 'Actualizar' : 'Guardar' }}</x-ui.button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- Modal de confirmación de acción (editar/eliminar) --}}
     <div x-data="{ show: @entangle('showConfirmModal') }" x-show="show" x-cloak
