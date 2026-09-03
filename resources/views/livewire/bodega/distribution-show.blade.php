@@ -27,8 +27,12 @@
                 <p><span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium {{ $sc[0] }}">{{ ucfirst(str_replace('_', ' ', $shipment->status)) }}</span></p>
             </div>
             <div>
-                <span class="text-xs text-gray-500">Sucursal</span>
-                <p class="font-medium">{{ $shipment->branch?->name ?? '—' }}</p>
+                <span class="text-xs text-gray-500">Origen</span>
+                <p class="font-medium text-amber-700">{{ $shipment->originBranch?->name ?? '—' }}</p>
+            </div>
+            <div>
+                <span class="text-xs text-gray-500">Destino</span>
+                <p class="font-medium text-green-700">{{ $shipment->branch?->name ?? '—' }}</p>
             </div>
             <div>
                 <span class="text-xs text-gray-500">Creado por</span>

@@ -20,13 +20,13 @@ class DistributionCreate extends Component
 
     public $selectedProductId = null;
     public $selectedProduct = null;
-    public $globalStock = 0;
-    public $alreadyAllocated = 0;
+    public $originStock = 0;
     public $available = 0;
     public $devices = [];
     public $selectedDevices = [];
     public $selectAll = false;
     public $quantity = 0;
+    public $originBranchId = '';
     public $targetBranchId = '';
     public $notes = '';
 
@@ -81,7 +81,7 @@ class DistributionCreate extends Component
         $this->selectedProduct = $product;
         $this->productSearch = $product->name.' ('.$product->sku.')';
         $this->productResults = [];
-        $this->loadProductData();
+        $this->loadOriginStock();
     }
 
     public function clearProduct()
@@ -89,8 +89,7 @@ class DistributionCreate extends Component
         $this->selectedProductId = null;
         $this->selectedProduct = null;
         $this->productSearch = '';
-        $this->globalStock = 0;
-        $this->alreadyAllocated = 0;
+        $this->originStock = 0;
         $this->available = 0;
         $this->devices = [];
         $this->selectedDevices = [];
@@ -98,27 +97,46 @@ class DistributionCreate extends Component
         $this->quantity = 0;
     }
 
-    private function loadProductData()
+    public function updatedOriginBranchId()
     {
+        if ($this->selectedProductId) {
+            $this->loadOriginStock();
+        }
+    }
+
+    private function loadOriginStock()
+    {
+        if (!$this->originBranchId || !$this->selectedProductId) {
+            $this->originStock = 0;
+            $this->available = 0;
+            $this->devices = [];
+            $this->selectedDevices = [];
+            $this->selectAll = false;
+            $this->quantity = 0;
+            return;
+        }
+
         $requiresDevice = $this->selectedProduct->category?->requires_device_registration ?? false;
 
         if ($requiresDevice) {
-            $allDevices = Device::where('product_id', $this->selectedProductId)
-                ->whereNull('branch_id')
+            $originDevices = Device::where('product_id', $this->selectedProductId)
+                ->where('branch_id', $this->originBranchId)
                 ->where('status', 'in_stock')->get();
 
-            $this->globalStock = $allDevices->count();
-            $this->available = $this->globalStock;
+            $this->originStock = $originDevices->count();
+            $this->available = $this->originStock;
 
-            $this->devices = $allDevices->map(fn($d) => [
+            $this->devices = $originDevices->map(fn($d) => [
                 'id' => $d->id,
                 'mac_address' => $d->mac_address,
             ])->toArray();
         } else {
-            $this->globalStock = (float) $this->selectedProduct->current_stock;
-            $alreadyAllocated = BranchInventory::where('product_id', $this->selectedProductId)->sum('allocated_quantity');
-            $this->alreadyAllocated = (float) $alreadyAllocated;
-            $this->available = $this->globalStock - $this->alreadyAllocated;
+            $inv = BranchInventory::where('branch_id', $this->originBranchId)
+                ->where('product_id', $this->selectedProductId)
+                ->first();
+
+            $this->originStock = (float) ($inv->allocated_quantity ?? 0);
+            $this->available = $this->originStock;
             $this->devices = [];
         }
 
@@ -146,6 +164,7 @@ class DistributionCreate extends Component
     public function save()
     {
         $this->validate([
+            'originBranchId' => 'required|exists:branches,id|different:targetBranchId',
             'targetBranchId' => 'required|exists:branches,id',
             'selectedProductId' => 'required|exists:products,id',
         ]);
@@ -162,14 +181,21 @@ class DistributionCreate extends Component
             return;
         }
 
+        if (!$requiresDevice && $this->quantity > $this->available) {
+            $this->dispatch('show-toast', type: 'error', message: 'Stock insuficiente en la sucursal de origen. Disponible: '.$this->available);
+            return;
+        }
+
         $shipment = DistributionShipment::create([
             'code' => DistributionShipment::generateCode(),
+            'origin_branch_id' => $this->originBranchId,
             'branch_id' => $this->targetBranchId,
             'status' => 'pending',
             'created_by' => Auth::id(),
             'notes' => $this->notes,
         ]);
 
+        $origin = Branch::find($this->originBranchId);
         $branch = Branch::find($this->targetBranchId);
 
         $itemQty = $requiresDevice ? count($this->selectedDevices) : $this->quantity;
@@ -180,12 +206,7 @@ class DistributionCreate extends Component
             'quantity' => $itemQty,
         ]);
 
-        if ($requiresDevice) {
-            Device::whereIn('id', $this->selectedDevices)
-                ->update(['branch_id' => $this->targetBranchId]);
-        }
-
-        $this->dispatch('show-toast', type: 'success', message: "Envío {$shipment->code} creado. Entregalo en {$branch?->name} para confirmar.");
+        $this->dispatch('show-toast', type: 'success', message: "Traspaso {$shipment->code} creado: {$origin?->name} → {$branch?->name}. Entregalo para confirmar.");
         $this->reset();
         return redirect()->route('bodega.shipments.index');
     }

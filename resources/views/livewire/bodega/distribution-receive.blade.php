@@ -1,5 +1,5 @@
 <div class="max-w-2xl mx-auto">
-    <x-ui.card title="Recibir envío" icon="qr_code_scanner" subtitle="Ingresá el código del envío para confirmar su recepción">
+    <x-ui.card title="Recibir traspaso" icon="qr_code_scanner" subtitle="Ingresá el código del traspaso para confirmar su recepción">
         <div class="space-y-6">
             @if(!$found)
             <div class="flex gap-2">
@@ -17,7 +17,11 @@
                 <div class="bg-green-50 border border-green-200 rounded-xl p-5 text-center">
                     <span class="material-symbols-outlined text-green-600 text-5xl">check_circle</span>
                     <h2 class="text-lg font-semibold text-gray-900 mt-2">{{ $shipment->code }}</h2>
-                    <p class="text-sm text-gray-600 mt-1">{{ $shipment->branch?->name }}</p>
+                    <p class="text-sm text-gray-700 mt-1">
+                        <span class="inline-flex items-center gap-1 text-amber-700"><span class="material-symbols-outlined text-sm">logout</span>{{ $shipment->originBranch?->name ?? '—' }}</span>
+                        <span class="material-symbols-outlined text-gray-400 align-middle mx-1">arrow_forward</span>
+                        <span class="inline-flex items-center gap-1 text-green-700"><span class="material-symbols-outlined text-sm">login</span>{{ $shipment->branch?->name }}</span>
+                    </p>
                     <p class="text-xs text-gray-500 mt-1">Creado por {{ $shipment->creator?->name }} · {{ $shipment->created_at->format('d/m/Y H:i') }}</p>
                 </div>
 

@@ -11,7 +11,7 @@ class DistributionShow extends Component
 
     public function mount($id)
     {
-        $this->shipment = DistributionShipment::with('branch', 'creator', 'confirmer', 'items.product')
+        $this->shipment = DistributionShipment::with('originBranch', 'branch', 'creator', 'confirmer', 'items.product')
             ->findOrFail($id);
     }
 

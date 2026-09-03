@@ -1,11 +1,11 @@
 <div class="max-w-7xl mx-auto">
-    <x-ui.card title="Envíos a sucursales" icon="local_shipping" subtitle="Tracking y control de reparticiones">
+    <x-ui.card title="Traspasos entre sucursales" icon="swap_horiz" subtitle="Tracking y control de movimientos de material">
         <x-slot:headerActions>
             <x-ui.button variant="secondary" icon="qr_code_scanner" href="{{ route('bodega.shipments.receive') }}">
                 Recibir
             </x-ui.button>
             <x-ui.button variant="primary" icon="add_circle" href="{{ route('bodega.shipments.create') }}">
-                Nuevo envío
+                Nuevo traspaso
             </x-ui.button>
         </x-slot:headerActions>
 
@@ -29,7 +29,12 @@
                             </div>
                             <div>
                                 <p class="text-sm font-semibold text-gray-800">{{ $s->code }}</p>
-                                <p class="text-xs text-gray-500">{{ $s->branch?->name }} · {{ $s->created_at->format('d/m/Y H:i') }}</p>
+                                <p class="text-xs text-gray-500">
+                                    <span class="text-amber-700">{{ $s->originBranch?->name ?? '—' }}</span>
+                                    <span class="material-symbols-outlined text-xs align-middle mx-0.5">arrow_forward</span>
+                                    <span class="text-green-700">{{ $s->branch?->name }}</span>
+                                    · {{ $s->created_at->format('d/m/Y H:i') }}
+                                </p>
                             </div>
                         </div>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusMap[$s->status][1] }}">{{ $statusMap[$s->status][0] }}</span>
