@@ -1,19 +1,19 @@
 <div class="max-w-3xl mx-auto">
-    <x-ui.card icon="{{ $roleId ? 'edit' : 'add_circle' }}" title="{{ $roleId ? 'Editar' : 'Nuevo' }} Rol" subtitle="{{ $roleId ? 'Modificá los datos y permisos del rol' : 'Registrá un nuevo rol y asignale sus permisos' }}">
+    <x-ui.card icon="{{ $roleId ? 'edit' : 'add_circle' }}" title="{{ $roleId ? __('roles.form_title_edit') : __('roles.form_title_new') }}" subtitle="{{ $roleId ? __('roles.form_subtitle_edit') : __('roles.form_subtitle_new') }}">
         <div class="space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <x-forms.group name="name" label="Nombre del Rol">
+                <x-forms.group name="name" label="{{ __('roles.field_name') }}">
                     <x-ui.input type="text" wire:model="name" placeholder="Ej: administrador" />
                 </x-forms.group>
 
-                <x-forms.group name="prefix" label="Prefijo">
+                <x-forms.group name="prefix" label="{{ __('roles.field_prefix') }}">
                     <x-ui.input type="text" wire:model="prefix" placeholder="Ej: SAC" class="uppercase" />
                 </x-forms.group>
             </div>
 
             <div class="flex justify-end gap-3">
-                <x-ui.button variant="ghost" href="{{ route('admin.roles.index') }}">Cancelar</x-ui.button>
-                <x-ui.button variant="primary" icon="save" wire:click="save">{{ $roleId ? 'Actualizar' : 'Guardar' }}</x-ui.button>
+                <x-ui.button variant="ghost" href="{{ route('admin.roles.index') }}">{{ __('roles.cancel') }}</x-ui.button>
+                <x-ui.button variant="primary" icon="save" wire:click="save">{{ $roleId ? __('roles.edit_role') : __('roles.save') }}</x-ui.button>
             </div>
         </div>
     </x-ui.card>
@@ -21,9 +21,9 @@
     <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
             <h2 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <span class="material-symbols-outlined text-gray-500 text-lg">lock</span>Permisos
+                <span class="material-symbols-outlined text-gray-500 text-lg">lock</span>{{ __('roles.permissions_section') }}
             </h2>
-            <span class="text-xs text-gray-400">{{ count($selectedPermissions) }} asignados</span>
+            <span class="text-xs text-gray-400">{{ count($selectedPermissions) }} {{ __('roles.col_permissions') }}</span>
         </div>
 
         <div class="p-6">

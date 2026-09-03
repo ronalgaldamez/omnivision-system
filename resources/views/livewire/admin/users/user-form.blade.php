@@ -22,7 +22,7 @@
                         class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
                         <option value="">Seleccione</option>
                         @foreach($roles as $role)
-                            <option value="{{ $role->name }}">{{ $role->name }}</option>
+                            <option value="{{ $role->name }}">{{ $role->label() }}</option>
                         @endforeach
                     </select>
                     @error('selectedRole') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
