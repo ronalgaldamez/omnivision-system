@@ -361,9 +361,9 @@
                                 class="material-symbols-outlined text-base">new_releases</span> Actualizaciones</a>@endcan
                                 <div class="border-t border-gray-100 my-1"></div>
                                 <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">Estructura</div>
-                                @can('access_admin')<a href="{{ route('admin.branches.index') }}"
+                                @can('access_admin')<a href="{{ route('admin.companies.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
-                                class="material-symbols-outlined text-base">store</span> Sucursales</a>@endcan
+                                class="material-symbols-outlined text-base">apartment</span> Empresas y Sucursales</a>@endcan
                                 @can('access_admin')<a href="{{ route('admin.vehiculos') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">directions_car</span> Vehículos</a>@endcan

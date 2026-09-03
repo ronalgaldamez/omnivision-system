@@ -10,18 +10,48 @@ class ZonesAndBranchesSeeder extends Seeder
 {
     public function run(): void
     {
+        // ─── Empresas (entidades legales) ───
+        $companyData = [
+            [
+                'razon_social' => 'Omnivision S.A. de C.V.',
+                'nombre_comercial' => 'Omnivision',
+                'tipo' => 'sociedad',
+                'nit' => null,
+            ],
+            [
+                'razon_social' => 'Jorge Alfredo Argueta Flores',
+                'nombre_comercial' => 'Omnivision',
+                'tipo' => 'persona_natural',
+                'nit' => null,
+            ],
+        ];
+
+        $companies = [];
+        foreach ($companyData as $data) {
+            $companies[$data['razon_social']] = \App\Models\Company::firstOrCreate(
+                ['razon_social' => $data['razon_social']],
+                [
+                    'nombre_comercial' => $data['nombre_comercial'],
+                    'tipo' => $data['tipo'],
+                    'nit' => $data['nit'],
+                    'is_active' => true,
+                ]
+            );
+        }
+
         // ─── Sucursales ───
         $branchData = [
-            ['name' => 'Casa Matriz Chalatenango', 'code' => 'MATRIZ', 'address' => 'Chalatenango'],
-            ['name' => 'Sucursal Concepción Quezaltepeque', 'code' => 'CQ'],
-            ['name' => 'Sucursal Amayo', 'code' => 'AMAYO'],
-            ['name' => 'Sucursal Aguilares', 'code' => 'AGUILARES'],
-            ['name' => 'Sucursal La Palma', 'code' => 'PALMA'],
-            ['name' => 'Sucursal San Pablo Tacachico', 'code' => 'SMP'],
+            ['name' => 'Casa Matriz Chalatenango', 'code' => 'MATRIZ', 'address' => 'Chalatenango', 'company' => 'Jorge Alfredo Argueta Flores'],
+            ['name' => 'Sucursal Concepción Quezaltepeque', 'code' => 'CQ', 'company' => 'Jorge Alfredo Argueta Flores'],
+            ['name' => 'Sucursal Amayo', 'code' => 'AMAYO', 'company' => 'Omnivision S.A. de C.V.'],
+            ['name' => 'Sucursal Aguilares', 'code' => 'AGUILARES', 'company' => 'Jorge Alfredo Argueta Flores'],
+            ['name' => 'Sucursal La Palma', 'code' => 'PALMA', 'company' => 'Jorge Alfredo Argueta Flores'],
+            ['name' => 'Sucursal San Pablo Tacachico', 'code' => 'SMP', 'company' => 'Jorge Alfredo Argueta Flores'],
         ];
 
         $branches = [];
         foreach ($branchData as $data) {
+            $company = $data['company'] ?? null;
             $branches[$data['code']] = Branch::firstOrCreate(
                 ['code' => $data['code']],
                 [
@@ -30,6 +60,9 @@ class ZonesAndBranchesSeeder extends Seeder
                     'is_active' => true,
                 ]
             );
+            if ($company && isset($companies[$company])) {
+                $branches[$data['code']]->update(['company_id' => $companies[$company]->id]);
+            }
         }
 
         // ─── Zonas ───

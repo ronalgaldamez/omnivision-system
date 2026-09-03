@@ -8,9 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 class Branch extends Model
 {
     use HasFactory;
-    protected $fillable = ['name', 'code', 'address', 'phone', 'is_active'];
+    protected $fillable = ['company_id', 'name', 'code', 'address', 'phone', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean'];
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
 
     public function zones()
     {

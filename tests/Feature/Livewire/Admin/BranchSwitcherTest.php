@@ -4,6 +4,7 @@ namespace Tests\Feature\Livewire\Admin;
 
 use App\Livewire\Admin\BranchSwitcher;
 use App\Models\Branch;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -53,5 +54,25 @@ class BranchSwitcherTest extends TestCase
             ->assertSet('activeBranchId', '');
 
         $this->assertNull(session('active_branch_id'));
+    }
+
+    public function test_groups_branches_by_company()
+    {
+        $this->actingAs(User::factory()->create());
+
+        $sociedad = Company::factory()->create(['razon_social' => 'Omnivision S.A. de C.V.']);
+        $persona = Company::factory()->create(['razon_social' => 'Jorge Alfredo Argueta Flores']);
+
+        Branch::factory()->create(['company_id' => $sociedad->id, 'name' => 'Sucursal Amayo']);
+        Branch::factory()->create(['company_id' => $persona->id, 'name' => 'Sucursal Aguilares']);
+
+        $component = Livewire::test(BranchSwitcher::class);
+
+        $companies = $component->get('companies');
+        $this->assertCount(2, $companies);
+
+        $byRazon = $companies->keyBy('razon_social');
+        $this->assertEquals('Sucursal Amayo', $byRazon['Omnivision S.A. de C.V.']->branches->first()->name);
+        $this->assertEquals('Sucursal Aguilares', $byRazon['Jorge Alfredo Argueta Flores']->branches->first()->name);
     }
 }
