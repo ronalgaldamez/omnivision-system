@@ -99,6 +99,58 @@ class InventoryService
         });
     }
 
+    /**
+     * Venta entre empresas: la empresa vendedora reduce su cantidad y la
+     * compradora ingresa la cantidad recalculando su costo promedio ponderado.
+     * NO toca el stock global del producto (el total del sistema no cambia).
+     */
+    public function processCompanySale(int $sellerCompanyId, int $buyerCompanyId, Product $product, $quantity, $cost)
+    {
+        DB::transaction(function () use ($sellerCompanyId, $buyerCompanyId, $product, $quantity, $cost) {
+            // ── Empresa vendedora: reduce cantidad ──
+            $seller = CompanyProductInventory::where('company_id', $sellerCompanyId)
+                ->where('product_id', $product->id)
+                ->first();
+
+            if ($seller) {
+                $newQty = max(0, (float) $seller->quantity - $quantity);
+                $seller->quantity = $newQty;
+                if ($newQty <= 0) {
+                    $seller->quantity = 0;
+                    $seller->average_cost = 0;
+                    $seller->total_value = 0;
+                } else {
+                    $seller->total_value = round($newQty * (float) $seller->average_cost, 2);
+                }
+                $seller->save();
+            }
+
+            // ── Empresa compradora: ingresa cantidad y recalcula promedio ──
+            $buyer = CompanyProductInventory::firstOrCreate(
+                ['company_id' => $buyerCompanyId, 'product_id' => $product->id],
+                ['quantity' => 0, 'average_cost' => 0, 'total_value' => 0]
+            );
+
+            $currentQty = (float) $buyer->quantity;
+            $currentValue = (float) $buyer->total_value;
+            $newValue = $quantity * $cost;
+            $totalQty = $currentQty + $quantity;
+
+            if ($totalQty <= 0) {
+                $newAverage = 0;
+                $newTotalValue = 0;
+            } else {
+                $newAverage = round(($currentValue + $newValue) / $totalQty, 4);
+                $newTotalValue = round($totalQty * $newAverage, 2);
+            }
+
+            $buyer->quantity = $totalQty;
+            $buyer->average_cost = $newAverage;
+            $buyer->total_value = $newTotalValue;
+            $buyer->save();
+        });
+    }
+
     public function processExit(Product $product, $quantity, Movement $movement)
     {
         if ($product->is_obsolete || $product->is_floating) {
