@@ -9,7 +9,7 @@ class DistributionShipment extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'code', 'branch_id', 'status',
+        'code', 'origin_branch_id', 'branch_id', 'status',
         'created_by', 'confirmed_by',
         'in_transit_at', 'delivered_at', 'confirmed_at',
         'notes',
@@ -20,6 +20,11 @@ class DistributionShipment extends Model
         'delivered_at' => 'datetime',
         'confirmed_at' => 'datetime',
     ];
+
+    public function originBranch()
+    {
+        return $this->belongsTo(Branch::class, 'origin_branch_id');
+    }
 
     public function branch()
     {

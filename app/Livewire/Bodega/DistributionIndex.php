@@ -23,7 +23,7 @@ class DistributionIndex extends Component
 
     public function render()
     {
-        $shipments = DistributionShipment::with('branch', 'creator', 'items.product')
+        $shipments = DistributionShipment::with('originBranch', 'branch', 'creator', 'items.product')
             ->when($this->statusFilter, fn($q) => $q->where('status', $this->statusFilter))
             ->orderBy('created_at', 'desc')
             ->paginate(15);
