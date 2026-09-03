@@ -16,7 +16,7 @@
             <x-ui.select wire:model.live="filterRole" class="w-44">
                 <option value="">Todos los roles</option>
                 @foreach($roles as $role)
-                    <option value="{{ $role->name }}">{{ $role->name }}</option>
+                    <option value="{{ $role->name }}">{{ $role->label() }}</option>
                 @endforeach
             </x-ui.select>
             <x-ui.select wire:model.live="filterBranch" class="w-48">
@@ -77,8 +77,9 @@
                             </td>
                             <td class="px-4 py-3 text-gray-600">{{ $user->email }}</td>
                             <td class="px-4 py-3">
-                                @foreach($user->getRoleNames() as $role)
-                                    <x-ui.badge variant="info">{{ $role }}</x-ui.badge>
+                                @foreach($user->getRoleNames() as $roleName)
+                                    @php $roleModel = \App\Models\Role::where('name', $roleName)->first(); @endphp
+                                    <x-ui.badge variant="info">{{ $roleModel ? $roleModel->label() : $roleName }}</x-ui.badge>
                                 @endforeach
                             </td>
                             <td class="px-4 py-3 text-gray-600 text-xs">{{ optional($user->branch)->name ?? '—' }}</td>

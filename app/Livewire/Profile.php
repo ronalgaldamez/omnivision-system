@@ -14,6 +14,9 @@ class Profile extends Component
     public $new_password;
     public $new_password_confirmation;
 
+    // Idioma del usuario
+    public $locale = 'es';
+
     // Propiedad para el estilo de avatar
     public $avatarStyle = 'initials';
 
@@ -61,6 +64,11 @@ class Profile extends Component
         $this->name = $user->name;
         $this->email = $user->email;
         $this->avatarStyle = $user->avatar_style ?? 'initials';
+
+        // Idioma: prioridad sesión, luego preferencia guardada, luego default
+        $this->locale = session('locale')
+            ?? \App\Models\Setting::get('user_locale_' . $user->id)
+            ?? config('app.locale');
     }
 
     // Abre el modal para cambiar avatar
@@ -73,6 +81,20 @@ class Profile extends Component
     public function closeAvatarModal()
     {
         $this->showAvatarModal = false;
+    }
+
+    public function updatedLocale($value)
+    {
+        if (!in_array($value, ['es', 'en'], true)) {
+            $this->locale = 'es';
+            return;
+        }
+
+        session(['locale' => $value]);
+        \App\Models\Setting::set('user_locale_' . Auth::id(), $value);
+        app()->setLocale($value);
+
+        $this->dispatch('show-toast', type: 'success', message: 'Idioma actualizado. / Language updated.');
     }
 
     // Se ejecuta al seleccionar un estilo en el modal

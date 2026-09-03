@@ -6,7 +6,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Branch;
 use App\Models\User;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 
 class UserIndex extends Component
 {

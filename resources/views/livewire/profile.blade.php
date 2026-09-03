@@ -55,6 +55,22 @@
                 </form>
             </div>
 
+            <!-- Idioma -->
+            <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-md font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-gray-500">language</span>
+                    Idioma
+                </h3>
+                <p class="text-sm text-gray-500 mb-4">Seleccioná el idioma del sistema para tu cuenta.</p>
+                <div class="max-w-xs">
+                    <select wire:model.live="locale"
+                        class="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                        <option value="es">Español</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+            </div>
+
             <!-- Notificaciones Push -->
             <div class="border-t border-gray-200 pt-6">
                 <h3 class="text-md font-semibold text-gray-800 mb-1 flex items-center gap-2">
