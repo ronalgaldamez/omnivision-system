@@ -3,6 +3,7 @@
 namespace App\Livewire\Suppliers;
 
 use App\Models\Movement;
+use App\Models\Branch;
 use App\Models\BranchInventory;
 use App\Models\Product;
 use App\Models\ProductPackaging;
@@ -810,7 +811,15 @@ class PurchaseForm extends Component
                 ])->increment('allocated_quantity', $baseQuantity);
 
                 $product = $products[$item['product_id']] ?? Product::find($item['product_id']);
-                $inventoryService->processPurchaseEntry($product, $baseQuantity, $baseUnitCost, $movement);
+
+                $branch = Branch::find($this->targetBranchId);
+                $companyId = $branch?->company_id;
+
+                if ($companyId) {
+                    $inventoryService->processCompanyPurchaseEntry($companyId, $product, $baseQuantity, $baseUnitCost, $movement);
+                } else {
+                    $inventoryService->processPurchaseEntry($product, $baseQuantity, $baseUnitCost, $movement);
+                }
 
                 $needsSave = false;
                 if (! is_null($item['stock_min'] ?? null) && $item['stock_min'] != $product->stock_min) {
