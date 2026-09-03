@@ -14,12 +14,16 @@ class BranchIndex extends Component
 
     public function render()
     {
-        $branches = Branch::where('name', 'like', '%'.$this->search.'%')
-            ->orWhere('code', 'like', '%'.$this->search.'%')
+        $branches = Branch::with('company')
+            ->where(function ($q) {
+                $q->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('code', 'like', '%'.$this->search.'%')
+                    ->orWhereHas('company', fn ($sub) => $sub->where('razon_social', 'like', '%'.$this->search.'%'));
+            })
             ->orderBy('name')
             ->paginate(10);
 
-        return view('livewire.admin.branches.branch-index', compact('branches'))->layout('components.layouts.app');
+        return view('livewire.admin.branches.branch-index', compact('branches'));
     }
 
     public function toggleActive($id)

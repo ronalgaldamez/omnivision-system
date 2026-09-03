@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Branch;
+use App\Models\Company;
 use Livewire\Component;
 
 class BranchSwitcher extends Component
@@ -11,10 +12,16 @@ class BranchSwitcher extends Component
 
     public $branches = [];
 
+    public $companies = [];
+
     public function mount()
     {
         $this->activeBranchId = auth()->user()->activeBranchId() ?? '';
-        $this->branches = Branch::where('is_active', true)->orderBy('name')->get();
+        $this->branches = Branch::with('company')->where('is_active', true)->orderBy('name')->get();
+        $this->companies = Company::where('is_active', true)
+            ->orderBy('razon_social')
+            ->with(['branches' => fn ($q) => $q->where('is_active', true)->orderBy('name')])
+            ->get();
     }
 
     public function switchBranch($branchId)

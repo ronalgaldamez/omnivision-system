@@ -106,6 +106,7 @@ enum PermissionEnum: string
     case ViewDashboard          = 'view dashboard';
     case ViewCatalog            = 'view catalog';
     case ManageCatalog          = 'manage catalog';
+    case ManageCompanies        = 'manage companies';
 
     // ─── Submenús Administración ───
     case ViewUsersMenu          = 'view_users_menu';
@@ -295,6 +296,7 @@ enum PermissionEnum: string
             self::ViewDashboard,
             self::ViewCatalog,
             self::ManageCatalog,
+            self::ManageCompanies,
             self::ViewUsersMenu,
             self::ViewRolesMenu,
             self::ViewCatalogMenu,

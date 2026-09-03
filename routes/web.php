@@ -226,10 +226,13 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // ========== ADMIN ==========
-    Route::prefix('admin/branches')->middleware(['auth', 'can:access_admin'])->group(function () {
-        Route::get('/', \App\Livewire\Admin\Branches\BranchIndex::class)->name('admin.branches.index');
-        Route::get('/create', \App\Livewire\Admin\Branches\BranchForm::class)->name('admin.branches.create');
-        Route::get('/{id}/edit', \App\Livewire\Admin\Branches\BranchForm::class)->name('admin.branches.edit');
+    Route::prefix('admin')->middleware(['auth', 'can:access_admin'])->group(function () {
+        Route::get('/companies', \App\Livewire\Admin\StructureManager::class)->name('admin.companies.index');
+        Route::get('/branches', \App\Livewire\Admin\StructureManager::class)->name('admin.branches.index');
+        Route::get('/companies/create', \App\Livewire\Admin\Companies\CompanyForm::class)->name('admin.companies.create');
+        Route::get('/companies/{id}/edit', \App\Livewire\Admin\Companies\CompanyForm::class)->name('admin.companies.edit');
+        Route::get('/branches/create', \App\Livewire\Admin\Branches\BranchForm::class)->name('admin.branches.create');
+        Route::get('/branches/{id}/edit', \App\Livewire\Admin\Branches\BranchForm::class)->name('admin.branches.edit');
     });
     Route::prefix('admin/users')->middleware(['auth', 'can:access_admin'])->group(function () {
         Route::get('/', \App\Livewire\Admin\Users\UserIndex::class)->name('admin.users.index');
