@@ -184,6 +184,51 @@
                                         </div>
                                         @endif
                                     </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <x-forms.label icon="straighten" required>Unidad de medida</x-forms.label>
+                                            <select wire:model.live="newProductUnit"
+                                                class="w-full px-3 py-2 rounded-lg border bg-white text-sm focus:ring-2 transition appearance-none cursor-pointer {{ $errors->has('newProductUnit') ? 'border-red-300 bg-red-50 focus:ring-red-500/20 focus:border-red-400' : 'border-gray-300 focus:ring-green-500/20 focus:border-green-500' }}">
+                                                @foreach ($units as $u)
+                                                    <option value="{{ $u->code }}">{{ $u->name }}{{ $u->symbol ? ' ('.$u->symbol.')' : '' }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <x-forms.label icon="package_2">Empaque (opcional)</x-forms.label>
+                                            <select wire:model.live="newProductPackagingTypeId"
+                                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition appearance-none cursor-pointer">
+                                                <option value="">Sin empaque</option>
+                                                @foreach ($packagingTypes as $pt)
+                                                    <option value="{{ $pt->id }}">{{ $pt->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        @if($newProductPackagingTypeId)
+                                            @php
+                                                $selUnit = $units->firstWhere('code', $newProductUnit);
+                                                $unitName = $selUnit?->name ?? $newProductUnit;
+                                                $unitSymbol = $selUnit?->symbol ?: null;
+                                            @endphp
+                                            <div class="md:col-span-2">
+                                                <x-forms.label icon="123">Cantidad por empaque{{ $unitSymbol ? ' ('.$unitSymbol.')' : '' }}</x-forms.label>
+                                                <input type="number" step="any" min="0.0001" wire:model.live.debounce.500ms="newProductPackagingQuantity"
+                                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition">
+                                                @if($newProductPackagingQuantity > 0)
+                                                    @php
+                                                        $pkgName = $packagingTypes->firstWhere('id', $newProductPackagingTypeId)?->name ?? 'empaque';
+                                                        $label = $unitName === 'Unidad' ? ($unitSymbol ? $unitSymbol : 'unidades') : ($unitSymbol ?: $unitName);
+                                                    @endphp
+                                                    <p class="text-xs text-gray-500 mt-1">
+                                                        Cada {{ strtolower($pkgName) }} trae <strong>{{ rtrim(rtrim(number_format($newProductPackagingQuantity, 4), '0'), '.') }} {{ $label }}</strong>.
+                                                        Ej: 3 {{ strtolower($pkgName) }} × {{ rtrim(rtrim(number_format($newProductPackagingQuantity, 4), '0'), '.') }} = <strong>{{ rtrim(rtrim(number_format(3 * $newProductPackagingQuantity, 4), '0'), '.') }} {{ $label }}</strong>
+                                                        (si comprás por empaque, así se guarda el inventario).
+                                                    </p>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
                                 <div class="flex justify-end gap-2">
                                     <x-ui.button variant="secondary" wire:click="cancelCreateMode">Cancelar</x-ui.button>

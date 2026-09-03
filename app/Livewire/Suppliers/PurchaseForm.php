@@ -12,6 +12,7 @@ use App\Models\PurchaseItem;
 use App\Models\Shelf;
 use App\Models\Supplier;
 use App\Models\PackagingType;
+use App\Models\UnitOfMeasure;
 use App\Services\InventoryService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
@@ -80,6 +81,12 @@ class PurchaseForm extends Component
     public $newProductCategoryList = [];
 
     public $newProductCategoryListSearch = '';
+
+    public $newProductUnit = 'unidad';
+
+    public $newProductPackagingTypeId = '';
+
+    public $newProductPackagingQuantity = 1;
 
     public $currentQuantity = 1;
 
@@ -158,6 +165,9 @@ class PurchaseForm extends Component
             $this->createMode = $draft['createMode'] ?? false;
             $this->newProductName = $draft['newProductName'] ?? '';
             $this->newProductCategoryId = $draft['newProductCategoryId'] ?? '';
+            $this->newProductUnit = $draft['newProductUnit'] ?? 'unidad';
+            $this->newProductPackagingTypeId = $draft['newProductPackagingTypeId'] ?? '';
+            $this->newProductPackagingQuantity = $draft['newProductPackagingQuantity'] ?? 1;
             $this->stockMin = $draft['stockMin'] ?? null;
             $this->stockMax = $draft['stockMax'] ?? null;
             $this->draftRestored = true;
@@ -221,6 +231,9 @@ class PurchaseForm extends Component
             'createMode' => $this->createMode,
             'newProductName' => $this->newProductName,
             'newProductCategoryId' => $this->newProductCategoryId,
+            'newProductUnit' => $this->newProductUnit,
+            'newProductPackagingTypeId' => $this->newProductPackagingTypeId,
+            'newProductPackagingQuantity' => $this->newProductPackagingQuantity,
             'stockMin' => $this->stockMin,
             'stockMax' => $this->stockMax,
         ]);
@@ -533,8 +546,11 @@ class PurchaseForm extends Component
         $this->newProductName = '';
         $this->newProductCategoryId = '';
         $this->newProductCategorySearch = '';
+        $this->newProductUnit = 'unidad';
+        $this->newProductPackagingTypeId = '';
+        $this->newProductPackagingQuantity = 1;
         $this->productSearchResults = [];
-        $this->resetValidation(['newProductName', 'newProductCategoryId', 'newProductCategorySearch']);
+        $this->resetValidation(['newProductName', 'newProductCategoryId', 'newProductCategorySearch', 'newProductUnit']);
     }
 
     public function resetForm()
@@ -551,6 +567,9 @@ class PurchaseForm extends Component
         $this->createMode = false;
         $this->newProductName = '';
         $this->newProductCategoryId = '';
+        $this->newProductUnit = 'unidad';
+        $this->newProductPackagingTypeId = '';
+        $this->newProductPackagingQuantity = 1;
         $this->resetCurrentProduct();
         $this->editingIndex = null;
         session()->forget('purchase_form_draft');
@@ -564,6 +583,8 @@ class PurchaseForm extends Component
             $this->validate([
                 'newProductName' => 'required|string|max:255',
                 'newProductCategoryId' => 'required|exists:categories,id',
+                'newProductUnit' => 'required|exists:unit_of_measures,code',
+                'newProductPackagingTypeId' => 'nullable|exists:packaging_types,id',
             ]);
         } catch (ValidationException $e) {
             $errors = $e->validator->errors();
@@ -581,16 +602,37 @@ class PurchaseForm extends Component
             'name' => $this->newProductName,
             'category_id' => $this->newProductCategoryId,
             'sku' => 'PROD-'.str_pad(Product::max('id') + 1, 5, '0', STR_PAD_LEFT),
+            'unit_of_measure' => $this->newProductUnit,
             'current_stock' => 0,
             'stock_min' => 0,
         ]);
 
+        if ($this->newProductPackagingTypeId && $this->newProductPackagingQuantity > 0) {
+            $type = PackagingType::find($this->newProductPackagingTypeId);
+            $unit = $type->unit_of_measure !== 'unidad' ? ' ('.$type->unit_of_measure.')' : '';
+            $name = $type->name.' x'.rtrim(rtrim(number_format($this->newProductPackagingQuantity, 4), '0'), '.').$unit;
+
+            ProductPackaging::create([
+                'product_id' => $product->id,
+                'packaging_type_id' => $type->id,
+                'name' => $name,
+                'quantity_in_base_unit' => $this->newProductPackagingQuantity,
+                'is_default_for_purchase' => true,
+            ]);
+        }
+
         $this->currentProductId = $product->id;
         $this->currentProductSearch = $product->name.' ('.$product->sku.')';
         $this->productSearchResults = [];
+        $this->currentPackagings = $product->packagings;
+        $default = $product->packagings->firstWhere('is_default_for_purchase', true);
+        $this->currentPackagingId = $default ? $default->id : ($product->packagings->first()?->id ?? '');
         $this->createMode = false;
         $this->newProductName = '';
         $this->newProductCategoryId = '';
+        $this->newProductUnit = 'unidad';
+        $this->newProductPackagingTypeId = '';
+        $this->newProductPackagingQuantity = 1;
         $this->saveDraft();
         $this->dispatch('show-toast', type: 'success', message: 'Producto creado exitosamente.');
     }
@@ -885,6 +927,7 @@ class PurchaseForm extends Component
     public function render()
     {
         $branches = \App\Models\Branch::where('is_active', true)->orderBy('name')->get();
-        return view('livewire.suppliers.purchase-form', compact('branches'))->layout('components.layouts.app');
+        $units = UnitOfMeasure::where('is_active', true)->orderBy('name')->get();
+        return view('livewire.suppliers.purchase-form', compact('branches', 'units'))->layout('components.layouts.app');
     }
 }
