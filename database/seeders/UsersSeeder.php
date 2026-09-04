@@ -85,6 +85,13 @@ class UsersSeeder extends Seeder
         // ── Bodega ──
         $users[] = ['name' => 'Bodeguero', 'email' => 'bodega@omnivision.com', 'role' => 'warehouse', 'branch_code' => 'MATRIZ'];
 
+        // ── Administrativos por empresa ──
+        // Omnivision: Juan Rivera (gerente) y Axel (subgerente) — Amayo
+        $users[] = ['name' => 'Juan Rivera', 'email' => 'gerente.juan@omnivision.com', 'role' => 'gerente_administrativo', 'branch_code' => 'AMAYO'];
+        $users[] = ['name' => 'Axel', 'email' => 'subgerente.axel@omnivision.com', 'role' => 'subgerente_administrativo', 'branch_code' => 'AMAYO'];
+        // Jorge: Brenda hace gerente y subgerente — Chalatenango
+        $users[] = ['name' => 'Brenda', 'email' => 'gerente.brenda@omnivision.com', 'role' => ['gerente_administrativo', 'subgerente_administrativo'], 'branch_code' => 'MATRIZ'];
+
         foreach ($users as $data) {
             $branchId = $data['branch_code']
                 ? ($branches[$data['branch_code']] ?? null)
@@ -98,7 +105,8 @@ class UsersSeeder extends Seeder
                     'branch_id' => $branchId,
                 ]
             );
-            $user->assignRole($data['role']);
+            $roles = is_array($data['role']) ? $data['role'] : [$data['role']];
+            $user->syncRoles($roles);
 
             if ($user->branch_id !== $branchId) {
                 $user->update(['branch_id' => $branchId]);

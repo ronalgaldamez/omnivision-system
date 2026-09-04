@@ -37,6 +37,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $noc               = Role::firstOrCreate(['name' => 'noc']);
         $fieldSupervisor   = Role::firstOrCreate(['name' => 'field_supervisor'], ['prefix' => 'FS']);
         $salesRep          = Role::firstOrCreate(['name' => 'sales_rep'], ['prefix' => 'SR']);
+        $gerenteAdmin      = Role::firstOrCreate(['name' => 'gerente_administrativo'], ['prefix' => 'GA']);
+        $subgerenteAdmin   = Role::firstOrCreate(['name' => 'subgerente_administrativo'], ['prefix' => 'SG']);
 
         // ═══════════════════════════════════════════
         // CAPA 3 — Matriz de asignación (rol → permisos)
@@ -292,6 +294,43 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::ViewPerformanceReports,
             PermissionEnum::ViewSlaDashboard,
             PermissionEnum::ViewSlaTimelines,
+        ]);
+
+        // ── Gerente Administrativo ──
+        // Aprueba cotizaciones de compra de su empresa. Ve compras y proveedores.
+        $gerenteAdmin->syncPermissions([
+            // Cotizaciones
+            PermissionEnum::ViewQuotations,
+            PermissionEnum::ApproveQuotations,
+
+            // Proveedores / compras (lectura para contexto)
+            PermissionEnum::AccessSuppliers,
+            PermissionEnum::ViewSuppliers,
+            PermissionEnum::ViewPurchases,
+            PermissionEnum::ViewSuppliersMenu,
+            PermissionEnum::ViewPurchaseHistoryMenu,
+
+            // Dashboard
+            PermissionEnum::ViewDashboard,
+            PermissionEnum::ViewReports,
+        ]);
+
+        // ── Subgerente Administrativo ──
+        // Ejecuta los pagos a proveedor de su empresa.
+        $subgerenteAdmin->syncPermissions([
+            // Cotizaciones
+            PermissionEnum::ViewQuotations,
+            PermissionEnum::PayQuotations,
+
+            // Proveedores / compras (lectura para contexto)
+            PermissionEnum::AccessSuppliers,
+            PermissionEnum::ViewSuppliers,
+            PermissionEnum::ViewPurchases,
+            PermissionEnum::ViewSuppliersMenu,
+            PermissionEnum::ViewPurchaseHistoryMenu,
+
+            // Dashboard
+            PermissionEnum::ViewDashboard,
         ]);
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
