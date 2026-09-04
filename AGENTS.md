@@ -5,7 +5,7 @@ license: MIT
 compatibility: opencode, cline
 metadata:
     audience: maintainers
-    version: 2.4.0
+    version: 2.5.0
 workflow: github
 ---
 
@@ -203,6 +203,20 @@ El contenedor de toasts ya es GLOBAL en `resources/views/components/layouts/app.
 - Varios errores globales de validación (sin campo asociado): `$this->dispatch('show-toasts', errors: [...])`. Ver "Feedback de errores: inline vs toast" abajo.
 - Un fallo NUNCA queda sin feedback: usar siempre `type: 'error'` con el motivo.
 - Tests: verificar con `->assertDispatched('show-toast', type: 'success')`.
+
+Ejemplo canónico de método de escritura (disparar el toast y resetear el formulario):
+
+```php
+public function save()
+{
+    $validated = $this->validate();
+    // ... lógica de negocio en el servicio, nunca en el componente ...
+    $this->dispatch('show-toast', type: 'success', message: 'Cliente guardado correctamente.');
+    $this->reset('name', 'phone'); // resetear campos según el caso
+}
+```
+
+Nombre del evento SIEMPRE en kebab-case (`show-toast`, `show-toasts`), es sensible a mayúsculas. Desde Alpine/JS usar `$dispatch('show-toast', { type: 'success', message: '...' })` — nunca `showToast`/`showToasts` en camelCase, el contenedor global NO los escucha. Ejemplos vivos de los 4 tipos en `/admin/ui-preview` (sección "Toast / Notificaciones").
 
 ### Modal de confirmación (patrón canónico)
 
