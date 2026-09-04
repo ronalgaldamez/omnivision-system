@@ -67,6 +67,8 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::EditSuppliers,
             PermissionEnum::ViewPurchases,
             PermissionEnum::CreatePurchases,
+            PermissionEnum::CreateQuotations,
+            PermissionEnum::ViewQuotations,
             PermissionEnum::ViewSuppliersMenu,
             PermissionEnum::ViewPurchaseHistoryMenu,
             PermissionEnum::ViewNewPurchaseMenu,

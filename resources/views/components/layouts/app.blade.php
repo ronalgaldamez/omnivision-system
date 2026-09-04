@@ -127,6 +127,9 @@
                                 @can('access_inventory')<a href="{{ route('bodega.intercompany-sales.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">point_of_sale</span> Venta entre empresas</a>@endcan
+                                @can('view quotations')<a href="{{ route('bodega.quotations.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">request_quote</span> Cotizaciones</a>@endcan
                                 @can('access_inventory')<a href="{{ route('devices.index') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                 class="material-symbols-outlined text-base">settings_ethernet</span> Dispositivos</a>@endcan
