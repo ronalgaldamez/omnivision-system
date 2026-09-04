@@ -145,23 +145,29 @@ All routes in `routes/web.php` with middleware `auth`. No API routes. No inertia
 
 #### Critical models
 
-- `Movement` — types: `entry`, `exit`, `technician_out`, `technician_return`, `damage`, `return_to_supplier`, `requisition_out`, `branch_allocation`
+- `Movement` — types: `entry`, `exit`, `technician_out`, `technician_return`, `damage`, `return_to_supplier`, `requisition_out`, `branch_allocation`. Se referencia a flujos por `reference_type`/`reference_id` (`purchase`, `shipment`, `intercompany_sale`, `technician_return`, `initial_stock`).
 - `MovementType` — dynamic display config (label, icon, color_class) stored in DB table `movement_types`
 - `Device` — tracks routers by MAC, status (`in_stock`, `assigned`, `installed`, `damaged`), linked to `branch`, `technician`, `purchase`
 - `DeviceStatus` — dynamic status display config in `device_statuses` table
 - `Category` — has `requires_device_registration` boolean for MAC-required products
-- `DistributionShipment` — shipment tracking with code (`ENV-XXXXX`), status (`pending` → `in_transit` → `delivered` → `confirmed`)
+- `Branch` — has `company_id` (nullable): cada sucursal pertenece a una empresa.
+- `Company` — entidad legal (razón social, nombre comercial, NIT, tipo sociedad/persona_natural). `CompanyProductInventory` guarda cantidad/costo promedio por empresa+producto.
+- `DistributionShipment` — shipment tracking with code (`ENV-XXXXX`), status (`pending` → `in_transit` → `delivered` → `confirmed`), con `origin_branch_id` (traspaso real entre sucursales).
 - `Requisition` — statuses: `open`, `heredada`, `closed`, `pending`, `approved`, `rejected`
 - `BranchInventory` — `allocated_quantity` per product per branch
+- `Quotation` — cotizaciones de compra con flujo de aprobación por rol: `pending` → `approved` → `paid` → `received` / `rejected`. Genera `Purchase` al recibir.
+- `IntercompanySale` — venta entre empresas distintas con confirmación de recepción: `pending` → `in_transit` → `delivered` → `confirmed`. Recién al confirmar se mueve el stock.
 
 #### Inventory flows
 
-- **Purchases**: global only (superadmin). Simple: product, quantity, cost. No packaging, no branch.
+- **Purchases**: cada compra lleva `branch_id` (sucursal destino) obligatorio. El costo promedio se registra a nivel de empresa (`CompanyProductInventory`). Simple: product, quantity, cost. No packaging, no branch.
+- **Cotizaciones (Quotation)**: flujo de aprobación de compras por rol — el bodeguero crea (`pending`), el gerente administrativo aprueba/rechaza (`approved`/`rejected`), el subgerente paga (`paid`) y al recibir el producto se genera la compra y entra stock (`received`). Roles: `gerente_administrativo`, `subgerente_administrativo`.
+- **Traspasos (Distribution)**: movimiento real entre sucursales vía `/bodega/shipments` con `origin_branch_id` + `branch_id`. Estados `pending → in_transit → delivered → confirmed`. Al confirmar descuenta el stock del origen y suma en el destino.
+- **Venta entre empresas (IntercompanySale)**: compra/venta entre sucursales de empresas distintas (Omnivision ≠ Jorge) con confirmación de recepción. Estados `pending → in_transit → delivered → confirmed`. El stock se mueve solo al confirmar.
 - **Devices**: registered in `/devices/register` with MAC, linked to product + optional purchase.
-- **Distribution**: via `/bodega/shipments` with tracking codes. Devices assigned per-unit, generic products by quantity.
 - **Bodega approvals**: `/bodega/requisitions` — warehouse manager approves/rejects technician requests, selects source branch.
 - **Requisitions**: created by technicians with status `pending`. Stock not deducted until bodega approves.
-- **Kardex**: weighted average. `branch_allocation` is exit in global view, entry in branch view.
+- **Kardex**: weighted average per company. `branch_allocation` is exit in global view, entry in branch view. Traspasos y ventas generan movimientos `exit`/`entry` con `branch_id`.
 
 #### Settings
 
@@ -169,7 +175,7 @@ Stored in `settings` table via `Setting::get(key, default)` / `Setting::set(key,
 
 #### Permissions
 
-Defined in `RolesAndPermissionsSeeder`. `branch_admin` role exists for branch-local users (no `access_admin`).
+Defined in `RolesAndPermissionsSeeder`. Roles actuales: `admin`, `warehouse`, `technician`, `accountant`, `buyer`, `atencion_al_cliente` (SAC), `noc`, `field_supervisor`, `sales_rep`, `contracts_staff`, `gerente_administrativo`, `subgerente_administrativo`. `branch_admin` fue eliminado. El admin recibe todos los permisos (`Permission::all()`); los usuarios pueden tener permisos personalizados individuales (`permissionsPersonalized`) que reemplazan al rol.
 
 #### Rendering
 
@@ -180,7 +186,8 @@ All views use `->layout('components.layouts.app')`. Sidebar in `app.blade.php`.
 - Browse/search modals use a consistent pattern: search field + "Ver todos" button + modal with `productList`/`categoryList`/etc.
 - Type display for movements: `$mov->type_display` accessor reads from `movement_types` table.
 - Device status display: `$device->deviceStatus` relationship.
-- Branch filtering: `auth()->user()->activeBranchId()` returns user's branch or session value.
+- Branch filtering: `auth()->user()->activeBranchId()` returns session value (si el usuario cambió de sucursal en el switcher) o su `branch_id` fijo. `auth()->user()->allowedBranchIds()` devuelve las sucursales que puede seleccionar: si tiene `user_branches` manuales → esas; si es `warehouse`/global → todas; si no → las de su misma empresa.
+- Visibilidad por empresa: los usuarios con sucursal ven solo su empresa salvo que su rol (`warehouse`) o una lista manual (`user_branches`) les dé más alcance. El `warehouse` (bodeguero) administra todas las sucursales incluso de otra empresa.
 - Number formatting: `allocated_quantity` is `decimal(12,4)` — cast to `(int)` for display.
 - Costs: display with `number_format($cost, 2)`.
 
