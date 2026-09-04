@@ -22,7 +22,7 @@
         x-transition:leave-end="opacity-0 scale-95"
         @click.away="open = false"
         class="absolute right-0 mt-1.5 w-72 bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden ring-1 ring-black/5">
-        <div class="py-1 max-h-80 overflow-y-auto">
+        <div class="py-1 max-h-96 overflow-y-auto">
             <button type="button" wire:click="switchBranch('')" @click="open = false"
                 class="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 transition flex items-center justify-between {{ !$activeBranchId ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700' }}">
                 <span class="flex items-center gap-2">
@@ -45,16 +45,26 @@
                     {{ $company->razon_social }}
                 </div>
                 @foreach ($company->branches as $branch)
-                    <button type="button" wire:click="switchBranch('{{ $branch->id }}')" @click="open = false"
-                        class="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 transition flex items-center justify-between {{ (string) $activeBranchId === (string) $branch->id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700' }}">
-                        <span class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-base">store</span>
-                            {{ $branch->name }}
-                        </span>
-                        @if ((string) $activeBranchId === (string) $branch->id)
-                            <span class="material-symbols-outlined text-blue-600 text-sm">check</span>
-                        @endif
-                    </button>
+                    @php $allowed = in_array((int) $branch->id, $allowedIds, true); @endphp
+                    @if ($allowed)
+                        <button type="button" wire:click="switchBranch('{{ $branch->id }}')" @click="open = false"
+                            class="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 transition flex items-center justify-between {{ (string) $activeBranchId === (string) $branch->id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700' }}">
+                            <span class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-base">store</span>
+                                {{ $branch->name }}
+                            </span>
+                            @if ((string) $activeBranchId === (string) $branch->id)
+                                <span class="material-symbols-outlined text-blue-600 text-sm">check</span>
+                            @endif
+                        </button>
+                    @else
+                        <div class="w-full text-left px-4 py-2.5 text-sm text-gray-300 cursor-not-allowed flex items-center gap-2"
+                            title="Sucursal de otra empresa. No tenés acceso.">
+                            <span class="material-symbols-outlined text-base">lock</span>
+                            <span class="flex-1">{{ $branch->name }}</span>
+                            <span class="material-symbols-outlined text-xs">block</span>
+                        </div>
+                    @endif
                 @endforeach
             @endforeach
 
@@ -68,16 +78,26 @@
                     Sin empresa
                 </div>
                 @foreach ($orphanBranches as $branch)
-                    <button type="button" wire:click="switchBranch('{{ $branch->id }}')" @click="open = false"
-                        class="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 transition flex items-center justify-between {{ (string) $activeBranchId === (string) $branch->id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700' }}">
-                        <span class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-base">store</span>
-                            {{ $branch->name }}
-                        </span>
-                        @if ((string) $activeBranchId === (string) $branch->id)
-                            <span class="material-symbols-outlined text-blue-600 text-sm">check</span>
-                        @endif
-                    </button>
+                    @php $allowed = in_array((int) $branch->id, $allowedIds, true); @endphp
+                    @if ($allowed)
+                        <button type="button" wire:click="switchBranch('{{ $branch->id }}')" @click="open = false"
+                            class="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 transition flex items-center justify-between {{ (string) $activeBranchId === (string) $branch->id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700' }}">
+                            <span class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-base">store</span>
+                                {{ $branch->name }}
+                            </span>
+                            @if ((string) $activeBranchId === (string) $branch->id)
+                                <span class="material-symbols-outlined text-blue-600 text-sm">check</span>
+                            @endif
+                        </button>
+                    @else
+                        <div class="w-full text-left px-4 py-2.5 text-sm text-gray-300 cursor-not-allowed flex items-center gap-2"
+                            title="Sucursal de otra empresa. No tenés acceso.">
+                            <span class="material-symbols-outlined text-base">lock</span>
+                            <span class="flex-1">{{ $branch->name }}</span>
+                            <span class="material-symbols-outlined text-xs">block</span>
+                        </div>
+                    @endif
                 @endforeach
             @endif
         </div>
