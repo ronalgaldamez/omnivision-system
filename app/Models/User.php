@@ -60,6 +60,14 @@ class User extends Authenticatable
         return $this->belongsTo(Branch::class);
     }
 
+    /**
+     * Sucursales asignadas manualmente al usuario (visibilidad ampliada).
+     */
+    public function branches()
+    {
+        return $this->belongsToMany(Branch::class, 'user_branches');
+    }
+
     public function scopeEncargados($q)
     {
         return $q->where('tech_role', 'encargado');
@@ -72,22 +80,33 @@ class User extends Authenticatable
 
     public function activeBranchId(): ?int
     {
-        if ($this->branch_id !== null) {
-            return (int) $this->branch_id;
+        $sessionId = session('active_branch_id');
+        if ($sessionId) {
+            return (int) $sessionId;
         }
 
-        $sessionId = session('active_branch_id');
-
-        return $sessionId ? (int) $sessionId : null;
+        return $this->branch_id !== null ? (int) $this->branch_id : null;
     }
 
     /**
      * Sucursales que el usuario puede seleccionar en el switcher.
-     * - Sin sucursal asignada o con access_all_branches → todas las activas.
-     * - Con sucursal asignada → las de su misma empresa (la suya + las hermanas).
+     * Prioridad:
+     * 1. Si tiene sucursales asignadas manualmente (user_branches) → esas.
+     * 2. Si tiene acceso global (sin sucursal, access_all_branches, o rol warehouse) → todas las activas.
+     * 3. Si tiene sucursal asignada → las de su misma empresa (la suya + las hermanas).
      */
     public function allowedBranchIds(): array
     {
+        // Camino 1: lista manual de sucursales asignadas al usuario
+        $manual = $this->branches()->pluck('branch_id')->map(fn($id) => (int) $id)->all();
+        if (! empty($manual)) {
+            return Branch::whereIn('id', $manual)
+                ->where('is_active', true)
+                ->pluck('id')
+                ->map(fn($id) => (int) $id)
+                ->all();
+        }
+
         $isGlobal = false;
 
         if ($this->branch_id === null) {
@@ -95,6 +114,11 @@ class User extends Authenticatable
         } elseif (class_exists(\Spatie\Permission\Models\Permission::class)) {
             $isGlobal = \App\Models\Permission::where('name', 'access_all_branches')->exists()
                 && $this->hasPermissionTo('access_all_branches');
+        }
+
+        // Camino 2: el bodeguero (warehouse) administra todas las sucursales
+        if (! $isGlobal && $this->hasRole('warehouse')) {
+            $isGlobal = true;
         }
 
         if ($isGlobal) {

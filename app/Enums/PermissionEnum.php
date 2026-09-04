@@ -29,6 +29,12 @@ enum PermissionEnum: string
     case ViewPurchases          = 'view purchases';
     case CreatePurchases        = 'create purchases';
 
+    // ─── Cotizaciones (flujo de compras) ───
+    case CreateQuotations       = 'create quotations';
+    case ViewQuotations         = 'view quotations';
+    case ApproveQuotations      = 'approve quotations';
+    case PayQuotations          = 'pay quotations';
+
     // ─── Submenús Proveedores ───
     case ViewSuppliersMenu      = 'view_suppliers_menu';
     case ViewPurchaseHistoryMenu = 'view_purchase_history_menu';
@@ -179,6 +185,19 @@ enum PermissionEnum: string
             self::ViewSuppliersMenu,
             self::ViewPurchaseHistoryMenu,
             self::ViewNewPurchaseMenu,
+        ];
+    }
+
+    /**
+     * Permisos del flujo de cotizaciones (aprobación de compras).
+     */
+    public static function quotations(): array
+    {
+        return [
+            self::CreateQuotations,
+            self::ViewQuotations,
+            self::ApproveQuotations,
+            self::PayQuotations,
         ];
     }
 

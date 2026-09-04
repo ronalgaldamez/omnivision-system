@@ -157,6 +157,9 @@
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                         class="material-symbols-outlined text-base">history</span> Historial de
                                 Compras</a>@endcan
+                                @can('view quotations')<a href="{{ route('bodega.quotations.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
+                                class="material-symbols-outlined text-base">request_quote</span> Cotizaciones</a>@endcan
                                 @can('view_new_purchase_menu')<a href="{{ route('purchases.create') }}"
                                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50/80"><span
                                         class="material-symbols-outlined text-base">add_shopping_cart</span> Nueva

@@ -135,4 +135,49 @@ class BranchSwitcherTest extends TestCase
             ->call('switchBranch', $branch->id)
             ->assertSet('activeBranchId', $branch->id);
     }
+
+    public function test_bodeguero_ve_todas_las_sucursales_incluso_otra_empresa()
+    {
+        $sociedad = Company::factory()->create();
+        $persona = Company::factory()->create();
+
+        $miBranch = Branch::factory()->create(['company_id' => $persona->id, 'name' => 'Chalatenango']);
+        $otraEmpresa = Branch::factory()->create(['company_id' => $sociedad->id, 'name' => 'Amayo']);
+
+        $role = \App\Models\Role::firstOrCreate(['name' => 'warehouse']);
+        $user = User::factory()->create(['branch_id' => $miBranch->id]);
+        $user->syncRoles([$role->name]);
+
+        $this->actingAs($user);
+
+        $allowed = $user->allowedBranchIds();
+        $this->assertContains($miBranch->id, $allowed);
+        $this->assertContains($otraEmpresa->id, $allowed);
+
+        Livewire::test(BranchSwitcher::class)
+            ->call('switchBranch', $otraEmpresa->id)
+            ->assertSet('activeBranchId', $otraEmpresa->id);
+    }
+
+    public function test_lista_manual_de_sucursales_permite_otra_empresa()
+    {
+        $sociedad = Company::factory()->create();
+        $persona = Company::factory()->create();
+
+        $miBranch = Branch::factory()->create(['company_id' => $persona->id, 'name' => 'Chalatenango']);
+        $otraEmpresa = Branch::factory()->create(['company_id' => $sociedad->id, 'name' => 'Amayo']);
+
+        $user = User::factory()->create(['branch_id' => $miBranch->id]);
+        $user->branches()->attach([$miBranch->id, $otraEmpresa->id]);
+
+        $this->actingAs($user);
+
+        $allowed = $user->allowedBranchIds();
+        $this->assertContains($miBranch->id, $allowed);
+        $this->assertContains($otraEmpresa->id, $allowed);
+
+        Livewire::test(BranchSwitcher::class)
+            ->call('switchBranch', $otraEmpresa->id)
+            ->assertSet('activeBranchId', $otraEmpresa->id);
+    }
 }

@@ -23,11 +23,12 @@ class UserForm extends Component
     public $activeTab = '';
     public $branchId = '';
     public $techRole = '';
+    public $managedBranches = [];
 
     public function mount($id = null)
     {
         if ($id) {
-            $user = User::with(['roles', 'permissions'])->findOrFail($id);
+            $user = User::with(['roles', 'permissions', 'branches'])->findOrFail($id);
             $this->userId = $user->id;
             $this->name = $user->name;
             $this->email = $user->email;
@@ -35,6 +36,7 @@ class UserForm extends Component
             $this->selectedRole = $user->roles->first()->name ?? '';
             $this->branchId = $user->branch_id ?? '';
             $this->techRole = $user->tech_role ?? '';
+            $this->managedBranches = $user->branches->pluck('id')->map(fn($id) => (int) $id)->all();
             $this->permissionsPersonalized = $user->hasPersonalizedPermissions();
 
             if ($this->permissionsPersonalized) {
@@ -65,6 +67,8 @@ class UserForm extends Component
             'selectedPermissions' => 'array',
             'selectedPermissions.*' => 'string',
             'branchId' => 'nullable|exists:branches,id',
+            'managedBranches' => 'array',
+            'managedBranches.*' => 'exists:branches,id',
         ];
 
         if ($this->userId) {
@@ -110,6 +114,8 @@ class UserForm extends Component
 
         $user = User::updateOrCreate(['id' => $this->userId], $userData);
         $user->syncRoles([$this->selectedRole]);
+
+        $user->branches()->sync($this->managedBranches ?? []);
 
         if ($this->permissionsPersonalized && !empty($this->selectedPermissions)) {
             $user->syncPermissions($this->selectedPermissions);
