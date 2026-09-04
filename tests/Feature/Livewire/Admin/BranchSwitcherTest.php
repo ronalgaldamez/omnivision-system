@@ -75,4 +75,64 @@ class BranchSwitcherTest extends TestCase
         $this->assertEquals('Sucursal Amayo', $byRazon['Omnivision S.A. de C.V.']->branches->first()->name);
         $this->assertEquals('Sucursal Aguilares', $byRazon['Jorge Alfredo Argueta Flores']->branches->first()->name);
     }
+
+    public function test_usuario_solo_puede_ver_sucursales_de_su_empresa()
+    {
+        $sociedad = Company::factory()->create();
+        $persona = Company::factory()->create();
+
+        $branchPersona = Branch::factory()->create(['company_id' => $persona->id, 'name' => 'Chalatenango']);
+
+        $user = User::factory()->create(['branch_id' => $branchPersona->id]);
+
+        $this->actingAs($user);
+
+        $allowed = $user->allowedBranchIds();
+        $this->assertContains($branchPersona->id, $allowed);
+    }
+
+    public function test_no_puede_cambiar_a_sucursal_de_otra_empresa()
+    {
+        $sociedad = Company::factory()->create();
+        $persona = Company::factory()->create();
+
+        $miBranch = Branch::factory()->create(['company_id' => $persona->id, 'name' => 'Chalatenango']);
+        $otraBranch = Branch::factory()->create(['company_id' => $sociedad->id, 'name' => 'Amayo']);
+
+        $user = User::factory()->create(['branch_id' => $miBranch->id]);
+        $this->actingAs($user);
+
+        Livewire::test(BranchSwitcher::class)
+            ->call('switchBranch', $otraBranch->id)
+            ->assertDispatched('show-toast', type: 'error')
+            ->assertSet('activeBranchId', $miBranch->id);
+    }
+
+    public function test_si_puede_cambiar_a_sucursal_hermana_de_su_misma_empresa()
+    {
+        $persona = Company::factory()->create();
+
+        $miBranch = Branch::factory()->create(['company_id' => $persona->id, 'name' => 'Chalatenango']);
+        $hermana = Branch::factory()->create(['company_id' => $persona->id, 'name' => 'Aguilares']);
+
+        $user = User::factory()->create(['branch_id' => $miBranch->id]);
+        $this->actingAs($user);
+
+        Livewire::test(BranchSwitcher::class)
+            ->call('switchBranch', $hermana->id)
+            ->assertSet('activeBranchId', $hermana->id);
+    }
+
+    public function test_usuario_sin_sucursal_puede_cambiar_a_cualquiera()
+    {
+        $sociedad = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $sociedad->id]);
+
+        $user = User::factory()->create(['branch_id' => null]);
+        $this->actingAs($user);
+
+        Livewire::test(BranchSwitcher::class)
+            ->call('switchBranch', $branch->id)
+            ->assertSet('activeBranchId', $branch->id);
+    }
 }

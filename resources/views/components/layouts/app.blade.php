@@ -425,9 +425,7 @@
                     </div>
 
                     <div class="flex items-center gap-3">
-                        @if(is_null(auth()->user()->branch_id))
-                            <livewire:admin.branch-switcher />
-                        @endif
+                        <livewire:admin.branch-switcher />
 
                         <livewire:changelog-badge />
 

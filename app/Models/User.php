@@ -81,6 +81,39 @@ class User extends Authenticatable
         return $sessionId ? (int) $sessionId : null;
     }
 
+    /**
+     * Sucursales que el usuario puede seleccionar en el switcher.
+     * - Sin sucursal asignada o con access_all_branches → todas las activas.
+     * - Con sucursal asignada → las de su misma empresa (la suya + las hermanas).
+     */
+    public function allowedBranchIds(): array
+    {
+        $isGlobal = false;
+
+        if ($this->branch_id === null) {
+            $isGlobal = true;
+        } elseif (class_exists(\Spatie\Permission\Models\Permission::class)) {
+            $isGlobal = \App\Models\Permission::where('name', 'access_all_branches')->exists()
+                && $this->hasPermissionTo('access_all_branches');
+        }
+
+        if ($isGlobal) {
+            return Branch::where('is_active', true)->pluck('id')->map(fn($id) => (int) $id)->all();
+        }
+
+        $myBranch = Branch::with('company')->find($this->branch_id);
+
+        if (! $myBranch || ! $myBranch->company_id) {
+            return $this->branch_id !== null ? [(int) $this->branch_id] : [];
+        }
+
+        return Branch::where('is_active', true)
+            ->where('company_id', $myBranch->company_id)
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->all();
+    }
+
     public function getRolePrefixAttribute(): string
     {
         return $this->roles()->first()?->prefix ?? 'OT';
