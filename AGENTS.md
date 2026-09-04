@@ -5,7 +5,7 @@ license: MIT
 compatibility: opencode, cline
 metadata:
     audience: maintainers
-    version: 2.1.0
+    version: 2.5.0
 workflow: github
 ---
 
@@ -183,6 +183,129 @@ All views use `->layout('components.layouts.app')`. Sidebar in `app.blade.php`.
 - Branch filtering: `auth()->user()->activeBranchId()` returns user's branch or session value.
 - Number formatting: `allocated_quantity` is `decimal(12,4)` — cast to `(int)` for display.
 - Costs: display with `number_format($cost, 2)`.
+
+## 🎨 UI: COMPONENTES, TOASTS Y MODALES DE CONFIRMACIÓN (OBLIGATORIO EN VISTAS NUEVAS)
+
+Toda vista nueva DEBE reutilizar los componentes y patrones del sistema. Está prohibido inventar estilos o comportamientos genéricos. Referencia visual en vivo: ruta `admin.ui-preview` (`/admin/ui-preview`, requiere `access_admin`) y su fuente `resources/views/components/ui-preview.blade.php` (botones, inputs, badges, alerts, modales y toasts de ejemplo).
+
+### Componentes reutilizables
+
+- `resources/views/components/ui/*.blade.php` → `<x-ui.button>`, `<x-ui.card>`, `<x-ui.input>`, `<x-ui.select>`, `<x-ui.textarea>`, `<x-ui.checkbox>`, `<x-ui.toggle>`, `<x-ui.badge>`, `<x-ui.alert>`, `<x-ui.modal>`, `<x-ui.confirm-modal>`, `<x-ui.empty-state>`.
+- `resources/views/components/forms/*.blade.php` → `<x-forms.group>`, `<x-forms.label>`, `<x-forms.error>`.
+- Iconos: Material Symbols (`<span class="material-symbols-outlined">check_circle</span>`). No usar emojis ni fuentes de iconos ajenas.
+
+### Toasts (SIN markup extra en la vista)
+
+El contenedor de toasts ya es GLOBAL en `resources/views/components/layouts/app.blade.php` (escucha `show-toast` y `show-toasts` a nivel `window`). Las vistas nuevas **NO** deben agregar contenedores de toast inline ni duplicar el que existe en el layout.
+
+- Disparar desde el componente Livewire tras CADA acción de escritura (crear, actualizar, eliminar, aprobar, rechazar, mover stock, etc.): `$this->dispatch('show-toast', type: 'success', message: '...')`.
+- `type` permitidos: `success`, `error`, `warning`, `info`. Se apilan abajo a la derecha por 5s.
+- Varios errores globales de validación (sin campo asociado): `$this->dispatch('show-toasts', errors: [...])`. Ver "Feedback de errores: inline vs toast" abajo.
+- Un fallo NUNCA queda sin feedback: usar siempre `type: 'error'` con el motivo.
+- Tests: verificar con `->assertDispatched('show-toast', type: 'success')`.
+
+Ejemplo canónico de método de escritura (disparar el toast y resetear el formulario):
+
+```php
+public function save()
+{
+    $validated = $this->validate();
+    // ... lógica de negocio en el servicio, nunca en el componente ...
+    $this->dispatch('show-toast', type: 'success', message: 'Cliente guardado correctamente.');
+    $this->reset('name', 'phone'); // resetear campos según el caso
+}
+```
+
+Nombre del evento SIEMPRE en kebab-case (`show-toast`, `show-toasts`), es sensible a mayúsculas. Desde Alpine/JS usar `$dispatch('show-toast', { type: 'success', message: '...' })` — nunca `showToast`/`showToasts` en camelCase, el contenedor global NO los escucha. Ejemplos vivos de los 4 tipos en `/admin/ui-preview` (sección "Toast / Notificaciones").
+
+### Modal de confirmación (patrón canónico)
+
+Toda acción destructiva o irreversible (eliminar, rechazar, desvincular, cerrar, aprobación definitiva) DEBE pasar por un modal de confirmación. Prohibido usar `confirm()` / `alert()` de JS nativo.
+
+Flujo estándar Livewire + overlay. Referencia a copiar textualmente:
+- PHP: `app/Livewire/WorkOrders/WorkOrderIndex.php`
+- Blade: `resources/views/livewire/work-orders/work-order-index.blade.php` (bloque `@if($confirmingAction)` del final)
+
+Componente PHP:
+- Propiedades públicas: `public $confirmingAction = null;` y `public $confirmingId = null;`.
+- Método que abre el modal: setea acción e id (ej: `$this->confirmingAction = 'delete'; $this->confirmingId = $id;`).
+- `executeConfirmedAction()`: ejecuta según `confirmingAction` y resetea ambos campos al final.
+- `cancelConfirmation()`: resetea ambos campos.
+- Tras ejecutar: disparar el toast correspondiente (éxito o error).
+
+Vista (al final del archivo, misma estructura que work-order-index):
+- `@if($confirmingAction)` → overlay `fixed inset-0 bg-gray-900/50 backdrop-blur-sm ... z-50` con `<x-ui.card>`.
+- Cuerpo centrado: ícono circular de color según gravedad (`bg-red-100`/`text-red-600` para peligro), título `text-lg font-semibold` y mensaje `text-sm text-gray-600`.
+- `<x-slot:footer>` con orden inverso en móvil: botón de confirmar `<x-ui.button variant="danger|primary|warning" wire:click="executeConfirmedAction">` y botón `<x-ui.button variant="secondary" wire:click="cancelConfirmation">Cancelar`.
+
+**Reemplazo recomendado para vistas nuevas:** usar el componente `<x-ui.confirm-modal>` (incluye overlay, transiciones y A11y: `role="dialog"`, `aria-modal`, foco inicial y cierre con `ESC`). El flujo PHP de `confirmingAction` NO cambia. Uso (dentro de `@if($confirmingAction)`):
+
+```
+<x-ui.confirm-modal
+    variant="danger|warning|success|primary"
+    icon="delete" title="Confirmar eliminación"
+    message="¿Eliminar el registro #{{ $confirmingId }}?"
+    confirmLabel="Sí, eliminar" cancelLabel="Cancelar"
+    confirmAction="executeConfirmedAction" cancelAction="cancelConfirmation" />
+```
+
+- `variant` controla el color del círculo de ícono y del botón de confirmar.
+- `confirmAction`/`cancelAction` son los métodos del componente Livewire.
+- Si la vista usa dos modales del mismo `variant`, pasar `id` distinto a cada uno.
+
+### Empty states (estados vacíos)
+
+Listas/tablas sin registros DEBEN usar `<x-ui.empty-state>` (ícono circular gris + título + descripción). Ejemplo:
+
+```
+<x-ui.empty-state icon="inventory_2" title="Sin productos"
+    description="No hay productos registrados en este inventario.">
+    <x-slot:action>
+        <x-ui.button variant="primary" href="{{ route('inventory.products.create') }}">Crear producto</x-ui.button>
+    </x-slot:action>
+</x-ui.empty-state>
+```
+
+No inventar markups de "Sin resultados" a mano en cada tabla.
+
+### Feedback de errores: inline vs toast
+
+- **Errores de campo** (validación de un input específico): se muestran INLINE, junto al campo, vía `$errors` de Livewire. Patrón: `<x-forms.group name="campo" label="..." icon="...">` y dentro `@error('campo') <x-forms.error>{{ $message }}</x-forms.error> @enderror`, o la prop `error` de `<x-ui.input|select|textarea>`.
+- **Errores globales** (sin campo asociado: duplicado detectado al guardar, regla de negocio, acción fallida, autorización) → toast `type: 'error'`. Varios a la vez → `show-toasts`.
+- **PROHIBIDO** disparar `show-toast` por cada error de campo: los errores de campo van inline en el formulario, no como notificaciones superpuestas.
+- Un error de `$errors` siempre visible cerca del input: no confiar solo en el toast para validación de formularios largos.
+
+### Variantes semánticas de botón (PROHIBIDO sobrescribir colores)
+
+Usar SIEMPRE la variante que expresa la acción. Nunca parchear con utilities `!bg-*` ni colorear por JS (ver `/admin/ui-preview`):
+
+- `primary` — acción principal de la pantalla (guardar, crear, continuar).
+- `success` — aprobar, confirmar, entregar, recibir, marcar resuelto.
+- `danger` — eliminar, rechazar, cancelar definitivo, acciones destructivas/irreversibles.
+- `warning` — acciones que requieren atención o reversibles con riesgo (pausar, devolver, generar OT).
+- `secondary` — cancelar, volver, neutro.
+- `ghost` — acciones ligeras (filas de tabla, links con apariencia de botón).
+
+Ejemplos de MALA práctica detectados en el repo (no repetir): `<x-ui.button variant="primary" class="!bg-green-600 hover:!bg-green-700">Aprobar</x-ui.button>` → debe ser `variant="success"`. Si ninguna variante aplica, falta variante en el componente: reportarlo, no parchear la clase.
+
+### `[x-cloak]` ya es GLOBAL — no duplicar `<style>`
+
+Ambos layouts (`components/layouts/app.blade.php` y `components/layouts/blank.blade.php`) ya definen `[x-cloak] { display: none !important; }`. Las vistas NO deben incluir `<style>[x-cloak] {...}</style>` propio (es código muerto duplicado). Solo usar el atributo `x-cloak` en los elementos que deben ocultarse hasta que Alpine inicie.
+
+### Toast en layout `blank` (páginas públicas)
+
+Solo el layout `app` incluye el toast global automáticamente. Si una vista usa `components.layouts.blank` y necesita feedback (crear, actualizar, errores), DEBE incluir manualmente `<x-notifications.toast-container />` una sola vez. En `app` está prohibido agregarlo.
+
+### Vista nueva: copiar a la "hermana" (no desde cero)
+
+Antes de crear una vista, buscar en el mismo módulo la más parecida (un index o un form existente) y copiar su esqueleto:
+- `x-ui.card` con `title`, `icon`, `subtitle` y `headerActions` para acciones superiores.
+- Formularios con `<x-forms.group>`/`<x-ui.input>` y errores inline (ver arriba).
+- Listas/tablas con el patrón de search + "Ver todos" del módulo.
+- Confirmaciones con el patrón canónico `@if($confirmingAction)` y toasts al final de cada acción.
+- No mezclar estilos de un módulo a otro: si el módulo hermano usa un componente, usalo igual; si no existe, seguí `omnivision-design` y avisá.
+
+Referencias útiles de estructura: `suppliers/supplier-index`, `inventory/products/index`, `work-orders/work-order-form`, `tickets/ticket-index`.
 
 ## PROTOCOLO DE CUESTIONAMIENTO OBLIGATORIO
 

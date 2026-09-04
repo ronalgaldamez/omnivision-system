@@ -6,7 +6,7 @@
     'error' => null,
     'disabled' => false,
     'required' => false,
-    'hide-error-text' => false,
+    'hideErrorText' => false,
     'name' => null,
     'id' => null,
 ])

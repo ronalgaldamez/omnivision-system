@@ -493,6 +493,25 @@
         </x-slot:footer>
     </x-ui.card>
 
+    {{-- Empty States --}}
+    <x-ui.card title="Empty States" icon="inbox">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="border border-gray-200 rounded-xl">
+                <x-ui.empty-state icon="inventory_2" title="Sin productos"
+                    description="No hay productos registrados en este inventario.">
+                    <x-slot:action>
+                        <x-ui.button variant="primary" icon="add">Crear producto</x-ui.button>
+                    </x-slot:action>
+                </x-ui.empty-state>
+            </div>
+            <div class="border border-gray-200 rounded-xl">
+                <x-ui.empty-state icon="search_off" title="Sin resultados"
+                    description="No se encontraron coincidencias para la búsqueda." />
+            </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-4">Patrón único para listas/tablas sin registros. No inventar markups de "Sin resultados".</p>
+    </x-ui.card>
+
     {{-- Cards de OT (prototipo v2 - limpia) --}}
     <x-ui.card title="Cards de OT (prototipo v2)" subtitle="Versión compacta: solo lo esencial; el detalle se abre al hacer clic" icon="engineering">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
