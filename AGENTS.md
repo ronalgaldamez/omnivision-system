@@ -5,7 +5,7 @@ license: MIT
 compatibility: opencode, cline
 metadata:
     audience: maintainers
-    version: 2.3.0
+    version: 2.4.0
 workflow: github
 ---
 
@@ -190,7 +190,7 @@ Toda vista nueva DEBE reutilizar los componentes y patrones del sistema. Está p
 
 ### Componentes reutilizables
 
-- `resources/views/components/ui/*.blade.php` → `<x-ui.button>`, `<x-ui.card>`, `<x-ui.input>`, `<x-ui.select>`, `<x-ui.textarea>`, `<x-ui.checkbox>`, `<x-ui.toggle>`, `<x-ui.badge>`, `<x-ui.alert>`, `<x-ui.modal>`.
+- `resources/views/components/ui/*.blade.php` → `<x-ui.button>`, `<x-ui.card>`, `<x-ui.input>`, `<x-ui.select>`, `<x-ui.textarea>`, `<x-ui.checkbox>`, `<x-ui.toggle>`, `<x-ui.badge>`, `<x-ui.alert>`, `<x-ui.modal>`, `<x-ui.confirm-modal>`, `<x-ui.empty-state>`.
 - `resources/views/components/forms/*.blade.php` → `<x-forms.group>`, `<x-forms.label>`, `<x-forms.error>`.
 - Iconos: Material Symbols (`<span class="material-symbols-outlined">check_circle</span>`). No usar emojis ni fuentes de iconos ajenas.
 
@@ -223,6 +223,36 @@ Vista (al final del archivo, misma estructura que work-order-index):
 - `@if($confirmingAction)` → overlay `fixed inset-0 bg-gray-900/50 backdrop-blur-sm ... z-50` con `<x-ui.card>`.
 - Cuerpo centrado: ícono circular de color según gravedad (`bg-red-100`/`text-red-600` para peligro), título `text-lg font-semibold` y mensaje `text-sm text-gray-600`.
 - `<x-slot:footer>` con orden inverso en móvil: botón de confirmar `<x-ui.button variant="danger|primary|warning" wire:click="executeConfirmedAction">` y botón `<x-ui.button variant="secondary" wire:click="cancelConfirmation">Cancelar`.
+
+**Reemplazo recomendado para vistas nuevas:** usar el componente `<x-ui.confirm-modal>` (incluye overlay, transiciones y A11y: `role="dialog"`, `aria-modal`, foco inicial y cierre con `ESC`). El flujo PHP de `confirmingAction` NO cambia. Uso (dentro de `@if($confirmingAction)`):
+
+```
+<x-ui.confirm-modal
+    variant="danger|warning|success|primary"
+    icon="delete" title="Confirmar eliminación"
+    message="¿Eliminar el registro #{{ $confirmingId }}?"
+    confirmLabel="Sí, eliminar" cancelLabel="Cancelar"
+    confirmAction="executeConfirmedAction" cancelAction="cancelConfirmation" />
+```
+
+- `variant` controla el color del círculo de ícono y del botón de confirmar.
+- `confirmAction`/`cancelAction` son los métodos del componente Livewire.
+- Si la vista usa dos modales del mismo `variant`, pasar `id` distinto a cada uno.
+
+### Empty states (estados vacíos)
+
+Listas/tablas sin registros DEBEN usar `<x-ui.empty-state>` (ícono circular gris + título + descripción). Ejemplo:
+
+```
+<x-ui.empty-state icon="inventory_2" title="Sin productos"
+    description="No hay productos registrados en este inventario.">
+    <x-slot:action>
+        <x-ui.button variant="primary" href="{{ route('inventory.products.create') }}">Crear producto</x-ui.button>
+    </x-slot:action>
+</x-ui.empty-state>
+```
+
+No inventar markups de "Sin resultados" a mano en cada tabla.
 
 ### Feedback de errores: inline vs toast
 
