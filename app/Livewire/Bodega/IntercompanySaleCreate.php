@@ -9,7 +9,6 @@ use App\Models\Device;
 use App\Models\IntercompanySale;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class IntercompanySaleCreate extends Component
@@ -190,98 +189,27 @@ class IntercompanySaleCreate extends Component
             return;
         }
 
-        DB::beginTransaction();
-        try {
-            $sale = IntercompanySale::create([
-                'code' => IntercompanySale::generateCode(),
-                'seller_branch_id' => $this->sellerBranchId,
-                'buyer_branch_id' => $this->buyerBranchId,
-                'subtotal' => $this->subtotal,
-                'iva_amount' => $this->ivaAmount,
-                'total' => $this->total,
-                'user_id' => Auth::id(),
-            ]);
+        $sale = IntercompanySale::create([
+            'code' => IntercompanySale::generateCode(),
+            'seller_branch_id' => $this->sellerBranchId,
+            'buyer_branch_id' => $this->buyerBranchId,
+            'subtotal' => $this->subtotal,
+            'iva_amount' => $this->ivaAmount,
+            'total' => $this->total,
+            'status' => 'pending',
+            'user_id' => Auth::id(),
+        ]);
 
-            $sale->items()->create([
-                'product_id' => $this->selectedProduct->id,
-                'product_name' => $this->selectedProduct->name,
-                'quantity' => $this->quantity,
-                'unit_cost' => $this->unitCost,
-            ]);
+        $sale->items()->create([
+            'product_id' => $this->selectedProduct->id,
+            'product_name' => $this->selectedProduct->name,
+            'quantity' => $this->quantity,
+            'unit_cost' => $this->unitCost,
+        ]);
 
-            // ── Descontar stock de la vendedora ──
-            if ($requiresDevice) {
-                $devices = Device::where('product_id', $this->selectedProductId)
-                    ->where('branch_id', $this->sellerBranchId)
-                    ->where('status', 'in_stock')
-                    ->take((int) $this->quantity)
-                    ->get();
-
-                foreach ($devices as $device) {
-                    $device->update(['branch_id' => $this->buyerBranchId, 'status' => 'in_stock']);
-                }
-            } else {
-                BranchInventory::where('branch_id', $this->sellerBranchId)
-                    ->where('product_id', $this->selectedProductId)
-                    ->decrement('allocated_quantity', $this->quantity);
-            }
-
-            // ── Sumar stock a la compradora ──
-            BranchInventory::firstOrCreate([
-                'branch_id' => $this->buyerBranchId,
-                'product_id' => $this->selectedProductId,
-            ])->increment('allocated_quantity', $this->quantity);
-
-            // ── Movimiento de salida (venta) en la sucursal vendedora ──
-            \App\Models\Movement::create([
-                'product_id' => $this->selectedProductId,
-                'type' => 'exit',
-                'quantity' => $this->quantity,
-                'unit_cost' => $this->unitCost,
-                'total_value' => round($this->quantity * $this->unitCost, 2),
-                'description' => 'Venta entre empresas: '.$sale->code.' a '.$buyerBranch->name,
-                'user_id' => Auth::id(),
-                'branch_id' => $this->sellerBranchId,
-                'reference_type' => 'intercompany_sale',
-                'reference_id' => $sale->id,
-            ]);
-
-            // ── Movimiento de entrada (compra) en la sucursal compradora ──
-            \App\Models\Movement::create([
-                'product_id' => $this->selectedProductId,
-                'type' => 'entry',
-                'quantity' => $this->quantity,
-                'unit_cost' => $this->unitCost,
-                'total_value' => round($this->quantity * $this->unitCost, 2),
-                'description' => 'Compra entre empresas: '.$sale->code.' desde '.$sellerBranch->name,
-                'user_id' => Auth::id(),
-                'branch_id' => $this->buyerBranchId,
-                'reference_type' => 'intercompany_sale',
-                'reference_id' => $sale->id,
-            ]);
-
-            // ── Registrar el movimiento a nivel de empresas (vendedora reduce, compradora recalcula) ──
-            $sellerCompanyId = $sellerBranch->company_id;
-            $buyerCompanyId = $buyerBranch->company_id;
-
-            if ($sellerCompanyId && $buyerCompanyId) {
-                app(\App\Services\InventoryService::class)->processCompanySale(
-                    $sellerCompanyId,
-                    $buyerCompanyId,
-                    $this->selectedProduct,
-                    $this->quantity,
-                    $this->unitCost
-                );
-            }
-
-            DB::commit();
-            $this->dispatch('show-toast', type: 'success', message: "Venta {$sale->code} registrada: {$sellerBranch->name} → {$buyerBranch->name}. Total: $".number_format($this->total, 2));
-            $this->resetForm();
-            return redirect()->route('bodega.intercompany-sales.index');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            $this->dispatch('show-toast', type: 'error', message: 'Error: '.$e->getMessage());
-        }
+        $this->dispatch('show-toast', type: 'success', message: "Venta {$sale->code} creada (pendiente): {$sellerBranch->name} → {$buyerBranch->name}. La sucursal compradora debe confirmar la recepción. Total: $".number_format($this->total, 2));
+        $this->resetForm();
+        return redirect()->route('bodega.intercompany-sales.index');
     }
 
     public function resetForm()

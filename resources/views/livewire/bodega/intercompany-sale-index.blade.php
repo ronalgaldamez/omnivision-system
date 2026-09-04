@@ -8,7 +8,16 @@
 
         <div class="space-y-3">
             @forelse($sales as $sale)
-            <div class="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition">
+            @php
+                $statusMap = [
+                    'pending' => ['Pendiente', 'bg-gray-100 text-gray-700'],
+                    'in_transit' => ['En tránsito', 'bg-blue-50 text-blue-700'],
+                    'delivered' => ['Entregado', 'bg-amber-50 text-amber-700'],
+                    'confirmed' => ['Confirmado', 'bg-green-50 text-green-700'],
+                ];
+                $st = $statusMap[$sale->status] ?? ['Desconocido', 'bg-gray-100 text-gray-700'];
+            @endphp
+            <a href="{{ route('bodega.intercompany-sales.show', $sale->id) }}" class="block border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
@@ -24,9 +33,9 @@
                             </p>
                         </div>
                     </div>
-                    <div class="text-right">
+                    <div class="text-right flex flex-col items-end gap-1">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $st[1] }}">{{ $st[0] }}</span>
                         <p class="text-sm font-bold text-gray-800 font-mono">${{ number_format($sale->total, 2) }}</p>
-                        <p class="text-xs text-gray-400">IVA: ${{ number_format($sale->iva_amount, 2) }}</p>
                     </div>
                 </div>
                 @if($sale->items->isNotEmpty())
@@ -36,7 +45,7 @@
                     @endforeach
                 </div>
                 @endif
-            </div>
+            </a>
             @empty
             <div class="text-center py-12 text-gray-500">No hay ventas entre empresas registradas</div>
             @endforelse
