@@ -5,7 +5,7 @@ license: MIT
 compatibility: opencode, cline
 metadata:
     audience: maintainers
-    version: 2.2.0
+    version: 2.3.0
 workflow: github
 ---
 
@@ -200,7 +200,7 @@ El contenedor de toasts ya es GLOBAL en `resources/views/components/layouts/app.
 
 - Disparar desde el componente Livewire tras CADA acción de escritura (crear, actualizar, eliminar, aprobar, rechazar, mover stock, etc.): `$this->dispatch('show-toast', type: 'success', message: '...')`.
 - `type` permitidos: `success`, `error`, `warning`, `info`. Se apilan abajo a la derecha por 5s.
-- Varios errores de validación: `$this->dispatch('show-toasts', errors: [...])`.
+- Varios errores globales de validación (sin campo asociado): `$this->dispatch('show-toasts', errors: [...])`. Ver "Feedback de errores: inline vs toast" abajo.
 - Un fallo NUNCA queda sin feedback: usar siempre `type: 'error'` con el motivo.
 - Tests: verificar con `->assertDispatched('show-toast', type: 'success')`.
 
@@ -223,6 +223,45 @@ Vista (al final del archivo, misma estructura que work-order-index):
 - `@if($confirmingAction)` → overlay `fixed inset-0 bg-gray-900/50 backdrop-blur-sm ... z-50` con `<x-ui.card>`.
 - Cuerpo centrado: ícono circular de color según gravedad (`bg-red-100`/`text-red-600` para peligro), título `text-lg font-semibold` y mensaje `text-sm text-gray-600`.
 - `<x-slot:footer>` con orden inverso en móvil: botón de confirmar `<x-ui.button variant="danger|primary|warning" wire:click="executeConfirmedAction">` y botón `<x-ui.button variant="secondary" wire:click="cancelConfirmation">Cancelar`.
+
+### Feedback de errores: inline vs toast
+
+- **Errores de campo** (validación de un input específico): se muestran INLINE, junto al campo, vía `$errors` de Livewire. Patrón: `<x-forms.group name="campo" label="..." icon="...">` y dentro `@error('campo') <x-forms.error>{{ $message }}</x-forms.error> @enderror`, o la prop `error` de `<x-ui.input|select|textarea>`.
+- **Errores globales** (sin campo asociado: duplicado detectado al guardar, regla de negocio, acción fallida, autorización) → toast `type: 'error'`. Varios a la vez → `show-toasts`.
+- **PROHIBIDO** disparar `show-toast` por cada error de campo: los errores de campo van inline en el formulario, no como notificaciones superpuestas.
+- Un error de `$errors` siempre visible cerca del input: no confiar solo en el toast para validación de formularios largos.
+
+### Variantes semánticas de botón (PROHIBIDO sobrescribir colores)
+
+Usar SIEMPRE la variante que expresa la acción. Nunca parchear con utilities `!bg-*` ni colorear por JS (ver `/admin/ui-preview`):
+
+- `primary` — acción principal de la pantalla (guardar, crear, continuar).
+- `success` — aprobar, confirmar, entregar, recibir, marcar resuelto.
+- `danger` — eliminar, rechazar, cancelar definitivo, acciones destructivas/irreversibles.
+- `warning` — acciones que requieren atención o reversibles con riesgo (pausar, devolver, generar OT).
+- `secondary` — cancelar, volver, neutro.
+- `ghost` — acciones ligeras (filas de tabla, links con apariencia de botón).
+
+Ejemplos de MALA práctica detectados en el repo (no repetir): `<x-ui.button variant="primary" class="!bg-green-600 hover:!bg-green-700">Aprobar</x-ui.button>` → debe ser `variant="success"`. Si ninguna variante aplica, falta variante en el componente: reportarlo, no parchear la clase.
+
+### `[x-cloak]` ya es GLOBAL — no duplicar `<style>`
+
+Ambos layouts (`components/layouts/app.blade.php` y `components/layouts/blank.blade.php`) ya definen `[x-cloak] { display: none !important; }`. Las vistas NO deben incluir `<style>[x-cloak] {...}</style>` propio (es código muerto duplicado). Solo usar el atributo `x-cloak` en los elementos que deben ocultarse hasta que Alpine inicie.
+
+### Toast en layout `blank` (páginas públicas)
+
+Solo el layout `app` incluye el toast global automáticamente. Si una vista usa `components.layouts.blank` y necesita feedback (crear, actualizar, errores), DEBE incluir manualmente `<x-notifications.toast-container />` una sola vez. En `app` está prohibido agregarlo.
+
+### Vista nueva: copiar a la "hermana" (no desde cero)
+
+Antes de crear una vista, buscar en el mismo módulo la más parecida (un index o un form existente) y copiar su esqueleto:
+- `x-ui.card` con `title`, `icon`, `subtitle` y `headerActions` para acciones superiores.
+- Formularios con `<x-forms.group>`/`<x-ui.input>` y errores inline (ver arriba).
+- Listas/tablas con el patrón de search + "Ver todos" del módulo.
+- Confirmaciones con el patrón canónico `@if($confirmingAction)` y toasts al final de cada acción.
+- No mezclar estilos de un módulo a otro: si el módulo hermano usa un componente, usalo igual; si no existe, seguí `omnivision-design` y avisá.
+
+Referencias útiles de estructura: `suppliers/supplier-index`, `inventory/products/index`, `work-orders/work-order-form`, `tickets/ticket-index`.
 
 ## PROTOCOLO DE CUESTIONAMIENTO OBLIGATORIO
 
