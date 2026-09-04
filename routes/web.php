@@ -172,6 +172,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/receive/{code?}', \App\Livewire\Bodega\DistributionReceive::class)->name('bodega.shipments.receive');
         Route::get('/intercompany-sales', \App\Livewire\Bodega\IntercompanySaleIndex::class)->name('bodega.intercompany-sales.index');
         Route::get('/intercompany-sales/create', \App\Livewire\Bodega\IntercompanySaleCreate::class)->name('bodega.intercompany-sales.create');
+        Route::get('/intercompany-sales/{id}', \App\Livewire\Bodega\IntercompanySaleShow::class)->name('bodega.intercompany-sales.show');
     });
 
     // ========== TECHNICIAN RETURNS ==========

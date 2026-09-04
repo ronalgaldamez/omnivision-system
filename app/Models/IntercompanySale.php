@@ -13,13 +13,18 @@ class IntercompanySale extends Model
 
     protected $fillable = [
         'code', 'seller_branch_id', 'buyer_branch_id',
-        'subtotal', 'iva_amount', 'total', 'user_id',
+        'subtotal', 'iva_amount', 'total', 'status',
+        'in_transit_at', 'delivered_at', 'confirmed_at', 'confirmed_by',
+        'user_id',
     ];
 
     protected $casts = [
         'subtotal' => 'decimal:2',
         'iva_amount' => 'decimal:2',
         'total' => 'decimal:2',
+        'in_transit_at' => 'datetime',
+        'delivered_at' => 'datetime',
+        'confirmed_at' => 'datetime',
     ];
 
     public function sellerBranch(): BelongsTo
@@ -35,6 +40,11 @@ class IntercompanySale extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function confirmer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by');
     }
 
     public function items(): HasMany
