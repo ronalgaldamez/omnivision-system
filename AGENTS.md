@@ -5,7 +5,7 @@ license: MIT
 compatibility: opencode, cline
 metadata:
     audience: maintainers
-    version: 2.1.0
+    version: 2.2.0
 workflow: github
 ---
 
@@ -183,6 +183,46 @@ All views use `->layout('components.layouts.app')`. Sidebar in `app.blade.php`.
 - Branch filtering: `auth()->user()->activeBranchId()` returns user's branch or session value.
 - Number formatting: `allocated_quantity` is `decimal(12,4)` — cast to `(int)` for display.
 - Costs: display with `number_format($cost, 2)`.
+
+## 🎨 UI: COMPONENTES, TOASTS Y MODALES DE CONFIRMACIÓN (OBLIGATORIO EN VISTAS NUEVAS)
+
+Toda vista nueva DEBE reutilizar los componentes y patrones del sistema. Está prohibido inventar estilos o comportamientos genéricos. Referencia visual en vivo: ruta `admin.ui-preview` (`/admin/ui-preview`, requiere `access_admin`) y su fuente `resources/views/components/ui-preview.blade.php` (botones, inputs, badges, alerts, modales y toasts de ejemplo).
+
+### Componentes reutilizables
+
+- `resources/views/components/ui/*.blade.php` → `<x-ui.button>`, `<x-ui.card>`, `<x-ui.input>`, `<x-ui.select>`, `<x-ui.textarea>`, `<x-ui.checkbox>`, `<x-ui.toggle>`, `<x-ui.badge>`, `<x-ui.alert>`, `<x-ui.modal>`.
+- `resources/views/components/forms/*.blade.php` → `<x-forms.group>`, `<x-forms.label>`, `<x-forms.error>`.
+- Iconos: Material Symbols (`<span class="material-symbols-outlined">check_circle</span>`). No usar emojis ni fuentes de iconos ajenas.
+
+### Toasts (SIN markup extra en la vista)
+
+El contenedor de toasts ya es GLOBAL en `resources/views/components/layouts/app.blade.php` (escucha `show-toast` y `show-toasts` a nivel `window`). Las vistas nuevas **NO** deben agregar contenedores de toast inline ni duplicar el que existe en el layout.
+
+- Disparar desde el componente Livewire tras CADA acción de escritura (crear, actualizar, eliminar, aprobar, rechazar, mover stock, etc.): `$this->dispatch('show-toast', type: 'success', message: '...')`.
+- `type` permitidos: `success`, `error`, `warning`, `info`. Se apilan abajo a la derecha por 5s.
+- Varios errores de validación: `$this->dispatch('show-toasts', errors: [...])`.
+- Un fallo NUNCA queda sin feedback: usar siempre `type: 'error'` con el motivo.
+- Tests: verificar con `->assertDispatched('show-toast', type: 'success')`.
+
+### Modal de confirmación (patrón canónico)
+
+Toda acción destructiva o irreversible (eliminar, rechazar, desvincular, cerrar, aprobación definitiva) DEBE pasar por un modal de confirmación. Prohibido usar `confirm()` / `alert()` de JS nativo.
+
+Flujo estándar Livewire + overlay. Referencia a copiar textualmente:
+- PHP: `app/Livewire/WorkOrders/WorkOrderIndex.php`
+- Blade: `resources/views/livewire/work-orders/work-order-index.blade.php` (bloque `@if($confirmingAction)` del final)
+
+Componente PHP:
+- Propiedades públicas: `public $confirmingAction = null;` y `public $confirmingId = null;`.
+- Método que abre el modal: setea acción e id (ej: `$this->confirmingAction = 'delete'; $this->confirmingId = $id;`).
+- `executeConfirmedAction()`: ejecuta según `confirmingAction` y resetea ambos campos al final.
+- `cancelConfirmation()`: resetea ambos campos.
+- Tras ejecutar: disparar el toast correspondiente (éxito o error).
+
+Vista (al final del archivo, misma estructura que work-order-index):
+- `@if($confirmingAction)` → overlay `fixed inset-0 bg-gray-900/50 backdrop-blur-sm ... z-50` con `<x-ui.card>`.
+- Cuerpo centrado: ícono circular de color según gravedad (`bg-red-100`/`text-red-600` para peligro), título `text-lg font-semibold` y mensaje `text-sm text-gray-600`.
+- `<x-slot:footer>` con orden inverso en móvil: botón de confirmar `<x-ui.button variant="danger|primary|warning" wire:click="executeConfirmedAction">` y botón `<x-ui.button variant="secondary" wire:click="cancelConfirmation">Cancelar`.
 
 ## PROTOCOLO DE CUESTIONAMIENTO OBLIGATORIO
 

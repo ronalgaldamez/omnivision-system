@@ -240,23 +240,4 @@
         </div>
     @endif
 
-    <div x-data="{ toasts: [] }"
-        x-on:show-toast.window="toasts.push({ id: Date.now() + Math.random(), type: $event.detail.type, message: $event.detail.message }); setTimeout(() => toasts.shift(), 3500)"
-        class="fixed bottom-5 right-5 z-50 flex flex-col-reverse gap-2 items-end"
-        style="max-height: 80vh; overflow-y: auto;">
-        <template x-for="toast in toasts" :key="toast.id">
-            <div x-show="true" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100">
-                <div x-show="toast.type === 'success'"
-                    class="bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 whitespace-nowrap">
-                    <span class="material-symbols-outlined">check_circle</span>
-                    <span x-text="toast.message" class="text-sm font-medium"></span>
-                </div>
-                <div x-show="toast.type === 'error'"
-                    class="bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 whitespace-nowrap">
-                    <span class="material-symbols-outlined">error</span>
-                    <span x-text="toast.message" class="text-sm font-medium"></span>
-                </div>
-            </div>
-        </template>
-    </div>
 </div>
