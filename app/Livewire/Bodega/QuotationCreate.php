@@ -212,7 +212,7 @@ class QuotationCreate extends Component
         $quotation = Quotation::create([
             'code' => Quotation::generateCode(),
             'supplier_id' => $this->supplier_id,
-            'branch_id' => auth()->user()->branch_id,
+            'branch_id' => auth()->user()->activeBranchId(),
             'created_by' => Auth::id(),
             'status' => 'pending',
             'subtotal' => $totals['subtotal'],

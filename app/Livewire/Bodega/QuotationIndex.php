@@ -117,7 +117,7 @@ class QuotationIndex extends Component
 
         DB::beginTransaction();
         try {
-            $invoice = 'COT-' . $quotation->code;
+            $invoice = $quotation->code;
             $purchase = Purchase::create([
                 'supplier_id' => $quotation->supplier_id,
                 'branch_id' => $quotation->branch_id,
@@ -158,6 +158,13 @@ class QuotationIndex extends Component
                 ]);
 
                 $branch = $quotation->branch;
+
+                // Sumar al inventario de la sucursal (BranchInventory)
+                \App\Models\BranchInventory::firstOrCreate([
+                    'branch_id' => $quotation->branch_id,
+                    'product_id' => $item->product_id,
+                ])->increment('allocated_quantity', (float) $item->quantity);
+
                 if ($branch?->company_id) {
                     $inventoryService->processCompanyPurchaseEntry($branch->company_id, $product, (float) $item->quantity, $cost, $movement);
                 } else {
@@ -182,8 +189,12 @@ class QuotationIndex extends Component
 
     public function render()
     {
+        $user = auth()->user();
+        $allowed = $user->allowedBranchIds();
+
         $quotations = Quotation::with('supplier', 'branch', 'creator', 'approver', 'payer', 'items')
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
+            ->when(! $user->can('access_all_branches') && $allowed, fn ($q) => $q->whereIn('branch_id', $allowed))
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
