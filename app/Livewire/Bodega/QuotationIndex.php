@@ -195,11 +195,13 @@ class QuotationIndex extends Component
 
                 // Si es un producto propuesto (no existía), se materializa ahora que llegó físicamente
                 if ($item->isPending()) {
+                    // El hook creating de Product asigna el SKU automáticamente
+                    // (generateUniqueSku): no hardcodear PROD- + max(id)+1, frágil ante
+                    // imports, borrados o concurrencia.
                     $product = \App\Models\Product::create([
                         'name' => $item->pending_name,
                         'unit_of_measure' => $item->pending_unit ?? 'unidad',
                         'category_id' => $item->pending_category_id,
-                        'sku' => 'PROD-'.str_pad(\App\Models\Product::max('id') + 1, 5, '0', STR_PAD_LEFT),
                         'current_stock' => 0,
                         'stock_min' => 0,
                     ]);

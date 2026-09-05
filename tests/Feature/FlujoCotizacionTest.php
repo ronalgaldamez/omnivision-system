@@ -268,4 +268,174 @@ class FlujoCotizacionTest extends TestCase
         $this->assertEquals(50, (float) $quotationA->subtotal);  // 10 * 5
         $this->assertEquals(140, (float) $quotationB->subtotal); // 20 * 7
     }
+
+    public function test_modo_individual_con_items_de_varios_proveedores_genera_una_sola_cotizacion()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $supplierA = Supplier::factory()->create(['name' => 'Proveedor A']);
+        $supplierB = Supplier::factory()->create(['name' => 'Proveedor B']);
+        $product = Product::factory()->create(['current_stock' => 0, 'average_cost' => 0]);
+
+        \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            // Primer item con proveedor A
+            ->call('selectSupplier', $supplierA->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 10)
+            ->set('currentUnitCost', 5)
+            ->call('addItem')
+            // Cambia el proveedor a B y agrega otro item (aún en modo individual)
+            ->call('selectSupplier', $supplierB->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 20)
+            ->set('currentUnitCost', 7)
+            ->call('addItem')
+            ->call('save')
+            ->assertSet('confirmingSave', true)
+            ->call('confirmSave')
+            ->assertRedirect(route('bodega.quotations.index'));
+
+        // Modo individual => UNA cotización al proveedor del encabezado (B), con ambos items
+        $this->assertEquals(1, Quotation::count());
+        $quotation = Quotation::first();
+        $this->assertEquals($supplierB->id, $quotation->supplier_id);
+        $this->assertEquals(2, $quotation->items()->count());
+        $this->assertEquals(190, (float) $quotation->subtotal); // 10*5 + 20*7
+    }
+
+    public function test_editar_item_pendiente_actualiza_en_su_lugar()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $supplier = Supplier::factory()->create();
+        $category = \App\Models\Category::factory()->create();
+
+        $component = \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            ->call('selectSupplier', $supplier->id)
+            ->call('activateCreateMode')
+            ->set('newProductName', 'Antena Nova')
+            ->set('newProductUnit', 'unidad')
+            ->set('newProductCategoryId', $category->id)
+            ->set('currentQuantity', 5)
+            ->set('currentUnitCost', 30)
+            ->call('addItem');
+
+        $this->assertCount(1, $component->get('items'));
+
+        // Editar reabre el panel de producto nuevo con los datos precargados
+        $component->call('editItem', 0)
+            ->assertSet('createMode', true)
+            ->assertSet('newProductName', 'Antena Nova')
+            ->assertSet('currentQuantity', 5)
+            ->set('currentQuantity', 8)
+            ->set('currentUnitCost', 32)
+            ->call('addItem');
+
+        $items = $component->get('items');
+        $this->assertCount(1, $items);
+        $this->assertEquals(8, (float) $items[0]['quantity']);
+        $this->assertEquals(32, (float) $items[0]['unit_cost']);
+        $this->assertEquals('Antena Nova', $items[0]['pending_name']);
+        $this->assertEquals('unidad', $items[0]['pending_unit']);
+        $this->assertEquals($category->id, (int) $items[0]['pending_category_id']);
+        $this->assertNull($component->get('editingIndex'));
+        $this->assertFalse($component->get('createMode'));
+    }
+
+    public function test_editar_item_del_medio_no_pisa_los_siguientes()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $supplier = Supplier::factory()->create();
+        $product = Product::factory()->create(['current_stock' => 0, 'average_cost' => 0]);
+
+        $component = \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            ->call('selectSupplier', $supplier->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 1)->set('currentUnitCost', 10)->call('addItem')
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 2)->set('currentUnitCost', 10)->call('addItem')
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 3)->set('currentUnitCost', 10)->call('addItem');
+
+        $this->assertCount(3, $component->get('items'));
+
+        // Editar el item del medio (índice 1) y actualizar su cantidad
+        $component->call('editItem', 1)
+            ->set('currentQuantity', 99)
+            ->call('addItem');
+
+        $items = $component->get('items');
+        $this->assertCount(3, $items);
+        $this->assertEquals(99, (float) $items[1]['quantity']);
+        $this->assertEquals(3, (float) $items[2]['quantity']); // el siguiente NO se pierde
+    }
+
+    public function test_editar_en_modo_multiple_conserva_el_proveedor_del_item()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $supplierA = Supplier::factory()->create(['name' => 'Proveedor A']);
+        $supplierB = Supplier::factory()->create(['name' => 'Proveedor B']);
+        $product = Product::factory()->create(['current_stock' => 0, 'average_cost' => 0]);
+
+        $component = \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            ->set('mode', 'multiple')
+            // Proveedor A: producto 10 unidades
+            ->call('selectSupplier', $supplierA->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 10)->set('currentUnitCost', 5)->call('addItem')
+            // Proveedor B: producto 20 unidades (el encabezado queda en B)
+            ->call('selectSupplier', $supplierB->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 20)->set('currentUnitCost', 7)->call('addItem');
+
+        // Editar el primer item (proveedor A) mientras el encabezado está en B
+        $component->call('editItem', 0)
+            ->set('currentQuantity', 12)
+            ->call('addItem');
+
+        $items = $component->get('items');
+        $this->assertCount(2, $items);
+        $this->assertEquals($supplierA->id, (int) $items[0]['supplier_id']);
+        $this->assertEquals($supplierB->id, (int) $items[1]['supplier_id']);
+        $this->assertEquals(12, (float) $items[0]['quantity']);
+    }
+
+    public function test_modo_multiple_no_agrega_sin_proveedor()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $product = Product::factory()->create(['current_stock' => 0, 'average_cost' => 0]);
+
+        $component = \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            ->set('mode', 'multiple')
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 10)
+            ->set('currentUnitCost', 5)
+            ->call('addItem')
+            ->assertDispatched('show-toast', type: 'error');
+
+        $this->assertCount(0, $component->get('items'));
+    }
 }

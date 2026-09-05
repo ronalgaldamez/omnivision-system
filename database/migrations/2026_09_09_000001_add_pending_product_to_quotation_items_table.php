@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
@@ -19,6 +20,10 @@ return new class extends Migration {
 
     public function down(): void
     {
+        // Los ítems con product_id NULL son productos propuestos por esta feature:
+        // se eliminan para poder restaurar la restricción NOT NULL original.
+        DB::table('quotation_items')->whereNull('product_id')->delete();
+
         Schema::table('quotation_items', function (Blueprint $table) {
             $table->dropForeign(['pending_category_id']);
             $table->dropColumn(['pending_name', 'pending_unit', 'pending_category_id']);

@@ -146,7 +146,9 @@
                                 </div>
                                 <div class="flex justify-end gap-2">
                                     <x-ui.button variant="secondary" size="sm" wire:click="cancelCreateMode">Cancelar</x-ui.button>
-                                    <x-ui.button variant="primary" size="sm" icon="add_circle" wire:click="addItem">Agregar a la cotización</x-ui.button>
+                                    <x-ui.button variant="primary" size="sm" :icon="$editingIndex !== null ? 'update' : 'add_circle'" wire:click="addItem">
+                                        {{ $editingIndex !== null ? 'Actualizar producto' : 'Agregar a la cotización' }}
+                                    </x-ui.button>
                                 </div>
                             </div>
                         @else
@@ -182,7 +184,10 @@
                                 <x-ui.input type="number" icon="123" wire:model="currentQuantity" label="Cantidad" min="1" step="1" />
                                 <x-ui.input type="number" icon="attach_money" wire:model="currentUnitCost" label="Costo unitario ($)" min="0" step="0.01" />
                             </div>
-                            <div class="flex justify-end">
+                            <div class="flex justify-end gap-2">
+                                @if($editingIndex !== null)
+                                    <x-ui.button variant="secondary" size="sm" wire:click="cancelEdit">Cancelar edición</x-ui.button>
+                                @endif
                                 <x-ui.button variant="primary" :icon="$editingIndex !== null ? 'update' : 'add_circle'" wire:click="addItem">
                                     {{ $editingIndex !== null ? 'Actualizar producto' : 'Agregar producto' }}
                                 </x-ui.button>
@@ -340,7 +345,7 @@
     {{-- Modal confirmación de guardado --}}
     @if($confirmingSave)
         <x-ui.confirm-modal variant="primary" icon="request_quote" title="Guardar cotización"
-            message="¿Estás seguro de generar esta cotización? Quedará pendiente de aprobación."
+            message="{{ $this->confirmSaveMessage }}"
             confirmLabel="Sí, guardar" cancelLabel="Cancelar"
             confirmAction="confirmSave" cancelAction="cancelSave" id="confirm-save-quotation" />
     @endif
