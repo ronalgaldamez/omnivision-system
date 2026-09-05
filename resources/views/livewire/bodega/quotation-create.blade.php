@@ -7,8 +7,34 @@
         <form wire:submit.prevent="save" class="space-y-6">
             <div class="border border-gray-200 rounded-xl overflow-hidden">
                 <div class="px-5 py-3.5 bg-gray-50/80 border-b border-gray-100 flex items-center gap-2.5">
+                    <span class="material-symbols-outlined text-gray-500">tune</span>
+                    <h2 class="text-sm font-semibold text-gray-800">Tipo de cotización</h2>
+                </div>
+                <div class="p-5">
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" wire:click="$set('mode', 'single')"
+                            class="px-4 py-2 text-sm font-medium rounded-lg transition {{ $mode === 'single' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                            Cotización normal
+                        </button>
+                        <button type="button" wire:click="$set('mode', 'multiple')"
+                            class="px-4 py-2 text-sm font-medium rounded-lg transition {{ $mode === 'multiple' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                            Cotización múltiple (varios proveedores)
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">
+                        @if($mode === 'single')
+                            Una cotización para un solo proveedor.
+                        @else
+                            Elegís el proveedor de cada producto y al guardar se crea una cotización separada por proveedor.
+                        @endif
+                    </p>
+                </div>
+            </div>
+
+            <div class="border border-gray-200 rounded-xl overflow-hidden">
+                <div class="px-5 py-3.5 bg-gray-50/80 border-b border-gray-100 flex items-center gap-2.5">
                     <span class="material-symbols-outlined text-gray-500">warehouse</span>
-                    <h2 class="text-sm font-semibold text-gray-800">Proveedor</h2>
+                    <h2 class="text-sm font-semibold text-gray-800">{{ $mode === 'multiple' ? 'Proveedor (del próximo producto)' : 'Proveedor' }}</h2>
                 </div>
                 <div class="p-5">
                     @if ($supplier_id && $supplier = \App\Models\Supplier::find($supplier_id))
@@ -62,9 +88,68 @@
                             <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{{ count($items) }} agregado(s)</span>
                         @endif
                     </div>
+                    @if(!$createMode)
+                        <x-ui.button variant="secondary" size="sm" icon="add" wire:click="activateCreateMode">Nuevo producto</x-ui.button>
+                    @endif
                 </div>
                 <div class="p-5 space-y-4">
                     <div class="bg-gray-50/80 rounded-xl border border-gray-200 p-4 space-y-3">
+                        @if($createMode)
+                            <div class="space-y-3 p-4 bg-green-50 rounded-lg border border-green-200 ring-1 ring-green-100">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-green-600 text-lg">add_circle</span>
+                                    <p class="text-sm font-semibold text-green-800">Nuevo producto (aún no existe en el catálogo)</p>
+                                </div>
+                                <div class="grid grid-cols-1 gap-3">
+                                    <input type="text" wire:model.live.debounce.500ms="newProductName"
+                                        class="w-full px-3 py-2 rounded-lg border bg-white text-sm focus:ring-2 transition {{ $errors->has('newProductName') ? 'border-red-300 bg-red-50 focus:ring-red-500/20 focus:border-red-400' : 'border-gray-300 focus:ring-green-500/20 focus:border-green-500' }}"
+                                        placeholder="Nombre del producto">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-600 mb-1">Unidad de medida</label>
+                                            <select wire:model="newProductUnit"
+                                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition">
+                                                @foreach ($units as $u)
+                                                    <option value="{{ $u->code }}">{{ $u->name }}{{ $u->symbol ? ' ('.$u->symbol.')' : '' }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-600 mb-1">Categoría</label>
+                                            @if($newProductCategoryId && $selCat = \App\Models\Category::find($newProductCategoryId))
+                                                <div class="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                                                    <span class="text-sm text-blue-800 flex-1">{{ $selCat->name }}</span>
+                                                    <button type="button" wire:click="clearNewProductCategory" class="p-1 text-blue-600 hover:text-red-600 rounded">
+                                                        <span class="material-symbols-outlined text-lg">close</span>
+                                                    </button>
+                                                </div>
+                                            @else
+                                                <div class="relative">
+                                                    <input type="text" wire:model.live.debounce.300ms="newProductCategorySearch" placeholder="Buscar categoría..."
+                                                        class="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition">
+                                                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
+                                                    @if(count($newProductCategoryResults) > 0)
+                                                        <ul class="absolute z-30 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-48 overflow-auto">
+                                                            @foreach($newProductCategoryResults as $cat)
+                                                                <li wire:click="selectNewProductCategory({{ $cat->id }})" class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm">{{ $cat->name }}</li>
+                                                            @endforeach
+                                                        </ul>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <x-ui.input type="number" icon="123" wire:model="currentQuantity" label="Cantidad" min="1" step="1" />
+                                    <x-ui.input type="number" icon="attach_money" wire:model="currentUnitCost" label="Costo unitario ($)" min="0" step="0.01" />
+                                </div>
+                                <div class="flex justify-end gap-2">
+                                    <x-ui.button variant="secondary" size="sm" wire:click="cancelCreateMode">Cancelar</x-ui.button>
+                                    <x-ui.button variant="primary" size="sm" icon="add_circle" wire:click="addItem">Agregar a la cotización</x-ui.button>
+                                </div>
+                            </div>
+                        @else
                         <x-forms.group name="productSearch" label="Buscar producto">
                             <div class="relative">
                                 <input type="text" wire:model.live.debounce.300ms="productSearch"
@@ -103,6 +188,7 @@
                                 </x-ui.button>
                             </div>
                         @endif
+                        @endif
                     </div>
 
                     @if (count($items) > 0)
@@ -111,6 +197,9 @@
                                 <thead>
                                     <tr class="bg-gray-50 border-b border-gray-200">
                                         <th class="px-4 py-3 text-left text-gray-600 font-semibold text-xs uppercase tracking-wider">Producto</th>
+                                        @if($mode === 'multiple')
+                                            <th class="px-4 py-3 text-left text-gray-600 font-semibold text-xs uppercase tracking-wider">Proveedor</th>
+                                        @endif
                                         <th class="px-4 py-3 text-center text-gray-600 font-semibold text-xs uppercase tracking-wider">Cantidad</th>
                                         <th class="px-4 py-3 text-center text-gray-600 font-semibold text-xs uppercase tracking-wider">Costo unit.</th>
                                         <th class="px-4 py-3 text-center text-gray-600 font-semibold text-xs uppercase tracking-wider">Total</th>
@@ -120,7 +209,15 @@
                                 <tbody class="divide-y divide-gray-100 bg-white">
                                     @foreach ($items as $index => $item)
                                         <tr>
-                                            <td class="px-4 py-3 text-gray-800">{{ $item['product_name'] }}</td>
+                                            <td class="px-4 py-3 text-gray-800">
+                                                {{ $item['product_name'] }}
+                                                @if(empty($item['product_id']))
+                                                    <span class="text-xs text-amber-600 font-medium">· nuevo</span>
+                                                @endif
+                                            </td>
+                                            @if($mode === 'multiple')
+                                                <td class="px-4 py-3 text-gray-600 text-xs">{{ \App\Models\Supplier::find($item['supplier_id'] ?? null)?->name ?? '—' }}</td>
+                                            @endif
                                             <td class="px-4 py-3 text-center text-gray-700">{{ rtrim(rtrim(number_format($item['quantity'], 4), '0'), '.') }}</td>
                                             <td class="px-4 py-3 text-center font-mono">${{ number_format($item['unit_cost'], 2) }}</td>
                                             <td class="px-4 py-3 text-center font-medium font-mono">${{ number_format($item['quantity'] * $item['unit_cost'], 2) }}</td>

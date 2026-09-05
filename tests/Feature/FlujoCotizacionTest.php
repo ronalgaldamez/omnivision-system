@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Branch;
+use App\Models\BranchInventory;
 use App\Models\Company;
 use App\Models\Product;
 use App\Models\Quotation;
@@ -154,5 +155,117 @@ class FlujoCotizacionTest extends TestCase
 
         $this->assertEquals('pending', $quotation->fresh()->status);
         $this->assertNull($quotation->fresh()->purchase_id);
+    }
+
+    public function test_producto_propuesto_se_materializa_al_recibir()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+        $gerente = $this->makeRoleUser('gerente_administrativo');
+        $subgerente = $this->makeRoleUser('subgerente_administrativo');
+
+        $supplier = Supplier::factory()->create();
+        $category = \App\Models\Category::factory()->create();
+
+        // Crear cotización con producto propuesto (nuevo)
+        \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            ->call('selectSupplier', $supplier->id)
+            ->call('activateCreateMode')
+            ->set('newProductName', 'Antena Nova')
+            ->set('newProductUnit', 'unidad')
+            ->set('newProductCategoryId', $category->id)
+            ->set('currentQuantity', 5)
+            ->set('currentUnitCost', 30)
+            ->call('addItem')
+            ->call('save')
+            ->assertSet('confirmingSave', true)
+            ->call('confirmSave')
+            ->assertRedirect(route('bodega.quotations.index'));
+
+        $quotation = Quotation::first();
+        $item = $quotation->items()->first();
+
+        // Antes de recibir, el producto NO existe y el item es propuesto
+        $this->assertTrue($item->isPending());
+        $this->assertDatabaseMissing('products', ['name' => 'Antena Nova']);
+
+        // Avanzar hasta recibir
+        $comp = \Livewire\Livewire::actingAs($gerente)
+            ->test(\App\Livewire\Bodega\QuotationIndex::class)
+            ->call('confirmApprove', $quotation->id)
+            ->call('executeConfirmedAction');
+
+        \Livewire\Livewire::actingAs($subgerente)
+            ->test(\App\Livewire\Bodega\QuotationIndex::class)
+            ->call('confirmPay', $quotation->id)
+            ->call('executeConfirmedAction');
+
+        \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationIndex::class)
+            ->call('confirmReceive', $quotation->id)
+            ->call('executeConfirmedAction');
+
+        // Al recibir, el producto propuesto se materializó con su stock
+        $this->assertDatabaseHas('products', ['name' => 'Antena Nova', 'unit_of_measure' => 'unidad']);
+
+        $product = \App\Models\Product::where('name', 'Antena Nova')->first();
+        $this->assertEquals(5, (float) $product->current_stock);
+
+        $bi = BranchInventory::where('branch_id', $branch->id)->where('product_id', $product->id)->first();
+        $this->assertEquals(5, (float) $bi->allocated_quantity);
+    }
+
+    public function test_cotizacion_multiple_agrupa_por_proveedor()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $supplierA = Supplier::factory()->create(['name' => 'Proveedor A']);
+        $supplierB = Supplier::factory()->create(['name' => 'Proveedor B']);
+        $product = Product::factory()->create(['current_stock' => 0, 'average_cost' => 0]);
+
+        \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            ->set('mode', 'multiple')
+            // Proveedor A: producto 10 unidades
+            ->call('selectSupplier', $supplierA->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 10)
+            ->set('currentUnitCost', 5)
+            ->call('addItem')
+            // Proveedor B: producto 20 unidades
+            ->call('selectSupplier', $supplierB->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 20)
+            ->set('currentUnitCost', 7)
+            ->call('addItem')
+            ->call('save')
+            ->assertSet('confirmingSave', true)
+            ->call('confirmSave')
+            ->assertRedirect(route('bodega.quotations.index'));
+
+        // Se crearon 2 cotizaciones separadas
+        $this->assertEquals(2, Quotation::count());
+
+        $quotationA = Quotation::where('supplier_id', $supplierA->id)->first();
+        $quotationB = Quotation::where('supplier_id', $supplierB->id)->first();
+
+        $this->assertNotNull($quotationA);
+        $this->assertNotNull($quotationB);
+
+        // Cada una con su total correcto
+        $this->assertEquals(1, $quotationA->items()->count());
+        $this->assertEquals(10, (float) $quotationA->items()->first()->quantity);
+        $this->assertEquals(1, $quotationB->items()->count());
+        $this->assertEquals(20, (float) $quotationB->items()->first()->quantity);
+
+        // Subtotales distintos por proveedor
+        $this->assertEquals(50, (float) $quotationA->subtotal);  // 10 * 5
+        $this->assertEquals(140, (float) $quotationB->subtotal); // 20 * 7
     }
 }

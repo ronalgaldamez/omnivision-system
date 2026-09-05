@@ -48,7 +48,11 @@
                         @if($q->items->isNotEmpty())
                         <div class="mt-2 flex flex-wrap gap-1.5">
                             @foreach($q->items as $item)
-                            <span class="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">{{ $item->product?->name ?? '?' }} ×{{ rtrim(rtrim(number_format($item->quantity, 4), '0'), '.') }}</span>
+                            <span class="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">
+                                {{ $item->product?->name ?? $item->pending_name ?? '?' }}
+                                @if($item->isPending())<span class="text-amber-600 font-medium"> · nuevo</span>@endif
+                                ×{{ rtrim(rtrim(number_format($item->quantity, 4), '0'), '.') }}
+                            </span>
                             @endforeach
                         </div>
                         @endif

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Bodega;
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\Quotation;
 use App\Models\Supplier;
@@ -30,19 +31,33 @@ class QuotationCreate extends Component
     public $currentUnitCost = 0;
     public $editingIndex = null;
 
+    // Producto nuevo propuesto (no existe en el catálogo aún)
+    public $createMode = false;
+    public $newProductName = '';
+    public $newProductUnit = 'unidad';
+    public $newProductCategoryId = '';
+    public $newProductCategorySearch = '';
+    public $newProductCategoryResults = [];
+
     public $confirmingRemoveIndex = null;
 
     public $confirmingSave = false;
 
     public $notes = '';
 
-    protected $rules = [
-        'supplier_id' => 'required|exists:suppliers,id',
-        'items' => 'required|array|min:1',
-        'items.*.product_id' => 'required|exists:products,id',
-        'items.*.quantity' => 'required|numeric|min:1',
-        'items.*.unit_cost' => 'required|numeric|gt:0',
-    ];
+    public $mode = 'single'; // single | multiple
+
+    protected function rules()
+    {
+        return [
+            'supplier_id' => $this->mode === 'single' ? 'required|exists:suppliers,id' : 'nullable|exists:suppliers,id',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'nullable|exists:products,id',
+            'items.*.pending_name' => 'nullable|string|max:255',
+            'items.*.quantity' => 'required|numeric|min:1',
+            'items.*.unit_cost' => 'required|numeric|gt:0',
+        ];
+    }
 
     protected $messages = [
         'supplier_id.required' => 'Seleccioná un proveedor.',
@@ -135,8 +150,91 @@ class QuotationCreate extends Component
         $this->productSearch = '';
     }
 
+    // ── Producto nuevo propuesto ──
+    public function activateCreateMode()
+    {
+        $this->createMode = true;
+        $this->selectedProductId = '';
+        $this->selectedProductName = '';
+        $this->selectedProductSku = '';
+        $this->productSearch = '';
+        $this->newProductName = '';
+        $this->newProductUnit = 'unidad';
+        $this->newProductCategoryId = '';
+        $this->newProductCategorySearch = '';
+        $this->newProductCategoryResults = [];
+    }
+
+    public function cancelCreateMode()
+    {
+        $this->createMode = false;
+        $this->newProductName = '';
+        $this->newProductCategoryId = '';
+        $this->newProductCategorySearch = '';
+        $this->newProductCategoryResults = [];
+    }
+
+    public function updatedNewProductCategorySearch()
+    {
+        if (strlen($this->newProductCategorySearch) >= 2) {
+            $this->newProductCategoryResults = Category::where('name', 'like', '%'.$this->newProductCategorySearch.'%')
+                ->orderBy('name')->limit(10)->get();
+        } else {
+            $this->newProductCategoryResults = [];
+        }
+    }
+
+    public function selectNewProductCategory($id)
+    {
+        $cat = Category::find($id);
+        if ($cat) {
+            $this->newProductCategoryId = $cat->id;
+            $this->newProductCategorySearch = $cat->name;
+            $this->newProductCategoryResults = [];
+        }
+    }
+
+    public function clearNewProductCategory()
+    {
+        $this->newProductCategoryId = '';
+        $this->newProductCategorySearch = '';
+    }
+
     public function addItem()
     {
+        // Modo producto nuevo propuesto
+        if ($this->createMode) {
+            if (trim($this->newProductName) === '') {
+                $this->dispatch('show-toast', type: 'error', message: 'Ingresá el nombre del producto.');
+                return;
+            }
+            if ($this->currentQuantity <= 0) {
+                $this->dispatch('show-toast', type: 'error', message: 'Ingresá una cantidad válida.');
+                return;
+            }
+            if ($this->currentUnitCost <= 0) {
+                $this->dispatch('show-toast', type: 'error', message: 'Ingresá un costo válido.');
+                return;
+            }
+
+            $item = [
+                'product_id' => null,
+                'product_name' => $this->newProductName,
+                'product_sku' => 'Nuevo',
+                'supplier_id' => $this->supplier_id,
+                'pending_name' => $this->newProductName,
+                'pending_unit' => $this->newProductUnit,
+                'pending_category_id' => $this->newProductCategoryId ?: null,
+                'quantity' => $this->currentQuantity,
+                'unit_cost' => $this->currentUnitCost,
+            ];
+
+            $this->items[] = $item;
+            $this->cancelCreateMode();
+            $this->resetProductFields();
+            return;
+        }
+
         if (!$this->selectedProductId) {
             $this->dispatch('show-toast', type: 'error', message: 'Seleccioná un producto.');
             return;
@@ -154,6 +252,10 @@ class QuotationCreate extends Component
             'product_id' => $this->selectedProductId,
             'product_name' => $this->selectedProductName,
             'product_sku' => $this->selectedProductSku,
+            'supplier_id' => $this->supplier_id,
+            'pending_name' => null,
+            'pending_unit' => null,
+            'pending_category_id' => null,
             'quantity' => $this->currentQuantity,
             'unit_cost' => $this->currentUnitCost,
         ];
@@ -240,6 +342,16 @@ class QuotationCreate extends Component
             return;
         }
 
+        // En modo múltiple, validar que cada item tenga proveedor
+        if ($this->mode === 'multiple') {
+            foreach ($this->items as $item) {
+                if (empty($item['supplier_id'])) {
+                    $this->dispatch('show-toast', type: 'error', message: 'Hay productos sin proveedor asignado. Elegí el proveedor antes de agregar cada producto.');
+                    return;
+                }
+            }
+        }
+
         $this->confirmingSave = true;
     }
 
@@ -252,29 +364,47 @@ class QuotationCreate extends Component
     {
         $this->confirmingSave = false;
 
-        $totals = $this->totals;
+        $branchId = auth()->user()->activeBranchId();
 
-        $quotation = Quotation::create([
-            'code' => Quotation::generateCode(),
-            'supplier_id' => $this->supplier_id,
-            'branch_id' => auth()->user()->activeBranchId(),
-            'created_by' => Auth::id(),
-            'status' => 'pending',
-            'subtotal' => $totals['subtotal'],
-            'iva_amount' => $totals['iva'],
-            'total' => $totals['total'],
-            'notes' => $this->notes,
-        ]);
+        // Agrupar items por proveedor
+        $grouped = collect($this->items)->groupBy('supplier_id');
 
-        foreach ($this->items as $item) {
-            $quotation->items()->create([
-                'product_id' => $item['product_id'],
-                'quantity' => $item['quantity'],
-                'unit_cost' => $item['unit_cost'],
+        $codes = [];
+        foreach ($grouped as $supplierId => $groupItems) {
+            $subtotal = $groupItems->sum(fn ($i) => $i['quantity'] * $i['unit_cost']);
+            $iva = round($subtotal * 0.13, 2);
+
+            $quotation = Quotation::create([
+                'code' => Quotation::generateCode(),
+                'supplier_id' => $supplierId,
+                'branch_id' => $branchId,
+                'created_by' => Auth::id(),
+                'status' => 'pending',
+                'subtotal' => round($subtotal, 2),
+                'iva_amount' => $iva,
+                'total' => round($subtotal + $iva, 2),
+                'notes' => $this->notes,
             ]);
+
+            foreach ($groupItems as $item) {
+                $quotation->items()->create([
+                    'product_id' => $item['product_id'] ?? null,
+                    'pending_name' => $item['pending_name'] ?? null,
+                    'pending_unit' => $item['pending_unit'] ?? null,
+                    'pending_category_id' => $item['pending_category_id'] ?? null,
+                    'quantity' => $item['quantity'],
+                    'unit_cost' => $item['unit_cost'],
+                ]);
+            }
+
+            $codes[] = $quotation->code;
         }
 
-        session()->flash('message', "Cotización {$quotation->code} creada. Queda pendiente de aprobación.");
+        $msg = count($codes) === 1
+            ? "Cotización {$codes[0]} creada. Queda pendiente de aprobación."
+            : count($codes).' cotizaciones creadas ('.implode(', ', $codes).'). Quedan pendientes de aprobación.';
+
+        session()->flash('message', $msg);
         return redirect()->route('bodega.quotations.index');
     }
 
@@ -288,6 +418,8 @@ class QuotationCreate extends Component
         $totals['iva'] = round($totals['subtotal'] * 0.13, 2);
         $totals['total'] = round($totals['subtotal'] + $totals['iva'], 2);
 
-        return view('livewire.bodega.quotation-create', compact('totals'))->layout('components.layouts.app');
+        $units = \App\Models\UnitOfMeasure::where('is_active', true)->orderBy('name')->get();
+
+        return view('livewire.bodega.quotation-create', compact('totals', 'units'))->layout('components.layouts.app');
     }
 }

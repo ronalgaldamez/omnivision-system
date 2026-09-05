@@ -190,19 +190,34 @@ class QuotationIndex extends Component
             $inventoryService = app(InventoryService::class);
 
             foreach ($quotation->items as $item) {
+                $cost = (float) $item->unit_cost;
+                $branch = $quotation->branch;
+
+                // Si es un producto propuesto (no existía), se materializa ahora que llegó físicamente
+                if ($item->isPending()) {
+                    $product = \App\Models\Product::create([
+                        'name' => $item->pending_name,
+                        'unit_of_measure' => $item->pending_unit ?? 'unidad',
+                        'category_id' => $item->pending_category_id,
+                        'sku' => 'PROD-'.str_pad(\App\Models\Product::max('id') + 1, 5, '0', STR_PAD_LEFT),
+                        'current_stock' => 0,
+                        'stock_min' => 0,
+                    ]);
+                    $item->update(['product_id' => $product->id]);
+                } else {
+                    $product = $item->product;
+                }
+
                 PurchaseItem::create([
                     'purchase_id' => $purchase->id,
-                    'product_id' => $item->product_id,
+                    'product_id' => $product->id,
                     'quantity' => (int) $item->quantity,
-                    'unit_cost' => (float) $item->unit_cost,
+                    'unit_cost' => $cost,
                     'base_quantity' => $item->quantity,
                 ]);
 
-                $product = $item->product;
-                $cost = (float) $item->unit_cost;
-
                 $movement = Movement::create([
-                    'product_id' => $item->product_id,
+                    'product_id' => $product->id,
                     'type' => 'entry',
                     'quantity' => (float) $item->quantity,
                     'unit_cost' => $cost,
@@ -213,12 +228,10 @@ class QuotationIndex extends Component
                     'reference_id' => $purchase->id,
                 ]);
 
-                $branch = $quotation->branch;
-
                 // Sumar al inventario de la sucursal (BranchInventory)
                 \App\Models\BranchInventory::firstOrCreate([
                     'branch_id' => $quotation->branch_id,
-                    'product_id' => $item->product_id,
+                    'product_id' => $product->id,
                 ])->increment('allocated_quantity', (float) $item->quantity);
 
                 if ($branch?->company_id) {

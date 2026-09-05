@@ -12,6 +12,7 @@ class QuotationItem extends Model
 
     protected $fillable = [
         'quotation_id', 'product_id', 'quantity', 'unit_cost',
+        'pending_name', 'pending_unit', 'pending_category_id',
     ];
 
     protected $casts = [
@@ -27,5 +28,18 @@ class QuotationItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function pendingCategory(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'pending_category_id');
+    }
+
+    /**
+     * Indica si el ítem es un producto propuesto (aún no existe en el catálogo).
+     */
+    public function isPending(): bool
+    {
+        return $this->product_id === null && ! empty($this->pending_name);
     }
 }
