@@ -186,6 +186,22 @@ All views use `->layout('components.layouts.app')`. Sidebar in `app.blade.php`.
 
 ## 🎨 UI: COMPONENTES, TOASTS Y MODALES DE CONFIRMACIÓN (OBLIGATORIO EN VISTAS NUEVAS)
 
+### ⚠️ REGLA OBLIGATORIA (CHECKLIST ANTES DE CREAR O MODIFICAR UNA VISTA)
+
+Antes de escribir UNA SOLA línea de una vista nueva, o de refactorizar una existente, el agente DEBE:
+
+1. **Abrir y analizar `/admin/ui-preview`** (fuente `resources/views/components/ui-preview.blade.php`) — es la referencia visual viva de TODOS los patrones aprobados del sistema (botones, inputs, selects, textareas, badges, alerts, toasts, modales de confirmación y modales de selección con búsqueda).
+2. **Aplicar TODOS los patrones ya trabajados** en este proyecto, sin excepción:
+   - Componentes `x-ui.*` y `x-forms.*` (nunca HTML crudo con clases sueltas si existe componente).
+   - Toasts (`show-toast` / `show-toasts`) tras cada acción de escritura; errores de campo inline con `x-forms.error`, errores globales por toast.
+   - Modal de confirmación (`x-ui.confirm-modal` + patrón `confirmingAction`) para toda acción destructiva o irreversible; nunca `confirm()`/`alert()` nativo.
+   - `x-ui.empty-state` para listas/tablas vacías.
+   - Variantes semánticas de botón (`success`, `danger`, `warning`, `secondary`, `ghost`, `primary`) sin parches `!bg-*`.
+   - No duplicar `<style>[x-cloak]</style>` (ya es global); no agregar contenedor de toast inline.
+3. **Copiar la vista "hermana"** más parecida del mismo módulo como esqueleto (no inventar desde cero).
+
+Prohibido entregar una vista nueva que no cumpla este checklist. Si el usuario reporta "esta vista no se parece a X", es porque este paso se omitió: corregirlo aplicando el checklist completo.
+
 Toda vista nueva DEBE reutilizar los componentes y patrones del sistema. Está prohibido inventar estilos o comportamientos genéricos. Referencia visual en vivo: ruta `admin.ui-preview` (`/admin/ui-preview`, requiere `access_admin`) y su fuente `resources/views/components/ui-preview.blade.php` (botones, inputs, badges, alerts, modales y toasts de ejemplo).
 
 ### Componentes reutilizables
@@ -252,6 +268,26 @@ Vista (al final del archivo, misma estructura que work-order-index):
 - `variant` controla el color del círculo de ícono y del botón de confirmar.
 - `confirmAction`/`cancelAction` son los métodos del componente Livewire.
 - Si la vista usa dos modales del mismo `variant`, pasar `id` distinto a cada uno.
+
+### Confirmación de guardado (formularios)
+
+Todo formulario que guarda/crea/actualiza un registro DEBE pedir confirmación antes de ejecutar el guardado, con el mismo patrón de modal. Flujo: `save()` valida → si pasa, setea `public $confirmingSave = true` (no guarda todavía) → el modal pide "¿Guardar?" → `confirmSave()` ejecuta el guardado real y dispara el toast. Referencia: `/purchases/create` (modal "Sí, registrar compra") y `/bodega/quotations/create`.
+
+Componente PHP:
+- Propiedad `public $confirmingSave = false;`.
+- `save()`: valida con try/catch (`show-toasts` + `addError`), y si pasa setea `$this->confirmingSave = true`.
+- `confirmSave()`: hace el `create`/`update` y `session()->flash()` o toast, luego `redirect()`.
+- `cancelSave()`: setea `$this->confirmingSave = false`.
+
+Vista (al final del archivo):
+```
+@if($confirmingSave)
+    <x-ui.confirm-modal variant="primary" icon="save" title="Guardar"
+        message="¿Estás seguro de guardar los datos?"
+        confirmLabel="Sí, guardar" cancelLabel="Cancelar"
+        confirmAction="confirmSave" cancelAction="cancelSave" id="confirm-save" />
+@endif
+```
 
 ### Empty states (estados vacíos)
 

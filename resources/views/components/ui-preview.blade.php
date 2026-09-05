@@ -389,6 +389,72 @@
         </div>
     </x-ui.card>
 
+    {{-- Modal de selección con búsqueda (Ver todos) --}}
+    <x-ui.card title="Modal de selección (búsqueda + lista)" icon="manage_search">
+        <p class="text-sm text-gray-600 mb-4">Patrón para buscar y elegir una entidad (proveedor, producto, cliente) con botón "Ver todos". Usado en <code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">/purchases/create</code> y <code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">/bodega/quotations/create</code>.</p>
+        <div x-data="{ open: false }">
+            <span @click="open = true">
+                <x-ui.button variant="secondary" icon="format_list_bulleted">Ver todos</x-ui.button>
+            </span>
+            <div x-show="open" x-cloak
+                x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
+                x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+                <div x-show="open" x-transition:enter="ease-out duration-200 delay-100"
+                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                    class="relative w-full max-w-2xl">
+                    <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-blue-600">business</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-semibold text-gray-900">Seleccionar proveedor</h3>
+                                    <p class="text-xs text-gray-500">Elegí un proveedor de la lista</p>
+                                </div>
+                            </div>
+                            <button type="button" @click="open = false" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                                <span class="material-symbols-outlined text-xl">close</span>
+                            </button>
+                        </div>
+                        <div class="p-4 border-b border-gray-100">
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                <input type="text" placeholder="Filtrar por nombre, NIT o NRC..."
+                                    class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                            </div>
+                        </div>
+                        <div class="p-2 max-h-96 overflow-y-auto">
+                            @foreach ([['Grupo Q Elektra S.A. de C.V.', 'NIT: 0614-120890-101-5 · ventas@grupoq.com', '2210-5000'], ['Materiales Eléctricos de Occidente', 'NIT: 0614-050295-101-3 · ventas@meo.com', '2440-3300'], ['Cablevisión y Comunicaciones S.A.', 'NIT: 0614-210188-101-7 · info@cablevision.com', '2235-1000']] as [$name, $detail, $phone])
+                                <button type="button" @click="open = false"
+                                    class="w-full text-left px-4 py-3 hover:bg-blue-50 rounded-xl transition flex items-center justify-between group border-b border-gray-50 last:border-0">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition">
+                                            <span class="material-symbols-outlined text-gray-500 text-lg group-hover:text-blue-600">business</span>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-medium text-gray-800 group-hover:text-blue-700 truncate">{{ $name }}</p>
+                                            <p class="text-xs text-gray-500 mt-0.5">{{ $detail }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                                        <span class="text-xs text-gray-400 hidden sm:inline">{{ $phone }}</span>
+                                        <span class="material-symbols-outlined text-gray-300 group-hover:text-blue-500 text-lg">chevron_right</span>
+                                    </div>
+                                </button>
+                            @endforeach
+                        </div>
+                        <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+                            <x-ui.button variant="secondary" @click="open = false">Cerrar</x-ui.button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </x-ui.card>
+
     {{-- Toast Preview --}}
     <x-ui.card title="Toast / Notificaciones" icon="notifications">
         <div class="space-y-4">
