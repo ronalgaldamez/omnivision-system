@@ -26,12 +26,13 @@
                             </div>
                         </div>
                     @else
-                        <x-forms.group name="supplier_id" label="Proveedor" required>
+                        <div>
+                            <x-forms.label icon="warehouse" required>Proveedor</x-forms.label>
                             <div class="flex gap-2">
                                 <div class="relative flex-1">
                                     <input type="text" wire:model.live.debounce.300ms="supplierSearch"
                                         placeholder="Buscar proveedor por nombre o NIT..."
-                                        class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
+                                        class="w-full pl-10 pr-3 py-2.5 rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500/20 transition text-sm {{ $errors->has('supplier_id') ? 'border-red-300 bg-red-50 focus:border-red-400 focus:bg-white' : 'border-gray-300 bg-white focus:border-blue-500' }}">
                                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                                     @if (count($supplierResults) > 0)
                                         <ul class="absolute z-30 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-60 overflow-auto divide-y divide-gray-100">
@@ -47,10 +48,7 @@
                                 </div>
                                 <x-ui.button variant="secondary" icon="format_list_bulleted" wire:click="openSupplierModal">Ver todos</x-ui.button>
                             </div>
-                            @error('supplier_id')
-                                <x-forms.error>{{ $message }}</x-forms.error>
-                            @enderror
-                        </x-forms.group>
+                        </div>
                     @endif
                 </div>
             </div>
@@ -129,7 +127,7 @@
                                             <td class="px-4 py-3 text-center">
                                                 <div class="flex items-center justify-center gap-1">
                                                     <x-ui.button variant="ghost" size="sm" icon="edit" wire:click="editItem({{ $index }})">Editar</x-ui.button>
-                                                    <x-ui.button variant="ghost" size="sm" icon="delete" wire:click="removeItem({{ $index }})">Eliminar</x-ui.button>
+                                                    <x-ui.button variant="ghost" size="sm" icon="delete" wire:click="askRemoveItem({{ $index }})">Eliminar</x-ui.button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -167,7 +165,9 @@
     <div x-data="{ show: @entangle('showSupplierModal') }" x-show="show" x-cloak
         x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150"
-        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4"
+        style="display: none;">
         <div x-show="show" x-transition:enter="ease-out duration-200 delay-100"
             x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
             class="relative w-full max-w-2xl">
@@ -175,33 +175,54 @@
                 <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                            <span class="material-symbols-outlined text-blue-600">business</span>
+                            <span class="material-symbols-outlined text-blue-600">warehouse</span>
                         </div>
                         <div>
                             <h3 class="text-base font-semibold text-gray-900">Seleccionar proveedor</h3>
                             <p class="text-xs text-gray-500">Elegí un proveedor de la lista</p>
                         </div>
                     </div>
-                    <button type="button" wire:click="closeSupplierModal" class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                    <button type="button" wire:click="closeSupplierModal" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
                         <span class="material-symbols-outlined text-xl">close</span>
                     </button>
                 </div>
                 <div class="p-4 border-b border-gray-100">
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
-                        <input type="text" wire:model.live.debounce.300ms="supplierListSearch" placeholder="Filtrar proveedores..."
-                            class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm text-sm">
+                        <input type="text" wire:model.live.debounce.300ms="supplierListSearch"
+                            placeholder="Filtrar por nombre, NIT o NRC..."
+                            class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm">
                     </div>
                 </div>
-                <div class="p-2 max-h-80 overflow-y-auto">
+                <div class="p-2 max-h-96 overflow-y-auto">
                     @forelse($supplierList as $supplier)
                         <button type="button" wire:click="selectSupplier({{ $supplier->id }})"
-                            class="w-full text-left px-4 py-3 hover:bg-blue-50 rounded-xl text-sm flex items-center justify-between">
-                            <span class="text-gray-800">{{ $supplier->name }}</span>
-                            <span class="text-xs text-gray-500">NIT: {{ $supplier->nit ?? 'N/A' }}</span>
+                            class="w-full text-left px-4 py-3 hover:bg-blue-50 rounded-xl transition flex items-center justify-between group border-b border-gray-50 last:border-0">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition">
+                                    <span class="material-symbols-outlined text-gray-500 text-lg group-hover:text-blue-600">business</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-gray-800 group-hover:text-blue-700 truncate">{{ $supplier->name }}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">
+                                        @if($supplier->nit)NIT: {{ $supplier->nit }}@endif
+                                        @if($supplier->email) · {{ $supplier->email }}@endif
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                                @if($supplier->phones && count($supplier->phones) > 0)
+                                    <span class="text-xs text-gray-400 hidden sm:inline">{{ $supplier->phones[0] }}</span>
+                                @endif
+                                <span class="material-symbols-outlined text-gray-300 group-hover:text-blue-500 text-lg">chevron_right</span>
+                            </div>
                         </button>
                     @empty
-                        <div class="py-8 text-center text-gray-500">Sin resultados</div>
+                        <div class="py-12 text-center">
+                            <span class="material-symbols-outlined text-gray-300 text-4xl mb-2">search_off</span>
+                            <p class="text-gray-500 text-sm">No se encontraron proveedores</p>
+                            <p class="text-xs text-gray-400 mt-1">Probá con otro término de búsqueda</p>
+                        </div>
                     @endforelse
                 </div>
                 <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
@@ -210,4 +231,20 @@
             </div>
         </div>
     </div>
+
+    {{-- Modal confirmación eliminar producto --}}
+    @if($confirmingRemoveIndex !== null)
+        <x-ui.confirm-modal variant="danger" icon="delete" title="Eliminar producto de la cotización"
+            message="¿Eliminar este producto de la lista? Podrás volver a agregarlo después."
+            confirmLabel="Sí, eliminar" cancelLabel="Cancelar"
+            confirmAction="removeItem" cancelAction="cancelRemoveItem" id="confirm-remove-item" />
+    @endif
+
+    {{-- Modal confirmación de guardado --}}
+    @if($confirmingSave)
+        <x-ui.confirm-modal variant="primary" icon="request_quote" title="Guardar cotización"
+            message="¿Estás seguro de generar esta cotización? Quedará pendiente de aprobación."
+            confirmLabel="Sí, guardar" cancelLabel="Cancelar"
+            confirmAction="confirmSave" cancelAction="cancelSave" id="confirm-save-quotation" />
+    @endif
 </div>

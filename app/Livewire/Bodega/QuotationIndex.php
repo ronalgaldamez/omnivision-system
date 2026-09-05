@@ -22,18 +22,93 @@ class QuotationIndex extends Component
     public $rejectingId = null;
     public $showRejectModal = false;
 
-    public function approve($id)
+    // Patrón canónico de confirmación (AGENTS)
+    public $confirmingAction = null;
+    public $confirmingId = null;
+
+    private function confirmableAction(string $action, $id): bool
     {
         $quotation = Quotation::findOrFail($id);
 
-        if ($quotation->status !== 'pending') {
-            $this->dispatch('show-toast', type: 'error', message: 'Solo se pueden aprobar cotizaciones pendientes.');
+        $checks = [
+            'approve' => ['status' => 'pending', 'perm' => 'approve quotations', 'msg' => 'Solo se pueden aprobar cotizaciones pendientes.'],
+            'pay' => ['status' => 'approved', 'perm' => 'pay quotations', 'msg' => 'Solo se pueden pagar cotizaciones aprobadas.'],
+            'receive' => ['status' => 'paid', 'perm' => null, 'msg' => 'Solo se pueden recibir cotizaciones pagadas.'],
+        ];
+
+        $check = $checks[$action] ?? null;
+        if (! $check) {
+            $this->dispatch('show-toast', type: 'error', message: 'Acción no válida.');
+            return false;
+        }
+
+        if ($quotation->status !== $check['status']) {
+            $this->dispatch('show-toast', type: 'error', message: $check['msg']);
+            return false;
+        }
+
+        if ($check['perm'] && auth()->user()->cannot($check['perm'])) {
+            $this->dispatch('show-toast', type: 'error', message: 'No tenés permiso para esta acción.');
+            return false;
+        }
+
+        if ($action === 'receive' && $quotation->purchase_id) {
+            $this->dispatch('show-toast', type: 'error', message: 'Esta cotización ya fue recibida.');
+            return false;
+        }
+
+        return true;
+    }
+
+    public function confirmApprove($id)
+    {
+        if (! $this->confirmableAction('approve', $id)) {
             return;
         }
-        if (auth()->user()->cannot('approve quotations')) {
-            $this->dispatch('show-toast', type: 'error', message: 'No tenés permiso para aprobar cotizaciones.');
+        $this->confirmingAction = 'approve';
+        $this->confirmingId = $id;
+    }
+
+    public function confirmPay($id)
+    {
+        if (! $this->confirmableAction('pay', $id)) {
             return;
         }
+        $this->confirmingAction = 'pay';
+        $this->confirmingId = $id;
+    }
+
+    public function confirmReceive($id)
+    {
+        if (! $this->confirmableAction('receive', $id)) {
+            return;
+        }
+        $this->confirmingAction = 'receive';
+        $this->confirmingId = $id;
+    }
+
+    public function executeConfirmedAction()
+    {
+        if ($this->confirmingAction === 'approve') {
+            $this->approve($this->confirmingId);
+        } elseif ($this->confirmingAction === 'pay') {
+            $this->markPaid($this->confirmingId);
+        } elseif ($this->confirmingAction === 'receive') {
+            $this->receive($this->confirmingId);
+        }
+
+        $this->cancelConfirmation();
+    }
+
+    public function cancelConfirmation()
+    {
+        $this->confirmingAction = null;
+        $this->confirmingId = null;
+    }
+
+    public function approve($id)
+    {
+        $quotation = Quotation::findOrFail($id);
 
         $quotation->update([
             'status' => 'approved',
@@ -81,15 +156,6 @@ class QuotationIndex extends Component
     {
         $quotation = Quotation::findOrFail($id);
 
-        if ($quotation->status !== 'approved') {
-            $this->dispatch('show-toast', type: 'error', message: 'Solo se pueden pagar cotizaciones aprobadas.');
-            return;
-        }
-        if (auth()->user()->cannot('pay quotations')) {
-            $this->dispatch('show-toast', type: 'error', message: 'No tenés permiso para pagar cotizaciones.');
-            return;
-        }
-
         $quotation->update([
             'status' => 'paid',
             'paid_by' => Auth::id(),
@@ -104,16 +170,6 @@ class QuotationIndex extends Component
     public function receive($id)
     {
         $quotation = Quotation::with('items', 'supplier', 'branch')->findOrFail($id);
-
-        if ($quotation->status !== 'paid') {
-            $this->dispatch('show-toast', type: 'error', message: 'Solo se pueden recibir cotizaciones pagadas.');
-            return;
-        }
-
-        if ($quotation->purchase_id) {
-            $this->dispatch('show-toast', type: 'error', message: 'Esta cotización ya fue recibida.');
-            return;
-        }
 
         DB::beginTransaction();
         try {

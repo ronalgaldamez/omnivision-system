@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Quotation;
 use App\Models\Supplier;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 class QuotationCreate extends Component
@@ -28,6 +29,10 @@ class QuotationCreate extends Component
     public $currentQuantity = 1;
     public $currentUnitCost = 0;
     public $editingIndex = null;
+
+    public $confirmingRemoveIndex = null;
+
+    public $confirmingSave = false;
 
     public $notes = '';
 
@@ -176,10 +181,26 @@ class QuotationCreate extends Component
         $this->items = array_values($this->items);
     }
 
-    public function removeItem($index)
+    public function askRemoveItem($index)
     {
+        $this->confirmingRemoveIndex = $index;
+    }
+
+    public function cancelRemoveItem()
+    {
+        $this->confirmingRemoveIndex = null;
+    }
+
+    public function removeItem()
+    {
+        $index = $this->confirmingRemoveIndex;
+        if ($index === null || ! array_key_exists($index, $this->items)) {
+            return;
+        }
         unset($this->items[$index]);
         $this->items = array_values($this->items);
+        $this->confirmingRemoveIndex = null;
+        $this->dispatch('show-toast', type: 'success', message: 'Producto eliminado de la cotización.');
     }
 
     private function resetProductFields()
@@ -205,7 +226,31 @@ class QuotationCreate extends Component
 
     public function save()
     {
-        $this->validate();
+        try {
+            $this->validate();
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+
+            $this->dispatch('show-toasts', errors: $errors->all());
+
+            foreach ($errors->keys() as $key) {
+                $this->addError($key, $errors->first($key));
+            }
+
+            return;
+        }
+
+        $this->confirmingSave = true;
+    }
+
+    public function cancelSave()
+    {
+        $this->confirmingSave = false;
+    }
+
+    public function confirmSave()
+    {
+        $this->confirmingSave = false;
 
         $totals = $this->totals;
 
@@ -229,7 +274,7 @@ class QuotationCreate extends Component
             ]);
         }
 
-        $this->dispatch('show-toast', type: 'success', message: "Cotización {$quotation->code} creada. Queda pendiente de aprobación.");
+        session()->flash('message', "Cotización {$quotation->code} creada. Queda pendiente de aprobación.");
         return redirect()->route('bodega.quotations.index');
     }
 

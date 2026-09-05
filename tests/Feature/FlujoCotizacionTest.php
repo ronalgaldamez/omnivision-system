@@ -58,6 +58,8 @@ class FlujoCotizacionTest extends TestCase
             ->set('currentUnitCost', 19.99)
             ->call('addItem')
             ->call('save')
+            ->assertSet('confirmingSave', true)
+            ->call('confirmSave')
             ->assertRedirect(route('bodega.quotations.index'));
 
         return Quotation::first();
@@ -76,30 +78,33 @@ class FlujoCotizacionTest extends TestCase
         $quotation = $this->createQuotationViaForm($warehouse, $branch);
         $this->assertEquals('pending', $quotation->status);
 
-        // 2. Gerente aprueba
+        // 2. Gerente aprueba (con confirmación)
         \Livewire\Livewire::actingAs($gerente)
             ->test(\App\Livewire\Bodega\QuotationIndex::class)
-            ->call('approve', $quotation->id)
+            ->call('confirmApprove', $quotation->id)
+            ->call('executeConfirmedAction')
             ->assertDispatched('show-toast', type: 'success');
 
         $quotation->refresh();
         $this->assertEquals('approved', $quotation->status);
         $this->assertNotNull($quotation->approved_at);
 
-        // 3. Subgerente paga
+        // 3. Subgerente paga (con confirmación)
         \Livewire\Livewire::actingAs($subgerente)
             ->test(\App\Livewire\Bodega\QuotationIndex::class)
-            ->call('markPaid', $quotation->id)
+            ->call('confirmPay', $quotation->id)
+            ->call('executeConfirmedAction')
             ->assertDispatched('show-toast', type: 'success');
 
         $quotation->refresh();
         $this->assertEquals('paid', $quotation->status);
         $this->assertNotNull($quotation->paid_at);
 
-        // 4. Bodeguero recibe → genera compra y entra stock
+        // 4. Bodeguero recibe (con confirmación) → genera compra y entra stock
         \Livewire\Livewire::actingAs($warehouse)
             ->test(\App\Livewire\Bodega\QuotationIndex::class)
-            ->call('receive', $quotation->id);
+            ->call('confirmReceive', $quotation->id)
+            ->call('executeConfirmedAction');
 
         $quotation->refresh();
         $this->assertEquals('received', $quotation->status);
@@ -124,10 +129,10 @@ class FlujoCotizacionTest extends TestCase
 
         $quotation = $this->createQuotationViaForm($warehouse, $branch);
 
-        // Un warehouse no puede aprobar (solo gerente)
+        // Un warehouse no puede aprobar (solo gerente): la confirmación valida el permiso
         \Livewire\Livewire::actingAs($warehouse)
             ->test(\App\Livewire\Bodega\QuotationIndex::class)
-            ->call('approve', $quotation->id)
+            ->call('confirmApprove', $quotation->id)
             ->assertDispatched('show-toast', type: 'error');
 
         $this->assertEquals('pending', $quotation->fresh()->status);
@@ -144,7 +149,7 @@ class FlujoCotizacionTest extends TestCase
 
         \Livewire\Livewire::actingAs($warehouse)
             ->test(\App\Livewire\Bodega\QuotationIndex::class)
-            ->call('receive', $quotation->id)
+            ->call('confirmReceive', $quotation->id)
             ->assertDispatched('show-toast', type: 'error');
 
         $this->assertEquals('pending', $quotation->fresh()->status);
