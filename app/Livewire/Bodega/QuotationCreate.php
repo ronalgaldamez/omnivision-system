@@ -47,6 +47,12 @@ class QuotationCreate extends Component
 
     public $mode = 'single'; // single | multiple
 
+    // Id del borrador que se está editando (null = creación nueva).
+    public $draftId = null;
+
+    // Código del borrador en edición (para mostrarlo en la vista).
+    public $draftCode = null;
+
     protected function rules()
     {
         return [
@@ -65,6 +71,13 @@ class QuotationCreate extends Component
         'items.min' => 'Agregá al menos un producto.',
     ];
 
+    public function mount($id = null)
+    {
+        if ($id !== null) {
+            $this->loadDraft((int) $id);
+        }
+    }
+
     // ── Proveedor ──
     public function updatedSupplierSearch()
     {
@@ -80,11 +93,59 @@ class QuotationCreate extends Component
     public function selectSupplier($id)
     {
         $supplier = Supplier::find($id);
-        if ($supplier) {
-            $this->supplier_id = $supplier->id;
-            $this->supplierSearch = $supplier->name.' (NIT: '.($supplier->nit ?? 'N/A').')';
-            $this->supplierResults = [];
-            $this->showSupplierModal = false;
+        if (! $supplier) {
+            return;
+        }
+
+        $this->supplier_id = $supplier->id;
+        $this->supplierSearch = $supplier->name.' (NIT: '.($supplier->nit ?? 'N/A').')';
+        $this->supplierResults = [];
+        $this->showSupplierModal = false;
+
+        // En modo individual el proveedor del encabezado es el de TODA la cotización:
+        // al cambiarlo con productos ya cargados, se re-asignan todos los items al nuevo
+        // proveedor (evita pedirle a un proveedor productos que se cargaron para otro).
+        // En modo múltiple cada item conserva su proveedor y no se toca nada.
+        if ($this->mode === 'single' && $this->items !== []) {
+            foreach ($this->items as &$item) {
+                $item['supplier_id'] = $supplier->id;
+            }
+            unset($item);
+        }
+    }
+
+    public function switchMode(string $mode)
+    {
+        if ($this->draftId) {
+            $this->dispatch('show-toast', type: 'error', message: 'Un borrador se edita como cotización individual.');
+            return;
+        }
+
+        if ($mode === $this->mode) {
+            return;
+        }
+
+        // Hacia múltiple: siempre se permite; cada item conserva su proveedor.
+        if ($mode === 'multiple') {
+            $this->mode = 'multiple';
+            return;
+        }
+
+        // Hacia individual: TODOS los items deben pertenecer a un solo proveedor.
+        $suppliers = $this->buildUsedSuppliers();
+
+        if (count($suppliers) > 1) {
+            $names = collect($suppliers)->map(fn ($s) => "{$s['name']} ({$s['count']})")->implode(', ');
+            $this->dispatch('show-toast', type: 'error', message: "No podés usar una cotización individual con productos de varios proveedores. La lista tiene productos de: {$names}. Eliminá los de otros proveedores o seguí en modo múltiple.");
+            return;
+        }
+
+        $this->mode = 'single';
+
+        // Consistencia: si los items ya tienen un único proveedor, el encabezado pasa
+        // a ser ese proveedor (no se le pide a otro proveedor productos que no vende).
+        if (! empty($suppliers[0]['id']) && (int) $this->supplier_id !== (int) $suppliers[0]['id']) {
+            $this->selectSupplier($suppliers[0]['id']);
         }
     }
 
@@ -286,6 +347,7 @@ class QuotationCreate extends Component
         ];
 
         $this->putItem($item);
+        $this->resetProductFields();
     }
 
     public function editItem($index)
@@ -396,6 +458,13 @@ class QuotationCreate extends Component
     {
         $count = count($this->items);
 
+        if ($this->draftId) {
+            $supplier = $this->supplier_id ? Supplier::find($this->supplier_id) : null;
+            $target = $supplier?->name ?? 'este proveedor';
+
+            return "¿Enviar este borrador a aprobación? La cotización quedará pendiente con {$count} producto(s) para {$target}.";
+        }
+
         if ($this->mode === 'multiple') {
             $providers = collect($this->items)->pluck('supplier_id')->filter()->unique()->count();
 
@@ -445,6 +514,34 @@ class QuotationCreate extends Component
     public function confirmSave()
     {
         $this->confirmingSave = false;
+
+        // Envío de un borrador: se completa la misma cotización y pasa a pendiente.
+        if ($this->draftId) {
+            $quotation = Quotation::find($this->draftId);
+
+            if (! $quotation || $quotation->status !== 'draft' || (int) $quotation->created_by !== (int) Auth::id()) {
+                $this->dispatch('show-toast', type: 'error', message: 'Este borrador ya no está disponible.');
+                return;
+            }
+
+            $subtotal = round(array_sum(array_map(fn ($i) => $i['quantity'] * $i['unit_cost'], $this->items)), 2);
+            $iva = round($subtotal * 0.13, 2);
+
+            $quotation->update([
+                'supplier_id' => (int) $this->supplier_id,
+                'status' => 'pending',
+                'subtotal' => $subtotal,
+                'iva_amount' => $iva,
+                'total' => round($subtotal + $iva, 2),
+                'notes' => $this->notes,
+            ]);
+            $quotation->items()->delete();
+            $this->persistItems($quotation, $this->items);
+
+            session()->flash('message', "Cotización {$quotation->code} enviada. Queda pendiente de aprobación.");
+
+            return redirect()->route('bodega.quotations.index');
+        }
 
         $codes = [];
 
@@ -501,6 +598,126 @@ class QuotationCreate extends Component
         return $quotation;
     }
 
+    /**
+     * Carga un borrador existente (solo su creador, mientras siga en borrador).
+     */
+    private function loadDraft(int $id): void
+    {
+        $quotation = Quotation::with(['supplier', 'items.product'])->findOrFail($id);
+
+        abort_unless(
+            $quotation->status === 'draft' && (int) $quotation->created_by === (int) auth()->id(),
+            403
+        );
+
+        $this->draftId = $quotation->id;
+        $this->draftCode = $quotation->code;
+        $this->mode = 'single'; // un borrador siempre se trabaja como cotización individual
+        $this->notes = $quotation->notes ?? '';
+
+        if ($quotation->supplier) {
+            $this->supplier_id = $quotation->supplier_id;
+            $this->supplierSearch = $quotation->supplier->name.' (NIT: '.($quotation->supplier->nit ?? 'N/A').')';
+        }
+
+        $this->items = $quotation->items->map(function ($qitem) {
+            if ($qitem->isPending()) {
+                return [
+                    'product_id' => null,
+                    'product_name' => $qitem->pending_name,
+                    'product_sku' => 'Nuevo',
+                    'supplier_id' => $this->supplier_id ?: '',
+                    'pending_name' => $qitem->pending_name,
+                    'pending_unit' => $qitem->pending_unit ?? 'unidad',
+                    'pending_category_id' => $qitem->pending_category_id,
+                    'quantity' => (float) $qitem->quantity,
+                    'unit_cost' => (float) $qitem->unit_cost,
+                ];
+            }
+
+            $product = $qitem->product;
+
+            return [
+                'product_id' => $qitem->product_id,
+                'product_name' => $product?->name ?? 'Producto eliminado',
+                'product_sku' => $product?->sku ?? '-',
+                'supplier_id' => $this->supplier_id ?: '',
+                'pending_name' => null,
+                'pending_unit' => null,
+                'pending_category_id' => null,
+                'quantity' => (float) $qitem->quantity,
+                'unit_cost' => (float) $qitem->unit_cost,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * Guarda la sesión actual como borrador (crea o actualiza la fila en draft).
+     */
+    public function saveDraft()
+    {
+        // Los borradores se guardan por proveedor: para varios proveedores se envía la cotización múltiple.
+        if ($this->mode === 'multiple' && count($this->buildUsedSuppliers()) > 1) {
+            $this->dispatch('show-toast', type: 'error', message: 'Para guardar como borrador usá productos de un solo proveedor, o enviá la cotización múltiple.');
+            return;
+        }
+
+        $supplierId = $this->supplier_id ? (int) $this->supplier_id : null;
+        $subtotal = round(array_sum(array_map(fn ($i) => $i['quantity'] * $i['unit_cost'], $this->items)), 2);
+        $iva = round($subtotal * 0.13, 2);
+
+        $data = [
+            'supplier_id' => $supplierId,
+            'subtotal' => $subtotal,
+            'iva_amount' => $iva,
+            'total' => round($subtotal + $iva, 2),
+            'notes' => $this->notes,
+        ];
+
+        if ($this->draftId) {
+            $quotation = Quotation::find($this->draftId);
+            if (! $quotation || $quotation->status !== 'draft' || (int) $quotation->created_by !== (int) Auth::id()) {
+                $this->dispatch('show-toast', type: 'error', message: 'Este borrador ya no está disponible.');
+                return;
+            }
+
+            $quotation->update($data);
+            $quotation->items()->delete();
+            $this->persistItems($quotation, $this->items);
+
+            $this->dispatch('show-toast', type: 'success', message: 'Borrador actualizado.');
+            return;
+        }
+
+        $quotation = Quotation::create($data + [
+            'code' => Quotation::generateCode(),
+            'branch_id' => auth()->user()->activeBranchId(),
+            'created_by' => Auth::id(),
+            'status' => 'draft',
+        ]);
+        $this->persistItems($quotation, $this->items);
+
+        $this->draftId = $quotation->id;
+        $this->dispatch('show-toast', type: 'success', message: "Borrador {$quotation->code} guardado. Lo encontrás en 'Mis borradores'.");
+    }
+
+    /**
+     * Persiste los items de la sesión en una cotización (catálogo y productos propuestos).
+     */
+    private function persistItems(Quotation $quotation, array $items): void
+    {
+        foreach ($items as $item) {
+            $quotation->items()->create([
+                'product_id' => $item['product_id'] ?? null,
+                'pending_name' => $item['pending_name'] ?? null,
+                'pending_unit' => $item['pending_unit'] ?? null,
+                'pending_category_id' => $item['pending_category_id'] ?? null,
+                'quantity' => $item['quantity'],
+                'unit_cost' => $item['unit_cost'],
+            ]);
+        }
+    }
+
     public function render()
     {
         $totals = [
@@ -513,6 +730,87 @@ class QuotationCreate extends Component
 
         $units = \App\Models\UnitOfMeasure::where('is_active', true)->orderBy('name')->get();
 
-        return view('livewire.bodega.quotation-create', compact('totals', 'units'))->layout('components.layouts.app');
+        $usedSuppliers = $this->buildUsedSuppliers();
+        $itemsBySupplier = $this->buildItemsBySupplier();
+
+        return view('livewire.bodega.quotation-create', compact('totals', 'units', 'usedSuppliers', 'itemsBySupplier'))->layout('components.layouts.app');
+    }
+
+    /**
+     * Proveedores presentes en la lista (orden de aparición) con su cantidad de items.
+     * Se usan para los chips de acceso rápido en modo múltiple.
+     */
+    private function buildUsedSuppliers(): array
+    {
+        $counts = [];
+        foreach ($this->items as $item) {
+            $sid = $item['supplier_id'] ?? null;
+            if ($sid === null || $sid === '') {
+                continue;
+            }
+            $key = (int) $sid;
+            $counts[$key] = ($counts[$key] ?? 0) + 1;
+        }
+
+        if ($counts === []) {
+            return [];
+        }
+
+        $suppliers = Supplier::whereIn('id', array_keys($counts))->get()->keyBy('id');
+
+        $out = [];
+        foreach ($counts as $sid => $count) {
+            $s = $suppliers->get($sid);
+            $out[] = [
+                'id' => $sid,
+                'name' => $s?->name ?? 'Proveedor #'.$sid,
+                'count' => $count,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Items agrupados por proveedor (orden de aparición), conservando el índice
+     * plano original para editar/eliminar. Cada grupo = una cotización en modo múltiple.
+     */
+    private function buildItemsBySupplier(): array
+    {
+        $position = [];
+        $groups = [];
+
+        foreach ($this->items as $flatIndex => $item) {
+            $sid = $item['supplier_id'] ?? null;
+            $key = ($sid !== null && $sid !== '') ? (int) $sid : '__sin_proveedor__';
+
+            if (! array_key_exists($key, $position)) {
+                $position[$key] = count($groups);
+                $groups[] = [
+                    'supplier_id' => is_int($key) ? $key : null,
+                    'supplier_name' => '',
+                    'supplier_nit' => '',
+                    'subtotal' => 0,
+                    'rows' => [],
+                ];
+            }
+
+            $gi = $position[$key];
+            $groups[$gi]['rows'][] = ['index' => $flatIndex] + $item;
+            $groups[$gi]['subtotal'] += (float) $item['quantity'] * (float) $item['unit_cost'];
+        }
+
+        $ids = array_values(array_filter(array_map(fn ($g) => $g['supplier_id'], $groups)));
+        if ($ids !== []) {
+            $suppliers = Supplier::whereIn('id', $ids)->get()->keyBy('id');
+            foreach ($groups as &$group) {
+                $s = $group['supplier_id'] ? $suppliers->get($group['supplier_id']) : null;
+                $group['supplier_name'] = $s?->name ?? 'Proveedor #'.$group['supplier_id'];
+                $group['supplier_nit'] = $s?->nit ?? '';
+            }
+            unset($group);
+        }
+
+        return $groups;
     }
 }

@@ -1,4 +1,33 @@
-<div class="max-w-7xl mx-auto">
+<div class="max-w-7xl mx-auto space-y-6">
+    @if($drafts->isNotEmpty())
+        <x-ui.card title="Mis borradores" subtitle="Cotizaciones que todavía no enviaste a aprobación" icon="drafts">
+            <div class="space-y-3">
+                @foreach($drafts as $d)
+                    <div class="border border-dashed border-gray-300 rounded-xl p-4 bg-gray-50/40">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="font-semibold text-gray-700">{{ $d->code }}</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 text-gray-600">Borrador</span>
+                                    @if($d->supplier)
+                                        <span class="text-xs text-gray-500">· {{ $d->supplier->name }}</span>
+                                    @endif
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    {{ $d->items->count() }} producto(s) · actualizado {{ $d->updated_at->format('d/m/Y H:i') }}
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <x-ui.button variant="secondary" size="sm" icon="edit_note" href="{{ route('bodega.quotations.edit', $d->id) }}">Continuar</x-ui.button>
+                                <x-ui.button variant="ghost" size="sm" icon="delete" wire:click="askDeleteDraft({{ $d->id }})">Eliminar</x-ui.button>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </x-ui.card>
+    @endif
+
     <x-ui.card title="Cotizaciones" icon="request_quote" subtitle="Flujo de aprobación de compras por empresa">
         <x-slot:headerActions>
             @can('create quotations')
@@ -67,6 +96,7 @@
                             <p class="text-[10px] text-gray-400">Pagó: {{ $q->payer?->name }}</p>
                         @endif
                         <div class="flex items-center justify-end gap-1.5 mt-2">
+                            <x-ui.button variant="ghost" size="sm" icon="visibility" href="{{ route('bodega.quotations.show', $q->id) }}">Ver</x-ui.button>
                             @if($q->status === 'pending' && $canApprove)
                                 <x-ui.button variant="success" size="sm" icon="check" wire:click="confirmApprove({{ $q->id }})">Aprobar</x-ui.button>
                                 <x-ui.button variant="danger" size="sm" icon="block" wire:click="openReject({{ $q->id }})">Rechazar</x-ui.button>
@@ -143,5 +173,10 @@
             message="¿Confirmás la recepción de la cotización #{{ $confirmingId }}? Se generará la compra y entrará el stock."
             confirmLabel="Sí, recibir y generar compra" cancelLabel="Cancelar"
             confirmAction="executeConfirmedAction" cancelAction="cancelConfirmation" id="confirm-receive" />
+    @elseif($confirmingAction === 'delete_draft')
+        <x-ui.confirm-modal variant="danger" icon="delete" title="Eliminar borrador"
+            message="¿Eliminar el borrador #{{ $confirmingId }}? Se perderán sus productos."
+            confirmLabel="Sí, eliminar" cancelLabel="Cancelar"
+            confirmAction="executeConfirmedAction" cancelAction="cancelConfirmation" id="confirm-delete-draft" />
     @endif
 </div>

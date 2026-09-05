@@ -79,6 +79,7 @@ class Quotation extends Model
     public function statusLabel(): string
     {
         return match ($this->status) {
+            'draft' => 'Borrador',
             'pending' => 'Pendiente',
             'approved' => 'Aprobada',
             'paid' => 'Pagada',
@@ -86,5 +87,10 @@ class Quotation extends Model
             'rejected' => 'Rechazada',
             default => ucfirst($this->status),
         };
+    }
+
+    public function isDraft(): bool
+    {
+        return $this->status === 'draft';
     }
 }

@@ -1,42 +1,68 @@
 <div class="max-w-6xl mx-auto">
-    <x-ui.card title="Nueva Cotización" icon="request_quote" subtitle="Solicitud de compra a proveedor (queda pendiente de aprobación)">
+    <x-ui.card :title="$draftId ? 'Editar borrador' : 'Nueva Cotización'"
+        :icon="$draftId ? 'edit_note' : 'request_quote'"
+        :subtitle="$draftId ? 'Completá la cotización y enviála a aprobación cuando el proveedor confirme' : 'Solicitud de compra a proveedor (queda pendiente de aprobación)'">
         <x-slot:headerActions>
             <x-ui.button variant="ghost" icon="arrow_back" href="{{ route('bodega.quotations.index') }}">Volver</x-ui.button>
         </x-slot:headerActions>
 
         <form wire:submit.prevent="save" class="space-y-6">
+            @if($draftId)
+                <x-ui.alert variant="neutral" title="Borrador {{ $draftCode }}">
+                    Estás editando un borrador que todavía no se envió a aprobación. Cuando el proveedor confirme, tocá "Enviar a aprobación".
+                </x-ui.alert>
+            @endif
+            @if(! $draftId)
             <div class="border border-gray-200 rounded-xl overflow-hidden">
                 <div class="px-5 py-3.5 bg-gray-50/80 border-b border-gray-100 flex items-center gap-2.5">
                     <span class="material-symbols-outlined text-gray-500">tune</span>
                     <h2 class="text-sm font-semibold text-gray-800">Tipo de cotización</h2>
                 </div>
                 <div class="p-5">
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" wire:click="$set('mode', 'single')"
-                            class="px-4 py-2 text-sm font-medium rounded-lg transition {{ $mode === 'single' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
-                            Cotización normal
-                        </button>
-                        <button type="button" wire:click="$set('mode', 'multiple')"
-                            class="px-4 py-2 text-sm font-medium rounded-lg transition {{ $mode === 'multiple' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
-                            Cotización múltiple (varios proveedores)
-                        </button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <x-ui.option-card icon="receipt_long" title="Cotización individual"
+                            description="Un solo proveedor para todos los productos. No podés mezclar proveedores en este modo."
+                            :active="$mode === 'single'" wire:click="switchMode('single')" />
+                        <x-ui.option-card icon="call_split" title="Cotización múltiple"
+                            description="Cada producto con su proveedor. Al guardar se genera una cotización por proveedor."
+                            :active="$mode === 'multiple'" wire:click="switchMode('multiple')" />
                     </div>
                     <p class="text-xs text-gray-500 mt-2">
                         @if($mode === 'single')
-                            Una cotización para un solo proveedor.
+                            Todos los productos de la lista van al proveedor que elijas acá. No podés mezclar proveedores en este modo (usá el múltiple para eso).
                         @else
-                            Elegís el proveedor de cada producto y al guardar se crea una cotización separada por proveedor.
+                            Elegís el proveedor de cada producto (con los chips podés volver a un proveedor ya usado) y al guardar se crea una cotización separada por proveedor.
                         @endif
                     </p>
                 </div>
             </div>
+            @endif
 
             <div class="border border-gray-200 rounded-xl overflow-hidden">
                 <div class="px-5 py-3.5 bg-gray-50/80 border-b border-gray-100 flex items-center gap-2.5">
                     <span class="material-symbols-outlined text-gray-500">warehouse</span>
-                    <h2 class="text-sm font-semibold text-gray-800">{{ $mode === 'multiple' ? 'Proveedor (del próximo producto)' : 'Proveedor' }}</h2>
+                    <h2 class="text-sm font-semibold text-gray-800">{{ $mode === 'multiple' ? 'Proveedor del producto a agregar' : 'Proveedor de la cotización' }}</h2>
                 </div>
-                <div class="p-5">
+                <div class="p-5 space-y-4">
+                    @if($mode === 'multiple' && count($usedSuppliers) > 0)
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-base">history</span>
+                                Usados en esta cotización — tocá uno para asignarle el próximo producto
+                            </p>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach($usedSuppliers as $us)
+                                    <button type="button" wire:click="selectSupplier({{ $us['id'] }})"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition
+                                            {{ (int) $supplier_id === (int) $us['id'] ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600' }}">
+                                        <span class="material-symbols-outlined text-sm">business</span>
+                                        <span class="font-semibold">{{ $us['name'] }}</span>
+                                        <span class="bg-gray-100 text-gray-500 rounded-full px-1.5 text-[10px] font-semibold">{{ $us['count'] }}</span>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                     @if ($supplier_id && $supplier = \App\Models\Supplier::find($supplier_id))
                         <div class="flex items-start gap-3 p-3.5 bg-green-50 border border-green-200 rounded-lg">
                             <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -197,6 +223,7 @@
                     </div>
 
                     @if (count($items) > 0)
+                        @if($mode === 'single')
                         <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                             <table class="min-w-full text-sm">
                                 <thead>
@@ -237,6 +264,60 @@
                                 </tbody>
                             </table>
                         </div>
+                        @else
+                        {{-- Modo múltiple: lista agrupada por proveedor (cada grupo = una cotización) --}}
+                        <div class="space-y-4">
+                            @foreach($itemsBySupplier as $group)
+                            <div class="rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                                <div class="px-4 py-3 bg-gray-50/80 border-b border-gray-100 flex flex-wrap items-center gap-3">
+                                    <span class="flex-shrink-0 w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-blue-600 text-lg">business</span>
+                                    </span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-gray-800 truncate">{{ $group['supplier_name'] }}</p>
+                                        <p class="text-xs text-gray-500">NIT: {{ $group['supplier_nit'] ?: 'N/A' }}</p>
+                                    </div>
+                                    <span class="inline-flex items-center gap-1 text-xs bg-white border border-gray-200 text-gray-600 rounded-full px-2.5 py-1">
+                                        <span class="material-symbols-outlined text-sm">inventory_2</span> {{ count($group['rows']) }} producto(s)
+                                    </span>
+                                    <span class="text-sm font-semibold font-mono text-gray-800">${{ number_format($group['subtotal'], 2) }}</span>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full text-sm">
+                                        <thead>
+                                            <tr class="bg-gray-50 border-b border-gray-200">
+                                                <th class="px-4 py-3 text-left text-gray-600 font-semibold text-xs uppercase tracking-wider">Producto</th>
+                                                <th class="px-4 py-3 text-center text-gray-600 font-semibold text-xs uppercase tracking-wider">Cantidad</th>
+                                                <th class="px-4 py-3 text-center text-gray-600 font-semibold text-xs uppercase tracking-wider">Costo unit.</th>
+                                                <th class="px-4 py-3 text-center text-gray-600 font-semibold text-xs uppercase tracking-wider">Total</th>
+                                                <th class="px-4 py-3 text-center text-gray-600 font-semibold text-xs uppercase tracking-wider">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 bg-white">
+                                            @foreach($group['rows'] as $row)
+                                            <tr>
+                                                <td class="px-4 py-3 text-gray-800">
+                                                    {{ $row['product_name'] }}
+                                                    @if(empty($row['product_id']))<span class="text-xs text-amber-600 font-medium">· nuevo</span>@endif
+                                                </td>
+                                                <td class="px-4 py-3 text-center text-gray-700">{{ rtrim(rtrim(number_format($row['quantity'], 4), '0'), '.') }}</td>
+                                                <td class="px-4 py-3 text-center font-mono">${{ number_format($row['unit_cost'], 2) }}</td>
+                                                <td class="px-4 py-3 text-center font-medium font-mono">${{ number_format($row['quantity'] * $row['unit_cost'], 2) }}</td>
+                                                <td class="px-4 py-3 text-center">
+                                                    <div class="flex items-center justify-center gap-1">
+                                                        <x-ui.button variant="ghost" size="sm" icon="edit" wire:click="editItem({{ $row['index'] }})">Editar</x-ui.button>
+                                                        <x-ui.button variant="ghost" size="sm" icon="delete" wire:click="askRemoveItem({{ $row['index'] }})">Eliminar</x-ui.button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                        @endif
 
                         <div class="flex justify-end">
                             <div class="w-full sm:w-72 space-y-2 p-4 bg-gray-50 rounded-xl border border-gray-200">
@@ -256,9 +337,21 @@
 
             <x-ui.textarea icon="sticky_note_2" wire:model="notes" label="Notas" rows="2" placeholder="Comentarios de la cotización" />
 
+            @if($mode === 'multiple' && count($itemsBySupplier) > 0)
+                <x-ui.alert variant="info" title="Se van a crear {{ count($itemsBySupplier) }} cotizaciones (una por proveedor)">
+                    @foreach($itemsBySupplier as $group)
+                        <p class="flex items-center justify-between gap-4 py-0.5">
+                            <span class="truncate">{{ $group['supplier_name'] }}</span>
+                            <span class="font-mono font-semibold flex-shrink-0">{{ count($group['rows']) }} producto(s) · ${{ number_format($group['subtotal'], 2) }}</span>
+                        </p>
+                    @endforeach
+                </x-ui.alert>
+            @endif
+
             <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
                 <x-ui.button variant="secondary" href="{{ route('bodega.quotations.index') }}">Cancelar</x-ui.button>
-                <x-ui.button type="submit" variant="primary" icon="request_quote">Guardar cotización</x-ui.button>
+                <x-ui.button type="button" variant="secondary" icon="save" wire:click="saveDraft">Guardar borrador</x-ui.button>
+                <x-ui.button type="submit" variant="primary" icon="request_quote">{{ $draftId ? 'Enviar a aprobación' : 'Guardar cotización' }}</x-ui.button>
             </div>
         </form>
     </x-ui.card>
@@ -344,9 +437,9 @@
 
     {{-- Modal confirmación de guardado --}}
     @if($confirmingSave)
-        <x-ui.confirm-modal variant="primary" icon="request_quote" title="Guardar cotización"
+        <x-ui.confirm-modal variant="primary" icon="request_quote" :title="$draftId ? 'Enviar a aprobación' : 'Guardar cotización'"
             message="{{ $this->confirmSaveMessage }}"
-            confirmLabel="Sí, guardar" cancelLabel="Cancelar"
+            :confirmLabel="$draftId ? 'Sí, enviar' : 'Sí, guardar'" cancelLabel="Cancelar"
             confirmAction="confirmSave" cancelAction="cancelSave" id="confirm-save-quotation" />
     @endif
 </div>

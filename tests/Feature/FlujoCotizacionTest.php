@@ -438,4 +438,270 @@ class FlujoCotizacionTest extends TestCase
 
         $this->assertCount(0, $component->get('items'));
     }
+
+    public function test_no_puede_cambiar_a_individual_con_productos_de_varios_proveedores()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $supplierA = Supplier::factory()->create(['name' => 'Proveedor A']);
+        $supplierB = Supplier::factory()->create(['name' => 'Proveedor B']);
+        $product = Product::factory()->create(['current_stock' => 0, 'average_cost' => 0]);
+
+        $component = \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            ->set('mode', 'multiple')
+            // Proveedor A: 5 unidades
+            ->call('selectSupplier', $supplierA->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 5)->set('currentUnitCost', 10)->call('addItem')
+            // Proveedor B: 3 unidades
+            ->call('selectSupplier', $supplierB->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 3)->set('currentUnitCost', 10)->call('addItem');
+
+        $this->assertCount(2, $component->get('items'));
+
+        // Intentar pasar a individual debe bloquearse y NO perder items
+        $component->call('switchMode', 'single')
+            ->assertSet('mode', 'multiple')
+            ->assertDispatched('show-toast', type: 'error');
+
+        $this->assertCount(2, $component->get('items'));
+    }
+
+    public function test_cambiar_a_individual_con_un_solo_proveedor_conserva_ese_proveedor()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $supplierA = Supplier::factory()->create(['name' => 'Proveedor A']);
+        $supplierB = Supplier::factory()->create(['name' => 'Proveedor B']);
+        $product = Product::factory()->create(['current_stock' => 0, 'average_cost' => 0]);
+
+        $component = \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            ->set('mode', 'multiple')
+            // Solo proveedor A (dos productos)
+            ->call('selectSupplier', $supplierA->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 2)->set('currentUnitCost', 10)->call('addItem')
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 3)->set('currentUnitCost', 10)->call('addItem');
+
+        // Limpiar el encabezado para forzar la auto-selección del único proveedor
+        $component->call('clearSupplier');
+
+        $component->call('switchMode', 'single')
+            ->assertSet('mode', 'single')
+            ->assertSet('supplier_id', $supplierA->id);
+
+        $items = $component->get('items');
+        $this->assertCount(2, $items);
+        foreach ($items as $item) {
+            $this->assertEquals($supplierA->id, (int) $item['supplier_id']);
+        }
+    }
+
+    public function test_cambiar_proveedor_en_individual_reasigna_todos_los_items()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $supplierA = Supplier::factory()->create(['name' => 'Proveedor A']);
+        $supplierB = Supplier::factory()->create(['name' => 'Proveedor B']);
+        $product = Product::factory()->create(['current_stock' => 0, 'average_cost' => 0]);
+
+        $component = \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            // Modo individual por defecto: proveedor A
+            ->call('selectSupplier', $supplierA->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 1)->set('currentUnitCost', 10)->call('addItem')
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 2)->set('currentUnitCost', 10)->call('addItem');
+
+        // Cambiar el proveedor en individual => todos los items se re-asignan a B
+        $component->call('selectSupplier', $supplierB->id)
+            ->assertSet('supplier_id', $supplierB->id);
+
+        $items = $component->get('items');
+        $this->assertCount(2, $items);
+        foreach ($items as $item) {
+            $this->assertEquals($supplierB->id, (int) $item['supplier_id']);
+        }
+    }
+
+    public function test_ver_detalle_de_cotizacion()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $quotation = $this->createQuotationViaForm($warehouse, $branch);
+
+        $this->actingAs($warehouse)
+            ->get(route('bodega.quotations.show', $quotation->id))
+            ->assertOk()
+            ->assertSee($quotation->code)
+            ->assertSee('Pendiente');
+    }
+
+    private function createDraftViaForm(User $creator, Branch $branch): Quotation
+    {
+        $product = Product::factory()->create(['current_stock' => 0, 'average_cost' => 0]);
+
+        \Livewire\Livewire::actingAs($creator)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 5)
+            ->set('currentUnitCost', 12)
+            ->call('addItem')
+            ->set('notes', 'Esperando confirmación del proveedor')
+            ->call('saveDraft')
+            ->assertDispatched('show-toast', type: 'success');
+
+        return Quotation::first();
+    }
+
+    public function test_guardar_borrador_sin_proveedor()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $draft = $this->createDraftViaForm($warehouse, $branch);
+
+        $this->assertEquals('draft', $draft->status);
+        $this->assertNull($draft->supplier_id);
+        $this->assertEquals(1, $draft->items()->count());
+        $this->assertEquals('Esperando confirmación del proveedor', $draft->notes);
+    }
+
+    public function test_no_guarda_borrador_multiple_con_varios_proveedores()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $supplierA = Supplier::factory()->create(['name' => 'Proveedor A']);
+        $supplierB = Supplier::factory()->create(['name' => 'Proveedor B']);
+        $product = Product::factory()->create(['current_stock' => 0, 'average_cost' => 0]);
+
+        $component = \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            ->set('mode', 'multiple')
+            ->call('selectSupplier', $supplierA->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 2)->set('currentUnitCost', 10)->call('addItem')
+            ->call('selectSupplier', $supplierB->id)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 3)->set('currentUnitCost', 10)->call('addItem')
+            ->call('saveDraft')
+            ->assertDispatched('show-toast', type: 'error');
+
+        $this->assertEquals(0, Quotation::count());
+    }
+
+    public function test_abrir_borrador_en_edicion()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $draft = $this->createDraftViaForm($warehouse, $branch);
+
+        $this->actingAs($warehouse)
+            ->get(route('bodega.quotations.edit', $draft->id))
+            ->assertOk()
+            ->assertSee($draft->code)
+            ->assertSee('Editar borrador');
+    }
+
+    public function test_enviar_borrador_a_aprobacion()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $product = Product::factory()->create(['current_stock' => 0, 'average_cost' => 0]);
+        $supplier = Supplier::factory()->create();
+
+        $component = \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationCreate::class)
+            ->call('selectProduct', $product->id)
+            ->set('currentQuantity', 5)
+            ->set('currentUnitCost', 12)
+            ->call('addItem')
+            ->set('notes', 'Esperando confirmación del proveedor')
+            ->call('saveDraft')
+            ->assertDispatched('show-toast', type: 'success');
+
+        $draftId = $component->get('draftId');
+
+        // El proveedor confirma: se completa el borrador y se envía a aprobación
+        $component->call('selectSupplier', $supplier->id)
+            ->set('notes', 'Proveedor confirmado')
+            ->call('save')
+            ->assertSet('confirmingSave', true)
+            ->call('confirmSave')
+            ->assertRedirect(route('bodega.quotations.index'));
+
+        $quotation = Quotation::find($draftId);
+        $this->assertEquals('pending', $quotation->status);
+        $this->assertEquals($supplier->id, $quotation->supplier_id);
+        $this->assertEquals(1, $quotation->items()->count());
+        $this->assertEquals('Proveedor confirmado', $quotation->notes);
+    }
+
+    public function test_eliminar_borrador()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $draft = $this->createDraftViaForm($warehouse, $branch);
+
+        \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationIndex::class)
+            ->call('askDeleteDraft', $draft->id)
+            ->call('executeConfirmedAction')
+            ->assertDispatched('show-toast', type: 'success');
+
+        $this->assertDatabaseMissing('quotations', ['id' => $draft->id]);
+        $this->assertDatabaseMissing('quotation_items', ['quotation_id' => $draft->id]);
+    }
+
+    public function test_borradores_solo_visibles_para_su_creador()
+    {
+        $company = Company::factory()->create();
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $warehouse = $this->makeWarehouse();
+        $warehouse->update(['branch_id' => $branch->id]);
+
+        $draft = $this->createDraftViaForm($warehouse, $branch);
+
+        // Otro rol con acceso a cotizaciones NO ve el borrador en el index
+        $gerente = $this->makeRoleUser('gerente_administrativo');
+        \Livewire\Livewire::actingAs($gerente)
+            ->test(\App\Livewire\Bodega\QuotationIndex::class)
+            ->assertDontSee($draft->code);
+
+        // El creador sí lo ve en "Mis borradores"
+        \Livewire\Livewire::actingAs($warehouse)
+            ->test(\App\Livewire\Bodega\QuotationIndex::class)
+            ->assertSee($draft->code);
+    }
 }

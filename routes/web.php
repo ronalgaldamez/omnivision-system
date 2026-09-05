@@ -175,6 +175,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/intercompany-sales/{id}', \App\Livewire\Bodega\IntercompanySaleShow::class)->name('bodega.intercompany-sales.show');
         Route::get('/quotations', \App\Livewire\Bodega\QuotationIndex::class)->middleware('can:view quotations')->name('bodega.quotations.index');
         Route::get('/quotations/create', \App\Livewire\Bodega\QuotationCreate::class)->middleware('can:create quotations')->name('bodega.quotations.create');
+        Route::get('/quotations/{id}/edit', \App\Livewire\Bodega\QuotationCreate::class)->middleware('can:create quotations')->name('bodega.quotations.edit');
+        Route::get('/quotations/{id}', \App\Livewire\Bodega\QuotationShow::class)->middleware('can:view quotations')->name('bodega.quotations.show');
     });
 
     // ========== TECHNICIAN RETURNS ==========

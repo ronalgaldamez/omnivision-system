@@ -43,6 +43,22 @@
         </div>
     </x-ui.card>
 
+    {{-- Option Cards --}}
+    <x-ui.card title="Option Cards" subtitle="Selector de opciones tipo radio — usado en 'Tipo de cotización'" icon="radio_button_checked">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <x-ui.option-card icon="receipt_long" title="Cotización individual"
+                description="Un solo proveedor para todos los productos. Se genera una cotización."
+                :active="true" />
+            <x-ui.option-card icon="call_split" title="Cotización múltiple"
+                description="Cada producto con su proveedor. Se genera una cotización por proveedor." />
+        </div>
+        <p class="text-xs text-gray-500 mt-4">
+            Usar <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">active</code> para el estado seleccionado.
+            En pantallas Livewire se combina con <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">wire:click</code>
+            y la prop <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">:active</code>.
+        </p>
+    </x-ui.card>
+
     {{-- Inputs --}}
     <x-ui.card title="Inputs" icon="edit_note">
         <div class="space-y-6 max-w-lg">

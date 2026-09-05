@@ -95,9 +95,34 @@ class QuotationIndex extends Component
             $this->markPaid($this->confirmingId);
         } elseif ($this->confirmingAction === 'receive') {
             $this->receive($this->confirmingId);
+        } elseif ($this->confirmingAction === 'delete_draft') {
+            $this->deleteDraft($this->confirmingId);
         }
 
         $this->cancelConfirmation();
+    }
+
+    public function askDeleteDraft($id)
+    {
+        $quotation = Quotation::find($id);
+        if (! $quotation || $quotation->status !== 'draft' || (int) $quotation->created_by !== (int) auth()->id()) {
+            $this->dispatch('show-toast', type: 'error', message: 'Este borrador no está disponible.');
+            return;
+        }
+
+        $this->confirmingAction = 'delete_draft';
+        $this->confirmingId = $id;
+    }
+
+    public function deleteDraft($id)
+    {
+        $quotation = Quotation::find($id);
+        if ($quotation && $quotation->status === 'draft' && (int) $quotation->created_by === (int) auth()->id()) {
+            $quotation->delete(); // items se eliminan en cascada
+            $this->dispatch('show-toast', type: 'success', message: 'Borrador eliminado.');
+        } else {
+            $this->dispatch('show-toast', type: 'error', message: 'No se pudo eliminar el borrador.');
+        }
     }
 
     public function cancelConfirmation()
@@ -263,13 +288,24 @@ class QuotationIndex extends Component
         $user = auth()->user();
         $allowed = $user->allowedBranchIds();
 
+        // El flujo de aprobación nunca incluye borradores (van en "Mis borradores").
         $quotations = Quotation::with('supplier', 'branch', 'creator', 'approver', 'payer', 'items')
+            ->where('status', '!=', 'draft')
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->when(! $user->can('access_all_branches') && $allowed, fn ($q) => $q->whereIn('branch_id', $allowed))
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return view('livewire.bodega.quotation-index', compact('quotations'))
+        // "Mis borradores": solo los del usuario actual (quien los creó).
+        $drafts = Quotation::with('supplier', 'items')
+            ->where('status', 'draft')
+            ->where('created_by', $user->id)
+            ->when(! $user->can('access_all_branches') && $allowed, fn ($q) => $q->whereIn('branch_id', $allowed))
+            ->orderBy('updated_at', 'desc')
+            ->take(30)
+            ->get();
+
+        return view('livewire.bodega.quotation-index', compact('quotations', 'drafts'))
             ->layout('components.layouts.app');
     }
 }
